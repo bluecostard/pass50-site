@@ -1,0 +1,10 @@
+{
+  "name": "PASS50",
+  "short_name": "PASS50",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#050705",
+  "theme_color": "#050705",
+  "description": "Qui dit quoi, qui va où ? Le classement du buzz ivoirien.",
+  "icons": [{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
