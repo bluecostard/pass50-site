@@ -1,0 +1,48 @@
+name: Déployer PASS50 sur IONOS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Préparer les fichiers
+        run: |
+          mkdir -p .deploy
+          rsync -a ./ .deploy/ \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.deploy/' \
+            --exclude 'api/config.php' \
+            --exclude 'uploads/' \
+            --exclude 'install.php' \
+            --exclude '*.zip' \
+            --exclude '*.md'
+
+      - name: Installer SFTP
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Déployer sur IONOS
+        env:
+          HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          USER: ${{ secrets.IONOS_SFTP_USER }}
+          PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+        run: |
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          mirror --reverse --verbose --only-newer .deploy/ "$REMOTE_DIR"
+          bye
+          LFTP
