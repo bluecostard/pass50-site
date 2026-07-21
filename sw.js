@@ -5,7 +5,9 @@ const ASSETS=[
   './manifest.webmanifest',
   './icon.svg',
   './assets/pass50-wordmark.png',
-  './assets/pass50-logo-email.png'
+  './assets/pass50-logo-email.png',
+  './v9-tools.css',
+  './v9-tools.js'
 ];
 
 self.addEventListener('install',event=>{
