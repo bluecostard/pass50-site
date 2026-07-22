@@ -8,3 +8,13 @@
 - Data Hub compatible avec une base allant jusqu’à 1 000 profils.
 - Ajout de Coach Hamond Chic, DBZ, Gorsky et Dolpho.
 - Conservation du retour à la même position du Top 50 après fermeture d’une FI.
+
+
+## Correctif FI Père Daloa — données persistantes
+
+- Les anciennes données V6 ne réécrivent plus les réseaux sociaux ni l’évènement à chaque chargement.
+- Le remplacement d’un lien officiel supprime l’ancienne preuve manuelle afin d’éviter les conflits en base.
+- Les liens Facebook modernes `/share/v/`, `/share/r/` et `/share/p/` sont reconnus.
+- Le lien exact collé par l’administrateur reste la source enregistrée, même si Facebook renvoie une autre URL canonique.
+- Le titre, le type et l’explication saisis manuellement ne sont plus remplacés pendant l’analyse ou la validation de la couverture.
+- Lorsqu’un évènement change de lien, l’ancienne couverture est réinitialisée pour éviter toute confusion.

@@ -18,7 +18,7 @@ function p50_exact_content_path(string $platform, string $url): bool {
     if ($platform === 'YouTube') return str_contains($host,'youtu.be') || preg_match('#/(watch|shorts|live)/#i',$path) || str_contains($query,'v=');
     if ($platform === 'TikTok') return preg_match('#/@[^/]+/video/\d+#i',$path) === 1;
     if ($platform === 'Instagram') return preg_match('#/(p|reel|tv)/[^/]+#i',$path) === 1;
-    if ($platform === 'Facebook') return preg_match('#/(videos|reel|posts|watch)/#i',$path) === 1 || str_contains($query,'v=') || str_contains($host,'fb.watch');
+    if ($platform === 'Facebook') return preg_match('#/(videos|reel|posts|watch|share/(?:v|r|p))/#i',$path) === 1 || preg_match('/(?:^|&)(?:v|story_fbid|fbid)=/i',$query) === 1 || str_contains($host,'fb.watch');
     if ($platform === 'X') return preg_match('#/status/\d+#i',$path) === 1;
     return trim($path,'/') !== '';
 }
@@ -44,10 +44,13 @@ try {
             $m = p50_page_metadata($r['body'],$r['finalUrl'] ?: $url);
             if ($title==='') $title=(string)($m['title']??'');
             if ($thumbnail==='') $thumbnail=(string)($m['image']??'');
-            if (!empty($m['canonical'])) $canonical=(string)$m['canonical'];
+            if (!empty($m['canonical'])) {
+                $candidate=(string)$m['canonical'];
+                if(p50_platform($candidate)===$platform&&p50_exact_content_path($platform,$candidate))$canonical=$candidate;
+            }
             $source = $source === 'Métadonnées publiques' ? 'Open Graph' : $source.' + Open Graph';
         }
-        if ($r['finalUrl']) $canonical=$r['finalUrl'];
+        if ($r['finalUrl']&&p50_platform($r['finalUrl'])===$platform&&p50_exact_content_path($platform,$r['finalUrl'])) $canonical=$r['finalUrl'];
     }
 } catch (Throwable $e) {}
 

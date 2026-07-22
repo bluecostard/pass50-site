@@ -370,7 +370,7 @@ function p50_de_add_social_evidence(string $profileId, string $platform, string 
 }
 
 function p50_de_rebuild_social_link(string $profileId, string $platform): void {
-    $stmt = db()->prepare('SELECT normalized_url,url_hash,COUNT(*) evidence_count,COUNT(DISTINCT source_type) source_type_count,MAX(source_weight) max_weight,AVG(source_weight) avg_weight,GROUP_CONCAT(DISTINCT source_type ORDER BY source_type SEPARATOR ",") source_types,MAX(validation_json) validation_json FROM p50_social_link_evidence WHERE profile_id=? AND platform=? GROUP BY normalized_url,url_hash');
+    $stmt = db()->prepare('SELECT normalized_url,url_hash,COUNT(*) evidence_count,COUNT(DISTINCT source_type) source_type_count,MAX(source_weight) max_weight,AVG(source_weight) avg_weight,GROUP_CONCAT(DISTINCT source_type ORDER BY source_type SEPARATOR ",") source_types,MAX(validation_json) validation_json,MAX(fetched_at) latest_fetched_at FROM p50_social_link_evidence WHERE profile_id=? AND platform=? GROUP BY normalized_url,url_hash');
     $stmt->execute([$profileId,$platform]);
     $groups = $stmt->fetchAll();
     if (!$groups) return;
@@ -389,9 +389,12 @@ function p50_de_rebuild_social_link(string $profileId, string $platform): void {
         else $confidence=min(89,(int)round($maxWeight*0.92));
         $scored[]=$g+['confidence'=>$confidence,'types'=>$types];
     }
-    usort($scored,static fn($a,$b)=>$b['confidence']<=>$a['confidence']?:$b['evidence_count']<=>$a['evidence_count']);
+    usort($scored,static fn($a,$b)=>$b['confidence']<=>$a['confidence']?:strcmp((string)($b['latest_fetched_at']??''),(string)($a['latest_fetched_at']??''))?:$b['evidence_count']<=>$a['evidence_count']);
     $best=$scored[0];
-    $conflict=isset($scored[1])&&(int)$scored[1]['confidence']>=p50_de_threshold()&&(int)$scored[1]['confidence']===(int)$best['confidence'];
+    $bestIsManual=in_array('manual_owner',$best['types'],true)||in_array('manual_admin',$best['types'],true);
+    // Deux anciennes validations manuelles ne doivent pas bloquer la publication :
+    // la plus récente est l'intention explicite du propriétaire.
+    $conflict=!$bestIsManual&&isset($scored[1])&&(int)$scored[1]['confidence']>=p50_de_threshold()&&(int)$scored[1]['confidence']===(int)$best['confidence'];
     $verified=!$conflict&&(int)$best['confidence']>=p50_de_threshold();
     $status=$conflict?'conflict':($verified?'verified':'candidate');
     $stmt=db()->prepare("INSERT INTO p50_social_links(profile_id,platform,normalized_url,url_hash,confidence,evidence_count,source_types,status,validation_json,checked_at,verified_at)

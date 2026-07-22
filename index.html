@@ -190,7 +190,7 @@ const seedData={
     {id:'s2',profileId:'paulyves',title:'Nouvelle vidéo au-dessus de la moyenne',platforms:['YouTube','Facebook'],confidence:'élevée',status:'validated',createdAt:Date.now()-7200000},
     {id:'s3',profileId:'emma',title:'Hausse inhabituelle des partages',platforms:['Instagram','TikTok','Facebook'],confidence:'moyenne',status:'pending',createdAt:Date.now()-10800000}
   ],
-  users:[],notifications:[],liveStreams:[],coulesPoll:{votesByPoll:{},previousSharesByPoll:{}},publishedAt:new Date().toISOString(),version:10
+  users:[],notifications:[],liveStreams:[],coulesPoll:{votesByPoll:{},previousSharesByPoll:{}},publishedAt:new Date().toISOString(),version:11
 };
 const seedProfileMedia={
   emma:{photoUrl:'https://upload.wikimedia.org/wikipedia/commons/d/d4/Emma_lohoues.jpg',photoCandidateUrl:'https://upload.wikimedia.org/wikipedia/commons/d/d4/Emma_lohoues.jpg',photoStatus:'validated',photoSource:'Wikimedia Commons · CC0 · portrait daté 2025',photoNote:'Source libre et identité clairement attribuée.',photoPosition:'50% 18%'},
@@ -232,13 +232,23 @@ const PASS50_V6_EVENTS={
   ivoriandoll:{type:'Musique / vidéo',title:'Ses contenus musicaux et sociaux alimentent sa progression',platforms:['Instagram','TikTok','YouTube'],metric:'Signal à mesurer',publishedLabel:'Période actuelle',reason:'Activité présente sur ses comptes officiels et sa chaîne YouTube.',url:'https://www.youtube.com/c/IVORIANDOLL/featured',icon:'▶',confidence:'moyenne'}
 };
 function applyPass50V6Patch(){
+  // Migration non destructive : les anciennes données servent uniquement à
+  // compléter les champs manquants. Elles ne doivent jamais réécrire une
+  // correction effectuée depuis l'administration.
   db.profiles.forEach(p=>{
-    p.links={...Object.fromEntries((p.platforms||[]).map(x=>[x,platformUrl(x,p.handle,p.name)])),...(p.links||{}),...(PASS50_V6_LINKS[p.id]||{})};
-    if(PASS50_V6_MEDIA[p.id])Object.assign(p,PASS50_V6_MEDIA[p.id]);
+    p.links=p.links||{};
+    Object.entries(PASS50_V6_LINKS[p.id]||{}).forEach(([platform,url])=>{
+      if(!p.links[platform])p.links[platform]=url;
+    });
+    const media=PASS50_V6_MEDIA[p.id];
+    const hasChosenPhoto=Boolean((p.photoUrl||p.photoCandidateUrl)&&p.photoStatus&&p.photoStatus!=='missing');
+    if(media&&!hasChosenPhoto)Object.entries(media).forEach(([key,value])=>{if(!p[key])p[key]=value;});
     if(!p.photoPosition)p.photoPosition='50% 50%';
   });
-  Object.entries(PASS50_V6_EVENTS).forEach(([profileId,data])=>{let e=db.events.find(x=>x.profileId===profileId);if(e)Object.assign(e,data);else db.events.push({id:'v6_'+profileId,profileId,...data,coverUrl:'',coverCandidateUrl:'',coverStatus:'missing',coverSource:'',coverNote:''});});
-  db.version=Math.max(Number(db.version||0),10);
+  Object.entries(PASS50_V6_EVENTS).forEach(([profileId,data])=>{
+    if(!db.events.some(x=>x.profileId===profileId))db.events.push({id:'v6_'+profileId,profileId,...data,coverUrl:'',coverCandidateUrl:'',coverStatus:'missing',coverSource:'',coverNote:'',originalLinkValidated:false});
+  });
+  db.version=Math.max(Number(db.version||0),11);
   localStorage.setItem(APP_KEY,JSON.stringify(db));
 }
 function clone(x){return JSON.parse(JSON.stringify(x));}
