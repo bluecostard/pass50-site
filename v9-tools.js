@@ -259,3 +259,189 @@ render();
 
   render();
 })();
+
+
+/* PASS50 V12 — import réel du recensement élargi (85 candidats)
+   Le fichier JSON placé dans le dépôt n'est pas importé par le navigateur
+   sans ce mécanisme. Les nouveaux profils restent non éligibles tant que
+   leurs comptes et leurs métriques n'ont pas été vérifiés. */
+(function(){
+  'use strict';
+  const CENSUS_URL='./pass50_nouveaux_candidats_85_v2.json?v=12';
+  const CENSUS_VERSION='85-v2';
+  let importing=false;
+
+  function p50CensusNormalize(value=''){
+    return String(value)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase()
+      .replace(/[’'`´]/g,'')
+      .replace(/[^a-z0-9]+/g,'')
+      .trim();
+  }
+
+  function p50CensusHandle(candidate){
+    const alias=String(candidate?.known_alias||'');
+    const found=alias.match(/@[A-Za-z0-9._-]+/);
+    if(found)return found[0];
+    const slug=String(candidate?.name||'profil')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,28);
+    return '@'+(slug||'profil');
+  }
+
+  function p50CensusInitials(name=''){
+    const words=String(name).replace(/[’']/g,' ').split(/\s+/).filter(Boolean);
+    return (words.slice(0,2).map(w=>w[0]).join('')||'P').toUpperCase();
+  }
+
+  function p50CensusProfile(candidate,index){
+    const official=(candidate&&typeof candidate.official_socials==='object'&&candidate.official_socials)||{};
+    const platforms=Object.keys(official).filter(k=>official[k]);
+    const scores=Object.fromEntries(periods.map(period=>[period,0]));
+    return {
+      id:String(candidate.id||('census-'+Date.now()+'-'+index)),
+      name:String(candidate.name||'Profil à vérifier'),
+      handle:p50CensusHandle(candidate),
+      initials:p50CensusInitials(candidate.name),
+      region:['CI','DIASPORA','BOTH'].includes(candidate.zone)?candidate.zone:'BOTH',
+      category:String(candidate.category||'À catégoriser'),
+      platforms,
+      scores,
+      delta:0,
+      decline:0,
+      alive:true,
+      eligible:false,
+      classable:false,
+      censusStatus:String(candidate.census_status||'À vérifier – comptes officiels'),
+      verificationPriority:String(candidate.verification_priority||'P2'),
+      entityType:String(candidate.entity_type||'Personne'),
+      knownAlias:String(candidate.known_alias||''),
+      censusSource:candidate.source||{},
+      censusNotes:String(candidate.notes||''),
+      censusImportedAt:new Date().toISOString(),
+      ageStatus:'unconfirmed',
+      birthDate:null,
+      birthYear:null,
+      agePublic:true,
+      photoUrl:'',
+      photoCandidateUrl:'',
+      photoStatus:'missing',
+      photoSource:'',
+      photoNote:'Profil recensé : identité visuelle à vérifier.',
+      photoPosition:'50% 50%',
+      badges:[],
+      links:{...official},
+      linkChecks:Object.fromEntries(platforms.map(platform=>[platform,{status:'pending',checkedAt:null}]))
+    };
+  }
+
+  function p50CensusMerge(candidates){
+    if(!Array.isArray(candidates))throw new Error('Format du recensement invalide');
+    db.profiles=Array.isArray(db.profiles)?db.profiles:[];
+
+    // Correction définitive de l'identité Cadic dans les anciennes bases locales/cloud.
+    db.profiles.forEach(profileItem=>{
+      if(profileItem.id==='louissette'||['louisettecadic','louissettecadic'].includes(p50CensusNormalize(profileItem.name))){
+        profileItem.name='Cadic N’Guessan';
+        profileItem.handle=profileItem.handle||'@misscadic';
+        profileItem.initials='CN';
+        profileItem.category='Beauté / Lifestyle / Mode';
+        profileItem.knownAlias='Louisette Cadic';
+      }
+    });
+
+    const existingIds=new Set(db.profiles.map(p=>String(p.id||'').toLowerCase()));
+    const existingNames=new Set(db.profiles.map(p=>p50CensusNormalize(p.name)));
+    const existingHandles=new Set(db.profiles.map(p=>p50CensusNormalize(p.handle)).filter(Boolean));
+    let added=0,skipped=0;
+
+    candidates.forEach((candidate,index)=>{
+      const id=String(candidate?.id||'').toLowerCase();
+      const name=p50CensusNormalize(candidate?.name);
+      const handle=p50CensusNormalize(p50CensusHandle(candidate));
+      const aliases=String(candidate?.known_alias||'').split(/[\/·,;|]/).map(p50CensusNormalize).filter(Boolean);
+      const aliasConflict=aliases.some(alias=>existingNames.has(alias)||existingHandles.has(alias));
+      if((id&&existingIds.has(id))||(name&&existingNames.has(name))||(handle&&existingHandles.has(handle))||aliasConflict){
+        skipped++;
+        return;
+      }
+      const profileItem=p50CensusProfile(candidate,index);
+      db.profiles.push(profileItem);
+      existingIds.add(profileItem.id.toLowerCase());
+      existingNames.add(p50CensusNormalize(profileItem.name));
+      existingHandles.add(p50CensusNormalize(profileItem.handle));
+      added++;
+    });
+
+    db.censusVersion=CENSUS_VERSION;
+    db.censusImportedAt=new Date().toISOString();
+    db.version=Math.max(Number(db.version||0),12);
+    return {added,skipped,total:db.profiles.length,eligible:db.profiles.filter(p=>p.alive&&p.eligible).length};
+  }
+
+  async function p50ImportCensus(showMessage=false){
+    if(importing)return null;
+    importing=true;
+    try{
+      const response=await fetch(CENSUS_URL,{cache:'no-store'});
+      if(!response.ok)throw new Error('Fichier de recensement introuvable ('+response.status+')');
+      const candidates=await response.json();
+      const result=p50CensusMerge(candidates);
+      save();
+      render();
+      if(document.querySelector('#adminModal.show'))renderAdminPane();
+      if(showMessage&&typeof toast==='function')toast(`${result.total} profils recensés · ${result.eligible} éligibles`);
+      console.info('[PASS50 V12] Recensement importé',result);
+      return result;
+    }catch(error){
+      console.error('[PASS50 V12] Import du recensement impossible',error);
+      if(showMessage&&typeof toast==='function')toast('Import du recensement impossible');
+      return null;
+    }finally{
+      importing=false;
+    }
+  }
+
+  // Premier import local, puis nouvel import après le chargement de la base cloud,
+  // car l'état MySQL peut remplacer l'état local pendant l'initialisation.
+  p50ImportCensus(false);
+  const cloudTimer=setInterval(()=>{
+    if(window.__pass50CloudReady){
+      clearInterval(cloudTimer);
+      p50ImportCensus(true);
+    }
+  },400);
+  setTimeout(()=>clearInterval(cloudTimer),25000);
+
+  // Le compteur de l'administration distingue recensement et classement.
+  const previousRenderAdminPane=renderAdminPane;
+  renderAdminPane=function(){
+    previousRenderAdminPane();
+    if(ui.adminTab!=='profiles')return;
+    const pane=document.querySelector('#adminPane');
+    const toolbar=pane?.querySelector('.admin-toolbar');
+    if(!pane||!toolbar||pane.querySelector('.census-count-note'))return;
+    const total=db.profiles.length;
+    const eligible=db.profiles.filter(p=>p.alive&&p.eligible).length;
+    const pending=total-eligible;
+    if(!toolbar.querySelector('#importCensusBtn')){
+      const importButton=document.createElement('button');
+      importButton.className='btn small';
+      importButton.id='importCensusBtn';
+      importButton.textContent='Importer le recensement';
+      toolbar.appendChild(importButton);
+    }
+    const note=document.createElement('div');
+    note.className='note census-count-note';
+    note.style.marginBottom='12px';
+    note.innerHTML=`<strong>${total} profils recensés</strong> · ${eligible} éligibles au classement · ${pending} en vérification`;
+    toolbar.insertAdjacentElement('afterend',note);
+  };
+
+  document.addEventListener('click',event=>{
+    if(event.target?.id==='importCensusBtn')p50ImportCensus(true);
+  });
+
+  window.p50ImportCensus=p50ImportCensus;
+})();
