@@ -55,8 +55,8 @@
     .hero-intro{isolation:isolate;background:rgba(8,11,8,.56)!important}
     .hero-intro>*{position:relative;z-index:3}
     .hero-backdrop{position:absolute;inset:0;z-index:0;overflow:hidden}
-    .hero-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,7,5,.92) 0%,rgba(5,7,5,.73) 58%,rgba(5,7,5,.8) 100%),linear-gradient(180deg,rgba(5,7,5,.22),rgba(5,7,5,.78));backdrop-filter:blur(1.5px)}
-    .hero-slide{position:absolute;inset:-2%;opacity:0;background-size:cover;background-position:center;transform:scale(1.04);animation:heroFade 20s infinite}
+    .hero-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,7,5,.58) 0%,rgba(5,7,5,.34) 58%,rgba(5,7,5,.42) 100%),linear-gradient(180deg,rgba(5,7,5,.08),rgba(5,7,5,.34));backdrop-filter:blur(.25px)}
+    .hero-slide{position:absolute;inset:-2%;opacity:0;background-size:cover;background-position:center;transform:scale(1.04);animation:heroFade 20s infinite;filter:saturate(1.14) contrast(1.08) brightness(1.03)}
     .hero-slide:nth-child(1){animation-delay:0s}.hero-slide:nth-child(2){animation-delay:5s}.hero-slide:nth-child(3){animation-delay:10s}.hero-slide:nth-child(4){animation-delay:15s}
     @keyframes heroFade{0%{opacity:0;transform:scale(1.04)}5%{opacity:1}22%{opacity:1;transform:scale(1.09)}27%{opacity:0}100%{opacity:0}}
     .score-info{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:5px;border:1px solid #697568;border-radius:50%;font-size:9px;color:#cbd3c8;vertical-align:1px;cursor:help;position:relative}
