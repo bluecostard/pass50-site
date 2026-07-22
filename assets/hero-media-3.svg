@@ -1,9 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
-<defs><linearGradient id="bg" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#090b09"/><stop offset="1" stop-color="#130f18"/></linearGradient><radialGradient id="r"><stop stop-color="#c08cff" stop-opacity=".32"/><stop offset="1" stop-color="#c08cff" stop-opacity="0"/></radialGradient></defs>
-<rect width="1400" height="900" fill="url(#bg)"/><circle cx="1060" cy="420" r="360" fill="url(#r)"/>
-<rect x="710" y="155" width="500" height="500" rx="30" fill="#121512" stroke="#d5b7ff" stroke-opacity=".45"/>
-<path d="M790 560l95-250 95 250 95-250 95 250" fill="none" stroke="#ffffff" stroke-opacity=".42" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="885" cy="308" r="18" fill="#b7ff00"/><circle cx="980" cy="558" r="18" fill="#ff9d1d"/><circle cx="1075" cy="308" r="18" fill="#ff4b4b"/><circle cx="1170" cy="558" r="18" fill="#d5b7ff"/>
-<rect x="770" y="205" width="380" height="54" rx="16" fill="#1d221d"/>
-<path d="M805 232h140" stroke="#d5b7ff" stroke-width="8" stroke-opacity=".6"/><path d="M965 232h140" stroke="#fff" stroke-width="8" stroke-opacity=".22"/>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#080808"/><stop offset="1" stop-color="#121018"/></linearGradient>
+  <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c89aff" stop-opacity=".24"/><stop offset="1" stop-color="#c89aff" stop-opacity="0"/></linearGradient>
+</defs>
+<rect width="1400" height="900" fill="url(#bg)"/>
+<rect x="735" y="110" width="560" height="620" rx="34" fill="#0d100d" stroke="#c89aff" stroke-opacity=".65"/>
+<rect x="770" y="145" width="490" height="550" rx="26" fill="#101410"/>
+<rect x="800" y="182" width="430" height="84" rx="18" fill="#171d17"/>
+<rect x="800" y="286" width="430" height="320" rx="24" fill="url(#shine)"/>
+<circle cx="940" cy="355" r="88" fill="#8e6b53"/><rect x="848" y="445" width="184" height="118" rx="28" fill="#151815"/>
+<text x="815" y="236" fill="#f7f8f6" font-family="Arial" font-size="62" font-weight="700">WAM</text>
+<text x="818" y="642" fill="#c89aff" font-family="Arial" font-size="28" font-weight="700" letter-spacing="3">WILLY A MIDI</text>
+<path d="M815 664h250" stroke="#c89aff" stroke-width="8" stroke-linecap="round" opacity=".8"/>
 </svg>
