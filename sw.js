@@ -7,7 +7,11 @@ const ASSETS=[
   './assets/pass50-wordmark.png',
   './assets/pass50-logo-email.png',
   './v9-tools.css',
-  './v9-tools.js'
+  './v9-tools.js',
+  './assets/hero-media-1.svg',
+  './assets/hero-media-2.svg',
+  './assets/hero-media-3.svg',
+  './assets/hero-media-4.svg'
 ];
 
 self.addEventListener('install',event=>{
