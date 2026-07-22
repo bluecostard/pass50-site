@@ -25,6 +25,13 @@ return [
         'sender_email' => 'contact@votre-domaine.fr',
         'sender_name' => 'PASS50',
     ],
+    'data_engine' => [
+        // PASS50 publie uniquement les données à 90 % ou plus.
+        'confidence_threshold' => 90,
+        // Facultatif : ajoutez une valeur longue et aléatoire avant d'activer un cron externe.
+        'cron_token' => '',
+        'batch_size' => 5,
+    ],
     'upload' => [
         'max_bytes' => 5 * 1024 * 1024,
         'allowed_mime' => ['image/jpeg', 'image/png', 'image/webp'],
