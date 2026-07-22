@@ -1,4 +1,4 @@
-const CACHE='pass50-data-engine-v1-__BUILD_ID__';
+const CACHE='pass50-admin-data-v2-__BUILD_ID__';
 const ASSETS=[
   './',
   './index.html',

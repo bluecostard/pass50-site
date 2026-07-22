@@ -218,7 +218,7 @@ function p50_de_sync_registry_from_state(): int {
     return $count;
 }
 
-function p50_de_registry_profiles(?string $profileId = null, int $limit = 100, int $offset = 0): array {
+function p50_de_registry_profiles(?string $profileId = null, int $limit = 1000, int $offset = 0): array {
     p50_de_ensure_schema();
     if ($profileId !== null && $profileId !== '') {
         $stmt = db()->prepare('SELECT * FROM p50_profile_registry WHERE profile_id=? LIMIT 1');
@@ -226,7 +226,7 @@ function p50_de_registry_profiles(?string $profileId = null, int $limit = 100, i
         $row = $stmt->fetch();
         return $row ? [$row] : [];
     }
-    $limit = max(1, min(100, $limit));
+    $limit = max(1, min(1000, $limit));
     $offset = max(0, $offset);
     $stmt = db()->prepare("SELECT * FROM p50_profile_registry WHERE alive=1 AND eligible=1 ORDER BY public_name LIMIT $limit OFFSET $offset");
     $stmt->execute();
@@ -590,7 +590,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
 }
 
 function p50_de_publish_all(?string $userId=null): int {
-    $profiles=p50_de_registry_profiles(null,100,0);$count=0;
+    $profiles=p50_de_registry_profiles(null,1000,0);$count=0;
     foreach($profiles as $profile)if(p50_de_publish_profile((string)$profile['profile_id'],$userId))$count++;
     return $count;
 }
@@ -687,7 +687,7 @@ function p50_de_hub_payload(): array {
     p50_de_sync_registry_from_state();
     $state=p50_de_load_public_state();$stateMap=p50_de_profile_state_map($state);
     $profiles=[];$threshold=p50_de_threshold();
-    foreach(p50_de_registry_profiles(null,100,0) as $r){
+    foreach(p50_de_registry_profiles(null,1000,0) as $r){
         $id=(string)$r['profile_id'];$sp=$stateMap[$id]??[];
         $facts=p50_de_verified_facts($id);$social=p50_de_social_links($id,false);
         $runStmt=db()->prepare('SELECT status,collector,started_at,finished_at,error_message FROM p50_collection_runs WHERE profile_id=? ORDER BY started_at DESC LIMIT 1');$runStmt->execute([$id]);$lastRun=$runStmt->fetch()?:null;
