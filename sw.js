@@ -1,4 +1,4 @@
-const CACHE='pass50-admin-data-v2-__BUILD_ID__';
+const CACHE='pass50-admin-social-v3-20260722';
 const ASSETS=[
   './',
   './index.html',

@@ -3,7 +3,7 @@
   const DE={hub:null,loading:false,offset:0,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','X','Snapchat','Web']};
 
   renderAdmin=function(){
-    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['hub','Data Hub'],['ranking','Classement'],['data','Données']];
+    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Réseaux sociaux'],['news','Actualité'],['live','LIVE'],['hub','Data Hub'],['ranking','Classement'],['data','Données']];
     const menu=`<div class="admin-menu">${items.map(([id,label])=>`<button class="btn ${ui.adminTab===id?'primary':''}" data-admin-tab="${id}">${label}</button>`).join('')}</div>`;
     $('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;
     renderAdminPane();
@@ -98,7 +98,7 @@
     try{
       const data=await apiFetch('social-links.php?profileId='+encodeURIComponent(profileId));
       const current=Object.fromEntries((data.links||[]).map(x=>[x.platform,x]));
-      pane.innerHTML=`<div class="de-profile-head"><div><div class="section-title">Réseaux officiels · ${deEsc(data.profile.public_name)}</div><div class="muted">Facebook, YouTube et Snapchat peuvent être ajoutés manuellement. Seuls les liens confirmés à 90 % ou plus apparaissent dans la FI.</div></div><button class="btn" data-admin-tab="hub">Retour au Data Hub</button></div><div class="de-social-summary"><strong>${(data.links||[]).filter(x=>x.status==='verified'&&Number(x.confidence)>=90).length}</strong><span>liens validés sur ${DE.platforms.length} plateformes</span></div><div class="de-links">${DE.platforms.map(platform=>deLinkCard(profileId,platform,current[platform])).join('')}</div>`;
+      pane.innerHTML=`<div class="de-profile-head"><div><div class="section-title">Réseaux officiels · ${deEsc(data.profile.public_name)}</div><div class="muted">Ajoute ou corrige manuellement Facebook, YouTube, Instagram, TikTok, Snapchat et les autres plateformes. Seuls les liens confirmés à 90 % ou plus apparaissent dans la FI.</div></div><button class="btn" data-admin-tab="hub">Retour au Data Hub</button></div><div class="de-social-summary"><strong>${(data.links||[]).filter(x=>x.status==='verified'&&Number(x.confidence)>=90).length}</strong><span>liens validés sur ${DE.platforms.length} plateformes</span></div><div class="de-links">${DE.platforms.map(platform=>deLinkCard(profileId,platform,current[platform])).join('')}</div>`;
     }catch(err){pane.innerHTML=`<div class="de-error">${deEsc(err.message)}</div><button class="btn" data-admin-tab="hub">Retour</button>`;}
   }
 

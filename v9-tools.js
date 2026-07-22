@@ -15,21 +15,38 @@ function p50v9IsDirectPlatformLink(platform,url=''){
       Facebook:()=>h.endsWith('facebook.com')&&path.length>1&&!path.startsWith('/search'),
       Snapchat:()=>h.endsWith('snapchat.com')&&/^\/add\/[^/]+\/?$/.test(path),
       LinkedIn:()=>h.endsWith('linkedin.com')&&/^\/(?:in|company)\//.test(path),
-      X:()=> (h==='x.com'||h.endsWith('twitter.com'))&&/^\/[A-Za-z0-9_]+\/?$/.test(path)
+      X:()=> (h==='x.com'||h.endsWith('twitter.com'))&&/^\/[A-Za-z0-9_]+\/?$/.test(path),
+      Web:()=>/^https?:$/.test(u.protocol)&&Boolean(h)&&path!=='/'
     };return rules[platform]?rules[platform]():false;
   }catch{return false}
 }
-function p50v9OfficialLinks(p){const qualityOk=Number(p?.quality?.social||0)>=90;return Object.entries(p?.links||{}).filter(([platform,url])=>{if(!p50v9IsDirectPlatformLink(platform,url))return false;const checked=p?.linkChecks?.[platform]?.status;return qualityOk||checked==='ok'||checked==='blocked_but_exists';});}
+function p50v9OfficialLinks(p){const qualityOk=Number(p?.quality?.social||0)>=90;return Object.entries(p?.links||{}).filter(([platform,url])=>{const account=p?.socialAccounts?.[platform];if(account?.visible===false)return false;if(!p50v9IsDirectPlatformLink(platform,url))return false;const checked=p?.linkChecks?.[platform]?.status;return qualityOk||checked==='ok'||checked==='blocked_but_exists';});}
 function p50v9ExactContentLink(url=''){return /^https?:\/\//i.test(url)&&!p50v9IsGenericLink(url)}
 function p50v9ApplyPatch(){
+  const socialPlatforms=['Instagram','TikTok','Facebook','YouTube','Snapchat','X','LinkedIn','Web'];
   db.profiles.forEach(p=>{
-    p.linkChecks=p.linkChecks||{};p.links=p.links||{};
-    Object.entries(p.links).forEach(([platform,url])=>{if(!p.linkChecks[platform])p.linkChecks[platform]={status:p50v9IsDirectPlatformLink(platform,url)?'pending':'search_not_official',checkedAt:null};});
+    p.linkChecks=p.linkChecks||{};p.links=p.links||{};p.socialAccounts=p.socialAccounts||{};
+    socialPlatforms.forEach(platform=>{
+      const url=p.links[platform]||p.socialAccounts[platform]?.url||'';
+      if(url&&!p.links[platform])p.links[platform]=url;
+      if(!p.linkChecks[platform])p.linkChecks[platform]={status:url?(p50v9IsDirectPlatformLink(platform,url)?'pending':'search_not_official'):'invalid',checkedAt:null,message:url?'Validation requise':'Non renseigné'};
+      const previous=p.socialAccounts[platform]||{};
+      p.socialAccounts[platform]={
+        handle:String(previous.handle||''),
+        url:String(previous.url||url||''),
+        followers:Number(previous.followers||0),
+        visible:previous.visible!==false,
+        confirmed:previous.confirmed===true||['ok','blocked_but_exists'].includes(p.linkChecks[platform]?.status),
+        checkedAt:previous.checkedAt||p.linkChecks[platform]?.checkedAt||null,
+        status:previous.status||p.linkChecks[platform]?.status||'invalid',
+        message:previous.message||p.linkChecks[platform]?.message||''
+      };
+    });
     if(!p.photoPosition)p.photoPosition='50% 50%';
   });
   db.events=(db.events||[]).map(e=>({...e,coverStatus:e.coverStatus||'missing',coverUrl:e.coverUrl||'',coverCandidateUrl:e.coverCandidateUrl||'',coverSource:e.coverSource||'',coverNote:e.coverNote||''}));
   db.content.forEach(c=>{const ev=primaryEvent(c.profileId);if(ev&&p50v9ExactContentLink(ev.url)&&!p50v9ExactContentLink(c.url))c.url=ev.url;});
-  db.version=Math.max(Number(db.version||0),9);
+  db.version=Math.max(Number(db.version||0),11);
 }
 p50v9ApplyPatch();save();render();
 const p50v9CloudPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50v9ApplyPatch();save();render();clearInterval(p50v9CloudPatchTimer)}},500);
@@ -41,8 +58,14 @@ function p50v9StatusClass(status){return ['ok','blocked_but_exists'].includes(st
 function p50v9StatusText(status){return ({ok:'OFFICIEL',blocked_but_exists:'À CONFIRMER',pending:'NON TESTÉ',search_not_official:'RECHERCHE',wrong_platform:'MAUVAIS RÉSEAU',broken:'CASSÉ',invalid:'INVALIDE'})[status]||String(status||'NON TESTÉ').toUpperCase()}
 
 const p50v8RenderAdminPane=renderAdminPane;
-renderAdmin=function(){const menu=`<div class="admin-menu"><button class="btn ${ui.adminTab==='signals'?'primary':''}" data-admin-tab="signals">Signaux</button><button class="btn ${ui.adminTab==='profiles'?'primary':''}" data-admin-tab="profiles">Influenceurs</button><button class="btn ${ui.adminTab==='media'?'primary':''}" data-admin-tab="media">Médias</button><button class="btn ${ui.adminTab==='links'?'primary':''}" data-admin-tab="links">Liens officiels</button><button class="btn ${ui.adminTab==='news'?'primary':''}" data-admin-tab="news">Actualité</button><button class="btn ${ui.adminTab==='ranking'?'primary':''}" data-admin-tab="ranking">Classement</button><button class="btn ${ui.adminTab==='data'?'primary':''}" data-admin-tab="data">Données</button></div>`;$('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;renderAdminPane()}
-renderAdminPane=function(){if(ui.adminTab==='links')return p50v9RenderLinks();if(ui.adminTab==='news')return p50v9RenderNews();return p50v8RenderAdminPane()}
+renderAdmin=function(){const menu=`<div class="admin-menu"><button class="btn ${ui.adminTab==='signals'?'primary':''}" data-admin-tab="signals">Signaux</button><button class="btn ${ui.adminTab==='profiles'?'primary':''}" data-admin-tab="profiles">Influenceurs</button><button class="btn ${ui.adminTab==='links'?'primary':''}" data-admin-tab="links">Réseaux sociaux</button><button class="btn ${ui.adminTab==='media'?'primary':''}" data-admin-tab="media">Médias</button><button class="btn ${ui.adminTab==='news'?'primary':''}" data-admin-tab="news">Actualité</button><button class="btn ${ui.adminTab==='ranking'?'primary':''}" data-admin-tab="ranking">Classement</button><button class="btn ${ui.adminTab==='data'?'primary':''}" data-admin-tab="data">Données</button></div>`;$('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;renderAdminPane()}
+renderAdminPane=function(){if(ui.adminTab==='profiles')return p50v9RenderProfiles();if(ui.adminTab==='links')return p50v9RenderLinks();if(ui.adminTab==='news')return p50v9RenderNews();return p50v8RenderAdminPane()}
+
+function p50v9RenderProfiles(){
+  const pane=$('#adminPane');
+  pane.innerHTML=`<div class="media-hint"><strong>Gestion des influenceurs :</strong> modifie la fiche générale ou ouvre directement les réseaux sociaux à ajouter manuellement.</div><div class="admin-toolbar"><input id="profileSearch" placeholder="Rechercher un influenceur" style="padding:10px;border-radius:12px;border:1px solid var(--line);background:#0f130f;color:white"><button class="btn small" id="addProfileBtn">Ajouter un influenceur</button></div><div class="admin-table-wrap"><table class="admin-table" style="min-width:760px"><thead><tr><th>Nom</th><th>Zone</th><th>Score</th><th>Réseaux</th><th>Éligible</th><th>Actions</th></tr></thead><tbody id="profileAdminRows">${adminProfileRows(db.profiles)}</tbody></table></div>`;
+}
+adminProfileRows=function(list){const topIds=new Set(ranking().slice(0,50).map(p=>p.id));return list.map(p=>{const links=p50v9OfficialLinks(p),declared=Object.values(p.links||{}).filter(Boolean).length;return `<tr class="${topIds.has(p.id)?'is-top50':''}"><td><strong>${p.name}</strong>${topIds.has(p.id)?'<span class="top50-marker">TOP 50</span>':''}<div class="hub-detail">${p.handle||''}</div></td><td>${p.region}</td><td>${score(p)}</td><td><strong>${links.length}</strong> validé${links.length>1?'s':''}<div class="hub-detail">${declared} renseigné${declared>1?'s':''}</div></td><td>${p.eligible&&p.alive?'Oui':'Non'}</td><td><div class="profile-admin-actions"><button class="btn small edit-profile" data-id="${p.id}">Modifier la fiche</button><button class="btn small primary edit-profile-links" data-id="${p.id}">Ajouter les réseaux</button></div></td></tr>`}).join('')}
 
 mediaCard=function(kind,item){const isProfile=kind==='profile',name=isProfile?item.name:(profile(item.profileId)?.name+' · '+item.title),status=isProfile?item.photoStatus:item.coverStatus,url=isProfile?candidatePhoto(item):(item.coverUrl||item.coverCandidateUrl||''),source=isProfile?item.photoSource:item.coverSource,note=isProfile?item.photoNote:item.coverNote,fallback=isProfile?item.initials:(item.icon||'▶');return `<article class="media-card"><div class="media-preview ${isProfile?'':'cover'}"><span>${fallback}</span>${url?`<img src="${safeAttr(url)}" alt="${safeAttr(name)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:''}<span class="media-state ${status}">${mediaStatusText(status)}</span></div><div class="media-body"><h4>${name}</h4><div class="media-source">${source||'Aucune source enregistrée'}${note?`<br>${note}`:''}</div><div class="media-url-row"><input class="media-url-input" data-kind="${kind}" data-id="${item.id}" value="${safeAttr(url)}" placeholder="Coller une URL d’image"><button class="btn small media-save-url" data-kind="${kind}" data-id="${item.id}">Ajouter</button></div><div class="media-actions">${isProfile?`<button class="btn small media-discover" data-id="${item.id}">🔎 Rechercher gratuitement</button>`:`<button class="btn small event-preview" data-id="${item.id}">🎬 Analyser le lien</button>`}<button class="btn small primary media-validate" data-kind="${kind}" data-id="${item.id}">Valider</button><button class="btn small danger media-reject" data-kind="${kind}" data-id="${item.id}">Rejeter</button><label class="file-label">Importer${isProfile?' une photo':' une couverture'}<input type="file" accept="image/*" class="media-file" data-kind="${kind}" data-id="${item.id}"></label></div></div></article>`}
 renderMediaPane=function(pane){const order={pending:0,missing:1,rejected:2,validated:3},profiles=[...db.profiles].sort((a,b)=>(order[a.photoStatus]??9)-(order[b.photoStatus]??9)),events=[...db.events].sort((a,b)=>(order[a.coverStatus]??9)-(order[b.coverStatus]??9));pane.innerHTML=`<div class="media-hint"><strong>Règle stricte :</strong> aucune photo ou couverture n’est téléchargée sans confirmation humaine qu’elle représente le bon profil ou le bon contenu.</div><div class="free-tools"><span class="free-pill">Openverse</span><span class="free-pill">Wikimedia Commons</span><span class="free-pill">Wikipédia</span><span class="free-pill">TikTok oEmbed</span><span class="free-pill">YouTube oEmbed</span></div><div class="admin-toolbar"><button class="btn primary" id="bulkPhotoSearch">Rechercher les photos du Top 10</button><button class="btn" id="bulkCoverSearch">Analyser les couvertures du Top 10</button></div><div class="section-head"><div class="section-title">Photos des influenceurs</div><span class="muted">${profiles.filter(x=>x.photoStatus==='pending').length} à valider</span></div><div class="media-grid">${profiles.map(p=>mediaCard('profile',p)).join('')}</div><div class="section-head" style="margin-top:22px"><div class="section-title">Couvertures des éléments déclencheurs</div><span class="muted">Vidéos, articles et événements</span></div><div class="media-grid">${events.map(e=>mediaCard('event',e)).join('')}</div>`}
@@ -54,14 +77,44 @@ function p50v9RenderLinks(){
   if(!PASS50_V9.linksProfileId||!all.some(p=>p.id===PASS50_V9.linksProfileId))PASS50_V9.linksProfileId=(ranking()[0]||all[0])?.id||null;
   const selected=profile(PASS50_V9.linksProfileId)||filtered[0]||all[0];if(selected)PASS50_V9.linksProfileId=selected.id;
   const verified=all.reduce((n,p)=>n+p50v9OfficialLinks(p).length,0);
-  pane.innerHTML=`<div class="official-links-shell"><div class="media-hint"><strong>Réseaux officiels :</strong> sélectionne un influenceur, colle les URL exactes, confirme-les puis enregistre. Facebook et YouTube sont disponibles sur chaque FI.</div><div class="official-links-toolbar"><div class="field"><label>Rechercher un influenceur</label><input id="officialLinksSearch" value="${safeAttr(PASS50_V9.linksSearch)}" placeholder="Nom ou identifiant"></div><div class="field"><label>Influenceur</label><select id="officialLinksProfile">${filtered.map(p=>`<option value="${p.id}" ${p.id===selected?.id?'selected':''}>${p.name}</option>`).join('')}</select></div><div class="official-links-kpi"><strong>${all.length}</strong><span>profils suivis</span></div><div class="official-links-kpi"><strong>${verified}</strong><span>liens validés</span></div></div>${selected?p50v9LinkCard(selected):'<div class="tool-empty">Aucun profil trouvé.</div>'}</div>`;
+  pane.innerHTML=`<div class="official-links-shell"><div class="media-hint"><strong>Ajout manuel des réseaux sociaux :</strong> sélectionne un influenceur, renseigne son identifiant, l’URL officielle et son nombre d’abonnés. Active uniquement les comptes que tu souhaites afficher sur sa fiche publique.</div><div class="official-links-toolbar"><div class="field"><label>Rechercher un influenceur</label><input id="officialLinksSearch" value="${safeAttr(PASS50_V9.linksSearch)}" placeholder="Nom ou identifiant"></div><div class="field"><label>Influenceur</label><select id="officialLinksProfile">${filtered.map(p=>`<option value="${p.id}" ${p.id===selected?.id?'selected':''}>${p.name}</option>`).join('')}</select></div><div class="official-links-kpi"><strong>${all.length}</strong><span>profils suivis</span></div><div class="official-links-kpi"><strong>${verified}</strong><span>liens validés</span></div></div>${selected?p50v9LinkCard(selected):'<div class="tool-empty">Aucun profil trouvé.</div>'}</div>`;
 }
+function p50v9Account(p,platform){
+  const check=p.linkChecks?.[platform]||{status:'invalid',checkedAt:null,message:''},stored=p.socialAccounts?.[platform]||{};
+  return {handle:String(stored.handle||''),url:String(stored.url||p.links?.[platform]||''),followers:Number(stored.followers||0),visible:stored.visible!==false,confirmed:stored.confirmed===true||['ok','blocked_but_exists'].includes(check.status),checkedAt:stored.checkedAt||check.checkedAt||null,status:stored.status||check.status||'invalid',message:stored.message||check.message||''};
+}
+function p50v9Followers(value){const n=Number(value||0);return n>0?new Intl.NumberFormat('fr-FR').format(n):'Non renseigné'}
 function p50v9LinkCard(p){
-  const order=['Instagram','TikTok','Facebook','YouTube','Snapchat','X','LinkedIn','Web'],plats=[...new Set([...order,...(p.platforms||[]),...Object.keys(p.links||{})])];
-  return `<article class="link-card official-editor" data-link-profile="${p.id}"><div class="link-card-head"><div><div class="official-profile-name">${p.name}${ranking().slice(0,50).some(x=>x.id===p.id)?'<span class="top50-marker">TOP 50</span>':''}</div><div class="muted">${p.handle||'Identifiant non renseigné'} · ${p.category}</div></div><div class="tool-actions"><button class="btn small" id="openLinksFI" data-id="${p.id}">Ouvrir la FI</button><button class="btn small primary save-links" data-id="${p.id}">Enregistrer</button><button class="btn small check-links" data-id="${p.id}">Vérifier</button></div></div><div class="official-platform-grid">${plats.map(platform=>{const check=p.linkChecks?.[platform]||{status:'pending'},url=p.links?.[platform]||'',confirmed=['ok','blocked_but_exists'].includes(check.status);return `<section class="official-platform-row"><div class="platform-label"><span class="platform-icon">${p50v9PlatformIcon(platform)}</span><div><strong>${platform}</strong><span class="link-state ${p50v9StatusClass(check.status)}" title="${safeAttr(check.message||'')}">${p50v9StatusText(check.status)}</span></div></div><div class="platform-input"><input data-link-platform="${platform}" value="${safeAttr(url)}" placeholder="URL officielle exacte"><label class="official-confirm"><input type="checkbox" data-link-confirm="${platform}" ${confirmed?'checked':''}> Je confirme le compte officiel</label></div>${url?`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">Ouvrir ↗</a>`:'<span class="muted">Non renseigné</span>'}</section>`}).join('')}</div></article>`;
+  const order=['Instagram','TikTok','Facebook','YouTube','Snapchat','X','LinkedIn','Web'],plats=[...new Set([...order,...(p.platforms||[]),...Object.keys(p.links||{}),...Object.keys(p.socialAccounts||{})])];
+  return `<article class="link-card official-editor" data-link-profile="${p.id}"><div class="link-card-head"><div><div class="official-profile-name">${p.name}${ranking().slice(0,50).some(x=>x.id===p.id)?'<span class="top50-marker">TOP 50</span>':''}</div><div class="muted">${p.handle||'Identifiant non renseigné'} · ${p.category}</div></div><div class="tool-actions"><button class="btn small" id="openLinksFI" data-id="${p.id}">Ouvrir la FI</button><button class="btn small primary save-links" data-id="${p.id}">Enregistrer les réseaux</button><button class="btn small check-links" data-id="${p.id}">Tout vérifier</button></div></div><div class="official-platform-grid">${plats.map(platform=>{const account=p50v9Account(p,platform),direct=p50v9IsDirectPlatformLink(platform,account.url);return `<section class="official-platform-row" data-platform-row="${platform}"><div class="platform-label"><span class="platform-icon">${p50v9PlatformIcon(platform)}</span><div><strong>${platform}</strong><span class="link-state ${p50v9StatusClass(account.status)}" title="${safeAttr(account.message||'')}">${p50v9StatusText(account.status)}</span></div></div><div class="platform-editor"><div class="platform-input-grid"><label><span>Nom du compte / identifiant</span><input data-link-handle="${platform}" value="${safeAttr(account.handle)}" placeholder="@identifiant"></label><label class="platform-url-field"><span>URL officielle exacte</span><input type="url" data-link-platform="${platform}" value="${safeAttr(account.url)}" placeholder="https://…"></label><label><span>Nombre d’abonnés</span><input type="number" min="0" step="1" data-link-followers="${platform}" value="${account.followers||''}" placeholder="0"></label></div><div class="platform-options"><label class="official-confirm"><input type="checkbox" data-link-visible="${platform}" ${account.visible?'checked':''}> Afficher sur la fiche publique</label><label class="official-confirm"><input type="checkbox" data-link-confirm="${platform}" ${account.confirmed?'checked':''}> Je confirme le compte officiel</label></div><div class="platform-check-meta">Abonnés : ${p50v9Followers(account.followers)} · Dernière vérification : ${account.checkedAt?new Date(account.checkedAt).toLocaleString('fr-FR'):'jamais'}${account.url&&!direct?' · URL non directe ou générique':''}</div></div><div class="platform-row-actions">${account.url?`<a class="btn small" href="${safeAttr(account.url)}" target="_blank" rel="noopener">Ouvrir ↗</a><button class="btn small check-one-link" data-id="${p.id}" data-platform="${platform}">Tester le lien</button>`:'<span class="muted">Non renseigné</span>'}</div></section>`}).join('')}</div></article>`;
 }
-function p50v9SaveLinks(id,card){const p=profile(id);if(!p||!card)return;card.querySelectorAll('[data-link-platform]').forEach(input=>{const platform=input.dataset.linkPlatform,url=input.value.trim(),confirmed=card.querySelector(`[data-link-confirm="${platform}"]`)?.checked===true;if(url)p.links[platform]=url;else delete p.links[platform];p.linkChecks[platform]={status:url&&confirmed&&p50v9IsDirectPlatformLink(platform,url)?'ok':url?'pending':'invalid',checkedAt:confirmed?new Date().toISOString():null,message:confirmed?'Compte officiel confirmé manuellement':'Validation requise'};});save();render();p50v9RenderLinks();toast('Liens officiels enregistrés')}
-async function p50v9CheckLinks(id,card){const p=profile(id);if(!p||!card)return;p50v9SaveLinks(id,card);const fresh=document.querySelector(`[data-link-profile="${id}"]`),btn=fresh?.querySelector('.check-links');if(btn){btn.disabled=true;btn.textContent='Vérification…';}try{const data=await apiFetch('link-check.php',{method:'POST',body:{links:p.links}});p.linkChecks={...p.linkChecks,...Object.fromEntries(Object.entries(data.results||{}).map(([k,v])=>[k,{...v,checkedAt:data.checkedAt}]))};save();p50v9RenderLinks();toast('Liens contrôlés')}catch(err){toast(err.message||'Contrôle impossible');p50v9RenderLinks()}}
+function p50v9SaveLinks(id,card,options={}){
+  const p=profile(id);if(!p||!card)return false;
+  p.links=p.links||{};p.linkChecks=p.linkChecks||{};p.socialAccounts=p.socialAccounts||{};p.platforms=p.platforms||[];
+  const invalid=[];let verified=0;
+  card.querySelectorAll('[data-link-platform]').forEach(input=>{
+    const platform=input.dataset.linkPlatform,url=input.value.trim(),handle=card.querySelector(`[data-link-handle="${platform}"]`)?.value.trim()||'',followers=Math.max(0,Number(card.querySelector(`[data-link-followers="${platform}"]`)?.value||0)),visible=card.querySelector(`[data-link-visible="${platform}"]`)?.checked!==false,confirmed=card.querySelector(`[data-link-confirm="${platform}"]`)?.checked===true,direct=url?p50v9IsDirectPlatformLink(platform,url):false,previous=p.socialAccounts[platform]||{};
+    let status='invalid',message='Non renseigné',checkedAt=previous.checkedAt||p.linkChecks[platform]?.checkedAt||null;
+    if(url&&confirmed&&direct){status='ok';message='Compte officiel confirmé manuellement';checkedAt=new Date().toISOString();verified++;}
+    else if(url&&confirmed&&!direct){status='invalid';message='Le lien doit pointer directement vers le compte officiel';invalid.push(platform);}
+    else if(url){status=direct?'pending':'search_not_official';message=direct?'Confirmation officielle requise':'Lien de recherche ou page générique refusé';}
+    if(url){p.links[platform]=url;if(!p.platforms.includes(platform))p.platforms.push(platform);}else{delete p.links[platform];p.platforms=p.platforms.filter(x=>x!==platform);}
+    p.linkChecks[platform]={status,checkedAt,message};
+    p.socialAccounts[platform]={handle,url,followers,visible,confirmed:confirmed&&direct,checkedAt,status,message};
+  });
+  p.quality=p.quality||{};p.quality.social=verified>0?Math.max(90,Number(p.quality.social||0)):0;
+  save();render();p50v9RenderLinks();
+  if(!options.silent)toast(invalid.length?`Enregistré, mais ${invalid.join(', ')} : lien officiel direct requis`:'Réseaux sociaux enregistrés');
+  return invalid.length===0;
+}
+async function p50v9CheckLinks(id,card){
+  const p=profile(id);if(!p||!card)return;p50v9SaveLinks(id,card,{silent:true});const fresh=document.querySelector(`[data-link-profile="${id}"]`),btn=fresh?.querySelector('.check-links');if(btn){btn.disabled=true;btn.textContent='Vérification…';}
+  try{const data=await apiFetch('link-check.php',{method:'POST',body:{links:p.links}});p.linkChecks={...p.linkChecks,...Object.fromEntries(Object.entries(data.results||{}).map(([k,v])=>[k,{...v,checkedAt:data.checkedAt}]))};Object.entries(data.results||{}).forEach(([platform,v])=>{p.socialAccounts[platform]={...p50v9Account(p,platform),status:v.status,message:v.message||'',checkedAt:data.checkedAt,confirmed:['ok','blocked_but_exists'].includes(v.status)};});save();p50v9RenderLinks();toast('Liens contrôlés');}catch(err){toast(err.message||'Contrôle impossible');p50v9RenderLinks()}
+}
+async function p50v9CheckSingleLink(id,platform){
+  const p=profile(id),card=document.querySelector(`[data-link-profile="${id}"]`);if(!p||!card)return;p50v9SaveLinks(id,card,{silent:true});const url=p.links?.[platform];if(!url)return toast('Renseigne d’abord une URL');
+  try{const data=await apiFetch('link-check.php',{method:'POST',body:{links:{[platform]:url}}}),result=data.results?.[platform]||{status:'pending',message:'Aucun résultat'};p.linkChecks[platform]={...result,checkedAt:data.checkedAt||new Date().toISOString()};p.socialAccounts[platform]={...p50v9Account(p,platform),status:result.status,message:result.message||'',checkedAt:p.linkChecks[platform].checkedAt,confirmed:['ok','blocked_but_exists'].includes(result.status)};save();p50v9RenderLinks();toast(`Lien ${platform} contrôlé`);}catch(err){toast(err.message||'Contrôle impossible')}
+}
 
 function p50v9RenderNews(){
   const pane=$('#adminPane'),profiles=[...db.profiles].sort((a,b)=>a.name.localeCompare(b.name,'fr'));
@@ -102,8 +155,10 @@ document.addEventListener('click',async e=>{
   if(e.target.matches('.event-preview')){try{await p50v9PreviewEvent(e.target.dataset.id)}catch(err){toast(err.message||'Prévisualisation impossible')}}
   if(e.target.id==='proposeCover')p50v9ProposeCover();if(e.target.id==='downloadCover')await p50v9DownloadCover();
   if(e.target.id==='bulkPhotoSearch')await p50v9BulkPhotos();if(e.target.id==='bulkCoverSearch')await p50v9BulkCovers();
+  const profileLinksBtn=e.target.closest('.edit-profile-links');if(profileLinksBtn){PASS50_V9.linksProfileId=profileLinksBtn.dataset.id;ui.adminTab='links';renderAdmin();}
   const saveBtn=e.target.closest('.save-links');if(saveBtn){const card=saveBtn.closest('[data-link-profile]');p50v9SaveLinks(saveBtn.dataset.id,card)}
   const checkBtn=e.target.closest('.check-links');if(checkBtn){const card=checkBtn.closest('[data-link-profile]');await p50v9CheckLinks(checkBtn.dataset.id,card)}
+  const checkOne=e.target.closest('.check-one-link');if(checkOne)await p50v9CheckSingleLink(checkOne.dataset.id,checkOne.dataset.platform);
   if(e.target.id==='checkTop10Links'){for(const p of ranking().slice(0,10)){const card=document.querySelector(`[data-link-profile="${p.id}"]`);if(card)await p50v9CheckLinks(p.id,card)}toast('Top 10 contrôlé')}
   if(e.target.id==='searchNewsBtn')await p50v9SearchNews();if(e.target.matches('.use-news'))p50v9UseNews(Number(e.target.dataset.index));
   if(e.target.id==='openLinksFI')openProfile(e.target.dataset.id);
@@ -120,13 +175,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=2';
+    css.href='./data-engine-ui.css?v=3';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=2';
+    js.src='./data-engine-ui.js?v=3';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
