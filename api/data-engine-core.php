@@ -590,7 +590,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
 }
 
 function p50_de_publish_all(?string $userId=null): int {
-    $profiles=p50_de_registry_profiles(null,1000,0);$count=0;
+    $profiles=p50_de_registry_profiles(null,100,0);$count=0;
     foreach($profiles as $profile)if(p50_de_publish_profile((string)$profile['profile_id'],$userId))$count++;
     return $count;
 }

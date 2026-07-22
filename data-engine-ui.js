@@ -1,9 +1,9 @@
 (function(){
   const fallbackRenderAdminPane=renderAdminPane;
-  const DE={hub:null,loading:false,offset:0,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','X','Snapchat','Web']};
+  const DE={hub:null,loading:false,offset:0,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:''};
 
   renderAdmin=function(){
-    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Réseaux sociaux'],['news','Actualité'],['live','LIVE'],['hub','Data Hub'],['ranking','Classement'],['data','Données']];
+    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['hub','Data Hub'],['ranking','Classement'],['data','Données']];
     const menu=`<div class="admin-menu">${items.map(([id,label])=>`<button class="btn ${ui.adminTab===id?'primary':''}" data-admin-tab="${id}">${label}</button>`).join('')}</div>`;
     $('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;
     renderAdminPane();
@@ -61,7 +61,7 @@
     const birth=p.facts?.birth_date;
     const social=(p.socialLinks||[]).filter(x=>x.status==='verified'&&Number(x.confidence)>=90);
     const run=p.lastRun;
-    const inTop50=ranking().slice(0,50).some(x=>x.id===p.id);return `<tr class="${inTop50?'is-top50':''}"><td><strong>${deEsc(p.name)}</strong>${inTop50?'<span class="top50-marker">TOP 50</span>':''}<div class="hub-detail">${deEsc(p.handle||'')}</div></td><td><div class="de-progress"><i style="width:${Number(p.completeness||0)}%"></i></div><div class="hub-detail">${Number(p.completeness||0)} %</div></td><td>${birth?deStatus('verified',birth.confidence):deStatus('empty',0)}</td><td>${social.length?`<span class="de-score ok">${social.length}</span> vérifié${social.length>1?'s':''}`:deStatus('empty',0)}</td><td><div class="de-run">${deTime(p.lastCollectedAt)}${run?.status==='error'?'<br><span style="color:#ff8080">Erreur de collecte</span>':''}</div></td><td><div class="de-row-actions"><button class="btn small de-collect-one" data-id="${deEsc(p.id)}">Collecter</button><button class="btn small de-social" data-id="${deEsc(p.id)}">Réseaux</button><button class="btn small de-birth" data-id="${deEsc(p.id)}">Naissance</button></div></td></tr>`;
+    const rankIndex=typeof ranking==='function'?ranking().findIndex(x=>x.id===p.id):-1;const top50=rankIndex>=0&&rankIndex<50;return `<tr><td><strong>${deEsc(p.name)}</strong>${top50?'<span class="de-top50-pill">TOP 50</span>':''}<div class="hub-detail">${rankIndex>=0?'#'+(rankIndex+1)+' · ':''}${deEsc(p.handle||'')}</div></td><td><div class="de-progress"><i style="width:${Number(p.completeness||0)}%"></i></div><div class="hub-detail">${Number(p.completeness||0)} %</div></td><td>${birth?deStatus('verified',birth.confidence):deStatus('empty',0)}</td><td>${social.length?`<span class="de-score ok">${social.length}</span> vérifié${social.length>1?'s':''}`:deStatus('empty',0)}</td><td><div class="de-run">${deTime(p.lastCollectedAt)}${run?.status==='error'?'<br><span style="color:#ff8080">Erreur de collecte</span>':''}</div></td><td><div class="de-row-actions"><button class="btn small de-collect-one" data-id="${deEsc(p.id)}">Collecter</button><button class="btn small de-social" data-id="${deEsc(p.id)}">Réseaux</button><button class="btn small de-birth" data-id="${deEsc(p.id)}">Naissance</button></div></td></tr>`;
   }
 
   async function deAction(button,work,label){
@@ -94,17 +94,21 @@
   }
 
   async function deOpenSocial(profileId){
+    DE.socialProfileId=profileId;
     const pane=$('#adminPane');pane.innerHTML='<div class="de-loading">Chargement des réseaux…</div>';
     try{
       const data=await apiFetch('social-links.php?profileId='+encodeURIComponent(profileId));
       const current=Object.fromEntries((data.links||[]).map(x=>[x.platform,x]));
-      pane.innerHTML=`<div class="de-profile-head"><div><div class="section-title">Réseaux officiels · ${deEsc(data.profile.public_name)}</div><div class="muted">Ajoute ou corrige manuellement Facebook, YouTube, Instagram, TikTok, Snapchat et les autres plateformes. Seuls les liens confirmés à 90 % ou plus apparaissent dans la FI.</div></div><button class="btn" data-admin-tab="hub">Retour au Data Hub</button></div><div class="de-social-summary"><strong>${(data.links||[]).filter(x=>x.status==='verified'&&Number(x.confidence)>=90).length}</strong><span>liens validés sur ${DE.platforms.length} plateformes</span></div><div class="de-links">${DE.platforms.map(platform=>deLinkCard(profileId,platform,current[platform])).join('')}</div>`;
+      const all=(DE.hub?.profiles||[]).slice().sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+      const options=all.map(p=>{const rank=typeof ranking==='function'?ranking().findIndex(x=>x.id===p.id):-1;const label=(rank>=0&&rank<50?'TOP 50 · ':'')+(rank>=0?'#'+(rank+1)+' · ':'')+p.name;return `<option value="${deEsc(p.id)}" ${p.id===profileId?'selected':''}>${deEsc(label)}</option>`}).join('');
+      const rank=typeof ranking==='function'?ranking().findIndex(x=>x.id===profileId):-1;
+      pane.innerHTML=`<div class="de-social-shell"><div class="de-profile-head"><div><div class="section-title">Réseaux officiels · ${deEsc(data.profile.public_name)}${rank>=0&&rank<50?'<span class="de-top50-pill">TOP 50</span>':''}</div><div class="muted">Facebook, YouTube et Snapchat sont toujours disponibles pour la saisie manuelle. Un lien n’est public qu’après confirmation et avec une confiance ≥ ${data.threshold||90} %.</div></div><button class="btn" data-admin-tab="hub">Retour au Data Hub</button></div><div class="de-social-switcher"><label>Changer rapidement de FI<select id="deSocialProfileSelect">${options}</select></label><button class="btn" data-admin-tab="hub">Voir la liste complète</button></div><div class="de-links">${DE.platforms.map(platform=>deLinkCard(profileId,platform,current[platform])).join('')}</div></div>`;
     }catch(err){pane.innerHTML=`<div class="de-error">${deEsc(err.message)}</div><button class="btn" data-admin-tab="hub">Retour</button>`;}
   }
 
   function deLinkCard(profileId,platform,link){
-    const status=link?.status||'empty',confidence=Number(link?.confidence||0),url=link?.url||'',icon=({Instagram:'◎',TikTok:'♪',Facebook:'f',YouTube:'▶',Snapchat:'◉',X:'𝕏',Web:'⌂'})[platform]||'•';
-    return `<article class="de-link-card"><div class="de-link-head"><div class="de-platform-title"><span>${icon}</span><div><strong>${deEsc(platform)}</strong><small>${url?'URL enregistrée':'À renseigner'}</small></div></div>${deStatus(status,confidence)}</div><form class="de-link-form" data-profile="${deEsc(profileId)}" data-platform="${deEsc(platform)}"><input type="url" name="url" value="${deEsc(url)}" placeholder="Colle l’URL officielle exacte" required><button class="btn primary" type="submit">Valider</button><label class="de-confirm"><input type="checkbox" name="confirmedOfficial" required> Je confirme qu’il s’agit du compte officiel de cet influenceur.</label></form>${url?`<div class="de-link-meta">${deEsc(url)}${link?.checked_at?` · contrôlé ${deTime(link.checked_at)}`:''}</div><div class="de-link-actions"><a class="btn small" href="${deEsc(url)}" target="_blank" rel="noopener">Ouvrir le compte ↗</a><button class="btn small danger de-reject-link" data-profile="${deEsc(profileId)}" data-platform="${deEsc(platform)}">Rejeter</button></div>`:''}</article>`;
+    const status=link?.status||'empty',confidence=Number(link?.confidence||0),url=link?.url||'';
+    const icons={Instagram:'◎',TikTok:'♪',Facebook:'f',YouTube:'▶',Snapchat:'◉',X:'𝕏',Web:'↗'};return `<article class="de-link-card"><div class="de-link-head"><div class="de-platform-name"><span class="de-platform-icon">${icons[platform]||'•'}</span><strong>${deEsc(platform)}</strong></div>${deStatus(status,confidence)}</div><form class="de-link-form" data-profile="${deEsc(profileId)}" data-platform="${deEsc(platform)}"><input type="url" name="url" value="${deEsc(url)}" placeholder="Colle l’URL exacte du compte officiel" required><label class="de-confirm"><input type="checkbox" name="confirmedOfficial" required> Je confirme qu’il s’agit du compte officiel de cette FI.</label><button class="btn primary" type="submit">VALIDER LE LIEN</button></form>${url?`<div class="de-link-meta">${deEsc(url)}${link?.checked_at?` · contrôlé ${deTime(link.checked_at)}`:''}</div><div class="de-link-actions"><a class="btn small" href="${deEsc(url)}" target="_blank" rel="noopener">Ouvrir ↗</a><button class="btn small danger de-reject-link" data-profile="${deEsc(profileId)}" data-platform="${deEsc(platform)}">Rejeter</button></div>`:''}</article>`;
   }
 
   document.addEventListener('click',async e=>{
@@ -123,6 +127,8 @@
       }
     }catch(err){console.error(err);toast(err.message||'Action impossible');}
   });
+
+  document.addEventListener('change',async e=>{if(e.target.id==='deSocialProfileSelect')await deOpenSocial(e.target.value);});
 
   document.addEventListener('submit',async e=>{
     if(e.target.id==='deBirthForm'){
