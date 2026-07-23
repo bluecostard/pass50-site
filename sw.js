@@ -1,4 +1,4 @@
-const CACHE='pass50-v14-hero-images-__BUILD_ID__';
+const CACHE='pass50-v15-hero-lighter-overlay-__BUILD_ID__';
 const ASSETS=[
   './',
   './index.html',
@@ -7,7 +7,7 @@ const ASSETS=[
   './assets/pass50-wordmark.png',
   './assets/pass50-logo-email.png',
   './v9-tools.css',
-  './v9-tools.js?v=14',
+  './v9-tools.js?v=15',
   './pass50_nouveaux_candidats_85_v2.json?v=13',
   './data-engine-ui.js',
   './assets/hero-media-1.jpg',
