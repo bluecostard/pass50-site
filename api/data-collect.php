@@ -13,7 +13,15 @@ $profileId=trim((string)($in['profileId']??''));
 $limit=max(1,min(5,(int)($in['limit']??5)));
 $deep=!array_key_exists('deep',$in)||!empty($in['deep']);
 $publish=!array_key_exists('publishVerified',$in)||!empty($in['publishVerified']);
-$profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null);
+$excludeRaw=$in['excludeIds']??[];
+$excludeIds=[];
+if(is_array($excludeRaw)){
+    foreach(array_slice($excludeRaw,0,500) as $candidate){
+        $candidate=trim((string)$candidate);
+        if($candidate!==''&&preg_match('/^[A-Za-z0-9._:-]{1,120}$/',$candidate))$excludeIds[$candidate]=true;
+    }
+}
+$profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null,array_keys($excludeIds));
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
 foreach($profiles as $profile){
     $run=p50_de_begin_run((string)$profile['profile_id'],'auto_enrichment_v22',$user['id'],['deep'=>$deep]);

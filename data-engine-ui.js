@@ -79,16 +79,20 @@
     if(DE.autoRunning)return;DE.autoRunning=true;DE.stopRequested=false;DE.autoSeen=new Set();DE.autoTarget=Number(DE.hub?.kpis?.profiles||0);DE.autoMessage='Démarrage du moteur…';deSetAutoUi();deAutoProgress();
     try{
       while(!DE.stopRequested&&DE.autoSeen.size<DE.autoTarget){
-        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,publishVerified:true}});
-        const ids=(data.processedIds||[]).map(String);if(!ids.length)break;
+        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,publishVerified:true,excludeIds:[...DE.autoSeen]}});
+        const ids=(data.processedIds||[]).map(String);if(!ids.length){
+          DE.autoMessage=DE.autoSeen.size>=DE.autoTarget?'Tous les profils ont été parcourus.':'Aucun autre profil disponible dans le registre actif.';
+          break;
+        }
         const before=DE.autoSeen.size;ids.forEach(id=>DE.autoSeen.add(id));
         DE.hub=data.hub;DE.autoMessage=`Dernier lot : ${data.processed} profil(s), ${data.found} donnée(s) trouvée(s), ${data.verified} vérifiée(s).`;deDrawHub();
         await loadCloudState();render();
         if(DE.autoSeen.size===before)break;
         await new Promise(resolve=>setTimeout(resolve,250));
       }
-      DE.autoMessage=DE.stopRequested?'Enrichissement arrêté après le lot en cours.':'Tour complet terminé. Les données fiables ont été publiées.';
-      toast(DE.stopRequested?'Enrichissement arrêté':`${DE.autoSeen.size} profils parcourus par le moteur`);
+      const complete=DE.autoSeen.size>=DE.autoTarget;
+      DE.autoMessage=DE.stopRequested?'Enrichissement arrêté après le lot en cours.':complete?'Tour complet terminé. Les données fiables ont été publiées.':`Parcours interrompu à ${DE.autoSeen.size}/${DE.autoTarget}. Relance le moteur pour reprendre.`;
+      toast(DE.stopRequested?'Enrichissement arrêté':complete?`${DE.autoSeen.size} profils parcourus par le moteur`:`${DE.autoSeen.size}/${DE.autoTarget} profils parcourus`);
     }catch(err){console.error(err);DE.autoMessage=err.message||'Le moteur a rencontré une erreur.';toast(DE.autoMessage);}
     finally{DE.autoRunning=false;DE.stopRequested=false;deSetAutoUi();deAutoProgress();await deLoadHub(true);}
   }

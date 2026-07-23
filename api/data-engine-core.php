@@ -248,10 +248,23 @@ function p50_de_registry_profiles(?string $profileId = null, int $limit = 1000, 
  * Sélectionne en priorité les profils jamais collectés, puis les plus anciens.
  * Le moteur travaille ainsi sur toute la base, y compris les profils non classables.
  */
-function p50_de_profiles_for_collection(int $limit = 5, ?string $profileId = null): array {
+function p50_de_profiles_for_collection(int $limit = 5, ?string $profileId = null, array $excludeIds = []): array {
     p50_de_ensure_schema();
     if ($profileId !== null && $profileId !== '') return p50_de_registry_profiles($profileId,1,0,false);
     $limit=max(1,min(10,$limit));
+    $exclude=[];
+    foreach(array_slice($excludeIds,0,500) as $candidate){
+        $candidate=trim((string)$candidate);
+        if($candidate!==''&&preg_match('/^[A-Za-z0-9._:-]{1,120}$/',$candidate))$exclude[$candidate]=true;
+    }
+    $params=[];
+    $where='r.alive=1';
+    if($exclude){
+        $ids=array_keys($exclude);
+        $where.=' AND r.profile_id NOT IN ('.implode(',',array_fill(0,count($ids),'?')).')';
+        $params=array_merge($params,$ids);
+    }
+    $priority="'census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey','census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo','census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show','census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man'";
     $sql="SELECT r.*,runs.last_run_at
           FROM p50_profile_registry r
           LEFT JOIN (
@@ -259,12 +272,14 @@ function p50_de_profiles_for_collection(int $limit = 5, ?string $profileId = nul
               FROM p50_collection_runs
               GROUP BY profile_id
           ) runs ON runs.profile_id=r.profile_id
-          WHERE r.alive=1
-          ORDER BY (r.profile_id IN ('census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey','census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo','census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show','census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man')) DESC,
-                   CASE WHEN r.profile_id IN ('census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey','census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo','census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show','census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man') AND (runs.last_run_at IS NULL OR runs.last_run_at<DATE_SUB(NOW(),INTERVAL 6 HOUR)) THEN 0 ELSE 1 END ASC,
-                   (runs.last_run_at IS NOT NULL) ASC,runs.last_run_at ASC,r.public_name ASC
+          WHERE $where
+          ORDER BY CASE WHEN runs.last_run_at IS NULL THEN 0 ELSE 1 END ASC,
+                   CASE WHEN r.profile_id IN ($priority) AND (runs.last_run_at IS NULL OR runs.last_run_at<DATE_SUB(NOW(),INTERVAL 6 HOUR)) THEN 0 ELSE 1 END ASC,
+                   runs.last_run_at ASC,r.public_name ASC
           LIMIT $limit";
-    return db()->query($sql)->fetchAll();
+    $stmt=db()->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
 }
 
 function p50_de_begin_run(?string $profileId, string $collector, ?string $userId, array $metadata = []): array {
