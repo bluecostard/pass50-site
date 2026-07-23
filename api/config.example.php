@@ -31,6 +31,12 @@ return [
         // Facultatif : ajoutez une valeur longue et aléatoire avant d'activer un cron externe.
         'cron_token' => '',
         'batch_size' => 5,
+        // Radar LIVE : nombre de chaînes YouTube contrôlées à chaque passage.
+        'live_batch_size' => 6,
+        // Intervalle minimum entre deux passages du radar public.
+        'live_refresh_seconds' => 50,
+        // Sécurité : un live automatique non revu depuis ce délai est retiré.
+        'live_stale_minutes' => 45,
     ],
     'upload' => [
         'max_bytes' => 5 * 1024 * 1024,
