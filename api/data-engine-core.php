@@ -435,6 +435,7 @@ function p50_de_normalize_social_url(string $platform, string $url): string {
     elseif ($platform === 'snapchat') $host='snapchat.com';
     $query = '';
     if ($platform === 'web' && !empty($parts['query'])) $query='?'.$parts['query'];
+    if ($platform === 'facebook' && strtolower(trim($path,'/')) === 'profile.php' && !empty($parts['query'])) { parse_str((string)$parts['query'],$fbq); if (!empty($fbq['id']) && ctype_digit((string)$fbq['id'])) $query='?id='.(string)$fbq['id']; }
     return $scheme.'://'.$host.$path.$query;
 }
 
@@ -451,7 +452,7 @@ function p50_de_direct_social_path(string $platform, string $url): bool {
         'instagram' => count($segments)===1 && !in_array($first,['accounts','about','developer','developers','direct','directory','explore','legal','privacy','reel','reels','stories','terms'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1,
         'tiktok' => count($segments)===1 && preg_match('/^@[A-Za-z0-9._-]+$/',$segments[0])===1,
         'youtube' => preg_match('#^(@[A-Za-z0-9._-]+|(channel|c|user)/[A-Za-z0-9._-]+)$#i',$path)===1,
-        'facebook' => count($segments)===1 && !in_array($first,['login','home','watch','groups','marketplace','gaming','events','reel','reels','share','sharer','photo','photos','videos','help','privacy','settings'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1,
+        'facebook' => (count($segments)===1 && !in_array($first,['login','home','watch','groups','marketplace','gaming','events','reel','reels','share','sharer','photo','photos','videos','help','privacy','settings','checkpoint'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1) || ($first==='profile.php' && isset($segments[0]) && preg_match('/(?:^|&)id=\d+(?:&|$)/',$query)===1) || (count($segments)===3 && $first==='pages' && ctype_digit((string)$segments[2])),
         'x' => count($segments)===1 && !in_array($first,['home','explore','notifications','messages','i','search','settings','compose'],true) && preg_match('/^[A-Za-z0-9_]+$/',$segments[0])===1,
         'snapchat' => count($segments)===2 && strtolower($segments[0])==='add' && preg_match('/^[A-Za-z0-9._-]+$/',$segments[1])===1,
         'linkedin' => count($segments)===2 && in_array(strtolower($segments[0]),['in','company'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[1])===1,
@@ -1218,7 +1219,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
             else $p['suggestedCategory']=$suggested;
         }
 
-        if($photoCandidate&&in_array((string)($p['photoStatus']??'missing'),['missing','pending'],true)&&empty($p['photoUrl'])){
+        if($photoCandidate&&empty($p['photoManualLocked'])&&in_array((string)($p['photoStatus']??'missing'),['missing','pending'],true)&&empty($p['photoUrl'])){
             $url=(string)$photoCandidate['normalized_value'];
             if(($p['photoCandidateUrl']??'')!==$url){$p['photoCandidateUrl']=$url;$changed=true;}
             $p['photoStatus']='pending';

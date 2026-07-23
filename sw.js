@@ -1,16 +1,20 @@
-const CACHE='pass50-v22-1-evidence-conflicts-__BUILD_ID__';
+const CACHE='pass50-v22-2-facebook-photo-favicon-__BUILD_ID__';
 const ASSETS=[
   './',
   './index.html',
-  './v9-tools.css?v=22.1',
-  './v9-tools.js?v=22.1',
-  './pass50_nouveaux_candidats_90_v19.json?v=22.1',
-  './data-engine-ui.js?v=22.1',
+  './v9-tools.css?v=22.2',
+  './v9-tools.js?v=22.2',
+  './pass50_nouveaux_candidats_90_v19.json?v=22.2',
+  './data-engine-ui.js?v=22.2',
+  './manifest.webmanifest?v=22.2',
+  './icon.svg?v=22.2',
+  './favicon-32.png?v=22.2',
+  './apple-touch-icon.png?v=22.2',
   './assets/hero-media-1.jpg',
   './assets/hero-media-2.jpg',
   './assets/hero-media-3.jpg',
   './assets/hero-media-4.jpg',
-  './data-engine-ui.css?v=22.1'
+  './data-engine-ui.css?v=22.2'
 ];
 
 self.addEventListener('install',event=>{

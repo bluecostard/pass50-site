@@ -19,7 +19,7 @@ function p50v9IsDirectPlatformLink(platform,url=''){
       Instagram:()=>h.endsWith('instagram.com')&&segments.length===1&&!reservedInstagram.has(first)&&/^[A-Za-z0-9._-]+$/.test(segments[0]),
       TikTok:()=>h.endsWith('tiktok.com')&&segments.length===1&&/^@[A-Za-z0-9._-]+$/.test(segments[0]),
       YouTube:()=>h.endsWith('youtube.com')&&(/^\/@[A-Za-z0-9._-]+$/.test(path)||/^\/(?:channel|c|user)\/[A-Za-z0-9._-]+$/i.test(path)),
-      Facebook:()=>h.endsWith('facebook.com')&&segments.length===1&&!reservedFacebook.has(first)&&/^[A-Za-z0-9._-]+$/.test(segments[0]),
+      Facebook:()=>h.endsWith('facebook.com')&&((segments.length===1&&!reservedFacebook.has(first)&&/^[A-Za-z0-9._-]+$/.test(segments[0]))||(first==='profile.php'&&/^\d+$/.test(u.searchParams.get('id')||''))||(segments.length===3&&first==='pages'&&/^\d+$/.test(segments[2]))),
       LinkedIn:()=>h.endsWith('linkedin.com')&&/^\/(?:in|company)\/[A-Za-z0-9._-]+$/i.test(path),
       Snapchat:()=>h.endsWith('snapchat.com')&&/^\/add\/[A-Za-z0-9._-]+$/i.test(path),
       X:()=> (h==='x.com'||h==='twitter.com')&&segments.length===1&&!reservedX.has(first)&&/^[A-Za-z0-9_]+$/.test(segments[0])
@@ -63,6 +63,7 @@ function p50v9ApplyPatch(){
     p.linkChecks=p.linkChecks||{};p.links=p.links||{};
     Object.entries(p.links).forEach(([platform,url])=>{if(!p.linkChecks[platform])p.linkChecks[platform]={status:p50v9IsDirectPlatformLink(platform,url)?'pending':'search_not_official',checkedAt:null};});
     if(!p.photoPosition)p.photoPosition='50% 50%';
+    p.photoManualLocked=Boolean(p.photoManualLocked);p.photoManualUpdatedAt=p.photoManualUpdatedAt||null;
   });
   db.events=(db.events||[]).map(e=>({...e,coverStatus:e.coverStatus||'missing',coverUrl:e.coverUrl||'',coverCandidateUrl:e.coverCandidateUrl||'',coverSource:e.coverSource||'',coverNote:e.coverNote||''}));
   db.content.forEach(c=>{const ev=primaryEvent(c.profileId);if(ev&&p50v9ExactContentLink(ev.url)&&!p50v9ExactContentLink(c.url))c.url=ev.url;});
@@ -95,15 +96,15 @@ function p50v9UseNews(index){const a=PASS50_V9.news[index],id=PASS50_V9.newsProf
 
 async function p50v9DiscoverPhotos(id,openResults=true){const p=profile(id);if(!p)return null;const officialUrls=p50v9OfficialLinks(p).map(([,url])=>url);const data=await apiFetch('media-discover.php',{method:'POST',body:{profileId:p.id,name:p.name,handle:p.handle,officialUrls}});if(openResults)p50v9ShowPhotoCandidates(p,data);return data}
 function p50v9ShowPhotoCandidates(p,data){PASS50_V9.photoCandidates=data.candidates||[];PASS50_V9.photoProfileId=p.id;const cards=PASS50_V9.photoCandidates.map((c,i)=>`<article class="tool-card"><img src="${safeAttr(c.previewUrl||c.url)}" alt="Proposition pour ${safeAttr(p.name)}" referrerpolicy="no-referrer" onerror="this.style.display='none'"><h4>${c.sourceName||'Source'}</h4><div class="tool-meta">Confiance ${c.confidence||'moyenne'} · ${c.reason||''}</div><div class="tool-license">${c.attribution?`Attribution : ${c.attribution}<br>`:''}${c.license?`Licence : ${c.license}`:''}</div><label class="tool-check"><input type="checkbox" class="confirm-photo" data-index="${i}"> Je confirme que cette photo représente clairement ${p.name}.</label><div class="tool-actions"><a class="btn small" href="${safeAttr(c.sourcePage||c.url)}" target="_blank" rel="noopener">Voir la source ↗</a><button class="btn small" data-propose-photo="${i}">Proposer sans télécharger</button><button class="btn small primary" data-download-photo="${i}">Valider et télécharger</button></div></article>`).join('');p50v9OpenTool(`Photos proposées · ${p.name}`,`<div class="media-hint">${data.rule||''}</div><div class="free-tools">${(data.freeSources||[]).map(x=>`<span class="free-pill">${x}</span>`).join('')}</div>${cards?`<div class="tool-grid">${cards}</div>`:`<div class="tool-empty">Aucune photo suffisamment fiable. Le script n’a rien téléchargé.<br><br><a class="btn small" href="${safeAttr(data.googleImagesUrl||'#')}" target="_blank" rel="noopener">Recherche manuelle Google Images ↗</a></div>`}`)}
-function p50v9ProposePhoto(index){const p=profile(PASS50_V9.photoProfileId),c=PASS50_V9.photoCandidates[index];if(!p||!c)return;p.photoCandidateUrl=c.previewUrl||c.url;p.photoUrl='';p.photoStatus='pending';p.photoSource=c.sourceName||'Source gratuite';p.photoNote='Proposition non téléchargée · validation requise';save();render();renderAdminPane();p50v9CloseTool();toast('Photo proposée, non publiée')}
-async function p50v9DownloadPhoto(index){const p=profile(PASS50_V9.photoProfileId),c=PASS50_V9.photoCandidates[index],check=$(`.confirm-photo[data-index="${index}"]`);if(!p||!c)return;if(!check?.checked)return toast('Confirme d’abord que la photo représente bien la personne');try{const data=await apiFetch('media-download.php',{method:'POST',body:{kind:'profile',profileId:p.id,profileName:p.name,url:c.url,sourcePage:c.sourcePage,confirmedRepresentation:true}});p.photoUrl=data.url;p.photoCandidateUrl=data.url;p.photoStatus='validated';p.photoSource=[c.sourceName,c.attribution,c.license].filter(Boolean).join(' · ');p.photoNote='Validé manuellement puis copié sur IONOS';save();render();renderAdminPane();p50v9CloseTool();toast('Photo validée et enregistrée sur IONOS')}catch(err){toast(err.message||'Téléchargement impossible')}}
+function p50v9ProposePhoto(index){const p=profile(PASS50_V9.photoProfileId),c=PASS50_V9.photoCandidates[index];if(!p||!c)return;if(p.photoManualLocked)return toast('La photo manuelle est protégée. Retire-la volontairement avant une nouvelle proposition.');p.photoCandidateUrl=c.previewUrl||c.url;p.photoUrl='';p.photoStatus='pending';p.photoSource=c.sourceName||'Source gratuite';p.photoNote='Proposition non téléchargée · validation requise';save();render();renderAdminPane();p50v9CloseTool();toast('Photo proposée, non publiée')}
+async function p50v9DownloadPhoto(index){const p=profile(PASS50_V9.photoProfileId),c=PASS50_V9.photoCandidates[index],check=$(`.confirm-photo[data-index="${index}"]`);if(!p||!c)return;if(!check?.checked)return toast('Confirme d’abord que la photo représente bien la personne');try{const data=await apiFetch('media-download.php',{method:'POST',body:{kind:'profile',profileId:p.id,profileName:p.name,url:c.url,sourcePage:c.sourcePage,confirmedRepresentation:true}});p.photoUrl=data.url;p.photoCandidateUrl=data.url;p.photoStatus='validated';p.photoSource=[c.sourceName,c.attribution,c.license].filter(Boolean).join(' · ');p.photoNote='Validé manuellement puis copié sur IONOS';p.photoManualLocked=true;p.photoManualUpdatedAt=new Date().toISOString();save();render();renderAdminPane();p50v9CloseTool();toast('Photo validée et enregistrée sur IONOS')}catch(err){toast(err.message||'Téléchargement impossible')}}
 
 async function p50v9PreviewEvent(id,openResults=true){const ev=db.events.find(e=>e.id===id);if(!ev||!p50v9ExactContentLink(ev.url)){if(openResults)toast('Ajoute d’abord le lien exact de la vidéo ou de l’article');return null}const data=await apiFetch('content-preview.php',{method:'POST',body:{url:ev.url}});if(openResults)p50v9ShowEventPreview(ev,data);return data}
 function p50v9ShowEventPreview(ev,data){PASS50_V9.preview=data;PASS50_V9.previewEventId=ev.id;const image=data.thumbnail?`<img src="${safeAttr(data.thumbnail)}" alt="Couverture" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:'<div class="trigger-thumb">🎬</div>';p50v9OpenTool(`Couverture · ${profile(ev.profileId)?.name||''}`,`<div class="tool-grid"><article class="tool-card">${image}<h4>${data.title||ev.title}</h4><div class="tool-meta">${data.platform} · ${data.author||''} · ${data.source||''}</div>${data.thumbnail?`<label class="tool-check"><input type="checkbox" id="confirmCover"> Je confirme que cette couverture correspond au contenu original.</label>`:''}<div class="tool-actions"><a class="btn small" href="${safeAttr(data.canonicalUrl||data.url)}" target="_blank" rel="noopener">Ouvrir l’original ↗</a>${data.thumbnail?'<button class="btn small" id="proposeCover">Proposer</button><button class="btn small primary" id="downloadCover">Valider et télécharger</button>':''}</div></article></div>`)}
 function p50v9ProposeCover(){const ev=db.events.find(e=>e.id===PASS50_V9.previewEventId),d=PASS50_V9.preview;if(!ev||!d?.thumbnail)return;ev.coverCandidateUrl=d.thumbnail;ev.coverUrl='';ev.coverStatus='pending';ev.coverSource=d.source||d.platform;ev.coverNote='Couverture proposée automatiquement, validation requise.';ev.resolvedUrl=d.canonicalUrl||d.url||ev.resolvedUrl||'';save();render();renderAdminPane();p50v9CloseTool();toast('Couverture proposée sans modifier les données manuelles')}
 async function p50v9DownloadCover(){const ev=db.events.find(e=>e.id===PASS50_V9.previewEventId),d=PASS50_V9.preview;if(!ev||!d?.thumbnail)return;if(!$('#confirmCover')?.checked)return toast('Confirme d’abord la couverture');const p=profile(ev.profileId);try{const data=await apiFetch('media-download.php',{method:'POST',body:{kind:'event',itemId:ev.id,itemName:ev.title,profileId:p?.id||ev.id,profileName:p?.name||ev.title,url:d.thumbnail,sourcePage:d.canonicalUrl||d.url,confirmedRepresentation:true}});ev.coverUrl=data.url;ev.coverCandidateUrl=data.url;ev.coverStatus='validated';ev.coverSource=d.source||d.platform;ev.coverNote='Validé manuellement puis copié sur IONOS';ev.resolvedUrl=d.canonicalUrl||d.url||ev.resolvedUrl||'';save();render();renderAdminPane();p50v9CloseTool();toast('Couverture validée sans modifier les données manuelles')}catch(err){toast(err.message||'Téléchargement impossible')}}
 
-async function p50v9BulkPhotos(){const list=ranking().slice(0,10).filter(p=>p.photoStatus!=='validated');let found=0;for(const p of list){try{const data=await p50v9DiscoverPhotos(p.id,false),c=data?.candidates?.[0];if(c){p.photoCandidateUrl=c.previewUrl||c.url;p.photoUrl='';p.photoStatus='pending';p.photoSource=c.sourceName||'Source gratuite';p.photoNote='Première proposition automatique. Aucun téléchargement avant confirmation.';found++}}catch(e){console.warn(e)}}save();render();renderAdminPane();toast(`${found} proposition${found>1?'s':''} à valider · aucun téléchargement automatique`)}
+async function p50v9BulkPhotos(){const list=ranking().slice(0,10).filter(p=>p.photoStatus!=='validated'&&!p.photoManualLocked);let found=0;for(const p of list){try{const data=await p50v9DiscoverPhotos(p.id,false),c=data?.candidates?.[0];if(c){p.photoCandidateUrl=c.previewUrl||c.url;p.photoUrl='';p.photoStatus='pending';p.photoSource=c.sourceName||'Source gratuite';p.photoNote='Première proposition automatique. Aucun téléchargement avant confirmation.';found++}}catch(e){console.warn(e)}}save();render();renderAdminPane();toast(`${found} proposition${found>1?'s':''} à valider · aucun téléchargement automatique`)}
 async function p50v9BulkCovers(){const ids=ranking().slice(0,10).map(p=>primaryEvent(p.id)).filter(Boolean);let found=0;for(const ev of ids){if(!p50v9ExactContentLink(ev.url))continue;try{const d=await p50v9PreviewEvent(ev.id,false);if(d?.thumbnail){ev.coverCandidateUrl=d.thumbnail;ev.coverUrl='';ev.coverStatus='pending';ev.coverSource=d.source||d.platform;ev.coverNote='Proposition automatique, non téléchargée.';found++}}catch(e){console.warn(e)}}save();render();renderAdminPane();toast(`${found} couverture${found>1?'s':''} à valider`)}
 
 const p50v8OpenProfile=openProfile;
@@ -132,13 +133,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=22.1';
+    css.href='./data-engine-ui.css?v=22.2';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=22.1';
+    js.src='./data-engine-ui.js?v=22.2';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
@@ -158,10 +159,12 @@ render();
     ['dolpho','Dolpho','@dolpho','DO','CI','Humour',['Instagram','TikTok','Facebook','YouTube','Snapchat'],28,0,0]
   ];
   function p50AdminPatchProfiles(){
+    const confirmedFacebook={lopere:'https://www.facebook.com/Daloa001',emma:'https://www.facebook.com/EmmaLohouesOfficiel'};
     requestedProfiles.forEach(row=>{if(!db.profiles.some(p=>p.id===row[0]||p.name.toLowerCase()===row[1].toLowerCase()))db.profiles.push(buildProfile(row,db.profiles.length));});
     db.profiles.forEach(p=>{
       p.platforms=[...new Set([...(p.platforms||[]),'Facebook','YouTube'])];
       p.links=p.links||{};p.linkChecks=p.linkChecks||{};
+      if(confirmedFacebook[p.id]&&!p50v9IsDirectPlatformLink('Facebook',p.links.Facebook||'')){p.links.Facebook=confirmedFacebook[p.id];p.linkChecks.Facebook={status:'pending',checkedAt:null,message:'Page officielle confirmée par le propriétaire PASS50'};}
       ['Facebook','YouTube','Snapchat'].forEach(platform=>{if(!p.linkChecks[platform])p.linkChecks[platform]={status:p.links[platform]&&p50v9IsDirectPlatformLink(platform,p.links[platform])?'pending':'search_not_official',checkedAt:null};});
     });
     db.events=(db.events||[]).map(e=>({...e,originalLinkValidated:Boolean(e.originalLinkValidated)}));
@@ -321,7 +324,7 @@ render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.1';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.2';
   const CENSUS_VERSION='90-v22';
   let importing=false;
 
