@@ -137,13 +137,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=22.6';
+    css.href='./data-engine-ui.css?v=23.0';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=22.6';
+    js.src='./data-engine-ui.js?v=23.0';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
@@ -709,7 +709,7 @@ render();
   const prevPane=window.renderAdminPane;
   window.renderAdminPane=function(){if(ui.adminTab==='quality')return renderQualityPane();return prevPane();};
   const prevAdmin=window.renderAdmin;
-  window.renderAdmin=function(){prevAdmin();const menu=document.querySelector('#adminBody .admin-menu');if(menu&&!menu.querySelector('[data-admin-tab="quality"]')){const b=document.createElement('button');b.className='btn '+(ui.adminTab==='quality'?'primary':'');b.dataset.adminTab='quality';b.textContent='Contrôle qualité';menu.appendChild(b);}if(ui.adminTab==='quality')renderQualityPane();};
+  window.renderAdmin=function(){prevAdmin();if(ui.adminTab==='quality')renderQualityPane();};
   document.addEventListener('input',e=>{if(e.target.id==='qaSearch'){window.__qaSearch=e.target.value;renderQualityPane();}});
   document.addEventListener('click',e=>{const fix=e.target.closest('.qa-fix');if(fix)return qaAction(fix.dataset.key,fix.dataset.id);if(e.target.id==='qaRefresh'){renderQualityPane();toast('Contrôle qualité actualisé');}});
 })();
