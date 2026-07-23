@@ -373,6 +373,7 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
         $manualOwner = in_array('manual_owner',$types,true);
         $manualAdmin = in_array('manual_admin',$types,true);
         $official = p50_de_type_matches($types,'official_site');
+        $officialLabel = p50_de_type_matches($types,'official_label') || p50_de_type_matches($types,'official_artist_label') || p50_de_type_matches($types,'official_broadcaster');
         $wikidataHigh = p50_de_type_matches($types,'wikidata_high_match');
         $wikipediaExact = p50_de_type_matches($types,'wikipedia_exact');
         $academicOfficial = p50_de_type_matches($types,'academic_official') || p50_de_type_matches($types,'public_institution') || p50_de_type_matches($types,'diploma_public_archive');
@@ -388,8 +389,8 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
             $confidence = min(89,max(60,(int)round($maxWeight*0.90)));
         } elseif ($factKey === 'birth_date') {
             if($academicOfficial&&$maxWeight>=96)$confidence=97;
-            elseif($official&&$maxWeight>=96)$confidence=97;
-            elseif($wikidataHigh&&$maxWeight>=96)$confidence=94;
+            elseif(($official||$officialLabel)&&$maxWeight>=96)$confidence=97;
+            elseif($wikidataHigh&&$maxWeight>=94)$confidence=94;
             elseif($wikipediaExact&&$maxWeight>=92)$confidence=92;
             elseif($sourceCount>=2)$confidence=min(100,90+max(0,min(10,(int)round(($avgWeight-80)/1.5))));
             else $confidence=min(89,(int)round($maxWeight*0.90));
@@ -397,7 +398,7 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
             $confidence=96;
         } elseif ($curatedResearch&&$maxWeight>=94) {
             $confidence=94;
-        } elseif ($official&&$maxWeight>=94) {
+        } elseif (($official||$officialLabel)&&$maxWeight>=94) {
             $confidence=96;
         } elseif ($wikidataHigh&&$maxWeight>=94) {
             $confidence=94;
@@ -1489,7 +1490,7 @@ function p50_de_hub_payload(): array {
             'id'=>$id,'name'=>$r['public_name'],'handle'=>$r['handle'],'region'=>$r['region'],'category'=>$r['category'],
             'eligible'=>(bool)$r['eligible'],'alive'=>(bool)$r['alive'],
             'quality'=>$qualities,'completeness'=>(int)round($complete/count($qualities)*100),
-            'facts'=>$facts,'birthBest'=>$birthBest,'photoBest'=>$photoBest,'categoryBest'=>$categoryBest,'bioBest'=>$bioBest,'nationalityBest'=>$nationalityBest,
+            'facts'=>$facts,'birthBest'=>$birthBest,'birthDate'=>(string)($birthBest['normalized_value']??''),'birthStatus'=>(string)($birthBest['status']??''),'photoBest'=>$photoBest,'categoryBest'=>$categoryBest,'bioBest'=>$bioBest,'nationalityBest'=>$nationalityBest,
             'socialLinks'=>$social,'verifiedSocialCount'=>$verifiedSocial,'lastRun'=>$lastRun,'educationBest'=>$educationBest,
             'priorityWave'=>p50_de_is_priority_profile($id)?'V22-16':'','trendCandidate'=>p50_de_compute_trend_score($id),
             'lastCollectedAt'=>$lastRun['finished_at']??null,
@@ -1507,5 +1508,5 @@ function p50_de_hub_payload(): array {
         'autoEnriched'=>count(array_filter($profiles,static fn($p)=>!empty($p['facts'])||!empty($p['photoBest'])||!empty($p['verifiedSocialCount']))),
         'neverCollected'=>count(array_filter($profiles,static fn($p)=>empty($p['lastRun']))),
     ];
-    return ['ok'=>true,'engineVersion'=>22,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
+    return ['ok'=>true,'engineVersion'=>22.4,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
 }

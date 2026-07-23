@@ -20,3 +20,11 @@
 /* PASS50 V21 — même vignette dans la FI et le Top 5 */
 .trigger-thumb.has-cover>span{opacity:0}
 .trigger-cover-fallback{position:absolute;left:6px;right:6px;bottom:6px;z-index:4;padding:3px 5px;border-radius:7px;background:rgba(4,7,4,.76);color:#dce7d9;font-size:7px;font-weight:950;letter-spacing:.08em;text-align:center;line-height:1.2}
+
+
+/* PASS50 V22.4 — recherche rapide Médias */
+.media-search-box{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin:12px 0 14px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#0b0f0b}
+.media-search-box input{width:100%;min-width:0;border:1px solid #3b463b;border-radius:11px;background:#111711;color:#fff;padding:11px 13px;font-size:16px;outline:none}
+.media-search-box input:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(183,255,0,.10)}
+.media-search-box span{font-size:11px;color:var(--muted);white-space:nowrap;font-weight:850}
+@media(max-width:680px){.media-search-box{grid-template-columns:1fr}.media-search-box span{white-space:normal}}
