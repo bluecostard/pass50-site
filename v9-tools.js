@@ -103,13 +103,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=18';
+    css.href='./data-engine-ui.css?v=19';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=18';
+    js.src='./data-engine-ui.js?v=19';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
@@ -184,18 +184,19 @@ render();
     const selected=PASS50_V9.newsProfileId&&profile(PASS50_V9.newsProfileId)?PASS50_V9.newsProfileId:(profiles[0]?.id||'');
     PASS50_V9.newsProfileId=selected;
     const p=profile(selected),ev=p?primaryEvent(p.id):null,m=p?p50RankMeta(p):{};
-    pane.innerHTML=`<div class="news-v2"><div class="media-hint"><strong>Actualité :</strong> recherche des articles récents et validation du lien original de la vidéo ou publication qui explique le buzz dans la FI.</div><section class="news-search-box"><div class="section-title" style="margin-bottom:10px">Rechercher l’actualité</div><div class="news-controls"><label>FI<select id="newsProfile">${profiles.map(x=>`<option value="${x.id}" ${x.id===selected?'selected':''}>${safeAttr(p50ProfileOption(x))}</option>`).join('')}</select></label><label>Période<select id="newsDays"><option value="2">2 jours</option><option value="7">7 jours</option><option value="15" ${PASS50_V9.newsDays===15?'selected':''}>15 jours</option><option value="30">30 jours</option><option value="60">60 jours</option></select></label><button class="btn primary" id="searchNewsBtn">Rechercher l’actualité</button></div><div id="newsResults"><div class="tool-empty">Sélectionne une FI puis lance la recherche.</div></div></section><section class="trigger-validation-box"><div class="section-title">Lien original du buzz · ${p?.name||''}${m.top50?'<span class="top50-marker">TOP 50</span>':''}</div><div class="muted" style="margin:5px 0 12px">Colle ici le lien exact de la vidéo, du post ou de l’article. Après validation, il apparaît dans la FI.</div><form id="newsTriggerForm" data-profile="${p?.id||''}"><div class="trigger-form-grid"><label>Type<select name="type"><option ${!ev||ev.type==='Vidéo'?'selected':''}>Vidéo</option><option ${ev?.type==='Publication'?'selected':''}>Publication</option><option ${ev?.type==='Article'?'selected':''}>Article</option><option ${ev?.type==='Déclaration'?'selected':''}>Déclaration</option><option ${ev?.type==='Événement'?'selected':''}>Événement</option></select></label><label>Titre<input name="title" value="${safeAttr(ev?.title||'')}" placeholder="Titre court du buzz" required></label><label class="full">URL originale exacte<input type="url" name="url" value="${safeAttr(ev?.url||'')}" placeholder="https://…" required></label><label class="full">Pourquoi cela provoque le buzz<input name="reason" value="${safeAttr(ev?.reason||'')}" placeholder="Explication courte"></label></div><label class="tool-check"><input type="checkbox" name="confirmedOriginal" required> J’ai ouvert le lien et je confirme qu’il s’agit bien du contenu original lié à cette FI.</label><div class="tool-actions"><button class="btn primary" type="submit">ANALYSER ET VALIDER DANS LA FI</button>${ev?`<a class="btn" href="${safeAttr(ev.url||'#')}" target="_blank" rel="noopener">Ouvrir le lien actuel ↗</a><button class="btn danger reject-trigger" type="button" data-profile="${p.id}">Rejeter le déclencheur</button>`:''}</div></form>${ev?`<div class="trigger-current"><div><strong>Déclencheur actuel</strong><div>${ev.title}</div><div class="muted">${ev.originalLinkValidated?'Lien original validé':'Lien original non validé'}</div></div><span class="link-state ${ev.originalLinkValidated?'ok':'pending'}">${ev.originalLinkValidated?'VALIDÉ':'À VALIDER'}</span></div>`:''}</section></div>`;
+    pane.innerHTML=`<div class="news-v2"><div class="media-hint"><strong>Actualité vidéo d’abord :</strong> le moteur visite les réseaux officiels accessibles, cherche en priorité les vidéos, Reels, Shorts et TikTok, puis complète avec quelques articles. La cible PASS50 doit pouvoir comprendre l’essentiel sans longue lecture.</div><section class="news-search-box"><div class="section-title" style="margin-bottom:10px">Rechercher l’actualité</div><div class="news-controls"><label>FI<select id="newsProfile">${profiles.map(x=>`<option value="${x.id}" ${x.id===selected?'selected':''}>${safeAttr(p50ProfileOption(x))}</option>`).join('')}</select></label><label>Période<select id="newsDays"><option value="2">2 jours</option><option value="7">7 jours</option><option value="15" ${PASS50_V9.newsDays===15?'selected':''}>15 jours</option><option value="30">30 jours</option><option value="60">60 jours</option></select></label><button class="btn primary" id="searchNewsBtn">Rechercher l’actualité</button></div><div id="newsResults"><div class="tool-empty">Sélectionne une FI puis lance la recherche.</div></div></section><section class="trigger-validation-box"><div class="section-title">Lien original du buzz · ${p?.name||''}${m.top50?'<span class="top50-marker">TOP 50</span>':''}</div><div class="muted" style="margin:5px 0 12px">Colle ici le lien exact de la vidéo, du post ou de l’article. Après validation, il apparaît dans la FI.</div><form id="newsTriggerForm" data-profile="${p?.id||''}"><div class="trigger-form-grid"><label>Type<select name="type"><option ${!ev||ev.type==='Vidéo'?'selected':''}>Vidéo</option><option ${ev?.type==='Publication'?'selected':''}>Publication</option><option ${ev?.type==='Article'?'selected':''}>Article</option><option ${ev?.type==='Déclaration'?'selected':''}>Déclaration</option><option ${ev?.type==='Événement'?'selected':''}>Événement</option></select></label><label>Titre<input name="title" value="${safeAttr(ev?.title||'')}" placeholder="Titre court du buzz" required></label><label class="full">URL originale exacte<input type="url" name="url" value="${safeAttr(ev?.url||'')}" placeholder="https://…" required></label><label class="full">Pourquoi cela provoque le buzz<input name="reason" value="${safeAttr(ev?.reason||'')}" placeholder="Explication courte"></label></div><label class="tool-check"><input type="checkbox" name="confirmedOriginal" required> J’ai ouvert le lien et je confirme qu’il s’agit bien du contenu original lié à cette FI.</label><div class="tool-actions"><button class="btn primary" type="submit">ANALYSER ET VALIDER DANS LA FI</button>${ev?`<a class="btn" href="${safeAttr(ev.url||'#')}" target="_blank" rel="noopener">Ouvrir le lien actuel ↗</a><button class="btn danger reject-trigger" type="button" data-profile="${p.id}">Rejeter le déclencheur</button>`:''}</div></form>${ev?`<div class="trigger-current"><div><strong>Déclencheur actuel</strong><div>${ev.title}</div><div class="muted">${ev.originalLinkValidated?'Lien original validé':'Lien original non validé'}</div></div><span class="link-state ${ev.originalLinkValidated?'ok':'pending'}">${ev.originalLinkValidated?'VALIDÉ':'À VALIDER'}</span></div>`:''}</section></div>`;
   };
 
   p50v9SearchNews=async function(){
     const id=$('#newsProfile')?.value,p=profile(id),days=Number($('#newsDays')?.value||15),box=$('#newsResults');
     if(!p||!box)return;
-    PASS50_V9.newsProfileId=id;PASS50_V9.newsDays=days;box.innerHTML='<div class="tool-loading">Recherche en cours…</div>';
+    PASS50_V9.newsProfileId=id;PASS50_V9.newsDays=days;box.innerHTML='<div class="tool-loading">Visite des réseaux officiels et recherche de vidéos…</div>';
     try{
-      const data=await apiFetch('news-discover.php',{method:'POST',body:{name:p.name,days}});
-      PASS50_V9.news=data.articles||[];
+      const data=await apiFetch('news-discover.php',{method:'POST',body:{profileId:id,name:p.name,handle:p.handle,days,socialLinks:p.links||{}}});
+      PASS50_V9.news=data.articles||data.results||[];
       const warning=data.warning?`<div class="news-warning">${data.warning}</div>`:'';
-      box.innerHTML=warning+(PASS50_V9.news.length?PASS50_V9.news.map((a,i)=>`<article class="news-card">${a.image?`<img src="${safeAttr(a.image)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:'<div class="trigger-thumb">📰</div>'}<div><h4>${a.title||'Article sans titre'}</h4><div class="tool-meta"><span class="news-source-pill">${a.source||data.source||'Web'}</span> ${a.domain||''} · ${a.date||''}</div><div class="tool-actions"><a class="btn small" href="${safeAttr(a.url)}" target="_blank" rel="noopener">Ouvrir ↗</a><button class="btn small primary use-news" data-index="${i}">Valider comme déclencheur FI</button></div></div></article>`).join(''):`<div class="tool-empty">${data.message||'Aucun article récent trouvé.'}</div>`);
+      const summary=`<div class="news-summary"><strong>${Number(data.videoCount||0)} vidéo${Number(data.videoCount||0)>1?'s':''}</strong> · ${Number(data.articleCount||0)} article${Number(data.articleCount||0)>1?'s':''} · vidéos affichées en premier</div>`;
+      box.innerHTML=warning+summary+(PASS50_V9.news.length?PASS50_V9.news.map((a,i)=>{const video=a.kind==='video'||a.type==='Vidéo'||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(a.platform);const icon=video?'▶':'📰';const label=video?'VIDÉO':'ARTICLE';return `<article class="news-card ${video?'video-first':''}">${a.image?`<img src="${safeAttr(a.image)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:`<div class="trigger-thumb">${icon}</div>`}<div><div class="news-kind ${video?'video':''}">${label}</div><h4>${a.title||(video?'Vidéo récente':'Article récent')}</h4><div class="tool-meta"><span class="news-source-pill">${a.source||data.source||'Web'}</span> ${a.platform||a.domain||''} · ${a.date||''}</div><div class="tool-actions"><a class="btn small" href="${safeAttr(a.url)}" target="_blank" rel="noopener">Ouvrir ↗</a><button class="btn small primary use-news" data-index="${i}">Valider dans la FI</button></div></div></article>`}).join(''):`<div class="tool-empty">${data.message||'Aucune vidéo ni actualité récente trouvée.'}</div>`);
     }catch(err){console.error(err);box.innerHTML=`<div class="tool-empty"><strong>Recherche momentanément indisponible.</strong><br>${err.message||'Le serveur n’a pas pu joindre les sources d’actualité.'}<br><br>Tu peux toujours valider manuellement le lien original dans le formulaire ci-dessous.</div>`;}
   };
 
@@ -203,7 +204,7 @@ render();
     const a=PASS50_V9.news[index],id=PASS50_V9.newsProfileId,p=profile(id);if(!a||!p)return;
     try{
       const preview=await apiFetch('content-preview.php',{method:'POST',body:{url:a.url}});
-      let ev=primaryEvent(id);const patch={type:'Article',title:a.title||`Actualité concernant ${p.name}`,platforms:['Web'],metric:'Article détecté',publishedLabel:a.date||`Sur ${PASS50_V9.newsDays} jours`,reason:'Article récent sélectionné et lien original validé par le propriétaire.',url:preview.canonicalUrl||a.url,icon:'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),coverCandidateUrl:a.image||preview.thumbnail||'',coverUrl:'',coverStatus:(a.image||preview.thumbnail)?'pending':'missing',coverSource:a.domain||preview.source||'Actualité',coverNote:'Couverture détectée depuis l’article, validation requise.'};if(ev)Object.assign(ev,patch);else db.events.push({id:'news_'+id+'_'+Date.now(),profileId:id,...patch});save();render();p50v9RenderNews();toast('Article validé dans la FI');
+      const isVideo=a.kind==='video'||a.type==='Vidéo'||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(a.platform);let ev=primaryEvent(id);const platform=a.platform||preview.platform||(isVideo?'Réseau social':'Web');const patch={type:isVideo?'Vidéo':'Article',title:a.title||`${isVideo?'Vidéo':'Actualité'} concernant ${p.name}`,platforms:[platform],metric:isVideo?'Vidéo détectée':'Article détecté',publishedLabel:a.date||`Sur ${PASS50_V9.newsDays} jours`,reason:isVideo?'Vidéo récente détectée sur un réseau officiel ou dans la recherche sociale, puis validée par le propriétaire.':'Article récent sélectionné et lien original validé par le propriétaire.',url:preview.canonicalUrl||a.url,icon:isVideo?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),coverCandidateUrl:a.image||preview.thumbnail||'',coverUrl:'',coverStatus:(a.image||preview.thumbnail)?'pending':'missing',coverSource:a.source||a.domain||preview.source||'Actualité',coverNote:'Couverture détectée depuis le contenu, validation requise.'};if(ev)Object.assign(ev,patch);else db.events.push({id:'news_'+id+'_'+Date.now(),profileId:id,...patch});save();render();p50v9RenderNews();toast(`${isVideo?'Vidéo':'Article'} validé dans la FI`);
     }catch(err){toast(err.message||'Impossible de valider ce lien');}
   };
 
@@ -266,18 +267,32 @@ render();
     try{const data=await apiFetch('link-check.php',{method:'POST',body:{links:p.links}});const checked=Object.fromEntries(Object.entries(data.results||{}).map(([k,v])=>{const url=p.links?.[k]||v.url||'';return [k,p50v9IsDirectPlatformLink(k,url)?{...v,checkedAt:data.checkedAt}:{...v,status:'generic_or_content',message:'Le lien doit ouvrir directement le profil officiel.',checkedAt:data.checkedAt}]}));p.linkChecks={...p.linkChecks,...checked};save();p50v9RenderLinks();toast('Liens contrôlés')}catch(err){toast(err.message||'Contrôle impossible');if(btn){btn.disabled=false;btn.textContent='Vérifier'}}
   };
 
+
+
+/* PASS50 V19 — duel éditorial demandé par le propriétaire.
+   Il ne se substitue pas aux métriques du moteur : il permet d'afficher le duel
+   pendant que l'historique automatisé continue de se constituer. */
+(function(){
+  const p50V19MeasuredCoules=typeof coulesCandidates==='function'?coulesCandidates:null;
+  coulesCandidates=function(){
+    const ids=['census-dougoutigui-lobeh','census-eudoxie-yao'];
+    const selected=ids.map(id=>profile(id)).filter(Boolean).map(p=>({...p,coulesEditorial:true,decline:0}));
+    if(selected.length===2)return selected;
+    return p50V19MeasuredCoules?p50V19MeasuredCoules():[];
+  };
+})();
   render();
 })();
 
 
-/* PASS50 V12 — import réel du recensement élargi (85 candidats)
+/* PASS50 V19 — import réel du recensement élargi (90 candidats)
    Le fichier JSON placé dans le dépôt n'est pas importé par le navigateur
    sans ce mécanisme. Les nouveaux profils restent non éligibles tant que
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_85_v2.json?v=18';
-  const CENSUS_VERSION='85-v2';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=19';
+  const CENSUS_VERSION='90-v19';
   let importing=false;
 
   function p50CensusNormalize(value=''){

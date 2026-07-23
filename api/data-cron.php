@@ -22,7 +22,7 @@ p50_de_sync_registry_from_state();
 $profiles=p50_de_profiles_for_collection($batch,null);
 $results=[];$found=0;$verified=0;
 foreach($profiles as $profile){
-    $run=p50_de_begin_run((string)$profile['profile_id'],'cron_auto_enrichment_v18',null,['deep'=>true]);
+    $run=p50_de_begin_run((string)$profile['profile_id'],'cron_auto_enrichment_v19',null,['deep'=>true]);
     try{
         $stateLinks=p50_de_collect_state_links($profile);
         $stateFacts=p50_de_collect_state_facts($profile);
@@ -30,9 +30,11 @@ foreach($profiles as $profile){
         $profileFound=$stateLinks+$stateFacts+(int)($enrichment['found']??0);
         $youtube=p50_de_collect_youtube_activity($profile);
         $profileFound+=(int)($youtube['found']??0);
-        $profileVerified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0);
+        $socialActivity=p50_de_collect_social_activity($profile);
+        $profileFound+=(int)($socialActivity['found']??0);
+        $profileVerified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0)+(int)($socialActivity['verified']??0);
         p50_de_publish_profile((string)$profile['profile_id'],null);
-        p50_de_finish_run($run['id'],'success',$profileFound,$profileVerified,null,['enrichment'=>$enrichment,'youtube'=>$youtube]);
+        p50_de_finish_run($run['id'],'success',$profileFound,$profileVerified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity]);
         $found+=$profileFound;$verified+=$profileVerified;
         $results[]=['profileId'=>$profile['profile_id'],'status'=>'success','found'=>$profileFound,'verified'=>$profileVerified];
     }catch(Throwable $e){

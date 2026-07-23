@@ -1,4 +1,4 @@
-const CACHE='pass50-v18-auto-enrichment-__BUILD_ID__';
+const CACHE='pass50-v19-video-social-iphone-__BUILD_ID__';
 const ASSETS=[
   './',
   './index.html',
@@ -7,14 +7,14 @@ const ASSETS=[
   './assets/pass50-wordmark.png',
   './assets/pass50-logo-email.png',
   './v9-tools.css',
-  './v9-tools.js?v=18',
-  './pass50_nouveaux_candidats_85_v2.json?v=18',
-  './data-engine-ui.js?v=18',
+  './v9-tools.js?v=19',
+  './pass50_nouveaux_candidats_90_v19.json?v=19',
+  './data-engine-ui.js?v=19',
   './assets/hero-media-1.jpg',
   './assets/hero-media-2.jpg',
   './assets/hero-media-3.jpg',
   './assets/hero-media-4.jpg',
-  './data-engine-ui.css?v=18'
+  './data-engine-ui.css?v=19'
 ];
 
 self.addEventListener('install',event=>{

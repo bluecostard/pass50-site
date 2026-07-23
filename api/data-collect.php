@@ -16,7 +16,7 @@ $publish=!array_key_exists('publishVerified',$in)||!empty($in['publishVerified']
 $profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null);
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
 foreach($profiles as $profile){
-    $run=p50_de_begin_run((string)$profile['profile_id'],'auto_enrichment_v18',$user['id'],['deep'=>$deep]);
+    $run=p50_de_begin_run((string)$profile['profile_id'],'auto_enrichment_v19',$user['id'],['deep'=>$deep]);
     try{
         $imported=p50_de_collect_state_links($profile);
         $importedFacts=p50_de_collect_state_facts($profile);
@@ -24,9 +24,11 @@ foreach($profiles as $profile){
         $found=$imported+$importedFacts+(int)($enrichment['found']??0);
         $youtube=p50_de_collect_youtube_activity($profile);
         $found+=(int)($youtube['found']??0);
-        $verified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0);
+        $socialActivity=p50_de_collect_social_activity($profile);
+        $found+=(int)($socialActivity['found']??0);
+        $verified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0)+(int)($socialActivity['verified']??0);
         if($publish)p50_de_publish_profile((string)$profile['profile_id'],$user['id']);
-        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts]);
+        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts]);
         $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment];
         $processedIds[]=(string)$profile['profile_id'];$totalFound+=$found;$totalVerified+=$verified;
     }catch(Throwable $e){

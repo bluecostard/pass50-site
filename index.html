@@ -83,6 +83,37 @@
     @keyframes recordToast{0%{opacity:0;transform:translate(-50%,-20px)}15%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-12px)}}
     @media (prefers-reduced-motion:reduce){.hero-slide,.motion-up,.motion-down,.badge-icon,.live-dot,.rank-card.first::before{animation:none!important}.mini{transition:none!important}}
 
+
+    /* PASS50 V19 — optimisation iPhone / Safari mobile */
+    html,body{width:100%;max-width:100%;overflow-x:hidden}
+    img,video,iframe{max-width:100%}
+    @media(max-width:680px){
+      body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+      .app{width:100%;max-width:100%;padding:0 max(10px,env(safe-area-inset-left)) calc(28px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-right))}
+      header{top:0;gap:7px;padding:calc(9px + env(safe-area-inset-top)) 0 9px;min-height:64px}
+      .brand{min-width:0;flex:0 1 auto}.brand-wordmark{font-size:24px;letter-spacing:-1.5px}.tagline{font-size:6px;letter-spacing:.75px;max-width:112px;overflow:hidden;text-overflow:ellipsis}
+      .actions{min-width:0;gap:5px;justify-content:flex-end}.actions .btn,.actions .icon-btn{min-height:40px;padding:8px 9px;border-radius:12px}
+      #accountBtn,#shareBtn{display:none}.actions .live{font-size:10px;white-space:nowrap;padding:8px 9px}.icon-btn{min-width:40px}
+      .demo-banner{margin-top:10px;padding:8px 9px;line-height:1.35;text-align:center}
+      .filters{display:grid;grid-template-columns:1fr;gap:9px;padding:12px 0}.filters .spacer{display:none}.seg{width:100%;-webkit-overflow-scrolling:touch;scrollbar-width:none}.seg::-webkit-scrollbar{display:none}.seg button{min-height:42px;padding:9px 13px;flex:0 0 auto;font-size:11px}
+      .hero{display:block}.hero-intro{min-height:330px;padding:22px 18px;margin-bottom:11px;border-radius:19px}.hero-slide{background-position:center 28%!important}.buzz-title{font-size:clamp(43px,13vw,55px);letter-spacing:-3px}.metric{font-size:38px}
+      .rank-card{min-height:auto;padding:12px;margin-bottom:11px;border-radius:19px}.rank-card .avatar{height:min(68vw,270px);margin-bottom:12px}.rank-num{font-size:51px}.rank-name{font-size:19px}.score{font-size:30px}
+      .section{margin-top:13px;padding:12px;border-radius:19px}.section-head{align-items:flex-start;gap:8px}.section-title{font-size:19px;line-height:1.15}.section-head .btn{flex:0 0 auto}
+      .top10{grid-template-columns:repeat(7,132px);gap:8px;margin-right:-2px;padding-bottom:8px;-webkit-overflow-scrolling:touch}.mini{min-width:132px;padding:9px}.mini .avatar{height:84px}
+      .content-grid{grid-template-columns:repeat(5,82vw);gap:9px;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}.content-card{min-height:210px;scroll-snap-align:start}
+      .sunk-duel{padding:12px;border-radius:18px}.sunk-grid{grid-template-columns:1fr;gap:9px}.versus{width:46px;height:46px;margin:0 auto;font-size:14px}.sunk{grid-template-columns:78px minmax(0,1fr);gap:10px;padding:11px;text-align:left}.sunk .avatar{height:78px}.sunk h3{font-size:17px;word-break:break-word}.drop{font-size:17px}.vote-result{margin-top:8px}.vote-percent{font-size:29px}.duel-question{font-size:21px}
+      .footer{padding-bottom:env(safe-area-inset-bottom)}
+      .modal{padding:0;align-items:end}.modal-box,.tool-modal-box{width:100vw!important;max-width:100vw;max-height:94dvh;border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom)}.modal-head{padding:13px 14px}.modal-body{padding:12px;overflow-x:hidden}
+      .profile-grid{grid-template-columns:1fr}.profile-grid>.left .avatar{height:min(78vw,330px)}.stats{grid-template-columns:1fr 1fr;gap:8px}.stat{min-width:0}.trigger-card{padding:11px}.trigger-main{grid-template-columns:58px minmax(0,1fr);gap:9px}.trigger-title,.trigger-reason{overflow-wrap:anywhere}
+      .top50-row{grid-template-columns:30px 40px minmax(0,1fr) 58px!important;gap:7px;padding:9px 6px;min-width:0}.top50-row .avatar{width:40px;height:40px}.top50-row>*{min-width:0}.top50-row>*:nth-child(5),.top50-row>*:nth-child(6){display:none!important}
+      .admin-grid{display:block}.admin-menu{top:0;margin:0 -12px 10px;padding:8px 12px;background:#090c09;-webkit-overflow-scrolling:touch}.admin-pane{min-width:0}.admin-toolbar{grid-template-columns:1fr!important}.admin-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.admin-table{min-width:560px}.signal-actions,.tool-actions,.card-actions{flex-wrap:wrap}
+      input,select,textarea{font-size:16px!important;max-width:100%}.btn,.icon-btn,button{touch-action:manipulation}.btn{min-height:42px}.close{min-width:44px;min-height:44px}
+      .news-card{grid-template-columns:1fr}.news-card img{width:100%;height:190px}.news-summary{line-height:1.4}.link-card-head,.trigger-current,.de-profile-head{flex-direction:column;align-items:stretch}.link-grid,.news-controls,.trigger-form-grid,.links-v2-toolbar,.de-social-switcher,.de-link-form{grid-template-columns:1fr!important}.de-kpis,.hub-kpis{grid-template-columns:1fr 1fr!important}.de-toolbar .btn{width:100%}
+    }
+    @media(max-width:390px){
+      .brand-wordmark{font-size:22px}.tagline{display:none}.actions .live{font-size:9px}.hero-intro{min-height:310px}.buzz-title{font-size:44px}.de-kpis,.hub-kpis{grid-template-columns:1fr!important}.stats{grid-template-columns:1fr}.content-grid{grid-template-columns:repeat(5,86vw)}
+    }
+
   </style>
 </head>
 <body>
@@ -106,7 +137,7 @@
   <section class="hero" id="buzz"></section>
   <section class="section" id="top10"><div class="section-head"><div class="section-title">📈 TOP 10</div><button class="btn small" id="top50Btn">VOIR LE CLASSEMENT COMPLET →</button></div><div class="top10" id="top10Grid"></div></section>
   <section class="section" id="tendance"><div class="section-head"><div class="section-title">🔥 TOP 5 CONTENUS TENDANCE</div><div class="muted">Liens directs</div></div><div class="content-grid" id="contentGrid"></div></section>
-  <section class="section" id="coules"><div class="section-head"><div><div class="section-title">🛝 LES COULÉS — LE DUEL</div><div class="muted">Baisse durable confirmée sur 120 jours de données.</div></div></div><div class="sunk-duel"><div class="duel-question">Qui est le plus coulé&nbsp;?</div><div class="duel-sub">Vote unique par compte · choix modifiable</div><div class="sunk-grid" id="sunkGrid"></div></div></section>
+  <section class="section" id="coules"><div class="section-head"><div><div class="section-title">🛝 LES COULÉS — LE DUEL</div><div class="muted">Duel éditorial PASS50 · le moteur continue de mesurer l’évolution réelle.</div></div></div><div class="sunk-duel"><div class="duel-question">Qui est le plus coulé&nbsp;?</div><div class="duel-sub">Vote unique par compte · choix modifiable</div><div class="sunk-grid" id="sunkGrid"></div></div></section>
   <footer class="footer"><div class="footer-brand" aria-label="PASS50"><span class="pass">PASS</span><span class="fifty">50</span></div><div>QUI DIT QUOI, <span style="color:var(--lime)">QUI VA OÙ ?</span></div><div id="lastPublished"></div></footer>
 </div>
 
@@ -349,7 +380,7 @@ function renderSunk(){
     else if(history.status==='loading')message='Vérification de l’historique…';
     $('#sunkGrid').innerHTML=`<div class="empty" style="grid-column:1/-1">${message}</div>`;return;
   }
-  const cards=r.candidates.map((p)=>`<article class="sunk ${myVote===p.id?'selected':''}" data-profile="${p.id}">${avatarHtml(p)}<div><h3>${p.name.toUpperCase()}</h3><div class="drop">−${Math.round(p.decline)}% d’attention</div></div><div class="vote-result"><div class="vote-percent" data-target="${r.shares[p.id]}">0 %</div><div class="vote-bar"><div class="vote-fill" style="width:${r.shares[p.id]}%"></div></div><div class="vote-bottom"><span class="vote-evolution">${coulesEvolution(p.id,r.shares,r.key)}</span><button class="thumb-vote coule-vote ${myVote===p.id?'selected':''}" data-id="${p.id}" aria-label="Choisir ${safeAttr(p.name)}" title="Choisir ${safeAttr(p.name)}">👍</button></div></div></article>`);
+  const cards=r.candidates.map((p)=>`<article class="sunk ${myVote===p.id?'selected':''}" data-profile="${p.id}">${avatarHtml(p)}<div><h3>${p.name.toUpperCase()}</h3><div class="drop">${p.coulesEditorial?'Baisse d’attention signalée':`−${Math.round(p.decline)}% d’attention`}</div></div><div class="vote-result"><div class="vote-percent" data-target="${r.shares[p.id]}">0 %</div><div class="vote-bar"><div class="vote-fill" style="width:${r.shares[p.id]}%"></div></div><div class="vote-bottom"><span class="vote-evolution">${coulesEvolution(p.id,r.shares,r.key)}</span><button class="thumb-vote coule-vote ${myVote===p.id?'selected':''}" data-id="${p.id}" aria-label="Choisir ${safeAttr(p.name)}" title="Choisir ${safeAttr(p.name)}">👍</button></div></div></article>`);
   $('#sunkGrid').innerHTML=cards[0]+'<div class="versus">VS</div>'+cards[1];
   requestAnimationFrame(()=>$('#sunkGrid').querySelectorAll('.vote-percent[data-target]').forEach(el=>{const target=Number(el.dataset.target||0),t0=performance.now(),dur=520;const tick=t=>{const k=Math.min(1,(t-t0)/dur);el.textContent=Math.round(target*(1-Math.pow(1-k,3)))+' %';if(k<1)requestAnimationFrame(tick)};requestAnimationFrame(tick)}));
 }
@@ -647,6 +678,6 @@ async function initCloud(){
 initCloud();
 
 </script>
-<script src="./v9-tools.js?v=18"></script>
+<script src="./v9-tools.js?v=19"></script>
 </body>
 </html>

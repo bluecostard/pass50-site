@@ -1065,6 +1065,87 @@ function p50_de_collect_youtube_activity(array $profile): array {
     return ['found'=>$found,'verified'=>$found,'channelId'=>$channelId,'feedUrl'=>$feedUrl,'message'=>'Activité YouTube collectée'];
 }
 
+
+/** Transforme les liens relatifs/échappés rencontrés dans les pages sociales. */
+function p50_de_absolute_content_url(string $raw,string $baseUrl): string {
+    $raw=html_entity_decode(trim(str_replace(['\\/','\\u002F','\\u0026'],['/','/','&'],$raw)),ENT_QUOTES|ENT_HTML5,'UTF-8');
+    if($raw==='')return '';
+    if(str_starts_with($raw,'//'))$raw='https:'.$raw;
+    if(preg_match('#^https?://#i',$raw))return $raw;
+    $parts=parse_url($baseUrl);if(!$parts||empty($parts['host']))return '';
+    $origin=(string)($parts['scheme']??'https').'://'.(string)$parts['host'];
+    if(str_starts_with($raw,'/'))return $origin.$raw;
+    $basePath=(string)($parts['path']??'/');$dir=rtrim(str_replace('\\','/',dirname($basePath)),'/');
+    return $origin.($dir!==''&&$dir!=='.'?'/'.ltrim($dir,'/'):'').'/'.ltrim($raw,'/');
+}
+
+function p50_de_is_exact_social_content(string $platform,string $url): bool {
+    if(!filter_var($url,FILTER_VALIDATE_URL)||p50_platform($url)!==$platform)return false;
+    $path=(string)(parse_url($url,PHP_URL_PATH)?:'');$query=(string)(parse_url($url,PHP_URL_QUERY)?:'');
+    return match($platform){
+        'YouTube'=>(bool)preg_match('#/(?:watch|shorts|live|embed)(?:/|$)#i',$path)||str_contains($query,'v='),
+        'TikTok'=>(bool)preg_match('#/@[^/]+/video/\d+#i',$path),
+        'Instagram'=>(bool)preg_match('#/(?:reel|reels|p|tv)/[^/]+#i',$path),
+        'Facebook'=>(bool)preg_match('#/(?:reel|reels|videos|watch)/#i',$path)||str_contains($query,'v='),
+        'X'=>(bool)preg_match('#/status/\d+#i',$path),
+        'Snapchat'=>(bool)preg_match('#/(?:spotlight|story)/#i',$path),
+        default=>false,
+    };
+}
+
+/** Extrait seulement des URL de contenus précis, jamais une page d'accueil ou un profil. */
+function p50_de_social_content_urls_from_html(string $html,string $baseUrl,string $platform,int $limit=8): array {
+    $raw=[];
+    preg_match_all('/(?:href|content)=["\']([^"\']+)["\']/i',$html,$matches);
+    $raw=array_merge($raw,(array)($matches[1]??[]));
+    preg_match_all('#https?:\\?/\\?/[^"\'<>\\s]+#i',$html,$scriptMatches);
+    $raw=array_merge($raw,(array)($scriptMatches[0]??[]));
+    $out=[];
+    foreach($raw as $candidate){
+        $url=p50_de_absolute_content_url((string)$candidate,$baseUrl);
+        if($url===''||!p50_de_is_exact_social_content($platform,$url))continue;
+        $parts=parse_url($url);if(!$parts)continue;
+        $clean=(string)($parts['scheme']??'https').'://'.(string)($parts['host']??'').(string)($parts['path']??'');
+        if(!empty($parts['query'])&&in_array($platform,['YouTube','Facebook'],true))$clean.='?'.$parts['query'];
+        $out[$clean]=$clean;
+        if(count($out)>=$limit)break;
+    }
+    return array_values($out);
+}
+
+/**
+ * Visite tous les réseaux officiels vérifiés d'une FI.
+ * Les plateformes qui bloquent les robots sont signalées, mais ne bloquent pas le cycle.
+ * Les contenus précis accessibles sont enregistrés comme activités, les métadonnées servent
+ * à proposer bio/photo/catégorie sans écraser les validations humaines.
+ */
+function p50_de_collect_social_activity(array $profile): array {
+    $profileId=(string)$profile['profile_id'];$name=(string)$profile['public_name'];$handle=(string)$profile['handle'];
+    $links=p50_de_social_links($profileId,true);$found=0;$visited=0;$blocked=[];$platforms=[];
+    foreach($links as $link){
+        $platform=(string)$link['platform'];$url=(string)$link['url'];
+        if(in_array($platform,['Web','LinkedIn','YouTube'],true))continue;
+        $visited++;$r=p50_http_fetch($url,12,'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5');
+        if($r['body']===''){ $blocked[]=$platform.' (HTTP '.(int)$r['status'].')';continue; }
+        $final=$r['finalUrl']?:$url;$meta=p50_page_metadata($r['body'],$final);$confidence=max(88,min(96,(int)$link['confidence']));
+        $identity=p50_name_score(($meta['title']??'').' '.($meta['description']??'').' '.$final,$name,$handle);
+        if($identity>=25){
+            $description=p50_de_text_excerpt((string)($meta['description']??''),500);
+            if($description!==''){p50_de_add_fact_evidence($profileId,'bio',$description,$description,'official_social_'.strtolower($platform),$platform.' officiel',$final,$confidence);$found++;$category=p50_de_infer_category($description);if($category!==''){p50_de_add_fact_evidence($profileId,'category',$category,$category,'official_social_'.strtolower($platform),$platform.' officiel',$final,max(88,$confidence-2));$found++;}}
+            $image=(string)($meta['image']??'');if(filter_var($image,FILTER_VALIDATE_URL)){p50_de_add_fact_evidence($profileId,'photo_url',$image,$image,'official_social_'.strtolower($platform),$platform.' officiel',$final,max(88,$confidence-4));$found++;}
+        }
+        $contentUrls=p50_de_social_content_urls_from_html($r['body'],$final,$platform,6);
+        foreach($contentUrls as $contentUrl){
+            $type=in_array($platform,['TikTok','Instagram','Facebook','Snapchat'],true)?'video':'post';
+            $title=trim((string)($meta['title']??''));if($title===''||p50_name_score($title,$name,$handle)<20)$title='Contenu récent détecté sur '.$platform;
+            p50_de_add_activity($profileId,$platform,$type,$title,$contentUrl,null,['discoveredFrom'=>$final,'automatic'=>true],max(88,$confidence-3));
+            $found++;
+        }
+        $platforms[$platform]=['visited'=>true,'contentFound'=>count($contentUrls),'httpStatus'=>(int)$r['status']];
+    }
+    return ['found'=>$found,'verified'=>0,'visited'=>$visited,'platforms'=>$platforms,'blocked'=>$blocked,'message'=>$visited?'Réseaux officiels visités autant que possible':'Aucun réseau officiel vérifié à visiter'];
+}
+
 function p50_de_activity_events(string $profileId,bool $verifiedOnly=true,int $limit=20): array {
     $limit=max(1,min(100,$limit));
     $sql='SELECT platform,event_type,title,url,published_at,metrics,confidence,status,collected_at FROM p50_activity_events WHERE profile_id=?';
@@ -1138,5 +1219,5 @@ function p50_de_hub_payload(): array {
         'autoEnriched'=>count(array_filter($profiles,static fn($p)=>!empty($p['facts'])||!empty($p['photoBest'])||!empty($p['verifiedSocialCount']))),
         'neverCollected'=>count(array_filter($profiles,static fn($p)=>empty($p['lastRun']))),
     ];
-    return ['ok'=>true,'engineVersion'=>18,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
+    return ['ok'=>true,'engineVersion'=>19,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
 }
