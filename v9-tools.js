@@ -132,13 +132,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=19';
+    css.href='./data-engine-ui.css?v=22';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=19';
+    js.src='./data-engine-ui.js?v=22';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
@@ -321,8 +321,8 @@ render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=21';
-  const CENSUS_VERSION='90-v19';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22';
+  const CENSUS_VERSION='90-v22';
   let importing=false;
 
   function p50CensusNormalize(value=''){
@@ -373,6 +373,10 @@ render();
       knownAlias:String(candidate.known_alias||''),
       censusSource:candidate.source||{},
       censusNotes:String(candidate.notes||''),
+      priorityWave:String(candidate.priority_wave||''),
+      researchQueries:Array.isArray(candidate.research_queries)?candidate.research_queries:[],
+      curatedSocialSources:(candidate&&typeof candidate.curated_social_sources==='object'&&candidate.curated_social_sources)||{},
+      curatedFacts:(candidate&&typeof candidate.curated_facts==='object'&&candidate.curated_facts)||{},
       censusImportedAt:new Date().toISOString(),
       ageStatus:'unconfirmed',
       birthDate:null,
@@ -417,6 +421,33 @@ render();
       const aliases=String(candidate?.known_alias||'').split(/[\/·,;|]/).map(p50CensusNormalize).filter(Boolean);
       const aliasConflict=aliases.some(alias=>existingNames.has(alias)||existingHandles.has(alias));
       if((id&&existingIds.has(id))||(name&&existingNames.has(name))||(handle&&existingHandles.has(handle))||aliasConflict){
+        const current=db.profiles.find(p=>
+          (id&&String(p.id||'').toLowerCase()===id)||
+          (name&&p50CensusNormalize(p.name)===name)||
+          (handle&&p50CensusNormalize(p.handle)===handle)||
+          aliases.includes(p50CensusNormalize(p.name))||aliases.includes(p50CensusNormalize(p.handle))
+        );
+        if(current){
+          const official=(candidate&&typeof candidate.official_socials==='object'&&candidate.official_socials)||{};
+          current.links=current.links||{};current.linkChecks=current.linkChecks||{};
+          Object.entries(official).forEach(([platform,url])=>{
+            if(!url)return;
+            const previous=String(current.links[platform]||'');
+            if(!previous||!p50v9IsDirectPlatformLink(platform,previous)){
+              current.links[platform]=String(url);
+              current.linkChecks[platform]={status:'pending',checkedAt:null,source:'PASS50 V22'};
+            }
+          });
+          current.platforms=[...new Set([...(current.platforms||[]),...Object.keys(official).filter(k=>official[k])])];
+          current.priorityWave=String(candidate.priority_wave||current.priorityWave||'');
+          current.verificationPriority=String(candidate.verification_priority||current.verificationPriority||'P2');
+          current.researchQueries=Array.isArray(candidate.research_queries)?candidate.research_queries:(current.researchQueries||[]);
+          current.curatedSocialSources={...(current.curatedSocialSources||{}),...((candidate&&typeof candidate.curated_social_sources==='object'&&candidate.curated_social_sources)||{})};
+          current.curatedFacts={...(current.curatedFacts||{}),...((candidate&&typeof candidate.curated_facts==='object'&&candidate.curated_facts)||{})};
+          current.censusSource=candidate.source||current.censusSource||{};
+          current.censusNotes=String(candidate.notes||current.censusNotes||'');
+          if((!current.category||['À catégoriser','Autre','Lifestyle'].includes(current.category))&&candidate.category)current.category=String(candidate.category);
+        }
         skipped++;
         return;
       }

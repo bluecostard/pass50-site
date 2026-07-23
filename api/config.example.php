@@ -31,6 +31,8 @@ return [
         // Facultatif : ajoutez une valeur longue et aléatoire avant d'activer un cron externe.
         'cron_token' => '',
         'batch_size' => 5,
+        // V22 : lancer data-cron.php?action=priority16 une fois la nuit, puis cycle toutes les 15 minutes.
+        'priority_wave_size' => 16,
         // Radar LIVE : nombre de chaînes YouTube contrôlées à chaque passage.
         'live_batch_size' => 6,
         // Intervalle minimum entre deux passages du radar public.

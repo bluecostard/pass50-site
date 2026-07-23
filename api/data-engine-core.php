@@ -4,6 +4,16 @@ declare(strict_types=1);
 require_once __DIR__ . '/http-tools.php';
 
 const P50_DATA_CONFIDENCE_THRESHOLD = 90;
+const P50_PRIORITY_WAVE_V22 = [
+    'census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey',
+    'census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo',
+    'census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show',
+    'census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man'
+];
+
+function p50_de_is_priority_profile(string $profileId): bool {
+    return in_array($profileId,P50_PRIORITY_WAVE_V22,true);
+}
 
 function p50_de_threshold(): int {
     global $config;
@@ -250,7 +260,9 @@ function p50_de_profiles_for_collection(int $limit = 5, ?string $profileId = nul
               GROUP BY profile_id
           ) runs ON runs.profile_id=r.profile_id
           WHERE r.alive=1
-          ORDER BY (runs.last_run_at IS NOT NULL) ASC,runs.last_run_at ASC,r.public_name ASC
+          ORDER BY (r.profile_id IN ('census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey','census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo','census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show','census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man')) DESC,
+                   CASE WHEN r.profile_id IN ('census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey','census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo','census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show','census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man') AND (runs.last_run_at IS NULL OR runs.last_run_at<DATE_SUB(NOW(),INTERVAL 6 HOUR)) THEN 0 ELSE 1 END ASC,
+                   (runs.last_run_at IS NOT NULL) ASC,runs.last_run_at ASC,r.public_name ASC
           LIMIT $limit";
     return db()->query($sql)->fetchAll();
 }
@@ -301,6 +313,8 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
         $official = p50_de_type_matches($types,'official_site');
         $wikidataHigh = p50_de_type_matches($types,'wikidata_high_match');
         $wikipediaExact = p50_de_type_matches($types,'wikipedia_exact');
+        $academicOfficial = p50_de_type_matches($types,'academic_official') || p50_de_type_matches($types,'public_institution') || p50_de_type_matches($types,'diploma_public_archive');
+        $curatedResearch = p50_de_type_matches($types,'curated_research_v22');
         $sourceCount = (int)$g['source_type_count'];
         $maxWeight = (int)$g['max_weight'];
         $avgWeight = (float)$g['avg_weight'];
@@ -311,11 +325,16 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
             // Une photo proposée automatiquement reste à confirmer humainement.
             $confidence = min(89,max(60,(int)round($maxWeight*0.90)));
         } elseif ($factKey === 'birth_date') {
-            if($official&&$maxWeight>=96)$confidence=97;
+            if($academicOfficial&&$maxWeight>=96)$confidence=97;
+            elseif($official&&$maxWeight>=96)$confidence=97;
             elseif($wikidataHigh&&$maxWeight>=96)$confidence=94;
             elseif($wikipediaExact&&$maxWeight>=92)$confidence=92;
             elseif($sourceCount>=2)$confidence=min(100,90+max(0,min(10,(int)round(($avgWeight-80)/1.5))));
             else $confidence=min(89,(int)round($maxWeight*0.90));
+        } elseif ($academicOfficial&&$maxWeight>=94) {
+            $confidence=96;
+        } elseif ($curatedResearch&&$maxWeight>=94) {
+            $confidence=94;
         } elseif ($official&&$maxWeight>=94) {
             $confidence=96;
         } elseif ($wikidataHigh&&$maxWeight>=94) {
@@ -435,9 +454,11 @@ function p50_de_rebuild_social_link(string $profileId, string $platform): void {
         $avgWeight=(float)$g['avg_weight'];
         $official=p50_de_type_matches($types,'official_site');
         $wikidataHigh=p50_de_type_matches($types,'wikidata_high_match');
+        $curatedResearch=p50_de_type_matches($types,'curated_research_v22');
         if($manualOwner)$confidence=100;
         elseif($manualAdmin)$confidence=98;
         elseif($official&&$maxWeight>=94)$confidence=96;
+        elseif($curatedResearch&&$maxWeight>=94)$confidence=94;
         elseif($wikidataHigh&&$maxWeight>=92)$confidence=94;
         elseif($sourceCount>=2)$confidence=min(100,92+max(0,min(8,(int)round(($avgWeight-82)/2))));
         elseif(in_array('wikidata',$types,true)&&$maxWeight>=92)$confidence=92;
@@ -838,12 +859,180 @@ function p50_de_collect_wikidata(array $profile): array {
     return ['found'=>$found,'verified'=>$verified,'qid'=>$qid,'identityScore'=>$bestScore,'message'=>'Collecte structurée terminée'];
 }
 
-/** Collecteur principal V18 : sources structurées, pages officielles et biographies publiques. */
+
+/** Recherche RSS générique, limitée aux résultats publics. */
+function p50_de_search_rss_items(array $queries,int $limit=10): array {
+    if(!function_exists('simplexml_load_string'))return [];
+    $items=[];
+    foreach($queries as $query){
+        foreach([
+            'https://www.bing.com/search?format=rss&q='.rawurlencode((string)$query),
+            'https://news.google.com/rss/search?q='.rawurlencode((string)$query).'&hl=fr&gl=CI&ceid=CI:fr'
+        ] as $rss){
+            $r=p50_http_fetch($rss,10,'application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.5');
+            if(!$r['ok']||$r['body']==='')continue;
+            libxml_use_internal_errors(true);$xml=simplexml_load_string($r['body'],'SimpleXMLElement',LIBXML_NONET|LIBXML_NOCDATA);
+            if(!$xml||!isset($xml->channel->item))continue;
+            foreach($xml->channel->item as $item){
+                $url=trim((string)$item->link);$title=trim((string)$item->title);$description=p50_de_text_excerpt((string)($item->description??''),1200);
+                if(preg_match_all('/href=["\'](https?:\/\/[^"\']+)["\']/i',(string)($item->description??''),$links)){
+                    foreach((array)($links[1]??[]) as $candidate){
+                        $candidate=html_entity_decode((string)$candidate,ENT_QUOTES|ENT_HTML5,'UTF-8');
+                        $host=strtolower((string)(parse_url($candidate,PHP_URL_HOST)?:''));
+                        if($host!==''&&!str_contains($host,'google.')){$url=$candidate;break;}
+                    }
+                }
+                if(!filter_var($url,FILTER_VALIDATE_URL)||!p50_public_http_url($url))continue;
+                $key=hash('sha256',strtolower(rtrim($url,'/')));$items[$key]=['url'=>$url,'title'=>$title,'description'=>$description,'query'=>$query];
+                if(count($items)>=$limit)break 3;
+            }
+        }
+    }
+    return array_values($items);
+}
+
+function p50_de_academic_host_weight(string $url): array {
+    $host=strtolower((string)(parse_url($url,PHP_URL_HOST)?:''));$path=strtolower((string)(parse_url($url,PHP_URL_PATH)?:''));
+    $host=preg_replace('/^www\./','',$host)?:$host;$pdf=str_ends_with($path,'.pdf');
+    // Haute confiance uniquement pour des domaines institutionnels identifiables.
+    $official=(bool)preg_match('/(?:^|\.)(?:gouv|gov|edu|ac)\.[a-z]{2,}(?:\.[a-z]{2,})?$/',$host)
+        ||str_ends_with($host,'.edu')||preg_match('/\.edu\.[a-z]{2,}$/',$host)
+        ||preg_match('/\.ac\.[a-z]{2,}$/',$host);
+    $institutionalName=(bool)preg_match('/(?:^|\.)(?:universite|university|ecole|school|lycee|institut|academy|enseignement|formation)[a-z0-9-]*\./',$host);
+    if($official&&$pdf)return ['diploma_public_archive','Archive académique publique',97];
+    if($official)return ['academic_official','Établissement / institution publique',96];
+    if($institutionalName&&$pdf)return ['education_institution_document','Document d’établissement indexé',90];
+    if($institutionalName)return ['education_institution','Établissement à confirmer',88];
+    if($pdf)return ['education_public_document','Document public indexé',84];
+    return ['education_media','Source parcours scolaire',82];
+}
+
+function p50_de_education_excerpt(string $text): string {
+    $plain=p50_de_text_excerpt($text,12000);if($plain==='')return '';
+    $sentences=preg_split('/(?<=[.!?])\s+/u',$plain)?:[];$selected=[];
+    foreach($sentences as $sentence){
+        $n=p50_normalize_text($sentence);
+        if(preg_match('/\b(ecole|lycee|universite|university|diplome|diplomee|diplome|licence|master|baccalaureat|bac|formation|etudes|alumni|promotion|soutenance|marine marchande)\b/',$n))$selected[]=trim($sentence);
+        if(count($selected)>=3)break;
+    }
+    return p50_de_text_excerpt(implode(' ',$selected),700);
+}
+
+/**
+ * Explore uniquement des archives et pages publiques : écoles, universités,
+ * listes d'anciens élèves, diplômes publiés, CV publics et institutions.
+ * Aucune date n'est déduite d'un âge scolaire : elle doit être explicitement écrite.
+ */
+function p50_de_collect_academic_public_records(array $profile,int $limit=7): array {
+    $name=(string)$profile['public_name'];$handle=(string)$profile['handle'];$profileId=(string)$profile['profile_id'];
+    $aliases=[];$state=p50_de_load_public_state();$map=p50_de_profile_state_map($state);$sp=$map[$profileId]??[];
+    foreach(preg_split('/[\/,;|·]+/u',(string)($sp['knownAlias']??''))?:[] as $alias)if(trim($alias)!=='')$aliases[]=trim($alias);
+    $realName=trim((string)($sp['realName']??($sp['curatedFacts']['real_name']['value']??'')));if($realName!=='')array_unshift($aliases,$realName);
+    $identities=[];
+    foreach(array_values(array_unique(array_filter([...$aliases,$name]))) as $identity){
+        $tokens=preg_split('/\s+/u',trim($identity))?:[];
+        // Un simple prénom ou pseudonyme court produit trop d’homonymes dans les archives scolaires.
+        $identityLength=function_exists('mb_strlen')?mb_strlen($identity,'UTF-8'):strlen($identity);
+        if(count(array_filter($tokens))<2&&$identityLength<10)continue;
+        $identities[]=$identity;
+    }
+    if(!$identities)return ['found'=>0,'checked'=>0,'details'=>[],'message'=>'Identité civile trop ambiguë pour les archives académiques'];
+    $queries=[];
+    foreach($identities as $identity){
+        $queries[]='"'.$identity.'" (école OR ecole OR lycée OR lycee OR université OR universite OR diplôme OR diplome OR alumni OR promotion OR soutenance)';
+        $queries[]='"'.$identity.'" ("date de naissance" OR "né le" OR "née le") (école OR université OR diplôme OR CV)';
+        $queries[]='filetype:pdf "'.$identity.'" (diplôme OR diplome OR CV OR "date de naissance")';
+        $queries[]='site:edu.ci "'.$identity.'" OR site:ac.ci "'.$identity.'" OR site:gouv.ci "'.$identity.'"';
+    }
+    $found=0;$checked=0;$details=[];
+    foreach(p50_de_search_rss_items($queries,$limit) as $item){
+        $hay=$item['title'].' '.$item['description'].' '.$item['url'];$identity=p50_name_score($hay,$name,$handle);
+        if($identity<62)continue;
+        [$sourceType,$sourceName,$weight]=p50_de_academic_host_weight($item['url']);
+        $education=p50_de_education_excerpt($item['description']);
+        if($education!==''){p50_de_add_fact_evidence($profileId,'education',$education,$education,$sourceType,$sourceName,$item['url'],$weight);$found++;}
+        // Snippet : preuve faible sauf institution publique, et uniquement si la date est explicite.
+        foreach(p50_de_birth_context_dates($item['title'].' '.$item['description']) as $date){
+            $birthWeight=str_starts_with($sourceType,'academic_official')||str_starts_with($sourceType,'diploma_public_archive')?96:78;
+            p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$sourceType.'_snippet',$sourceName.' · extrait indexé',$item['url'],$birthWeight);$found++;
+        }
+        $path=strtolower((string)(parse_url($item['url'],PHP_URL_PATH)?:''));
+        if(!str_ends_with($path,'.pdf')){
+            $page=p50_de_collect_page_enrichment($profile,$item['url'],$sourceType,$sourceName,$weight,false);
+            $found+=(int)($page['found']??0);$details[]=$page;
+            if(($page['url']??'')!==''){
+                $r=p50_http_fetch((string)$page['url'],10,'text/html,*/*;q=0.6');
+                if($r['body']!==''){$edu=p50_de_education_excerpt($r['body']);if($edu!==''){p50_de_add_fact_evidence($profileId,'education',$edu,$edu,$sourceType,$sourceName,(string)$page['url'],$weight);$found++;}}
+            }
+        }
+        $checked++;
+    }
+    return ['found'=>$found,'checked'=>$checked,'details'=>$details,'message'=>'Archives scolaires et universitaires publiques explorées'];
+}
+
+/** Extrait les métriques publiques d'un contenu vidéo/post lorsque la plateforme les expose. */
+function p50_de_content_metrics(string $url): array {
+    $r=p50_http_fetch($url,12,'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5');
+    if($r['body']==='')return ['metrics'=>[],'publishedAt'=>null,'title'=>'','thumbnail'=>''];
+    $html=$r['body'];$meta=p50_page_metadata($html,$r['finalUrl']?:$url);$metrics=[];$published=null;
+    $patterns=[
+        'views'=>['/"viewCount"\s*:\s*"?(\d+)/i','/"playCount"\s*:\s*"?(\d+)/i','/"videoViewCount"\s*:\s*"?(\d+)/i'],
+        'likes'=>['/"likeCount"\s*:\s*"?(\d+)/i','/"diggCount"\s*:\s*"?(\d+)/i'],
+        'comments'=>['/"commentCount"\s*:\s*"?(\d+)/i'],
+        'shares'=>['/"shareCount"\s*:\s*"?(\d+)/i'],
+    ];
+    foreach($patterns as $key=>$list)foreach($list as $pattern)if(preg_match($pattern,$html,$m)){$metrics[$key]=(int)$m[1];break;}
+    foreach(['/"datePublished"\s*:\s*"([^"]+)"/i','/"uploadDate"\s*:\s*"([^"]+)"/i','/<meta[^>]+property=["\']article:published_time["\'][^>]+content=["\']([^"\']+)/i'] as $pattern){
+        if(preg_match($pattern,$html,$m)){try{$published=(new DateTimeImmutable($m[1]))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');}catch(Throwable){}break;}
+    }
+    return ['metrics'=>$metrics,'publishedAt'=>$published,'title'=>(string)($meta['title']??''),'thumbnail'=>(string)($meta['image']??'')];
+}
+
+function p50_de_metric_number(mixed $value): int {
+    if(is_int($value)||is_float($value))return max(0,(int)$value);
+    $raw=strtoupper(str_replace(["\u{00A0}",' '],'',trim((string)$value)));if($raw==='')return 0;
+    if(preg_match('/([0-9]+(?:[.,][0-9]+)?)([KMB])?/',$raw,$m)){
+        $n=(float)str_replace(',','.',$m[1]);$factor=match($m[2]??''){ 'K'=>1000,'M'=>1000000,'B'=>1000000000,default=>1};return (int)round($n*$factor);
+    }
+    return 0;
+}
+
+/** Score de tendance fondé sur preuves récentes, sans score inventé. */
+function p50_de_compute_trend_score(string $profileId): array {
+    $stmt=db()->prepare("SELECT platform,event_type,published_at,collected_at,metrics,confidence FROM p50_activity_events WHERE profile_id=? AND status='verified' AND confidence>=? AND COALESCE(published_at,collected_at)>=DATE_SUB(NOW(),INTERVAL 45 DAY) ORDER BY COALESCE(published_at,collected_at) DESC");
+    $stmt->execute([$profileId,p50_de_threshold()]);$events=$stmt->fetchAll();$links=p50_de_social_links($profileId,true);
+    $platforms=[];$latestTs=0;$sumViews=0;$maxViews=0;$eventCount30=0;$eventCount7=0;$weightedViews=0.0;$conf=[];
+    $now=time();
+    foreach($events as $event){
+        $metrics=decode_json_column($event['metrics']??null,[]);$views=p50_de_metric_number($metrics['views']??0);
+        $ts=strtotime((string)($event['published_at']?:$event['collected_at']))?:0;$ageHours=max(0,($now-$ts)/3600);
+        $decay=exp(-$ageHours/(24*6));$weightedViews+=$views*$decay;$sumViews+=$views;$maxViews=max($maxViews,$views);$latestTs=max($latestTs,$ts);
+        if($ageHours<=24*30)$eventCount30++;if($ageHours<=24*7)$eventCount7++;
+        $platforms[(string)$event['platform']]=true;$conf[]=(int)$event['confidence'];
+    }
+    foreach($links as $link){$platforms[(string)$link['platform']]=true;$conf[]=(int)$link['confidence'];}
+    $freshHours=$latestTs>0?max(0,($now-$latestTs)/3600):9999;
+    $viewScore=$weightedViews>0?min(58.0,max(0.0,(log10($weightedViews+1)-3.0)*14.5)):0.0;
+    $activityScore=min(18.0,$eventCount7*3.2+max(0,$eventCount30-$eventCount7)*0.8);
+    $freshness=$freshHours<=12?12:($freshHours<=48?9:($freshHours<=168?6:($freshHours<=720?2:0)));
+    $diversity=min(8.0,count($platforms)*2.0);$score=(int)round(min(100,max(0,8+$viewScore+$activityScore+$freshness+$diversity)));
+    $confidence=$conf?(int)round(array_sum($conf)/count($conf)):0;
+    $classable=$confidence>=p50_de_threshold()&&count($links)>=1&&($eventCount30>=2||$maxViews>=50000||$sumViews>=100000);
+    return ['score'=>$score,'confidence'=>$confidence,'classable'=>$classable,'events30'=>$eventCount30,'events7'=>$eventCount7,'sumViews'=>$sumViews,'maxViews'=>$maxViews,'platforms'=>array_keys($platforms),'latestAt'=>$latestTs?gmdate('c',$latestTs):null];
+}
+
+function p50_de_period_scores(int $base): array {
+    return ['2H'=>$base,'24H'=>max(0,min(100,$base-1)),'48H'=>max(0,min(100,$base-2)),'7J'=>max(0,min(100,$base-4)),'15J'=>max(0,min(100,$base-6))];
+}
+
+/** Collecteur principal V22 : sources structurées, archives publiques et activité sociale. */
 function p50_de_collect_enrichment(array $profile,bool $deep=true): array {
     $profileId=(string)$profile['profile_id'];$found=0;$details=[];
     $structured=p50_de_collect_wikidata($profile);$found+=(int)($structured['found']??0);$details['structured']=$structured;
     $facts=p50_de_verified_facts($profileId);
-    if(!isset($facts['birth_date'])&&$deep){$bio=p50_de_collect_biography_web($profile,3);$found+=(int)($bio['found']??0);$details['biography']=$bio;}
+    if($deep){$academic=p50_de_collect_academic_public_records($profile,p50_de_is_priority_profile($profileId)?9:5);$found+=(int)($academic['found']??0);$details['academic']=$academic;}
+    $facts=p50_de_verified_facts($profileId);
+    if(!isset($facts['birth_date'])&&$deep){$bio=p50_de_collect_biography_web($profile,p50_de_is_priority_profile($profileId)?6:3);$found+=(int)($bio['found']??0);$details['biography']=$bio;}
     // Les sites Web déjà validés sont analysés même si Wikidata ne connaît pas le profil.
     foreach(p50_de_social_links($profileId,true) as $link){
         if(strcasecmp((string)$link['platform'],'Web')!==0)continue;
@@ -859,12 +1048,20 @@ function p50_de_collect_state_facts(array $profile): int {
     $map=p50_de_profile_state_map($state);
     $p=$map[(string)$profile['profile_id']]??null;
     if(!is_array($p))return 0;
+    $count=0;$profileId=(string)$profile['profile_id'];
     $date=trim((string)($p['birthDate']??''));
     if($date!==''&&preg_match('/^\d{4}-\d{2}-\d{2}$/',$date)){
-        p50_de_add_fact_evidence((string)$profile['profile_id'],'birth_date',$date,$date,'state_import','État PASS50','',70);
-        return 1;
+        p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,'state_import','État PASS50','',70);$count++;
     }
-    return 0;
+    $allowed=['real_name','education','occupation','nationality','bio','category','official_website','birth_date'];
+    foreach((array)($p['curatedFacts']??[]) as $key=>$seed){
+        if(!in_array((string)$key,$allowed,true)||!is_array($seed))continue;
+        $value=trim((string)($seed['value']??''));if($value==='')continue;
+        if($key==='birth_date'){$value=p50_de_normalize_iso_date($value);if($value==='')continue;}
+        $weight=max(90,min(96,(int)($seed['confidence']??94)));
+        p50_de_add_fact_evidence($profileId,(string)$key,$value,$value,'curated_research_v22',(string)($seed['source_name']??'Recherche PASS50 V22'),(string)($seed['source_url']??''),$weight);$count++;
+    }
+    return $count;
 }
 
 function p50_de_collect_state_links(array $profile): int {
@@ -873,11 +1070,14 @@ function p50_de_collect_state_links(array $profile): int {
     $p=$map[(string)$profile['profile_id']]??null;
     if(!is_array($p))return 0;
     $count=0;
+    $curated=is_array($p['curatedSocialSources']??null)?$p['curatedSocialSources']:[];
     foreach((array)($p['links']??[]) as $platform=>$url){
         if(!is_string($url)||trim($url)==='')continue;
         $validation=p50_de_validate_social_url((string)$platform,$url,(string)$profile['public_name'],(string)$profile['handle']);
         if($validation['normalizedUrl']==='')continue;
-        p50_de_add_social_evidence((string)$profile['profile_id'],(string)$platform,$validation['normalizedUrl'],'state_import','État PASS50','',70,$validation);
+        $seed=is_array($curated[$platform]??null)?$curated[$platform]:null;
+        $type=$seed?'curated_research_v22':'state_import';$name=$seed?(string)($seed['source_name']??'Recherche PASS50 V22'):'État PASS50';$sourceUrl=$seed?(string)($seed['source_url']??''):'';$weight=$seed?max(90,min(96,(int)($seed['confidence']??94))):70;
+        p50_de_add_social_evidence((string)$profile['profile_id'],(string)$platform,$validation['normalizedUrl'],$type,$name,$sourceUrl,$weight,$validation);
         $count++;
     }
     return $count;
@@ -951,6 +1151,8 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
             if($currentBio===''||($autoBioValue!==''&&$currentBio===$autoBioValue)){$p['bio']=$bio;$autoBioValue=$bio;$changed=true;}
         }
         if(isset($facts['occupation'])){$p['occupation']=(string)$facts['occupation']['normalized_value'];$changed=true;}
+        if(isset($facts['education'])){$p['education']=(string)$facts['education']['normalized_value'];$changed=true;}
+        if(isset($facts['real_name'])){$p['realName']=(string)$facts['real_name']['normalized_value'];$changed=true;}
         if(isset($facts['nationality'])){$p['nationality']=(string)$facts['nationality']['normalized_value'];$changed=true;}
         if(isset($facts['official_website'])){$p['officialWebsite']=(string)$facts['official_website']['normalized_value'];$changed=true;}
         $autoCategoryValue=(string)($previousEngine['autoCategoryValue']??'');
@@ -971,6 +1173,15 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
             $p['quality']['photo']=0;
         }
 
+        $trend=p50_de_compute_trend_score($profileId);
+        $wasCandidate=empty($p['eligible'])||array_key_exists('classable',$p)&&empty($p['classable']);
+        $autoManaged=!empty($previousEngine['autoScore'])||$wasCandidate||p50_de_is_priority_profile($profileId);
+        if($autoManaged&&$trend['classable']){
+            $periodScores=p50_de_period_scores((int)$trend['score']);$p['scores']=array_merge((array)($p['scores']??[]),$periodScores);$p['score']=$periodScores['2H'];
+            $p['eligible']=true;$p['classable']=true;$p['quality']['score']=(int)$trend['confidence'];
+            $badges=[];if($trend['score']>=88)$badges[]='HOT';if($trend['score']>=82)$badges[]='UP';if(($trend['events7']??0)>=3)$badges[]='VIRAL';$p['badges']=array_values(array_unique($badges));
+            $changed=true;
+        }
         $p['lastCollectedAt']=gmdate('c');
         $p['dataEngine']=[
             'threshold'=>p50_de_threshold(),
@@ -980,12 +1191,15 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
             'photoCandidate'=>(bool)$photoCandidate,
             'autoBioValue'=>$autoBioValue,
             'autoCategoryValue'=>$autoCategoryValue,
+            'autoScore'=>$autoManaged,
+            'trend'=>$trend,
+            'priorityWave'=>p50_de_is_priority_profile($profileId)?'V22-16':'',
         ];
         $changed=true;
         break;
     }
     unset($p);
-    if($changed){$state['dataEngineMeta']=['threshold'=>p50_de_threshold(),'lastPublishedAt'=>gmdate('c'),'version'=>18];p50_de_save_public_state($state,$userId);}
+    if($changed){$state['dataEngineMeta']=['threshold'=>p50_de_threshold(),'lastPublishedAt'=>gmdate('c'),'version'=>22];p50_de_save_public_state($state,$userId);}
     return $changed;
 }
 
@@ -1135,10 +1349,12 @@ function p50_de_collect_social_activity(array $profile): array {
             $image=(string)($meta['image']??'');if(filter_var($image,FILTER_VALIDATE_URL)){p50_de_add_fact_evidence($profileId,'photo_url',$image,$image,'official_social_'.strtolower($platform),$platform.' officiel',$final,max(88,$confidence-4));$found++;}
         }
         $contentUrls=p50_de_social_content_urls_from_html($r['body'],$final,$platform,6);
-        foreach($contentUrls as $contentUrl){
+        foreach($contentUrls as $contentIndex=>$contentUrl){
             $type=in_array($platform,['TikTok','Instagram','Facebook','Snapchat'],true)?'video':'post';
-            $title=trim((string)($meta['title']??''));if($title===''||p50_name_score($title,$name,$handle)<20)$title='Contenu récent détecté sur '.$platform;
-            p50_de_add_activity($profileId,$platform,$type,$title,$contentUrl,null,['discoveredFrom'=>$final,'automatic'=>true],max(88,$confidence-3));
+            $content=$contentIndex<3?p50_de_content_metrics($contentUrl):['metrics'=>[],'publishedAt'=>null,'title'=>'','thumbnail'=>''];
+            $title=trim((string)($content['title']??''));if($title===''||p50_name_score($title,$name,$handle)<20)$title=trim((string)($meta['title']??''));if($title===''||p50_name_score($title,$name,$handle)<20)$title='Contenu récent détecté sur '.$platform;
+            $metrics=array_merge(['discoveredFrom'=>$final,'automatic'=>true],(array)($content['metrics']??[]));if(!empty($content['thumbnail']))$metrics['thumbnail']=$content['thumbnail'];
+            p50_de_add_activity($profileId,$platform,$type,$title,$contentUrl,$content['publishedAt']??null,$metrics,max(90,$confidence-2));
             $found++;
         }
         $platforms[$platform]=['visited'=>true,'contentFound'=>count($contentUrls),'httpStatus'=>(int)$r['status']];
@@ -1187,6 +1403,7 @@ function p50_de_hub_payload(): array {
         $photoBest=p50_de_best_fact($id,'photo_url',1);
         $categoryBest=p50_de_best_fact($id,'category',1);
         $bioBest=p50_de_best_fact($id,'bio',1);
+        $educationBest=p50_de_best_fact($id,'education',1);
         $nationalityBest=p50_de_best_fact($id,'nationality',1);
         $runStmt=db()->prepare('SELECT status,collector,started_at,finished_at,error_message,items_found,items_verified FROM p50_collection_runs WHERE profile_id=? ORDER BY started_at DESC LIMIT 1');$runStmt->execute([$id]);$lastRun=$runStmt->fetch()?:null;
         $photoConfidence=((string)($sp['photoStatus']??'')==='validated')?100:(int)($photoBest['confidence']??0);
@@ -1203,7 +1420,8 @@ function p50_de_hub_payload(): array {
             'eligible'=>(bool)$r['eligible'],'alive'=>(bool)$r['alive'],
             'quality'=>$qualities,'completeness'=>(int)round($complete/count($qualities)*100),
             'facts'=>$facts,'birthBest'=>$birthBest,'photoBest'=>$photoBest,'categoryBest'=>$categoryBest,'bioBest'=>$bioBest,'nationalityBest'=>$nationalityBest,
-            'socialLinks'=>$social,'verifiedSocialCount'=>$verifiedSocial,'lastRun'=>$lastRun,
+            'socialLinks'=>$social,'verifiedSocialCount'=>$verifiedSocial,'lastRun'=>$lastRun,'educationBest'=>$educationBest,
+            'priorityWave'=>p50_de_is_priority_profile($id)?'V22-16':'','trendCandidate'=>p50_de_compute_trend_score($id),
             'lastCollectedAt'=>$lastRun['finished_at']??null,
         ];
     }
@@ -1219,5 +1437,5 @@ function p50_de_hub_payload(): array {
         'autoEnriched'=>count(array_filter($profiles,static fn($p)=>!empty($p['facts'])||!empty($p['photoBest'])||!empty($p['verifiedSocialCount']))),
         'neverCollected'=>count(array_filter($profiles,static fn($p)=>empty($p['lastRun']))),
     ];
-    return ['ok'=>true,'engineVersion'=>19,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
+    return ['ok'=>true,'engineVersion'=>22,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
 }

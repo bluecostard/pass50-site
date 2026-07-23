@@ -16,13 +16,13 @@ if($action==='snapshot'){
     $count=p50_de_capture_snapshots((string)($_GET['period']??'2H'));
     json_response(['ok'=>true,'action'=>'snapshot','captured'=>$count]);
 }
-if(!in_array($action,['collect','cycle'],true))json_response(['error'=>'Action cron inconnue.'],422);
+if(!in_array($action,['collect','cycle','priority16'],true))json_response(['error'=>'Action cron inconnue.'],422);
 
 p50_de_sync_registry_from_state();
-$profiles=p50_de_profiles_for_collection($batch,null);
+$profiles=$action==='priority16'?array_values(array_filter(p50_de_registry_profiles(null,1000,0,false),static fn($p)=>p50_de_is_priority_profile((string)$p['profile_id']))):p50_de_profiles_for_collection($batch,null);
 $results=[];$found=0;$verified=0;
 foreach($profiles as $profile){
-    $run=p50_de_begin_run((string)$profile['profile_id'],'cron_auto_enrichment_v19',null,['deep'=>true]);
+    $run=p50_de_begin_run((string)$profile['profile_id'],'cron_auto_enrichment_v22',null,['deep'=>true]);
     try{
         $stateLinks=p50_de_collect_state_links($profile);
         $stateFacts=p50_de_collect_state_facts($profile);

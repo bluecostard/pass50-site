@@ -16,7 +16,7 @@ $publish=!array_key_exists('publishVerified',$in)||!empty($in['publishVerified']
 $profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null);
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
 foreach($profiles as $profile){
-    $run=p50_de_begin_run((string)$profile['profile_id'],'auto_enrichment_v19',$user['id'],['deep'=>$deep]);
+    $run=p50_de_begin_run((string)$profile['profile_id'],'auto_enrichment_v22',$user['id'],['deep'=>$deep]);
     try{
         $imported=p50_de_collect_state_links($profile);
         $importedFacts=p50_de_collect_state_facts($profile);

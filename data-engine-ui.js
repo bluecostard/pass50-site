@@ -33,7 +33,7 @@
   }
 
   function deRenderHub(pane){
-    pane.innerHTML=`<div class="data-engine-shell"><div class="media-hint"><strong>Moteur V19 :</strong> il travaille sur <strong>tous les profils recensés</strong>, même non classables. Il recherche les naissances, biographies, catégories, nationalités, photos candidates et réseaux officiels, puis visite autant que possible chaque compte validé pour détecter des vidéos et publications récentes. Seules les données ≥ <strong>90 %</strong> sont publiées ; les photos restent à valider.</div><div class="de-toolbar"><button class="btn" id="deSync">Synchroniser les profils</button><button class="btn" id="deCollectBatch">Enrichir 5 profils</button><button class="btn primary" id="deAutoAll">Enrichir toute la base</button><button class="btn danger" id="deStopAuto" style="display:none">Arrêter</button><button class="btn" id="dePublish">Publier les données ≥ 90 %</button><button class="btn" id="deSnapshot">Capturer le classement</button></div><div id="deHubContent" class="de-loading">Chargement du moteur de données…</div></div>`;
+    pane.innerHTML=`<div class="data-engine-shell"><div class="media-hint"><strong>Moteur V22 :</strong> il travaille sur <strong>tous les profils recensés</strong>, même non classables. Il explore aussi les archives publiques d’écoles, universités, diplômes, listes d’anciens élèves et institutions, sans déduire une naissance lorsqu’elle n’est pas explicitement publiée. Il visite les comptes validés et calcule un score uniquement à partir de preuves récentes. Seules les données ≥ <strong>90 %</strong> sont publiées ; les photos restent à valider.</div><div class="de-toolbar"><button class="btn" id="deSync">Synchroniser les profils</button><button class="btn" id="deCollectBatch">Enrichir 5 profils</button><button class="btn primary" id="dePriority16">Actualiser les 16 prioritaires</button><button class="btn primary" id="deAutoAll">Enrichir toute la base</button><button class="btn danger" id="deStopAuto" style="display:none">Arrêter</button><button class="btn" id="dePublish">Publier les données ≥ 90 %</button><button class="btn" id="deSnapshot">Capturer le classement</button></div><div id="deHubContent" class="de-loading">Chargement du moteur de données…</div></div>`;
     deLoadHub();deSetAutoUi();
   }
 
@@ -66,7 +66,7 @@
   function deProfileRow(p){
     const birth=p.birthBest||p.facts?.birth_date,social=(p.socialLinks||[]).filter(x=>x.status==='verified'&&Number(x.confidence)>=deThreshold()),run=p.lastRun;
     const rankIndex=typeof ranking==='function'?ranking().findIndex(x=>x.id===p.id):-1,top50=rankIndex>=0&&rankIndex<50;
-    const info=[];if(p.categoryBest)info.push('Catégorie');if(p.bioBest)info.push('Bio');if(p.nationalityBest)info.push('Nationalité');if(p.photoBest)info.push('Photo');
+    const info=[];if(p.categoryBest)info.push('Catégorie');if(p.bioBest)info.push('Bio');if(p.educationBest)info.push('Parcours scolaire');if(p.nationalityBest)info.push('Nationalité');if(p.photoBest)info.push('Photo');
     return `<tr><td><strong>${deEsc(p.name)}</strong>${top50?'<span class="de-top50-pill">TOP 50</span>':''}<div class="hub-detail">${rankIndex>=0?'#'+(rankIndex+1)+' · ':''}${deEsc(p.handle||'')}</div></td><td>${p.eligible?'<span class="de-status verified">Classable</span>':'<span class="de-status candidate">Recensé</span>'}</td><td><div class="de-progress"><i style="width:${Number(p.completeness||0)}%"></i></div><div class="hub-detail">${Number(p.completeness||0)} %</div></td><td>${birth?deStatus(birth.status,birth.confidence):deStatus('empty',0)}</td><td>${social.length?`<span class="de-score ok">${social.length}</span> vérifié${social.length>1?'s':''}`:deStatus('empty',0)}</td><td>${info.length?`<div class="de-info-chips">${info.map(x=>`<span>${x}</span>`).join('')}</div>`:'<span class="muted">Aucune</span>'}</td><td><div class="de-run">${deTime(p.lastCollectedAt)}${run?.items_found?`<br>${Number(run.items_found)} donnée(s) trouvée(s)`:''}${run?.status==='error'?'<br><span style="color:#ff8080">Erreur de collecte</span>':''}</div></td><td><div class="de-row-actions"><button class="btn small de-collect-one" data-id="${deEsc(p.id)}">Enrichir</button><button class="btn small de-social" data-id="${deEsc(p.id)}">Réseaux</button><button class="btn small de-birth" data-id="${deEsc(p.id)}">Naissance</button></div></td></tr>`;
   }
 
@@ -92,6 +92,7 @@
     }catch(err){console.error(err);DE.autoMessage=err.message||'Le moteur a rencontré une erreur.';toast(DE.autoMessage);}
     finally{DE.autoRunning=false;DE.stopRequested=false;deSetAutoUi();deAutoProgress();await deLoadHub(true);}
   }
+  async function dePriority16(btn){await deAction(btn,async()=>{const data=await apiFetch('priority-refresh.php',{method:'POST',body:{}});DE.hub=data.hub;deDrawHub();await loadCloudState();render();toast(`${data.processed} profils prioritaires parcourus · ${data.classable} classables sur preuves récentes`);},'Actualisation des 16…');}
   async function dePublish(btn){await deAction(btn,async()=>{const data=await apiFetch('data-publish.php',{method:'POST',body:{}});DE.hub=data.hub;deDrawHub();await loadCloudState();render();toast(`${data.publishedProfiles} profils publiés`);},'Publication…');}
   async function deSnapshot(btn){await deAction(btn,async()=>{const data=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});toast(`${data.captured} positions enregistrées`);},'Capture…');}
 
@@ -121,6 +122,7 @@
     try{
       if(e.target.id==='deSync')await deSync(e.target);
       if(e.target.id==='deCollectBatch')await deCollect(e.target);
+      if(e.target.id==='dePriority16')await dePriority16(e.target);
       if(e.target.id==='deAutoAll')await deAutoEnrich(e.target);
       if(e.target.id==='deStopAuto'){DE.stopRequested=true;DE.autoMessage='Arrêt demandé : le lot en cours se termine…';deAutoProgress();}
       if(e.target.id==='dePublish')await dePublish(e.target);

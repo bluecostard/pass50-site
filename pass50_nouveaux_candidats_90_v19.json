@@ -159,16 +159,53 @@
     "zone": "CI",
     "category": "Musique",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/channel/UCck5J0M6YKnXCrnuXkCFuvw",
+      "X": "https://x.com/HimraOfficiel",
+      "Instagram": "https://www.instagram.com/himra_saiyen/",
+      "Facebook": "https://www.facebook.com/Himraofficiel/"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2024-10-13",
       "url": "https://www.pulse.ci/article/decouvrez-les-22-gagnants-des-pulse-influencers-awards-2024-en-cote-divoire-2024102810001168223"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Himra\" date de naissance école université diplôme",
+      "\"Himra\" officiel YouTube TikTok Instagram",
+      "\"Himra\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/channel/UCck5J0M6YKnXCrnuXkCFuvw",
+        "source_name": "Wikidata / YouTube API",
+        "source_url": "https://www.wikidata.org/wiki/Q131464985",
+        "confidence": 94
+      },
+      "X": {
+        "url": "https://x.com/HimraOfficiel",
+        "source_name": "Wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q131464985",
+        "confidence": 94
+      },
+      "Instagram": {
+        "url": "https://www.instagram.com/himra_saiyen/",
+        "source_name": "Wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q131464985",
+        "confidence": 94
+      },
+      "Facebook": {
+        "url": "https://www.facebook.com/Himraofficiel/",
+        "source_name": "Wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q131464985",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-ahou-lafricaine",
@@ -368,16 +405,59 @@
     "zone": "CI",
     "category": "Médias",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "Instagram": "https://www.instagram.com/willy_dumbo/",
+      "Web": "https://lifetv.ci/programmes/willy-a-midi/"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2024-10-13",
       "url": "https://www.pulse.ci/article/decouvrez-les-22-gagnants-des-pulse-influencers-awards-2024-en-cote-divoire-2024102810001168223"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Willy Dumbo\" date de naissance école université diplôme",
+      "\"Willy Dumbo\" officiel YouTube TikTok Instagram",
+      "\"Willy Dumbo\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "Instagram": {
+        "url": "https://www.instagram.com/willy_dumbo/",
+        "source_name": "HypeAuditor",
+        "source_url": "https://hypeauditor.com/fr/instagram/willy_dumbo/",
+        "confidence": 94
+      },
+      "Web": {
+        "url": "https://lifetv.ci/programmes/willy-a-midi/",
+        "source_name": "Life TV",
+        "source_url": "https://lifetv.ci/programmes/willy-a-midi/",
+        "confidence": 94
+      }
+    },
+    "curated_facts": {
+      "real_name": {
+        "value": "Wilfried Emmanuel Missinhou",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/5-choses-a-savoir-sur-willy-dumbo-2024090510591232377",
+        "confidence": 94
+      },
+      "education": {
+        "value": "Études de marine marchande, avec un grade de lieutenant selon le portrait cité par Pulse.",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/5-choses-a-savoir-sur-willy-dumbo-2024090510591232377",
+        "confidence": 94
+      },
+      "occupation": {
+        "value": "Animateur, humoriste, chanteur et imitateur.",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/5-choses-a-savoir-sur-willy-dumbo-2024090510591232377",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-djamo",
@@ -577,16 +657,53 @@
     "zone": "CI",
     "category": "Musique",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/channel/UClzKdPhr7GrMtFFVcgpMiLg",
+      "Instagram": "https://www.instagram.com/didibofficial/",
+      "TikTok": "https://www.tiktok.com/@didib.mojaveli",
+      "X": "https://x.com/Didibofficial"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2023-10-09",
       "url": "https://www.pulse.ci/article/decouvrez-les-laureats-de-ledition-2023-des-pulse-influencer-awards-2024090512323480803"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Didi B\" date de naissance école université diplôme",
+      "\"Didi B\" officiel YouTube TikTok Instagram",
+      "\"Didi B\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/channel/UClzKdPhr7GrMtFFVcgpMiLg",
+        "source_name": "Wikidata / YouTube API",
+        "source_url": "https://www.wikidata.org/wiki/Q115791127",
+        "confidence": 94
+      },
+      "Instagram": {
+        "url": "https://www.instagram.com/didibofficial/",
+        "source_name": "Ivoireland",
+        "source_url": "https://www.ivoireland.com/24/qui-didi-rappeur-talentueux-cote",
+        "confidence": 94
+      },
+      "TikTok": {
+        "url": "https://www.tiktok.com/@didib.mojaveli",
+        "source_name": "Wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q115791127",
+        "confidence": 94
+      },
+      "X": {
+        "url": "https://x.com/Didibofficial",
+        "source_name": "Wikidata",
+        "source_url": "https://www.wikidata.org/wiki/Q115791127",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-le-grouilleur-3-0",
@@ -710,7 +827,7 @@
     "zone": "CI",
     "category": "Humour / Courts-métrages",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
     "official_socials": {},
@@ -719,7 +836,33 @@
       "date": "2025-09-19",
       "url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Chris Vital\" date de naissance école université diplôme",
+      "\"Chris Vital\" officiel YouTube TikTok Instagram",
+      "\"Chris Vital\" vidéo récente vues 2026"
+    ],
+    "curated_facts": {
+      "real_name": {
+        "value": "Djeli N’Guessan Brice Chris Vital",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/chris-vital-le-web-humoriste-ivoirien-couronne-meilleur-createur-digital-au-primud-2025-2025101612535426058",
+        "confidence": 94
+      },
+      "education": {
+        "value": "Formation en droit entamée après le baccalauréat.",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/chris-vital-le-web-humoriste-ivoirien-couronne-meilleur-createur-digital-au-primud-2025-2025101612535426058",
+        "confidence": 94
+      },
+      "occupation": {
+        "value": "Humoriste web et créateur digital.",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/chris-vital-le-web-humoriste-ivoirien-couronne-meilleur-createur-digital-au-primud-2025-2025101612535426058",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-mamie-show",
@@ -729,16 +872,46 @@
     "zone": "CI",
     "category": "Humour / Famille",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@mamieshow_officiel"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2025-09-19",
       "url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Mamie Show\" date de naissance école université diplôme",
+      "\"Mamie Show\" officiel YouTube TikTok Instagram",
+      "\"Mamie Show\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@mamieshow_officiel",
+        "source_name": "Hafi / Chartex",
+        "source_url": "https://hafi.pro/top/most-followed-tiktok/ivory-coast",
+        "confidence": 94
+      }
+    },
+    "curated_facts": {
+      "real_name": {
+        "value": "Ali Mamlouk",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724",
+        "confidence": 94
+      },
+      "occupation": {
+        "value": "Humoriste web et créateur de vidéos familiales.",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-artiste-de-poulet",
@@ -748,16 +921,53 @@
     "zone": "CI",
     "category": "Humour / Musique",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@artiste_de_poulet1",
+      "Web": "https://music.apple.com/ci/artist/artiste-de-poulet/1665548801"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2025-09-19",
       "url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Artiste de Poulet\" date de naissance école université diplôme",
+      "\"Artiste de Poulet\" officiel YouTube TikTok Instagram",
+      "\"Artiste de Poulet\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@artiste_de_poulet1",
+        "source_name": "Chartex",
+        "source_url": "https://chartex.com/song/en-jesus-commando-zinzin-mode-2925259",
+        "confidence": 94
+      },
+      "Web": {
+        "url": "https://music.apple.com/ci/artist/artiste-de-poulet/1665548801",
+        "source_name": "Apple Music",
+        "source_url": "https://music.apple.com/ci/artist/artiste-de-poulet/1665548801",
+        "confidence": 94
+      }
+    },
+    "curated_facts": {
+      "real_name": {
+        "value": "Aly Chouchou",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724",
+        "confidence": 94
+      },
+      "occupation": {
+        "value": "Créateur humoristique et artiste musical.",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-ange-freddy",
@@ -767,16 +977,54 @@
     "zone": "CI",
     "category": "Humour / Courts-métrages",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/channel/UCiP6EoBSe9ghJ7Bhn0HK3_Q",
+      "Instagram": "https://www.instagram.com/realangefreddy/",
+      "TikTok": "https://www.tiktok.com/@realangefreddy"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2025-09-19",
       "url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Ange Freddy\" date de naissance école université diplôme",
+      "\"Ange Freddy\" officiel YouTube TikTok Instagram",
+      "\"Ange Freddy\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/channel/UCiP6EoBSe9ghJ7Bhn0HK3_Q",
+        "source_name": "vling",
+        "source_url": "https://vling.net/en/channel/UCiP6EoBSe9ghJ7Bhn0HK3_Q/channel-info",
+        "confidence": 94
+      },
+      "Instagram": {
+        "url": "https://www.instagram.com/realangefreddy/",
+        "source_name": "Ivoireland",
+        "source_url": "https://www.ivoireland.com/7741/biographie-ange-freddy-homme-parcours",
+        "confidence": 94
+      },
+      "TikTok": {
+        "url": "https://www.tiktok.com/@realangefreddy",
+        "source_name": "Ivoireland",
+        "source_url": "https://www.ivoireland.com/7741/biographie-ange-freddy-homme-parcours",
+        "confidence": 94
+      }
+    },
+    "curated_facts": {
+      "occupation": {
+        "value": "Web-humoriste, créateur de courts-métrages et photographe.",
+        "source_name": "Ivoireland",
+        "source_url": "https://www.ivoireland.com/7741/biographie-ange-freddy-homme-parcours",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-amour-ruth-poopy",
@@ -824,16 +1072,46 @@
     "zone": "CI",
     "category": "Humour / Musique",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "Instagram": "https://www.instagram.com/stephanesacre/"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2025-09-19",
       "url": "https://www.pulse.ci/article/besoin-dune-bonne-dose-de-rire-voici-10-tiktokeurs-ivoiriens-a-suivre-absolument-2025091915542150724"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"L’Exès\" date de naissance école université diplôme",
+      "\"L’Exès\" officiel YouTube TikTok Instagram",
+      "\"L’Exès\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "Instagram": {
+        "url": "https://www.instagram.com/stephanesacre/",
+        "source_name": "Le Monde",
+        "source_url": "https://www.lemonde.fr/afrique/article/2024/12/31/en-cote-d-ivoire-la-tenue-d-un-chanteur-suscite-une-vague-d-homophobie_6475478_3212.html",
+        "confidence": 94
+      }
+    },
+    "curated_facts": {
+      "real_name": {
+        "value": "Stéphane Sacré",
+        "source_name": "Le Monde",
+        "source_url": "https://www.lemonde.fr/afrique/article/2024/12/31/en-cote-d-ivoire-la-tenue-d-un-chanteur-suscite-une-vague-d-homophobie_6475478_3212.html",
+        "confidence": 94
+      },
+      "occupation": {
+        "value": "Animateur de télévision, humoriste, influenceur et chanteur.",
+        "source_name": "Le Monde",
+        "source_url": "https://www.lemonde.fr/afrique/article/2024/12/31/en-cote-d-ivoire-la-tenue-d-un-chanteur-suscite-une-vague-d-homophobie_6475478_3212.html",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-gaelle-taglao",
@@ -1033,16 +1311,32 @@
     "zone": "BOTH",
     "category": "Lifestyle / Divertissement",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/@eudoxieyao."
+    },
     "source": {
       "publisher": "Linfodrome",
       "date": "2025-07-29",
       "url": "https://origin.linfodrome.com/high-tech/111864-emma-lohoues-maa-bio-teknoush-voici-le-top-10-des-influenceurs-ivoiriens-les-plus-puissants-sur-tiktok-en-2025"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Eudoxie Yao\" date de naissance école université diplôme",
+      "\"Eudoxie Yao\" officiel YouTube TikTok Instagram",
+      "\"Eudoxie Yao\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/@eudoxieyao.",
+        "source_name": "Social Blade",
+        "source_url": "https://socialblade.com/youtube/handle/eudoxieyao.",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-jordz",
@@ -1071,16 +1365,32 @@
     "zone": "CI",
     "category": "Musique / Gospel",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/@ksbloomofficiel"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2022-12-05",
       "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"KS Bloom\" date de naissance école université diplôme",
+      "\"KS Bloom\" officiel YouTube TikTok Instagram",
+      "\"KS Bloom\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/@ksbloomofficiel",
+        "source_name": "vidIQ",
+        "source_url": "https://vidiq.com/youtube-stats/channel/%40ksbloomofficiel/",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-jonathan-morrison",
@@ -1090,16 +1400,32 @@
     "zone": "BOTH",
     "category": "Business / Sport événementiel",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "Instagram": "https://www.instagram.com/jonathanmorrison13/"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2022-12-05",
       "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Jonathan Morrison\" date de naissance école université diplôme",
+      "\"Jonathan Morrison\" officiel YouTube TikTok Instagram",
+      "\"Jonathan Morrison\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "Instagram": {
+        "url": "https://www.instagram.com/jonathanmorrison13/",
+        "source_name": "Kessiya",
+        "source_url": "https://kessiya.com/les-12-influenceurs-ivoiriens-a-suivre-en-2023/",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-jr-lamelo",
@@ -1109,16 +1435,47 @@
     "zone": "CI",
     "category": "Musique",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P2",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@jrlamelo_officiel",
+      "Web": "https://open.spotify.com/artist/66zu5ZivCIIEf7agz4ZMrU"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2022-12-05",
       "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"JR Lamelo\" date de naissance école université diplôme",
+      "\"JR Lamelo\" officiel YouTube TikTok Instagram",
+      "\"JR Lamelo\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@jrlamelo_officiel",
+        "source_name": "HypeAuditor",
+        "source_url": "https://hypeauditor.com/fr/tiktok/jrlamelo_officiel/",
+        "confidence": 94
+      },
+      "Web": {
+        "url": "https://open.spotify.com/artist/66zu5ZivCIIEf7agz4ZMrU",
+        "source_name": "Spotify",
+        "source_url": "https://open.spotify.com/artist/66zu5ZivCIIEf7agz4ZMrU",
+        "confidence": 94
+      }
+    },
+    "curated_facts": {
+      "occupation": {
+        "value": "Rappeur ivoirien associé au mouvement maïmouna / drill décalé.",
+        "source_name": "Pulse Côte d’Ivoire",
+        "source_url": "https://www.pulse.ci/article/les-rappeurs-ivoiriens-qui-ont-mousse-en-2022-pulse-picks-2024090511120151261",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-doupi-papillon",
@@ -1128,16 +1485,32 @@
     "zone": "CI",
     "category": "Danse / Musique",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/channel/UCTNcMp9dZxnP1umjuX9QgcQ"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2022-12-05",
       "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Doupi Papillon\" date de naissance école université diplôme",
+      "\"Doupi Papillon\" officiel YouTube TikTok Instagram",
+      "\"Doupi Papillon\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/channel/UCTNcMp9dZxnP1umjuX9QgcQ",
+        "source_name": "vling",
+        "source_url": "https://vling.net/en/channel/UCTNcMp9dZxnP1umjuX9QgcQ/channel-info",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-roseline-layo",
@@ -1147,16 +1520,46 @@
     "zone": "CI",
     "category": "Musique",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/channel/UCqxktbqwGm859grAvvFiJFw",
+      "Instagram": "https://www.instagram.com/roselinelayooff/",
+      "TikTok": "https://www.tiktok.com/@roselinelayoofficiel"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2022-12-05",
       "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Roseline Layo\" date de naissance école université diplôme",
+      "\"Roseline Layo\" officiel YouTube TikTok Instagram",
+      "\"Roseline Layo\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/channel/UCqxktbqwGm859grAvvFiJFw",
+        "source_name": "vidIQ",
+        "source_url": "https://vidiq.com/fr/youtube-stats/channel/UCqxktbqwGm859grAvvFiJFw/",
+        "confidence": 94
+      },
+      "Instagram": {
+        "url": "https://www.instagram.com/roselinelayooff/",
+        "source_name": "Ivoireland",
+        "source_url": "https://www.ivoireland.com/8955/biographie-roselyne-layo-chanteuse-auteur",
+        "confidence": 94
+      },
+      "TikTok": {
+        "url": "https://www.tiktok.com/@roselinelayoofficiel",
+        "source_name": "Ivoireland",
+        "source_url": "https://www.ivoireland.com/8955/biographie-roselyne-layo-chanteuse-auteur",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-olivia-yace",
@@ -1223,16 +1626,32 @@
     "zone": "CI",
     "category": "Musique",
     "census_status": "À vérifier – comptes officiels",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/@joseyofficiel"
+    },
     "source": {
       "publisher": "ELLE Afrique francophone",
       "date": "2025-12-26",
       "url": "https://elleafriquefrancophone.com/elle-la-liste-ces-personnalites-ivoiriennes-qui-ont-marque-lannee-2025/"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"Josey\" date de naissance école université diplôme",
+      "\"Josey\" officiel YouTube TikTok Instagram",
+      "\"Josey\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/@joseyofficiel",
+        "source_name": "vidIQ",
+        "source_url": "https://vidiq.com/youtube-stats/channel/%40joseyofficiel/",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-sefora-kodjo",
@@ -1641,16 +2060,40 @@
     "zone": "CI",
     "category": "Divertissement / Danse / Musique",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "Web": "https://music.apple.com/fr/artist/bb-sans-os-de-man/1713200344"
+    },
     "source": {
       "publisher": "Presse Côte d’Ivoire",
       "date": "2023-06-06",
       "url": "https://www.pressecotedivoire.fr/16972-tombe-sous-le-charme-dabidjan-bb-sans-os-de-man-refuse-meme-pour-de-largent-de-se-retourner-au-village"
     },
-    "notes": "Danseur et artiste ivoirien révélé par les réseaux sociaux. Plusieurs buzz et sorties musicales documentés ; comptes officiels et activité récente à vérifier."
+    "notes": "Danseur et artiste ivoirien révélé par les réseaux sociaux. Plusieurs buzz et sorties musicales documentés ; comptes officiels et activité récente à vérifier. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
+    "priority_wave": "V22-16",
+    "research_queries": [
+      "\"BB Sans Os de Man\" date de naissance école université diplôme",
+      "\"BB Sans Os de Man\" officiel YouTube TikTok Instagram",
+      "\"BB Sans Os de Man\" vidéo récente vues 2026"
+    ],
+    "curated_social_sources": {
+      "Web": {
+        "url": "https://music.apple.com/fr/artist/bb-sans-os-de-man/1713200344",
+        "source_name": "Apple Music",
+        "source_url": "https://music.apple.com/fr/artist/bb-sans-os-de-man/1713200344",
+        "confidence": 94
+      }
+    },
+    "curated_facts": {
+      "occupation": {
+        "value": "Danseur et artiste ivoirien révélé sur les réseaux sociaux.",
+        "source_name": "Presse Côte d’Ivoire",
+        "source_url": "https://www.pressecotedivoire.fr/16972-tombe-sous-le-charme-dabidjan-bb-sans-os-de-man-refuse-meme-pour-de-largent-de-se-retourner-au-village",
+        "confidence": 94
+      }
+    }
   },
   {
     "id": "census-dougoutigui-lobeh",
