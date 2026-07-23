@@ -86,6 +86,23 @@ CREATE TABLE IF NOT EXISTS p50_social_link_evidence (
   INDEX idx_p50_social_evidence_url (profile_id,platform,url_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+CREATE TABLE IF NOT EXISTS p50_social_link_audit (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  profile_id VARCHAR(100) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  action_type VARCHAR(32) NOT NULL,
+  previous_url TEXT NULL,
+  new_url TEXT NULL,
+  actor_id CHAR(36) NULL,
+  actor_role VARCHAR(24) NOT NULL DEFAULT '',
+  actor_name VARCHAR(190) NOT NULL DEFAULT '',
+  metadata_json LONGTEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_p50_social_audit_profile (profile_id,created_at),
+  INDEX idx_p50_social_audit_platform (profile_id,platform,created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS p50_social_links (
   profile_id VARCHAR(100) NOT NULL,
   platform VARCHAR(32) NOT NULL,

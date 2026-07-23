@@ -155,6 +155,7 @@ render();
   PASS50_V9.linksProfileId=PASS50_V9.linksProfileId||'';
   PASS50_V9.triggerPreview=null;
   PASS50_V9.triggerProfileId='';
+  PASS50_V9.linkHistory=PASS50_V9.linkHistory||[];
 
   const requestedProfiles=[
     ['coachhamond','Coach Hamond Chic','@coachhamondchic','HC','DIASPORA','Coaching / Lifestyle',['Instagram','TikTok','Facebook','YouTube','Snapchat'],34,0,0],
@@ -206,7 +207,7 @@ render();
     const results=await Promise.allSettled(Object.entries(links).map(([platform,url])=>apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:p.id,platform,url,confirmedOfficial:true,replaceExisting:true}})));
     if(results.every(x=>x.status==='fulfilled'))localStorage.setItem(key,'1');
   }
-  const adminPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50AdminPatchProfiles();p50SeedNoLimitOfficialLinks().catch(()=>null);render();clearInterval(adminPatchTimer)}},500);
+  const adminPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50AdminPatchProfiles();p50SeedNoLimitOfficialLinks().catch(()=>null);p50BackupConfirmedLinksFromBrowser().catch(()=>null);render();clearInterval(adminPatchTimer)}},500);
   setTimeout(()=>clearInterval(adminPatchTimer),20000);
 
   const oldDirect=p50v9IsDirectPlatformLink;
@@ -233,12 +234,49 @@ render();
     finally{PASS50_V9.socialHydrating.delete(profileId);}
   }
 
+  function p50LocalLinkAudit(profileId,platform,previousUrl,newUrl,confirmed=false){
+    const key='pass50_link_audit_v1',items=JSON.parse(localStorage.getItem(key)||'[]');
+    items.unshift({profileId,platform,previousUrl:previousUrl||'',newUrl:newUrl||'',confirmed:Boolean(confirmed),createdAt:new Date().toISOString()});
+    localStorage.setItem(key,JSON.stringify(items.slice(0,3000)));
+  }
+  async function p50LoadLinkHistory(profileId){
+    try{
+      const data=await apiFetch('social-links.php?profileId='+encodeURIComponent(profileId)+'&history=1&limit=80');
+      PASS50_V9.linkHistory=data.history||[];
+    }catch{PASS50_V9.linkHistory=[];}
+    p50RenderLinkHistory(profileId);
+  }
+  function p50RenderLinkHistory(profileId){
+    const box=document.getElementById('linkHistoryBox');if(!box||profileId!==PASS50_V9.linksProfileId)return;
+    const items=PASS50_V9.linkHistory||[];
+    box.innerHTML=items.length?`<div class="section-title" style="margin-bottom:8px">Historique enregistré</div>${items.slice(0,30).map(x=>`<div class="link-history-row"><strong>${safeAttr(x.platform)}</strong><span>${safeAttr(x.action_type)}</span><code>${safeAttr(x.new_url||x.previous_url||'')}</code><small>${safeAttr(x.created_at||'')}</small></div>`).join('')}`:'<div class="tool-empty">Aucun historique serveur antérieur. Les nouvelles actions seront désormais conservées.</div>';
+  }
+  async function p50RecoverOfficialLinks(scope='profile'){
+    const profileId=scope==='profile'?PASS50_V9.linksProfileId:'';
+    const button=document.querySelector(scope==='profile'?'#recoverProfileLinks':'#recoverAllLinks');if(button){button.disabled=true;button.textContent='Récupération…';}
+    try{
+      const data=await apiFetch('social-links-recovery.php',{method:'POST',body:{scope,profileId}});
+      await loadCloudState();p50AdminPatchProfiles();render();p50v9RenderLinks();
+      toast(`${data.restoredCount||0} lien(s) restauré(s)`);
+    }catch(err){toast(err.message||'Récupération impossible');}
+    finally{if(button){button.disabled=false;button.textContent=scope==='profile'?'Récupérer cette FI':'Récupérer toutes mes saisies';}}
+  }
+  async function p50BackupConfirmedLinksFromBrowser(){
+    const key='pass50_v227_confirmed_links_backup';if(localStorage.getItem(key)==='1'||!window.__pass50CloudReady)return;
+    const jobs=[];
+    (db.profiles||[]).forEach(p=>Object.entries(p.links||{}).forEach(([platform,url])=>{
+      const status=p.linkChecks?.[platform]?.status||'';
+      if(p50v9IsDirectPlatformLink(platform,url)&&['owner_verified','manual_verified','ok'].includes(status))jobs.push(apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:p.id,platform,url,confirmedOfficial:true,replaceExisting:true}}).catch(()=>null));
+    }));
+    if(jobs.length)await Promise.allSettled(jobs);
+    localStorage.setItem(key,'1');
+  }
   p50v9RenderLinks=function(){
     const pane=$('#adminPane'),profiles=p50AllProfiles();
     if(!PASS50_V9.linksProfileId||!profile(PASS50_V9.linksProfileId))PASS50_V9.linksProfileId=profiles[0]?.id||'';
     const p=profile(PASS50_V9.linksProfileId),m=p?p50RankMeta(p):{};
-    pane.innerHTML=`<div class="links-v2"><div class="media-hint"><strong>Éditeur rapide :</strong> sélectionne une FI, colle les URL exactes puis enregistre. Facebook, YouTube et Snapchat sont disponibles sur toutes les FI. Seuls les liens officiels directs sont publics.</div><div class="links-v2-toolbar"><label>FI à modifier<select id="linksProfileSelect">${profiles.map(x=>`<option value="${x.id}" ${x.id===PASS50_V9.linksProfileId?'selected':''}>${safeAttr(p50ProfileOption(x))}</option>`).join('')}</select></label></div>${p?`<article class="link-card focused" data-link-profile="${p.id}"><div class="link-card-head"><div><strong>${p.name}</strong>${m.top50?'<span class="top50-marker">TOP 50</span>':''}<div class="muted">${m.rank?'#'+m.rank+' · ':''}${p.handle}</div></div><div class="tool-actions"><button class="btn save-links" data-id="${p.id}">Enregistrer</button><button class="btn primary check-links" data-id="${p.id}">Vérifier</button></div></div>${p50v9LinkGrid(p)}<label class="tool-check"><input type="checkbox" class="confirm-all-links"> Je confirme que les liens renseignés correspondent aux comptes officiels de cette FI.</label></article>`:'<div class="tool-empty">Aucune FI.</div>'}</div>`;
-    if(p)p50HydrateOfficialLinks(p.id);
+    pane.innerHTML=`<div class="links-v2"><div class="media-hint"><strong>Sauvegarde renforcée :</strong> chaque lien direct est maintenant enregistré côté serveur dès que tu cliques sur Enregistrer. La confirmation le rend officiel et prioritaire.</div><div class="links-recovery-actions"><button class="btn" id="recoverProfileLinks">Récupérer cette FI</button><button class="btn primary" id="recoverAllLinks">Récupérer toutes mes saisies</button></div><div class="links-v2-toolbar"><label>FI à modifier<select id="linksProfileSelect">${profiles.map(x=>`<option value="${x.id}" ${x.id===PASS50_V9.linksProfileId?'selected':''}>${safeAttr(p50ProfileOption(x))}</option>`).join('')}</select></label></div>${p?`<article class="link-card focused" data-link-profile="${p.id}"><div class="link-card-head"><div><strong>${p.name}</strong>${m.top50?'<span class="top50-marker">TOP 50</span>':''}<div class="muted">${m.rank?'#'+m.rank+' · ':''}${p.handle}</div></div><div class="tool-actions"><button class="btn save-links" data-id="${p.id}">Enregistrer</button><button class="btn primary check-links" data-id="${p.id}">Vérifier</button></div></div>${p50v9LinkGrid(p)}<label class="tool-check"><input type="checkbox" class="confirm-all-links"> Je confirme que les liens renseignés correspondent aux comptes officiels de cette FI.</label></article><div id="linkHistoryBox" class="link-history-box"><div class="tool-loading">Chargement de l’historique…</div></div>`:'<div class="tool-empty">Aucune FI.</div>'}</div>`;
+    if(p){p50HydrateOfficialLinks(p.id);p50LoadLinkHistory(p.id);}
   };
   function p50v9LinkGrid(p){
     const fixed=['Instagram','TikTok','Facebook','YouTube','Snapchat','X'];
@@ -313,7 +351,7 @@ render();
     if(e.target.id==='newsProfile'){PASS50_V9.newsProfileId=e.target.value;p50v9RenderNews();}
   });
   document.addEventListener('submit',e=>{if(e.target.id==='newsTriggerForm'){e.preventDefault();p50ValidateTriggerForm(e.target)}});
-  document.addEventListener('click',e=>{if(e.target.matches('.reject-trigger'))p50RejectTrigger(e.target.dataset.profile)});
+  document.addEventListener('click',e=>{if(e.target.matches('.reject-trigger'))p50RejectTrigger(e.target.dataset.profile);if(e.target.id==='recoverProfileLinks')p50RecoverOfficialLinks('profile');if(e.target.id==='recoverAllLinks')p50RecoverOfficialLinks('all');});
   document.addEventListener('input',e=>{if(e.target.id==='profileSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#profileAdminRows tr').forEach(r=>r.style.display=(r.dataset.adminProfileName||'').includes(q)?'':'none')}});
 
   p50v9SaveLinks=async function(id,card){
@@ -323,6 +361,7 @@ render();
     card.querySelectorAll('[data-link-platform]').forEach(input=>{
       const platform=input.dataset.linkPlatform,url=input.value.trim();
       if(url){
+        p50LocalLinkAudit(id,platform,previousLinks[platform]||'',url,confirmed);
         p.links[platform]=url;p.platforms=[...new Set([...(p.platforms||[]),platform])];
         const direct=p50v9IsDirectPlatformLink(platform,url);
         p.linkChecks[platform]={
@@ -330,19 +369,23 @@ render();
           checkedAt:confirmed&&direct?new Date().toISOString():null,
           message:direct?(confirmed?'Compte officiel confirmé par le propriétaire PASS50':'Lien direct prêt à contrôler'):'Le lien doit ouvrir directement le profil, pas la page d’accueil ou de connexion.'
         };
-        if(confirmed&&direct){
-          tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:id,platform,url,confirmedOfficial:true,replaceExisting:true}})
+        if(direct){
+          tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:id,platform,url,confirmedOfficial:confirmed,replaceExisting:confirmed}})
             .then(data=>{
               p.links[platform]=data?.validation?.normalizedUrl||url;
-              p.linkChecks[platform]={status:'owner_verified',checkedAt:new Date().toISOString(),message:'Compte officiel confirmé et publié par le propriétaire'};
+              p.linkChecks[platform]=confirmed
+                ?{status:'owner_verified',checkedAt:new Date().toISOString(),message:'Compte officiel confirmé et publié par le propriétaire'}
+                :{status:'pending',checkedAt:new Date().toISOString(),message:'Lien sauvegardé côté serveur, en attente de confirmation'};
             })
             .catch(err=>{
-              // Une panne du contrôle distant ne doit jamais annuler une confirmation explicite du propriétaire.
-              p.linkChecks[platform]={status:'owner_verified',checkedAt:new Date().toISOString(),message:'Compte officiel confirmé localement. Synchronisation serveur à relancer si nécessaire.'};
-              console.warn('Publication serveur différée pour '+platform,err);
+              p.linkChecks[platform]=confirmed
+                ?{status:'owner_verified',checkedAt:new Date().toISOString(),message:'Compte officiel confirmé localement. Synchronisation serveur à relancer si nécessaire.'}
+                :{status:'pending',checkedAt:null,message:'Lien conservé dans le navigateur. Synchronisation serveur à relancer.'};
+              console.warn('Sauvegarde serveur différée pour '+platform,err);
             }));
         }
       }else{
+        if(previousLinks[platform])p50LocalLinkAudit(id,platform,previousLinks[platform],'',confirmed);
         delete p.links[platform];p.linkChecks[platform]={status:'search_not_official',checkedAt:null};
         if(confirmed&&previousLinks[platform])tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'delete',profileId:id,platform}}).catch(()=>null));
       }

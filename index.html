@@ -624,12 +624,31 @@ async function syncCloudState(){
   const u=currentUser();if(!u||!['owner','admin'].includes(u.role)||!CLOUD.enabled||!CLOUD.token)return;
   await apiFetch('state.php',{method:'POST',body:{data:cloudSafeState()}});
 }
+function p50RecoverableDirectLink(platform,url){
+  try{
+    const u=new URL(String(url||'')),h=u.hostname.toLowerCase(),path=u.pathname.replace(/\/+$/,'')||'/';
+    if(!/^https?:$/.test(u.protocol)||path==='/'||/(^|\/)(login|accounts\/login|search|explore|watch|reel|reels|posts?|videos?)(\/|$)/i.test(path))return false;
+    const p=String(platform||'').toLowerCase();
+    if(p==='instagram')return h.endsWith('instagram.com')&&/^\/[A-Za-z0-9._-]+$/.test(path);
+    if(p==='tiktok')return h.endsWith('tiktok.com')&&/^\/@[^/]+$/.test(path);
+    if(p==='facebook')return (h.endsWith('facebook.com')||h==='fb.com')&&path.length>1;
+    if(p==='youtube')return (h.includes('youtube.com')||h==='youtu.be')&&/^\/(?:@|channel\/|c\/|user\/)/i.test(path);
+    if(p==='snapchat')return h.endsWith('snapchat.com')&&/^\/add\/[^/]+$/i.test(path);
+    if(p==='x')return (h==='x.com'||h.endsWith('twitter.com'))&&/^\/[A-Za-z0-9_]+$/.test(path);
+    return path.length>1;
+  }catch{return false}
+}
 async function loadCloudState(){
   if(!CLOUD.enabled)return;
+  const manualLinks=Object.fromEntries((db.profiles||[]).map(p=>{
+    const links={},checks={};
+    Object.entries(p.links||{}).forEach(([platform,url])=>{if(p50RecoverableDirectLink(platform,url)){links[platform]=url;if(p.linkChecks?.[platform])checks[platform]=p.linkChecks[platform];}});
+    return [p.id,{links,linkChecks:checks}];
+  }).filter(([,v])=>Object.keys(v.links).length));
   const manualPhotos=Object.fromEntries((db.profiles||[]).filter(p=>p.photoManualLocked).map(p=>[p.id,{photoUrl:p.photoUrl||'',photoCandidateUrl:p.photoCandidateUrl||'',photoStatus:p.photoStatus||'pending',photoSource:p.photoSource||'Ajout manuel',photoNote:p.photoNote||'',photoPosition:p.photoPosition||'50% 50%',photoManualLocked:true,photoManualUpdatedAt:p.photoManualUpdatedAt||new Date().toISOString()}]));
   const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p.birthManualLocked&&p.birthDate).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(p.birthDate.slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...(p.quality||{}),birth:100},dataEngine:{...(p.dataEngine||{}),verifiedFacts:[...new Set([...(p.dataEngine?.verifiedFacts||[]),'birth_date'])]}}]));
   const data=await apiFetch('state.php',{auth:false});
-  if(data?.data){const cloud=data.data;db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{if(manualPhotos[p.id])Object.assign(p,manualPhotos[p.id]);if(manualBirths[p.id])Object.assign(p,manualBirths[p.id]);});localStorage.setItem(APP_KEY,JSON.stringify(db));}
+  if(data?.data){const cloud=data.data;db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{if(manualPhotos[p.id])Object.assign(p,manualPhotos[p.id]);if(manualBirths[p.id])Object.assign(p,manualBirths[p.id]);if(manualLinks[p.id]){p.links={...(p.links||{}),...manualLinks[p.id].links};p.linkChecks={...(p.linkChecks||{}),...manualLinks[p.id].linkChecks};}});localStorage.setItem(APP_KEY,JSON.stringify(db));}
 }
 function hydrateApiUser(apiUser,notes=[]){
   if(!apiUser)return;
@@ -686,6 +705,6 @@ async function initCloud(){
 initCloud();
 
 </script>
-<script src="./v9-tools.js?v=22.6"></script>
+<script src="./v9-tools.js?v=22.7"></script>
 </body>
 </html>

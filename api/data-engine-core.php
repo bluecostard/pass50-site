@@ -105,6 +105,21 @@ function p50_de_ensure_schema(): void {
             UNIQUE KEY uq_p50_social_evidence (profile_id,platform,url_hash,source_hash),
             INDEX idx_p50_social_evidence_url (profile_id,platform,url_hash)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS p50_social_link_audit (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            profile_id VARCHAR(100) NOT NULL,
+            platform VARCHAR(32) NOT NULL,
+            action_type VARCHAR(32) NOT NULL,
+            previous_url TEXT NULL,
+            new_url TEXT NULL,
+            actor_id CHAR(36) NULL,
+            actor_role VARCHAR(24) NOT NULL DEFAULT '',
+            actor_name VARCHAR(190) NOT NULL DEFAULT '',
+            metadata_json LONGTEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_p50_social_audit_profile (profile_id,created_at),
+            INDEX idx_p50_social_audit_platform (profile_id,platform,created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS p50_social_links (
             profile_id VARCHAR(100) NOT NULL,
             platform VARCHAR(32) NOT NULL,
@@ -512,6 +527,32 @@ function p50_de_validate_social_url(string $platform, string $url, string $name 
         'title'=>(string)($metadata['title']??''),
         'message'=>$explicitMissing?'Profil introuvable':($blocked?'Profil direct valide ; la plateforme bloque le contrôle automatique':'Lien direct accessible'),
     ];
+}
+
+function p50_de_log_social_action(string $profileId,string $platform,string $actionType,?string $previousUrl,?string $newUrl,?array $user=null,array $metadata=[]): void {
+    p50_de_ensure_schema();
+    $stmt=db()->prepare('INSERT INTO p50_social_link_audit(profile_id,platform,action_type,previous_url,new_url,actor_id,actor_role,actor_name,metadata_json,created_at) VALUES(?,?,?,?,?,?,?,?,?,NOW())');
+    $stmt->execute([
+        $profileId,$platform,$actionType,$previousUrl,$newUrl,
+        $user['id']??null,(string)($user['role']??''),(string)($user['display_name']??$user['email']??''),
+        json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
+    ]);
+}
+
+function p50_de_social_history(string $profileId,int $limit=100): array {
+    p50_de_ensure_schema();
+    $limit=max(1,min(500,$limit));
+    $stmt=db()->prepare("SELECT id,profile_id,platform,action_type,previous_url,new_url,actor_role,actor_name,metadata_json,created_at FROM p50_social_link_audit WHERE profile_id=? ORDER BY id DESC LIMIT $limit");
+    $stmt->execute([$profileId]);
+    $rows=$stmt->fetchAll();
+    foreach($rows as &$row){$row['metadata']=decode_json_column($row['metadata_json']??null,[]);unset($row['metadata_json']);}
+    return $rows;
+}
+
+function p50_de_current_social_url(string $profileId,string $platform): string {
+    $stmt=db()->prepare('SELECT normalized_url FROM p50_social_links WHERE profile_id=? AND platform=? LIMIT 1');
+    $stmt->execute([$profileId,$platform]);
+    return (string)($stmt->fetchColumn()?:'');
 }
 
 function p50_de_add_social_evidence(string $profileId, string $platform, string $url, string $sourceType, string $sourceName, string $sourceUrl, int $sourceWeight, array $validation = []): void {
@@ -1226,7 +1267,16 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
         $previousEngine=is_array($p['dataEngine']??null)?$p['dataEngine']:[];
         $publicLinks=[];$maxSocial=0;
         foreach($links as $link){$publicLinks[(string)$link['platform']]=(string)$link['url'];$maxSocial=max($maxSocial,(int)$link['confidence']);}
-        if(($p['links']??[])!==$publicLinks){$p['links']=$publicLinks;$changed=true;}
+        // Ne jamais écraser des liens directs déjà saisis dans l'état public par une
+        // réponse serveur partielle. Les liens vérifiés du moteur prennent la priorité,
+        // mais les autres saisies directes sont conservées jusqu'à suppression explicite.
+        $preservedLinks=[];
+        foreach((array)($p['links']??[]) as $platform=>$url){
+            $normalized=p50_de_normalize_social_url((string)$platform,(string)$url);
+            if($normalized!=='')$preservedLinks[(string)$platform]=$normalized;
+        }
+        $mergedLinks=array_merge($preservedLinks,$publicLinks);
+        if(($p['links']??[])!==$mergedLinks){$p['links']=$mergedLinks;$changed=true;}
         $p['quality']=is_array($p['quality']??null)?$p['quality']:[];
         $p['quality']['identity']=max(90,(int)($p['quality']['identity']??0));
         $p['quality']['social']=$maxSocial;
