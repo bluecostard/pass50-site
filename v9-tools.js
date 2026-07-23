@@ -29,6 +29,31 @@ function p50v9IsDirectPlatformLink(platform,url=''){
 }
 function p50v9OfficialLinks(p){return Object.entries(p?.links||{}).filter(([platform,url])=>p50v9IsDirectPlatformLink(platform,url));}
 function p50v9ExactContentLink(url=''){return /^https?:\/\//i.test(url)&&!p50v9IsGenericLink(url)}
+
+/* PASS50 V20 — vignette automatique des contenus validés */
+function p50v20DetectedCover(ev){
+  if(!ev)return '';
+  const url=String(ev.coverUrl||ev.coverCandidateUrl||'').trim();
+  if(!url)return '';
+  if(ev.coverStatus==='validated')return url;
+  // Le propriétaire a confirmé le lien original : une vignette extraite de ce même lien
+  // peut être affichée sans une seconde validation redondante.
+  if(ev.originalLinkValidated&&ev.coverCandidateUrl)return url;
+  return '';
+}
+function p50v20TrendCover(p,ev){return p50v20DetectedCover(ev)||(typeof publicPhoto==='function'?publicPhoto(p):'')||''}
+function p50v20SyncTrendContent(profileId,ev,platform='Réseau social'){
+  if(!profileId||!ev)return;
+  let c=(db.content||[]).find(x=>x.profileId===profileId);
+  if(!c){
+    c={id:'trend_'+profileId+'_'+Date.now(),profileId,platform,badge:'HOT',views:'Contenu validé',comments:'',time:'Récent',url:ev.url||''};
+    db.content.push(c);
+  }
+  c.url=ev.url||c.url||'';
+  c.platform=platform||c.platform||'Réseau social';
+  c.badge=c.badge||'HOT';
+  c.time=c.time||'Récent';
+}
 function p50v9ApplyPatch(){
   db.profiles.forEach(p=>{
     p.linkChecks=p.linkChecks||{};p.links=p.links||{};
@@ -81,7 +106,7 @@ const p50v8OpenProfile=openProfile;
 openProfile=function(id){close('top50Modal');const p=profile(id),u=userPrefs(),bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)],links=p50v9OfficialLinks(p);$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name}</h2><div class="handle">${p.handle}</div><div style="margin-top:11px">${p.badges.map(badgeHtml).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}<div class="chart">${bars.map(h=>`<div class="bar" style="height:${Math.max(8,h)}%"></div>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé. Les liens de recherche ne sont pas affichés au public.</div>':''}</div></div>`;open('profileModal')}
 
 eventHtml=function(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigger-empty"><strong>Élément déclencheur non encore validé</strong><div style="margin-top:5px">Le profil est classé sur la base de plusieurs signaux, mais aucun contenu principal n’a encore été sélectionné.</div></div>`;const link=p50v9ExactContentLink(e.url)?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'<span class="muted">Lien original à valider</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${triggerThumbHtml(e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${e.platforms.join(' · ')} · ${e.publishedLabel} · Confiance ${e.confidence}</div><div class="trigger-reason">${e.reason}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric}</span>${link}</div></section>`}
-renderContent=function(){const content=[...db.content].sort((a,b)=>{const pa=profile(a.profileId),pb=profile(b.profileId);return score(pb)-score(pa)}).slice(0,5);$('#contentGrid').innerHTML=content.map((c,i)=>{const p=profile(c.profileId),ev=primaryEvent(c.profileId),cover=publicCover(ev),url=p50v9ExactContentLink(ev?.url)?ev.url:(p50v9ExactContentLink(c.url)?c.url:'');const body=`${cover?`<img class="cover-bg" src="${safeAttr(cover)}" alt="" referrerpolicy="no-referrer">`:''}<div><strong>#${i+1} · ${p.name}</strong><div style="margin-top:8px">${badgeHtml(c.badge)}</div></div><div class="play">▶</div><div class="content-meta"><span>${c.platform}</span><span>${c.views} · ${c.time}</span></div>`;return url?`<a class="content-card ${cover?'has-cover':''}" href="${safeAttr(url)}" target="_blank" rel="noopener" data-content="${c.id}">${body}</a>`:`<article class="content-card ${cover?'has-cover':''}" data-content="${c.id}">${body}<div class="platform-hidden-note">Lien original à valider</div></article>`}).join('')}
+renderContent=function(){const content=[...db.content].sort((a,b)=>{const pa=profile(a.profileId),pb=profile(b.profileId);return score(pb)-score(pa)}).slice(0,5);$('#contentGrid').innerHTML=content.map((c,i)=>{const p=profile(c.profileId),ev=primaryEvent(c.profileId),detected=p50v20DetectedCover(ev),cover=p50v20TrendCover(p,ev),fallback=Boolean(cover&&!detected),url=p50v9ExactContentLink(ev?.url)?ev.url:(p50v9ExactContentLink(c.url)?c.url:'');const body=`${cover?`<img class="cover-bg" src="${safeAttr(cover)}" alt="Visuel ${safeAttr(p.name)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:''}${fallback?'<span class="content-cover-fallback">VISUEL DU PROFIL</span>':''}<div><strong>#${i+1} · ${p.name}</strong><div style="margin-top:8px">${badgeHtml(c.badge)}</div></div><div class="play">▶</div><div class="content-meta"><span>${c.platform}</span><span>${c.views} · ${c.time}</span></div>`;return url?`<a class="content-card ${cover?'has-cover':''}" href="${safeAttr(url)}" target="_blank" rel="noopener" data-content="${c.id}">${body}</a>`:`<article class="content-card ${cover?'has-cover':''}" data-content="${c.id}">${body}<div class="platform-hidden-note">Lien original à valider</div></article>`}).join('')}
 
 document.addEventListener('click',async e=>{
   if(e.target.matches('.media-discover')){try{e.target.disabled=true;e.target.textContent='Recherche…';await p50v9DiscoverPhotos(e.target.dataset.id)}catch(err){toast(err.message||'Recherche impossible')}finally{e.target.disabled=false;e.target.textContent='🔎 Rechercher gratuitement'}}
@@ -204,7 +229,7 @@ render();
     const a=PASS50_V9.news[index],id=PASS50_V9.newsProfileId,p=profile(id);if(!a||!p)return;
     try{
       const preview=await apiFetch('content-preview.php',{method:'POST',body:{url:a.url}});
-      const isVideo=a.kind==='video'||a.type==='Vidéo'||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(a.platform);let ev=primaryEvent(id);const platform=a.platform||preview.platform||(isVideo?'Réseau social':'Web');const patch={type:isVideo?'Vidéo':'Article',title:a.title||`${isVideo?'Vidéo':'Actualité'} concernant ${p.name}`,platforms:[platform],metric:isVideo?'Vidéo détectée':'Article détecté',publishedLabel:a.date||`Sur ${PASS50_V9.newsDays} jours`,reason:isVideo?'Vidéo récente détectée sur un réseau officiel ou dans la recherche sociale, puis validée par le propriétaire.':'Article récent sélectionné et lien original validé par le propriétaire.',url:preview.canonicalUrl||a.url,icon:isVideo?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),coverCandidateUrl:a.image||preview.thumbnail||'',coverUrl:'',coverStatus:(a.image||preview.thumbnail)?'pending':'missing',coverSource:a.source||a.domain||preview.source||'Actualité',coverNote:'Couverture détectée depuis le contenu, validation requise.'};if(ev)Object.assign(ev,patch);else db.events.push({id:'news_'+id+'_'+Date.now(),profileId:id,...patch});save();render();p50v9RenderNews();toast(`${isVideo?'Vidéo':'Article'} validé dans la FI`);
+      const isVideo=a.kind==='video'||a.type==='Vidéo'||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(a.platform);let ev=primaryEvent(id);const platform=a.platform||preview.platform||(isVideo?'Réseau social':'Web');const patch={type:isVideo?'Vidéo':'Article',title:a.title||`${isVideo?'Vidéo':'Actualité'} concernant ${p.name}`,platforms:[platform],metric:isVideo?'Vidéo détectée':'Article détecté',publishedLabel:a.date||`Sur ${PASS50_V9.newsDays} jours`,reason:isVideo?'Vidéo récente détectée sur un réseau officiel ou dans la recherche sociale, puis validée par le propriétaire.':'Article récent sélectionné et lien original validé par le propriétaire.',url:preview.canonicalUrl||a.url,icon:isVideo?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),coverCandidateUrl:a.image||preview.thumbnail||'',coverUrl:'',coverStatus:(a.image||preview.thumbnail)?'validated':'missing',coverSource:a.source||a.domain||preview.source||'Actualité',coverNote:(a.image||preview.thumbnail)?'Vignette extraite automatiquement du contenu original confirmé.':'Aucune vignette détectée : la photo validée du profil sera utilisée comme visuel de secours.'};if(ev)Object.assign(ev,patch);else{ev={id:'news_'+id+'_'+Date.now(),profileId:id,...patch};db.events.push(ev);}p50v20SyncTrendContent(id,ev,platform);save();render();p50v9RenderNews();toast(`${isVideo?'Vidéo':'Article'} validé avec vignette dans la FI et le Top 5`);
     }catch(err){toast(err.message||'Impossible de valider ce lien');}
   };
 
@@ -219,10 +244,11 @@ render();
     try{
       const preview=await apiFetch('content-preview.php',{method:'POST',body:{url}});
       let ev=primaryEvent(id),previousUrl=String(ev?.url||''),urlChanged=previousUrl!==url;
-      const patch={type:String(fd.get('type')||'Vidéo'),title,platforms:[preview.platform||'Web'],metric:'Lien original validé',publishedLabel:'Validation manuelle',reason,url,submittedUrl:url,resolvedUrl:preview.canonicalUrl||url,icon:['YouTube','TikTok','Instagram','Facebook'].includes(preview.platform)?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),manualDataValidated:true,coverCandidateUrl:preview.thumbnail||(!urlChanged?(ev?.coverCandidateUrl||''):''),coverUrl:!urlChanged?(ev?.coverUrl||''):'',coverStatus:preview.thumbnail?'pending':(!urlChanged?(ev?.coverStatus||'missing'):'missing'),coverSource:preview.source||(!urlChanged?(ev?.coverSource||''):''),coverNote:preview.thumbnail?'Couverture détectée depuis le nouveau lien original, à valider.':(!urlChanged?(ev?.coverNote||''):'')};
+      const patch={type:String(fd.get('type')||'Vidéo'),title,platforms:[preview.platform||'Web'],metric:'Lien original validé',publishedLabel:'Validation manuelle',reason,url,submittedUrl:url,resolvedUrl:preview.canonicalUrl||url,icon:['YouTube','TikTok','Instagram','Facebook'].includes(preview.platform)?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),manualDataValidated:true,coverCandidateUrl:preview.thumbnail||(!urlChanged?(ev?.coverCandidateUrl||''):''),coverUrl:!urlChanged?(ev?.coverUrl||''):'',coverStatus:preview.thumbnail?'validated':(!urlChanged?(ev?.coverStatus||'missing'):'missing'),coverSource:preview.source||(!urlChanged?(ev?.coverSource||''):''),coverNote:preview.thumbnail?'Vignette extraite automatiquement du lien original confirmé.':(!urlChanged?(ev?.coverNote||''):'Aucune vignette détectée : la photo validée du profil sera utilisée dans le Top 5.')};
       if(ev){Object.assign(ev,patch);db.events=db.events.filter(x=>x.profileId!==id||x.id===ev.id);}else{ev={id:'trigger_'+id+'_'+Date.now(),profileId:id,...patch};db.events.push(ev);}
       db.content.forEach(c=>{if(c.profileId===id)c.url=url;});
-      save();render();p50v9RenderNews();toast('Nouveau lien et données manuelles enregistrés dans la FI');
+      p50v20SyncTrendContent(id,ev,preview.platform||'Réseau social');
+      save();render();p50v9RenderNews();toast(preview.thumbnail?'Lien, vignette et données enregistrés dans la FI et le Top 5':'Lien enregistré ; visuel du profil utilisé dans le Top 5');
     }catch(err){console.error(err);toast(err.message||'Lien original non validé');}
     finally{if(btn){btn.disabled=false;btn.textContent=old;}}
   }
@@ -291,7 +317,7 @@ render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=19';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=20';
   const CENSUS_VERSION='90-v19';
   let importing=false;
 
