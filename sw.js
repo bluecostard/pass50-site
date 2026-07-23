@@ -1,9 +1,9 @@
-const CACHE='pass50-v22-7-links-audit-recovery';
+const CACHE='pass50-v22-8-live-open-fix';
 const ASSETS=[
   './',
   './index.html',
   './v9-tools.css?v=22.4',
-  './v9-tools.js?v=22.7',
+  './v9-tools.js?v=22.8',
   './pass50_nouveaux_candidats_90_v19.json?v=22.6',
   './data-engine-ui.js?v=22.6',
   './manifest.webmanifest?v=22.4',

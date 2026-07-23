@@ -310,7 +310,29 @@ function score(p){return Number(p.scores[ui.period]||0)}
 function regionEligible(p){return ui.region==='ALL'||p.region===ui.region||p.region==='BOTH'}
 function activeLives(){normalizeLiveStreams();return db.liveStreams.filter(x=>x.status==='live').sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt));}
 function renderLiveHeader(){const lives=activeLives(),count=$('#liveCount');if(count)count.textContent=lives.length?`(${lives.length})`:'';}
-function openLives(){const lives=activeLives();$('#liveBody').innerHTML=lives.length?`<div class="live-list">${lives.map(l=>{const p=profile(l.profileId);return `<div class="live-card"><div class="avatar">${avatarInner(p)}</div><div><strong>${p?.name||'Influenceur'}</strong><div class="live-platform"><span class="live-pulse"></span>EN DIRECT SUR ${l.platform||'UNE PLATEFORME'}</div><div class="muted">${l.title||'Direct en cours'}</div></div><a class="btn primary" href="${safeAttr(l.url||'#')}" target="_blank" rel="noopener">REGARDER →</a></div>`}).join('')}</div>`:`<div class="live-empty"><strong>Aucun direct détecté pour le moment.</strong><div style="margin-top:6px">Cette fenêtre se met à jour automatiquement.</div></div>`;open('liveModal')}
+function liveAvatarHtml(p,live){
+  if(p)return avatarHtml(p,'live-avatar');
+  const label=String(live?.profileId||'LIVE').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase()||'LV';
+  return `<div class="avatar live-avatar"><span>${safeAttr(label)}</span></div>`;
+}
+function liveWatchUrl(live){
+  const url=String(live?.url||'').trim();
+  if(!/^https?:\/\//i.test(url))return '';
+  try{
+    const parsed=new URL(url),host=parsed.hostname.toLowerCase();
+    if((host==='youtube.com'||host.endsWith('.youtube.com')||host==='youtu.be')&&!parsed.pathname)return '';
+    return parsed.href;
+  }catch{return ''}
+}
+function openLives(){
+  const lives=activeLives();
+  $('#liveBody').innerHTML=lives.length?`<div class="live-list">${lives.map(l=>{
+    const p=profile(l.profileId),url=liveWatchUrl(l),viewers=Number(l.viewers||0);
+    const action=url?`<a class="btn primary live-watch-link" href="${safeAttr(url)}" target="_blank" rel="noopener noreferrer">REGARDER SUR ${safeAttr(l.platform||'LA PLATEFORME')} →</a>`:`<span class="btn disabled" aria-disabled="true">LIEN DU LIVE INDISPONIBLE</span>`;
+    return `<article class="live-card">${liveAvatarHtml(p,l)}<div><strong>${safeAttr(p?.name||l.profileName||'Influenceur')}</strong><div class="live-platform"><span class="live-pulse"></span>EN DIRECT SUR ${safeAttr(l.platform||'UNE PLATEFORME')}</div><div class="muted">${safeAttr(l.title||'Direct en cours')}${viewers?` · ${viewers.toLocaleString('fr-FR')} spectateur(s)`:''}</div></div>${action}</article>`;
+  }).join('')}</div>`:`<div class="live-empty"><strong>Aucun direct détecté pour le moment.</strong><div style="margin-top:6px">Cette fenêtre se met à jour automatiquement.</div></div>`;
+  open('liveModal');
+}
 async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));render();}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
 function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false;}
 function ranking(){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));}
@@ -705,6 +727,6 @@ async function initCloud(){
 initCloud();
 
 </script>
-<script src="./v9-tools.js?v=22.7"></script>
+<script src="./v9-tools.js?v=22.8"></script>
 </body>
 </html>
