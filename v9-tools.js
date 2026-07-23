@@ -267,7 +267,7 @@ render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_85_v2.json?v=12';
+  const CENSUS_URL='./pass50_nouveaux_candidats_85_v2.json?v=13';
   const CENSUS_VERSION='85-v2';
   let importing=false;
 

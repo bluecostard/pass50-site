@@ -52,13 +52,14 @@
     @media(max-width:680px){.hub-kpis{grid-template-columns:1fr 1fr}.app{padding:0 12px 30px}.brand{min-width:128px}.brand-wordmark{font-size:25px;letter-spacing:-1.7px}.tagline{font-size:6.5px;letter-spacing:.95px}.actions .live{display:inline-flex;padding:9px 10px;font-size:11px}.icon-btn{padding:9px 11px}.filters{padding:15px 0}.seg button{padding:10px 14px}.hero{display:block}.hero-intro{min-height:300px;margin-bottom:12px}.buzz-title{font-size:50px}.rank-card{min-height:auto;margin-bottom:12px}.rank-card .avatar{height:210px}.top10{grid-template-columns:repeat(7,138px)}.content-grid{grid-template-columns:repeat(5,210px);overflow-x:auto}.sunk-grid{grid-template-columns:1fr 42px 1fr;gap:7px}.versus{width:42px;height:42px;font-size:13px}.sunk{grid-template-columns:1fr;padding:10px;text-align:center}.sunk .avatar{height:92px}.duel-question{font-size:23px}.vote-line{font-size:10px}.drop{font-size:21px}.profile-grid{grid-template-columns:1fr}.profile-grid>.left .avatar{height:230px}.stats{grid-template-columns:1fr 1fr}.user-grid{grid-template-columns:1fr}.user-section.full{grid-column:auto}.user-title{align-items:flex-start;flex-direction:column;gap:8px}.person-row{grid-template-columns:42px 1fr}.person-row .avatar{width:42px;height:42px}.person-actions{grid-column:1/-1;justify-content:flex-start;padding-left:52px}.pref{flex-direction:column;align-items:flex-start}.two{grid-template-columns:1fr}.footer{flex-direction:column}.top50-row{grid-template-columns:34px 42px 1fr 67px}.top50-row>*:nth-child(5),.top50-row>*:nth-child(6){display:none}.demo-banner{font-size:10px}.modal{padding:6px}.modal-body{padding:13px}.trigger-main{grid-template-columns:64px 1fr}.trigger-thumb{height:64px}.trigger-title{font-size:16px}.admin-toolbar{display:grid;grid-template-columns:1fr}.admin-toolbar input,.admin-toolbar .btn{width:100%}.admin-menu{position:sticky;top:0;z-index:4;display:flex;flex-direction:row;overflow:auto;background:#090c09;padding-bottom:8px;margin-bottom:4px}.admin-menu button{flex:0 0 auto}.admin-pane{min-height:auto}.signal{grid-template-columns:1fr}.signal-actions{justify-content:flex-start;flex-wrap:wrap}.admin-table{min-width:480px}.admin-table th,.admin-table td{font-size:12px;padding:8px}}
 
     /* PASS50 Premium UI */
-    .hero-intro{isolation:isolate;background:rgba(8,11,8,.56)!important}
+    .hero-intro{isolation:isolate;background:linear-gradient(180deg,rgba(8,11,8,.28),rgba(8,11,8,.42))!important;border-color:rgba(183,255,0,.18)}
     .hero-intro>*{position:relative;z-index:3}
     .hero-backdrop{position:absolute;inset:0;z-index:0;overflow:hidden}
-    .hero-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,7,5,.72) 0%,rgba(5,7,5,.50) 38%,rgba(5,7,5,.18) 66%,rgba(5,7,5,.12) 100%),linear-gradient(180deg,rgba(5,7,5,.02),rgba(5,7,5,.14));backdrop-filter:blur(0)}
-    .hero-slide{position:absolute;inset:-2%;opacity:0;background-size:cover;background-position:74% center;transform:scale(1.0);animation:heroFade 20s infinite;filter:saturate(1.08) contrast(1.06) brightness(1.0)}
+    .hero-backdrop::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 78% 34%,rgba(183,255,0,.16),transparent 34%);z-index:1;pointer-events:none}
+    .hero-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,7,5,.48) 0%,rgba(5,7,5,.34) 30%,rgba(5,7,5,.16) 58%,rgba(5,7,5,.08) 100%),linear-gradient(180deg,rgba(5,7,5,.04),rgba(5,7,5,.12));z-index:1;pointer-events:none}
+    .hero-slide{position:absolute;inset:-1.5%;opacity:0;background-size:cover;background-position:center 24%;transform:scale(1.0);animation:heroFade 20s infinite;filter:saturate(1.06) contrast(1.03) brightness(.98)}
     .hero-slide:nth-child(1){animation-delay:0s}.hero-slide:nth-child(2){animation-delay:5s}.hero-slide:nth-child(3){animation-delay:10s}.hero-slide:nth-child(4){animation-delay:15s}
-    @keyframes heroFade{0%{opacity:0;transform:scale(1.04)}5%{opacity:1}22%{opacity:1;transform:scale(1.09)}27%{opacity:0}100%{opacity:0}}
+    @keyframes heroFade{0%{opacity:0;transform:scale(1.03)}5%{opacity:1}22%{opacity:1;transform:scale(1.07)}27%{opacity:0}100%{opacity:0}}
     .score-info{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:5px;border:1px solid #697568;border-radius:50%;font-size:9px;color:#cbd3c8;vertical-align:1px;cursor:help;position:relative}
     .score-info:hover::after,.score-info:focus::after{content:"Score sur 100 calculé selon l’activité récente, l’engagement, la viralité et l’évolution.";position:absolute;left:0;bottom:22px;width:240px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#090c09;color:#e8eee5;font-size:11px;line-height:1.4;letter-spacing:0;text-transform:none;z-index:20;box-shadow:var(--shadow)}
     .motion-up{display:inline-block;animation:arrowUp 2.4s ease-in-out infinite}.motion-down{display:inline-block;animation:arrowDown 2.4s ease-in-out infinite}
@@ -614,6 +615,6 @@ async function initCloud(){
 initCloud();
 
 </script>
-<script src="./v9-tools.js?v=12"></script>
+<script src="./v9-tools.js?v=13"></script>
 </body>
 </html>
