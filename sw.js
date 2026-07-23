@@ -1,4 +1,4 @@
-const CACHE='pass50-v13-hero-transparency-__BUILD_ID__';
+const CACHE='pass50-v14-hero-images-__BUILD_ID__';
 const ASSETS=[
   './',
   './index.html',
@@ -7,13 +7,13 @@ const ASSETS=[
   './assets/pass50-wordmark.png',
   './assets/pass50-logo-email.png',
   './v9-tools.css',
-  './v9-tools.js?v=13',
+  './v9-tools.js?v=14',
   './pass50_nouveaux_candidats_85_v2.json?v=13',
   './data-engine-ui.js',
-  './assets/hero-media-1.svg',
-  './assets/hero-media-2.svg',
-  './assets/hero-media-3.svg',
-  './assets/hero-media-4.svg',
+  './assets/hero-media-1.jpg',
+  './assets/hero-media-2.jpg',
+  './assets/hero-media-3.jpg',
+  './assets/hero-media-4.jpg',
   './data-engine-ui.css'
 ];
 

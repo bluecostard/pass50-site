@@ -314,8 +314,9 @@ function heroCard(p,index){const u=userPrefs(),fav=u?.favorites.includes(p.id),f
 function publishedTime(){return new Date(db.publishedAt||Date.now()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
 function renderHero(){
   const r=ranking(),top=r.slice(0,3),total=top.reduce((a,p)=>a+score(p),0);
-  const slides=['assets/hero-media-1.svg','assets/hero-media-2.svg','assets/hero-media-3.svg','assets/hero-media-4.svg'];
-  $('#buzz').innerHTML=`<div class="panel hero-intro"><div class="hero-backdrop">${slides.map(src=>`<div class="hero-slide" style="background-image:url('${src}')"></div>`).join('')}</div><div><div class="eyebrow">⚡ BUZZ NOW · ${periodLabels[ui.period]}</div><h1 class="buzz-title">LE BUZZ<br><span>MAINTENANT</span></h1></div><div><div class="metric score-animate">${total}/300</div><div class="muted">SCORE CUMULÉ DU TOP 3</div><div class="up" style="margin-top:7px">↗ Classement actualisé • ${publishedTime()}</div></div></div>${top.map(heroCard).join('')}`;
+  const slides=['assets/hero-media-1.jpg','assets/hero-media-2.jpg','assets/hero-media-3.jpg','assets/hero-media-4.jpg'];
+  const slidePositions=['center center','center 30%','center 35%','center 40%'];
+  $('#buzz').innerHTML=`<div class="panel hero-intro"><div class="hero-backdrop">${slides.map((src,i)=>`<div class="hero-slide" style="background-image:url('${src}');background-position:${slidePositions[i]||'center center'}"></div>`).join('')}</div><div><div class="eyebrow">⚡ BUZZ NOW · ${periodLabels[ui.period]}</div><h1 class="buzz-title">LE BUZZ<br><span>MAINTENANT</span></h1></div><div><div class="metric score-animate">${total}/300</div><div class="muted">SCORE CUMULÉ DU TOP 3</div><div class="up" style="margin-top:7px">↗ Classement actualisé • ${publishedTime()}</div></div></div>${top.map(heroCard).join('')}`;
   animateScoreCounters($('#buzz'));
 }
 let previousTop10Order=[];
@@ -615,6 +616,6 @@ async function initCloud(){
 initCloud();
 
 </script>
-<script src="./v9-tools.js?v=13"></script>
+<script src="./v9-tools.js?v=14"></script>
 </body>
 </html>
