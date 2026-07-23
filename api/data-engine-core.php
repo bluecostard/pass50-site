@@ -308,6 +308,11 @@ function p50_de_source_identity(string $sourceType, string $sourceName, string $
     return $sourceType.'|'.$sourceName;
 }
 
+function p50_de_normalize_profile_name(string $value): string {
+    $value=p50_normalize_text($value);
+    return preg_replace('/[^a-z0-9]+/','',$value) ?: '';
+}
+
 function p50_de_collect_curated_evidence_v221(array $profile): int {
     static $pack = null;
     if ($pack === null) {
@@ -320,9 +325,13 @@ function p50_de_collect_curated_evidence_v221(array $profile): int {
     }
     $profileId = (string)($profile['profile_id'] ?? '');
     if ($profileId === '') return 0;
+    $profileName=p50_de_normalize_profile_name((string)($profile['public_name']??''));
     $found = 0;
     foreach ($pack as $item) {
-        if (!is_array($item) || (string)($item['profile_id'] ?? '') !== $profileId) continue;
+        if (!is_array($item)) continue;
+        $itemId=(string)($item['profile_id']??'');
+        $itemName=p50_de_normalize_profile_name((string)($item['profile_name']??''));
+        if($itemId!==$profileId&&($itemName===''||$profileName===''||$itemName!==$profileName))continue;
         $factKey = trim((string)($item['fact_key'] ?? ''));
         $value = trim((string)($item['normalized_value'] ?? ''));
         if ($factKey === '' || $value === '') continue;
@@ -372,6 +381,7 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
         $types = array_values(array_filter(explode(',',(string)$g['source_types'])));
         $manualOwner = in_array('manual_owner',$types,true);
         $manualAdmin = in_array('manual_admin',$types,true);
+        $manualLegacy = p50_de_type_matches($types,'manual_source');
         $official = p50_de_type_matches($types,'official_site');
         $officialLabel = p50_de_type_matches($types,'official_label') || p50_de_type_matches($types,'official_artist_label') || p50_de_type_matches($types,'official_broadcaster');
         $wikidataHigh = p50_de_type_matches($types,'wikidata_high_match');
@@ -383,7 +393,7 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
         $avgWeight = (float)$g['avg_weight'];
 
         if ($manualOwner) $confidence = 100;
-        elseif ($manualAdmin) $confidence = 98;
+        elseif ($manualAdmin||$manualLegacy) $confidence = 98;
         elseif ($factKey === 'photo_url') {
             // Une photo proposée automatiquement reste à confirmer humainement.
             $confidence = min(89,max(60,(int)round($maxWeight*0.90)));
@@ -413,7 +423,7 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
     }
     usort($scored, static fn($a,$b) => $b['confidence'] <=> $a['confidence'] ?: $b['evidence_count'] <=> $a['evidence_count']);
     $best = $scored[0];
-    $bestManual = in_array('manual_owner',$best['types'],true) || in_array('manual_admin',$best['types'],true);
+    $bestManual = in_array('manual_owner',$best['types'],true) || in_array('manual_admin',$best['types'],true) || p50_de_type_matches($best['types'],'manual_source');
     $conflict = false;
     if (!$bestManual && isset($scored[1]) && (int)$scored[1]['confidence'] >= p50_de_threshold()) {
         $gap = (int)$best['confidence'] - (int)$scored[1]['confidence'];
@@ -1122,7 +1132,8 @@ function p50_de_collect_state_facts(array $profile): int {
     $count=0;$profileId=(string)$profile['profile_id'];
     $date=trim((string)($p['birthDate']??''));
     if($date!==''&&preg_match('/^\d{4}-\d{2}-\d{2}$/',$date)){
-        p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,'state_import','État PASS50','',70);$count++;
+        $manual=!empty($p['birthManualLocked']);
+        p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$manual?'manual_owner':'state_import',$manual?'Administrateur PASS50':'État PASS50','',$manual?100:70);$count++;
     }
     $allowed=['real_name','education','occupation','nationality','bio','category','official_website','birth_date'];
     foreach((array)($p['curatedFacts']??[]) as $key=>$seed){
@@ -1161,6 +1172,13 @@ function p50_de_profile_verified_count(string $profileId): int {
     return (int)$stmt->fetchColumn();
 }
 
+function p50_de_rebuild_profile_facts(string $profileId): int {
+    $stmt=db()->prepare('SELECT DISTINCT fact_key FROM p50_fact_evidence WHERE profile_id=?');
+    $stmt->execute([$profileId]);$count=0;
+    foreach($stmt->fetchAll() as $row){$key=trim((string)($row['fact_key']??''));if($key==='')continue;p50_de_rebuild_fact($profileId,$key);$count++;}
+    return $count;
+}
+
 function p50_de_verified_facts(string $profileId): array {
     $stmt=db()->prepare("SELECT fact_key,normalized_value,confidence,evidence_count,source_types,verified_at FROM p50_facts WHERE profile_id=? AND status='verified' AND confidence>=? ORDER BY confidence DESC");
     $stmt->execute([$profileId,p50_de_threshold()]);
@@ -1190,6 +1208,9 @@ function p50_de_social_links(string $profileId, bool $verifiedOnly=false): array
 function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
     $state=p50_de_load_public_state();
     if(!$state)return false;
+    $registry=p50_de_registry_profiles($profileId,1,0,false);
+    if($registry){p50_de_collect_state_facts($registry[0]);p50_de_collect_curated_evidence_v221($registry[0]);}
+    p50_de_rebuild_profile_facts($profileId);
     $facts=p50_de_verified_facts($profileId);
     $photoCandidate=p50_de_best_fact($profileId,'photo_url',60);
     $links=p50_de_social_links($profileId,true);
@@ -1508,5 +1529,5 @@ function p50_de_hub_payload(): array {
         'autoEnriched'=>count(array_filter($profiles,static fn($p)=>!empty($p['facts'])||!empty($p['photoBest'])||!empty($p['verifiedSocialCount']))),
         'neverCollected'=>count(array_filter($profiles,static fn($p)=>empty($p['lastRun']))),
     ];
-    return ['ok'=>true,'engineVersion'=>22.4,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
+    return ['ok'=>true,'engineVersion'=>22.5,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
 }

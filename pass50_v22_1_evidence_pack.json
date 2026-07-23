@@ -11,7 +11,8 @@
     "source_type": "official_label_v221",
     "source_name": "Universal Music France",
     "source_url": "https://universalmusic.fr/artistes/32183968271",
-    "source_weight": 97
+    "source_weight": 97,
+    "profile_name": "Didi B"
   },
   {
     "profile_id": "census-didi-b",
@@ -21,7 +22,8 @@
     "source_type": "official_label_v221",
     "source_name": "Universal Music France",
     "source_url": "https://universalmusic.fr/artistes/32183968271",
-    "source_weight": 97
+    "source_weight": 97,
+    "profile_name": "Didi B"
   },
   {
     "profile_id": "census-roseline-layo",
@@ -34,7 +36,8 @@
     "source_type": "wikidata_high_match_v221",
     "source_name": "Wikidata",
     "source_url": "https://www.wikidata.org/wiki/Q110498357",
-    "source_weight": 94
+    "source_weight": 94,
+    "profile_name": "Roseline Layo"
   },
   {
     "profile_id": "census-josey",
@@ -47,7 +50,8 @@
     "source_type": "official_label_conflict_v221",
     "source_name": "Universal Music France",
     "source_url": "https://universalmusic.fr/artistes/35368173924",
-    "source_weight": 97
+    "source_weight": 97,
+    "profile_name": "Josey"
   },
   {
     "profile_id": "census-josey",
@@ -60,7 +64,8 @@
     "source_type": "official_label_conflict_v221",
     "source_name": "Universal Music France",
     "source_url": "https://universalmusic.fr/artistes/35368173924",
-    "source_weight": 97
+    "source_weight": 97,
+    "profile_name": "Josey"
   },
   {
     "profile_id": "census-josey",
@@ -70,6 +75,37 @@
     "source_type": "official_label_v221",
     "source_name": "Universal Music France",
     "source_url": "https://universalmusic.fr/artistes/35368173924",
-    "source_weight": 97
+    "source_weight": 97,
+    "profile_name": "Josey"
+  },
+  {
+    "profile_id": "apoutchou",
+    "profile_name": "Apoutchou National",
+    "fact_key": "birth_date",
+    "normalized_value": "1990-12-24",
+    "raw_value": {
+      "date": "24 décembre 1990",
+      "real_name": "Stéphane Agbré",
+      "note": "Date structurée avec référence externe."
+    },
+    "source_type": "wikidata_high_match_v225",
+    "source_name": "Wikidata",
+    "source_url": "https://www.wikidata.org/wiki/Q117712984",
+    "source_weight": 94
+  },
+  {
+    "profile_id": "thierry",
+    "profile_name": "Thierry Yaké",
+    "fact_key": "birth_date",
+    "normalized_value": "1986-12-12",
+    "raw_value": {
+      "date": "12 décembre 1986",
+      "alias": "DJ TikTok",
+      "note": "Information confirmée directement par l’administrateur PASS50."
+    },
+    "source_type": "manual_owner",
+    "source_name": "Administrateur PASS50",
+    "source_url": "",
+    "source_weight": 100
   }
 ]

@@ -33,7 +33,7 @@
         p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=p.quality||{};p.quality.birth=confidence;p.dataEngine=p.dataEngine||{};p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];changed++;
       }
     }
-    if(changed)localStorage.setItem(APP_KEY,JSON.stringify(db));
+    if(changed){localStorage.setItem(APP_KEY,JSON.stringify(db));if(window.__pass50CloudReady&&typeof scheduleCloudSync==='function')scheduleCloudSync();}
     return changed;
   }
 

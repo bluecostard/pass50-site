@@ -137,13 +137,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=22.4';
+    css.href='./data-engine-ui.css?v=22.5';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=22.4';
+    js.src='./data-engine-ui.js?v=22.5';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
@@ -389,6 +389,8 @@ render();
       birthDate:null,
       birthYear:null,
       agePublic:true,
+      birthManualLocked:false,
+      birthManualUpdatedAt:null,
       photoUrl:'',
       photoCandidateUrl:'',
       photoStatus:'missing',
