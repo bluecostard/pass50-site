@@ -279,12 +279,59 @@ function p50_de_finish_run(int $id, string $status, int $found, int $verified, ?
     $stmt->execute([$status,$found,$verified,$error,json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$id]);
 }
 
+function p50_de_source_identity(string $sourceType, string $sourceName, string $sourceUrl): string {
+    $sourceType = trim($sourceType);
+    $sourceName = trim(mb_strtolower($sourceName));
+    // Les décisions manuelles doivent rester distinctes et parfaitement auditables.
+    if (in_array($sourceType,['manual_owner','manual_admin'],true)) {
+        return $sourceType.'|'.$sourceName.'|'.trim($sourceUrl);
+    }
+    $host = strtolower((string)(parse_url($sourceUrl,PHP_URL_HOST) ?: ''));
+    $host = preg_replace('/^www\./','',$host) ?: $host;
+    // Plusieurs pages du même média ou établissement comptent comme une seule source indépendante.
+    if ($host !== '') return $sourceType.'|'.$host;
+    return $sourceType.'|'.$sourceName;
+}
+
+function p50_de_collect_curated_evidence_v221(array $profile): int {
+    static $pack = null;
+    if ($pack === null) {
+        $path = dirname(__DIR__).'/pass50_v22_1_evidence_pack.json';
+        if (!is_file($path)) { $pack = []; }
+        else {
+            $decoded = json_decode((string)file_get_contents($path),true);
+            $pack = is_array($decoded) ? $decoded : [];
+        }
+    }
+    $profileId = (string)($profile['profile_id'] ?? '');
+    if ($profileId === '') return 0;
+    $found = 0;
+    foreach ($pack as $item) {
+        if (!is_array($item) || (string)($item['profile_id'] ?? '') !== $profileId) continue;
+        $factKey = trim((string)($item['fact_key'] ?? ''));
+        $value = trim((string)($item['normalized_value'] ?? ''));
+        if ($factKey === '' || $value === '') continue;
+        p50_de_add_fact_evidence(
+            $profileId,
+            $factKey,
+            $value,
+            $item['raw_value'] ?? $value,
+            (string)($item['source_type'] ?? 'curated_research_v221'),
+            (string)($item['source_name'] ?? 'Recherche PASS50 V22.1'),
+            (string)($item['source_url'] ?? ''),
+            (int)($item['source_weight'] ?? 85)
+        );
+        $found++;
+    }
+    return $found;
+}
+
 function p50_de_add_fact_evidence(string $profileId, string $factKey, string $normalizedValue, mixed $rawValue, string $sourceType, string $sourceName, string $sourceUrl, int $sourceWeight): void {
     $normalizedValue = trim($normalizedValue);
     if ($normalizedValue === '') return;
     $raw = is_string($rawValue) ? $rawValue : (json_encode($rawValue,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?: '');
     $valueHash = p50_de_hash($normalizedValue);
-    $sourceHash = p50_de_hash($sourceType . '|' . $sourceName . '|' . $sourceUrl);
+    $sourceHash = p50_de_hash(p50_de_source_identity($sourceType,$sourceName,$sourceUrl));
     $stmt = db()->prepare("INSERT INTO p50_fact_evidence(profile_id,fact_key,normalized_value,value_hash,raw_value,source_type,source_name,source_url,source_hash,source_weight,fetched_at)
         VALUES(?,?,?,?,?,?,?,?,?,?,NOW())
         ON DUPLICATE KEY UPDATE raw_value=VALUES(raw_value),source_weight=VALUES(source_weight),fetched_at=NOW(),source_url=VALUES(source_url)");
@@ -301,7 +348,7 @@ function p50_de_type_matches(array $types, string $prefix): bool {
 }
 
 function p50_de_rebuild_fact(string $profileId, string $factKey): void {
-    $stmt = db()->prepare('SELECT normalized_value,value_hash,MAX(raw_value) raw_value,COUNT(*) evidence_count,COUNT(DISTINCT source_type) source_type_count,MAX(source_weight) max_weight,AVG(source_weight) avg_weight,GROUP_CONCAT(DISTINCT source_type ORDER BY source_type SEPARATOR ",") source_types FROM p50_fact_evidence WHERE profile_id=? AND fact_key=? GROUP BY normalized_value,value_hash');
+    $stmt = db()->prepare('SELECT normalized_value,value_hash,MAX(raw_value) raw_value,COUNT(*) evidence_count,COUNT(DISTINCT source_hash) independent_source_count,COUNT(DISTINCT source_type) source_type_count,MAX(source_weight) max_weight,AVG(source_weight) avg_weight,GROUP_CONCAT(DISTINCT source_type ORDER BY source_type SEPARATOR ",") source_types FROM p50_fact_evidence WHERE profile_id=? AND fact_key=? GROUP BY normalized_value,value_hash');
     $stmt->execute([$profileId,$factKey]);
     $groups = $stmt->fetchAll();
     if (!$groups) return;
@@ -315,7 +362,7 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
         $wikipediaExact = p50_de_type_matches($types,'wikipedia_exact');
         $academicOfficial = p50_de_type_matches($types,'academic_official') || p50_de_type_matches($types,'public_institution') || p50_de_type_matches($types,'diploma_public_archive');
         $curatedResearch = p50_de_type_matches($types,'curated_research_v22');
-        $sourceCount = (int)$g['source_type_count'];
+        $sourceCount = (int)($g['independent_source_count'] ?? $g['source_type_count']);
         $maxWeight = (int)$g['max_weight'];
         $avgWeight = (float)$g['avg_weight'];
 
@@ -350,7 +397,14 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
     }
     usort($scored, static fn($a,$b) => $b['confidence'] <=> $a['confidence'] ?: $b['evidence_count'] <=> $a['evidence_count']);
     $best = $scored[0];
-    $conflict = isset($scored[1]) && (int)$scored[1]['confidence'] >= p50_de_threshold() && (int)$scored[1]['confidence'] === (int)$best['confidence'];
+    $bestManual = in_array('manual_owner',$best['types'],true) || in_array('manual_admin',$best['types'],true);
+    $conflict = false;
+    if (!$bestManual && isset($scored[1]) && (int)$scored[1]['confidence'] >= p50_de_threshold()) {
+        $gap = (int)$best['confidence'] - (int)$scored[1]['confidence'];
+        // Pour une naissance, toute deuxième date fortement étayée bloque la publication.
+        // Pour les autres faits, deux versions fortes et proches restent en conflit.
+        $conflict = $factKey === 'birth_date' ? true : $gap <= 4;
+    }
     $upsert = db()->prepare("INSERT INTO p50_facts(profile_id,fact_key,normalized_value,value_hash,value_json,confidence,evidence_count,source_types,status,last_seen_at,verified_at)
         VALUES(?,?,?,?,?,?,?,?,?,NOW(),?)
         ON DUPLICATE KEY UPDATE normalized_value=VALUES(normalized_value),value_json=VALUES(value_json),confidence=VALUES(confidence),evidence_count=VALUES(evidence_count),source_types=VALUES(source_types),status=VALUES(status),last_seen_at=NOW(),verified_at=VALUES(verified_at)");

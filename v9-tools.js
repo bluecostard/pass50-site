@@ -132,13 +132,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=22';
+    css.href='./data-engine-ui.css?v=22.1';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=22';
+    js.src='./data-engine-ui.js?v=22.1';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
@@ -321,7 +321,7 @@ render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.1';
   const CENSUS_VERSION='90-v22';
   let importing=false;
 

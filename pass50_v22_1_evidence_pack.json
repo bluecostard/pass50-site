@@ -1,0 +1,75 @@
+[
+  {
+    "profile_id": "census-didi-b",
+    "fact_key": "birth_date",
+    "normalized_value": "1992-04-03",
+    "raw_value": {
+      "date": "3 avril 1992",
+      "real_name": "Bassa Zéréhoué Diyilem",
+      "note": "Date explicitement affichée par le label."
+    },
+    "source_type": "official_label_v221",
+    "source_name": "Universal Music France",
+    "source_url": "https://universalmusic.fr/artistes/32183968271",
+    "source_weight": 97
+  },
+  {
+    "profile_id": "census-didi-b",
+    "fact_key": "real_name",
+    "normalized_value": "Bassa Zéréhoué Diyilem",
+    "raw_value": "Bassa Zéréhoué Diyilem",
+    "source_type": "official_label_v221",
+    "source_name": "Universal Music France",
+    "source_url": "https://universalmusic.fr/artistes/32183968271",
+    "source_weight": 97
+  },
+  {
+    "profile_id": "census-roseline-layo",
+    "fact_key": "birth_date",
+    "normalized_value": "1993-12-21",
+    "raw_value": {
+      "date": "21 décembre 1993",
+      "note": "Valeur Wikidata avec référence externe."
+    },
+    "source_type": "wikidata_high_match_v221",
+    "source_name": "Wikidata",
+    "source_url": "https://www.wikidata.org/wiki/Q110498357",
+    "source_weight": 94
+  },
+  {
+    "profile_id": "census-josey",
+    "fact_key": "birth_date",
+    "normalized_value": "1990-06-29",
+    "raw_value": {
+      "date": "29 juin 1990",
+      "note": "Date affichée dans l'encadré Naissance de la page Universal."
+    },
+    "source_type": "official_label_conflict_v221",
+    "source_name": "Universal Music France",
+    "source_url": "https://universalmusic.fr/artistes/35368173924",
+    "source_weight": 97
+  },
+  {
+    "profile_id": "census-josey",
+    "fact_key": "birth_date",
+    "normalized_value": "1989-06-29",
+    "raw_value": {
+      "date": "29 juin 1989",
+      "note": "Date écrite dans le texte biographique de la même page Universal."
+    },
+    "source_type": "official_label_conflict_v221",
+    "source_name": "Universal Music France",
+    "source_url": "https://universalmusic.fr/artistes/35368173924",
+    "source_weight": 97
+  },
+  {
+    "profile_id": "census-josey",
+    "fact_key": "real_name",
+    "normalized_value": "Gnakrou Josée Priscille",
+    "raw_value": "Gnakrou Josée Priscille",
+    "source_type": "official_label_v221",
+    "source_name": "Universal Music France",
+    "source_url": "https://universalmusic.fr/artistes/35368173924",
+    "source_weight": 97
+  }
+]

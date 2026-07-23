@@ -20,15 +20,16 @@ foreach($profiles as $profile){
     try{
         $imported=p50_de_collect_state_links($profile);
         $importedFacts=p50_de_collect_state_facts($profile);
+        $curatedFacts=p50_de_collect_curated_evidence_v221($profile);
         $enrichment=p50_de_collect_enrichment($profile,$deep);
-        $found=$imported+$importedFacts+(int)($enrichment['found']??0);
+        $found=$imported+$importedFacts+$curatedFacts+(int)($enrichment['found']??0);
         $youtube=p50_de_collect_youtube_activity($profile);
         $found+=(int)($youtube['found']??0);
         $socialActivity=p50_de_collect_social_activity($profile);
         $found+=(int)($socialActivity['found']??0);
         $verified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0)+(int)($socialActivity['verified']??0);
         if($publish)p50_de_publish_profile((string)$profile['profile_id'],$user['id']);
-        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts]);
+        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts,'curatedEvidenceImported'=>$curatedFacts]);
         $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment];
         $processedIds[]=(string)$profile['profile_id'];$totalFound+=$found;$totalVerified+=$verified;
     }catch(Throwable $e){

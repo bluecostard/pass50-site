@@ -10,7 +10,7 @@ $results=[];$found=0;$verified=0;$classable=0;
 foreach($profiles as $profile){
     $id=(string)$profile['profile_id'];$run=p50_de_begin_run($id,'priority_wave_v22',$user['id'],['deep'=>true,'wave'=>'V22-16']);
     try{
-        $profileFound=p50_de_collect_state_links($profile)+p50_de_collect_state_facts($profile);
+        $profileFound=p50_de_collect_state_links($profile)+p50_de_collect_state_facts($profile)+p50_de_collect_curated_evidence_v221($profile);
         $enrichment=p50_de_collect_enrichment($profile,true);$profileFound+=(int)($enrichment['found']??0);
         $youtube=p50_de_collect_youtube_activity($profile);$profileFound+=(int)($youtube['found']??0);
         $social=p50_de_collect_social_activity($profile);$profileFound+=(int)($social['found']??0);
