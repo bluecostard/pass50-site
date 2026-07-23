@@ -3,19 +3,28 @@
 const PASS50_V9={photoCandidates:[],photoProfileId:null,preview:null,previewEventId:null,news:[],newsProfileId:null,newsDays:15,socialHydrated:new Set(),socialHydrating:new Set()};
 
 function p50v9IsGenericLink(url=''){
-  try{const u=new URL(url);return !u.pathname||u.pathname==='/'||/(search|results|explore\/search)/i.test(u.pathname)||u.searchParams.has('search_query')||u.searchParams.has('q');}catch{return true}
+  try{
+    const u=new URL(url),path=u.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
+    return !path||/(^|\/)(search|results|explore\/search)(\/|$)/i.test(path)||/^(accounts\/)?login(\/|$)/i.test(path)||/^(home|feed|watch)(\/|$)/i.test(path)||u.searchParams.has('search_query')||u.searchParams.has('q');
+  }catch{return true}
 }
 function p50v9IsDirectPlatformLink(platform,url=''){
   if(!url||p50v9IsGenericLink(url))return false;
-  try{const u=new URL(url),h=u.hostname.toLowerCase(),path=u.pathname;
+  try{
+    const u=new URL(url),h=u.hostname.toLowerCase().replace(/^www\./,''),path=u.pathname.replace(/\/+$/,'')||'/',segments=path.split('/').filter(Boolean),first=(segments[0]||'').toLowerCase();
+    const reservedInstagram=new Set(['accounts','about','developer','developers','direct','directory','explore','legal','privacy','reel','reels','stories','terms']);
+    const reservedFacebook=new Set(['login','home','watch','groups','marketplace','gaming','events','reel','reels','share','sharer','photo','photos','videos','help','privacy','settings']);
+    const reservedX=new Set(['home','explore','notifications','messages','i','search','settings','compose']);
     const rules={
-      Instagram:()=>h.endsWith('instagram.com')&&/^\/[A-Za-z0-9._-]+\/?$/.test(path),
-      TikTok:()=>h.endsWith('tiktok.com')&&/^\/@[^/]+\/?$/.test(path),
-      YouTube:()=>h.includes('youtube.com')&&/^\/(?:@|channel\/|c\/|user\/)/.test(path),
-      Facebook:()=>h.endsWith('facebook.com')&&path.length>1&&!path.startsWith('/search'),
-      LinkedIn:()=>h.endsWith('linkedin.com')&&/^\/(?:in|company)\//.test(path),
-      X:()=> (h==='x.com'||h.endsWith('twitter.com'))&&/^\/[A-Za-z0-9_]+\/?$/.test(path)
-    };return rules[platform]?rules[platform]():false;
+      Instagram:()=>h.endsWith('instagram.com')&&segments.length===1&&!reservedInstagram.has(first)&&/^[A-Za-z0-9._-]+$/.test(segments[0]),
+      TikTok:()=>h.endsWith('tiktok.com')&&segments.length===1&&/^@[A-Za-z0-9._-]+$/.test(segments[0]),
+      YouTube:()=>h.endsWith('youtube.com')&&(/^\/@[A-Za-z0-9._-]+$/.test(path)||/^\/(?:channel|c|user)\/[A-Za-z0-9._-]+$/i.test(path)),
+      Facebook:()=>h.endsWith('facebook.com')&&segments.length===1&&!reservedFacebook.has(first)&&/^[A-Za-z0-9._-]+$/.test(segments[0]),
+      LinkedIn:()=>h.endsWith('linkedin.com')&&/^\/(?:in|company)\/[A-Za-z0-9._-]+$/i.test(path),
+      Snapchat:()=>h.endsWith('snapchat.com')&&/^\/add\/[A-Za-z0-9._-]+$/i.test(path),
+      X:()=> (h==='x.com'||h==='twitter.com')&&segments.length===1&&!reservedX.has(first)&&/^[A-Za-z0-9_]+$/.test(segments[0])
+    };
+    return rules[platform]?rules[platform]():false;
   }catch{return false}
 }
 function p50v9OfficialLinks(p){return Object.entries(p?.links||{}).filter(([platform,url])=>p50v9IsDirectPlatformLink(platform,url));}
@@ -37,7 +46,7 @@ setTimeout(()=>clearInterval(p50v9CloudPatchTimer),20000);
 function p50v9OpenTool(title,html){$('#toolTitle').textContent=title;$('#toolBody').innerHTML=html;open('toolModal')}
 function p50v9CloseTool(){close('toolModal')}
 function p50v9StatusClass(status){return ['ok','blocked_but_exists'].includes(status)?'ok':status==='pending'?'pending':'bad'}
-function p50v9StatusText(status){return ({ok:'OFFICIEL',blocked_but_exists:'À CONFIRMER',pending:'NON TESTÉ',search_not_official:'RECHERCHE',wrong_platform:'MAUVAIS RÉSEAU',broken:'CASSÉ',invalid:'INVALIDE'})[status]||String(status||'NON TESTÉ').toUpperCase()}
+function p50v9StatusText(status){return ({ok:'OFFICIEL',blocked_but_exists:'À CONFIRMER',pending:'NON TESTÉ',search_not_official:'RECHERCHE',generic_or_content:'LIEN GÉNÉRIQUE',wrong_platform:'MAUVAIS RÉSEAU',broken:'CASSÉ',invalid:'INVALIDE'})[status]||String(status||'NON TESTÉ').toUpperCase()}
 
 const p50v8RenderAdminPane=renderAdminPane;
 renderAdmin=function(){const menu=`<div class="admin-menu"><button class="btn ${ui.adminTab==='signals'?'primary':''}" data-admin-tab="signals">Signaux</button><button class="btn ${ui.adminTab==='profiles'?'primary':''}" data-admin-tab="profiles">Influenceurs</button><button class="btn ${ui.adminTab==='media'?'primary':''}" data-admin-tab="media">Médias</button><button class="btn ${ui.adminTab==='links'?'primary':''}" data-admin-tab="links">Liens officiels</button><button class="btn ${ui.adminTab==='news'?'primary':''}" data-admin-tab="news">Actualité</button><button class="btn ${ui.adminTab==='ranking'?'primary':''}" data-admin-tab="ranking">Classement</button><button class="btn ${ui.adminTab==='data'?'primary':''}" data-admin-tab="data">Données</button></div>`;$('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;renderAdminPane()}
@@ -69,7 +78,7 @@ async function p50v9BulkPhotos(){const list=ranking().slice(0,10).filter(p=>p.ph
 async function p50v9BulkCovers(){const ids=ranking().slice(0,10).map(p=>primaryEvent(p.id)).filter(Boolean);let found=0;for(const ev of ids){if(!p50v9ExactContentLink(ev.url))continue;try{const d=await p50v9PreviewEvent(ev.id,false);if(d?.thumbnail){ev.coverCandidateUrl=d.thumbnail;ev.coverUrl='';ev.coverStatus='pending';ev.coverSource=d.source||d.platform;ev.coverNote='Proposition automatique, non téléchargée.';found++}}catch(e){console.warn(e)}}save();render();renderAdminPane();toast(`${found} couverture${found>1?'s':''} à valider`)}
 
 const p50v8OpenProfile=openProfile;
-openProfile=function(id){close('top50Modal');const p=profile(id),u=userPrefs(),bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)],links=p50v9OfficialLinks(p);$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${ranking().findIndex(x=>x.id===id)+1} · ${p.category}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name}</h2><div class="handle">${p.handle}</div><div style="margin-top:11px">${p.badges.map(badgeHtml).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}<div class="chart">${bars.map(h=>`<div class="bar" style="height:${Math.max(8,h)}%"></div>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé. Les liens de recherche ne sont pas affichés au public.</div>':''}</div></div>`;open('profileModal')}
+openProfile=function(id){close('top50Modal');const p=profile(id),u=userPrefs(),bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)],links=p50v9OfficialLinks(p);$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name}</h2><div class="handle">${p.handle}</div><div style="margin-top:11px">${p.badges.map(badgeHtml).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}<div class="chart">${bars.map(h=>`<div class="bar" style="height:${Math.max(8,h)}%"></div>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé. Les liens de recherche ne sont pas affichés au public.</div>':''}</div></div>`;open('profileModal')}
 
 eventHtml=function(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigger-empty"><strong>Élément déclencheur non encore validé</strong><div style="margin-top:5px">Le profil est classé sur la base de plusieurs signaux, mais aucun contenu principal n’a encore été sélectionné.</div></div>`;const link=p50v9ExactContentLink(e.url)?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'<span class="muted">Lien original à valider</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${triggerThumbHtml(e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${e.platforms.join(' · ')} · ${e.publishedLabel} · Confiance ${e.confidence}</div><div class="trigger-reason">${e.reason}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric}</span>${link}</div></section>`}
 renderContent=function(){const content=[...db.content].sort((a,b)=>{const pa=profile(a.profileId),pb=profile(b.profileId);return score(pb)-score(pa)}).slice(0,5);$('#contentGrid').innerHTML=content.map((c,i)=>{const p=profile(c.profileId),ev=primaryEvent(c.profileId),cover=publicCover(ev),url=p50v9ExactContentLink(ev?.url)?ev.url:(p50v9ExactContentLink(c.url)?c.url:'');const body=`${cover?`<img class="cover-bg" src="${safeAttr(cover)}" alt="" referrerpolicy="no-referrer">`:''}<div><strong>#${i+1} · ${p.name}</strong><div style="margin-top:8px">${badgeHtml(c.badge)}</div></div><div class="play">▶</div><div class="content-meta"><span>${c.platform}</span><span>${c.views} · ${c.time}</span></div>`;return url?`<a class="content-card ${cover?'has-cover':''}" href="${safeAttr(url)}" target="_blank" rel="noopener" data-content="${c.id}">${body}</a>`:`<article class="content-card ${cover?'has-cover':''}" data-content="${c.id}">${body}<div class="platform-hidden-note">Lien original à valider</div></article>`}).join('')}
@@ -94,13 +103,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=2';
+    css.href='./data-engine-ui.css?v=18';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=2';
+    js.src='./data-engine-ui.js?v=18';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
@@ -224,7 +233,7 @@ render();
   openProfile=function(id){
     const top50=$('#top50Modal'),profileWasOpen=$('#profileModal').classList.contains('show');
     if(top50?.classList.contains('show')){profileReturnContext={modalId:'top50Modal',scrollTop:top50.querySelector('.modal-box')?.scrollTop||0,profileId:id};close('top50Modal')}else if(!profileWasOpen){profileReturnContext=null}
-    const p=profile(id),u=userPrefs(),bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)],links=p50v9OfficialLinks(p);$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${ranking().findIndex(x=>x.id===id)+1} · ${p.category}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name}</h2><div class="handle">${p.handle}</div><div style="margin-top:11px">${p.badges.map(badgeHtml).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}<div class="chart">${bars.map(h=>`<div class="bar" style="height:${Math.max(8,h)}%"></div>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé.</div>':''}</div></div>`;open('profileModal');
+    const p=profile(id),u=userPrefs(),bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)],links=p50v9OfficialLinks(p);$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name}</h2><div class="handle">${p.handle}</div><div style="margin-top:11px">${p.badges.map(badgeHtml).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}<div class="chart">${bars.map(h=>`<div class="bar" style="height:${Math.max(8,h)}%"></div>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé.</div>':''}</div></div>`;open('profileModal');
   };
 
   const oldAdminRows=adminProfileRows;
@@ -244,8 +253,8 @@ render();
     const tasks=[];
     card.querySelectorAll('[data-link-platform]').forEach(input=>{
       const platform=input.dataset.linkPlatform,url=input.value.trim();
-      if(url){p.links[platform]=url;p.platforms=[...new Set([...(p.platforms||[]),platform])];p.linkChecks[platform]={status:'pending',checkedAt:null};
-        if(confirmed&&p50v9IsDirectPlatformLink(platform,url))tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:id,platform,url,confirmedOfficial:true,replaceExisting:true}}).then(data=>{p.links[platform]=data?.validation?.normalizedUrl||url;p.linkChecks[platform]={status:'ok',checkedAt:new Date().toISOString(),message:'Lien officiel remplacé et validé par le propriétaire'}}).catch(err=>{p.linkChecks[platform]={status:'broken',checkedAt:new Date().toISOString(),message:err.message||'Validation serveur impossible'}}));
+      if(url){p.links[platform]=url;p.platforms=[...new Set([...(p.platforms||[]),platform])];const direct=p50v9IsDirectPlatformLink(platform,url);p.linkChecks[platform]={status:direct?'pending':'generic_or_content',checkedAt:null,message:direct?'':'Le lien doit ouvrir directement le profil, pas la page d’accueil ou de connexion.'};
+        if(confirmed&&direct)tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:id,platform,url,confirmedOfficial:true,replaceExisting:true}}).then(data=>{p.links[platform]=data?.validation?.normalizedUrl||url;p.linkChecks[platform]={status:'ok',checkedAt:new Date().toISOString(),message:'Lien officiel remplacé et validé par le propriétaire'}}).catch(err=>{p.linkChecks[platform]={status:'broken',checkedAt:new Date().toISOString(),message:err.message||'Validation serveur impossible'}}));
       }else{delete p.links[platform];p.linkChecks[platform]={status:'search_not_official',checkedAt:null};if(confirmed&&previousLinks[platform])tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'delete',profileId:id,platform}}).catch(()=>null));}
     });
     save();if(tasks.length)await Promise.allSettled(tasks);save();render();toast(confirmed?'Liens officiels remplacés et publiés':'Liens enregistrés localement · confirmation requise pour publication');
@@ -254,7 +263,7 @@ render();
     const p=profile(id);if(!p||!card)return;
     await p50v9SaveLinks(id,card);
     const btn=card.querySelector('.check-links');if(btn){btn.disabled=true;btn.textContent='Vérification…'}
-    try{const data=await apiFetch('link-check.php',{method:'POST',body:{links:p.links}});p.linkChecks={...p.linkChecks,...Object.fromEntries(Object.entries(data.results||{}).map(([k,v])=>[k,{...v,checkedAt:data.checkedAt}]))};save();p50v9RenderLinks();toast('Liens contrôlés')}catch(err){toast(err.message||'Contrôle impossible');if(btn){btn.disabled=false;btn.textContent='Vérifier'}}
+    try{const data=await apiFetch('link-check.php',{method:'POST',body:{links:p.links}});const checked=Object.fromEntries(Object.entries(data.results||{}).map(([k,v])=>{const url=p.links?.[k]||v.url||'';return [k,p50v9IsDirectPlatformLink(k,url)?{...v,checkedAt:data.checkedAt}:{...v,status:'generic_or_content',message:'Le lien doit ouvrir directement le profil officiel.',checkedAt:data.checkedAt}]}));p.linkChecks={...p.linkChecks,...checked};save();p50v9RenderLinks();toast('Liens contrôlés')}catch(err){toast(err.message||'Contrôle impossible');if(btn){btn.disabled=false;btn.textContent='Vérifier'}}
   };
 
   render();
@@ -267,7 +276,7 @@ render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_85_v2.json?v=15';
+  const CENSUS_URL='./pass50_nouveaux_candidats_85_v2.json?v=18';
   const CENSUS_VERSION='85-v2';
   let importing=false;
 

@@ -218,7 +218,7 @@ function p50_de_sync_registry_from_state(): int {
     return $count;
 }
 
-function p50_de_registry_profiles(?string $profileId = null, int $limit = 1000, int $offset = 0): array {
+function p50_de_registry_profiles(?string $profileId = null, int $limit = 1000, int $offset = 0, bool $eligibleOnly = false): array {
     p50_de_ensure_schema();
     if ($profileId !== null && $profileId !== '') {
         $stmt = db()->prepare('SELECT * FROM p50_profile_registry WHERE profile_id=? LIMIT 1');
@@ -228,9 +228,31 @@ function p50_de_registry_profiles(?string $profileId = null, int $limit = 1000, 
     }
     $limit = max(1, min(1000, $limit));
     $offset = max(0, $offset);
-    $stmt = db()->prepare("SELECT * FROM p50_profile_registry WHERE alive=1 AND eligible=1 ORDER BY public_name LIMIT $limit OFFSET $offset");
+    $where = $eligibleOnly ? 'alive=1 AND eligible=1' : 'alive=1';
+    $stmt = db()->prepare("SELECT * FROM p50_profile_registry WHERE $where ORDER BY public_name LIMIT $limit OFFSET $offset");
     $stmt->execute();
     return $stmt->fetchAll();
+}
+
+/**
+ * Sélectionne en priorité les profils jamais collectés, puis les plus anciens.
+ * Le moteur travaille ainsi sur toute la base, y compris les profils non classables.
+ */
+function p50_de_profiles_for_collection(int $limit = 5, ?string $profileId = null): array {
+    p50_de_ensure_schema();
+    if ($profileId !== null && $profileId !== '') return p50_de_registry_profiles($profileId,1,0,false);
+    $limit=max(1,min(10,$limit));
+    $sql="SELECT r.*,runs.last_run_at
+          FROM p50_profile_registry r
+          LEFT JOIN (
+              SELECT profile_id,MAX(started_at) last_run_at
+              FROM p50_collection_runs
+              GROUP BY profile_id
+          ) runs ON runs.profile_id=r.profile_id
+          WHERE r.alive=1
+          ORDER BY (runs.last_run_at IS NOT NULL) ASC,runs.last_run_at ASC,r.public_name ASC
+          LIMIT $limit";
+    return db()->query($sql)->fetchAll();
 }
 
 function p50_de_begin_run(?string $profileId, string $collector, ?string $userId, array $metadata = []): array {
@@ -258,26 +280,52 @@ function p50_de_add_fact_evidence(string $profileId, string $factKey, string $no
     p50_de_rebuild_fact($profileId,$factKey);
 }
 
+function p50_de_type_matches(array $types, string $prefix): bool {
+    foreach($types as $type){
+        $type=(string)$type;
+        if($type===$prefix||str_starts_with($type,$prefix.'_'))return true;
+    }
+    return false;
+}
+
 function p50_de_rebuild_fact(string $profileId, string $factKey): void {
     $stmt = db()->prepare('SELECT normalized_value,value_hash,MAX(raw_value) raw_value,COUNT(*) evidence_count,COUNT(DISTINCT source_type) source_type_count,MAX(source_weight) max_weight,AVG(source_weight) avg_weight,GROUP_CONCAT(DISTINCT source_type ORDER BY source_type SEPARATOR ",") source_types FROM p50_fact_evidence WHERE profile_id=? AND fact_key=? GROUP BY normalized_value,value_hash');
     $stmt->execute([$profileId,$factKey]);
     $groups = $stmt->fetchAll();
     if (!$groups) return;
-    $manualTypes = ['manual_owner','manual_admin'];
     $scored = [];
     foreach ($groups as $g) {
         $types = array_values(array_filter(explode(',',(string)$g['source_types'])));
         $manualOwner = in_array('manual_owner',$types,true);
         $manualAdmin = in_array('manual_admin',$types,true);
+        $official = p50_de_type_matches($types,'official_site');
+        $wikidataHigh = p50_de_type_matches($types,'wikidata_high_match');
+        $wikipediaExact = p50_de_type_matches($types,'wikipedia_exact');
         $sourceCount = (int)$g['source_type_count'];
         $maxWeight = (int)$g['max_weight'];
         $avgWeight = (float)$g['avg_weight'];
+
         if ($manualOwner) $confidence = 100;
         elseif ($manualAdmin) $confidence = 98;
-        elseif ($factKey === 'birth_date') {
-            $confidence = $sourceCount >= 2 ? min(100, 90 + max(0,min(10,(int)round(($avgWeight-80)/1.5)))) : min(89,(int)round($maxWeight*0.90));
+        elseif ($factKey === 'photo_url') {
+            // Une photo proposée automatiquement reste à confirmer humainement.
+            $confidence = min(89,max(60,(int)round($maxWeight*0.90)));
+        } elseif ($factKey === 'birth_date') {
+            if($official&&$maxWeight>=96)$confidence=97;
+            elseif($wikidataHigh&&$maxWeight>=96)$confidence=94;
+            elseif($wikipediaExact&&$maxWeight>=92)$confidence=92;
+            elseif($sourceCount>=2)$confidence=min(100,90+max(0,min(10,(int)round(($avgWeight-80)/1.5))));
+            else $confidence=min(89,(int)round($maxWeight*0.90));
+        } elseif ($official&&$maxWeight>=94) {
+            $confidence=96;
+        } elseif ($wikidataHigh&&$maxWeight>=94) {
+            $confidence=94;
+        } elseif ($wikipediaExact&&$maxWeight>=90) {
+            $confidence=92;
+        } elseif ($sourceCount >= 2) {
+            $confidence = min(100, 90 + max(0,min(10,(int)round(($avgWeight-80)/1.5))));
         } else {
-            $confidence = $sourceCount >= 2 ? min(100, 90 + max(0,min(10,(int)round(($avgWeight-80)/1.5)))) : ($maxWeight >= 98 ? 95 : min(89,(int)round($maxWeight*0.90)));
+            $confidence = $maxWeight >= 98 ? 95 : min(89,(int)round($maxWeight*0.90));
         }
         $scored[] = $g + ['confidence'=>$confidence,'types'=>$types];
     }
@@ -320,17 +368,20 @@ function p50_de_normalize_social_url(string $platform, string $url): string {
 function p50_de_direct_social_path(string $platform, string $url): bool {
     $path = trim((string)(parse_url($url,PHP_URL_PATH) ?: ''),'/');
     $query = (string)(parse_url($url,PHP_URL_QUERY) ?: '');
+    $segments = array_values(array_filter(explode('/',$path),static fn($x)=>$x!==''));
+    $first = strtolower((string)($segments[0]??''));
     $p = strtolower($platform);
     if ($p === 'web') return true;
-    if ($path === '' || preg_match('#^(search|explore|results|home|watch|feed)(/|$)#i',$path)) return false;
+    if ($path === '' || preg_match('#^(search|explore|results|home|watch|feed|login)(/|$)#i',$path)) return false;
     if (str_contains($query,'search_query=')) return false;
     return match($p) {
-        'instagram' => count(array_filter(explode('/',$path))) >= 1 && !str_starts_with($path,'p/') && !str_starts_with($path,'reel/'),
-        'tiktok' => str_starts_with($path,'@'),
-        'youtube' => preg_match('#^(channel/|c/|user/|@)#i',$path) === 1,
-        'facebook' => !preg_match('#^(watch|groups|marketplace|gaming)(/|$)#i',$path),
-        'x' => count(array_filter(explode('/',$path))) === 1,
-        'snapchat' => str_starts_with($path,'add/'),
+        'instagram' => count($segments)===1 && !in_array($first,['accounts','about','developer','developers','direct','directory','explore','legal','privacy','reel','reels','stories','terms'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1,
+        'tiktok' => count($segments)===1 && preg_match('/^@[A-Za-z0-9._-]+$/',$segments[0])===1,
+        'youtube' => preg_match('#^(@[A-Za-z0-9._-]+|(channel|c|user)/[A-Za-z0-9._-]+)$#i',$path)===1,
+        'facebook' => count($segments)===1 && !in_array($first,['login','home','watch','groups','marketplace','gaming','events','reel','reels','share','sharer','photo','photos','videos','help','privacy','settings'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1,
+        'x' => count($segments)===1 && !in_array($first,['home','explore','notifications','messages','i','search','settings','compose'],true) && preg_match('/^[A-Za-z0-9_]+$/',$segments[0])===1,
+        'snapchat' => count($segments)===2 && strtolower($segments[0])==='add' && preg_match('/^[A-Za-z0-9._-]+$/',$segments[1])===1,
+        'linkedin' => count($segments)===2 && in_array(strtolower($segments[0]),['in','company'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[1])===1,
         default => true,
     };
 }
@@ -382,8 +433,12 @@ function p50_de_rebuild_social_link(string $profileId, string $platform): void {
         $sourceCount=(int)$g['source_type_count'];
         $maxWeight=(int)$g['max_weight'];
         $avgWeight=(float)$g['avg_weight'];
+        $official=p50_de_type_matches($types,'official_site');
+        $wikidataHigh=p50_de_type_matches($types,'wikidata_high_match');
         if($manualOwner)$confidence=100;
         elseif($manualAdmin)$confidence=98;
+        elseif($official&&$maxWeight>=94)$confidence=96;
+        elseif($wikidataHigh&&$maxWeight>=92)$confidence=94;
         elseif($sourceCount>=2)$confidence=min(100,92+max(0,min(8,(int)round(($avgWeight-82)/2))));
         elseif(in_array('wikidata',$types,true)&&$maxWeight>=92)$confidence=92;
         else $confidence=min(89,(int)round($maxWeight*0.92));
@@ -441,26 +496,307 @@ function p50_de_parse_dates(string $text): array {
     return array_values(array_unique($dates));
 }
 
-function p50_de_collect_wikidata(array $profile): array {
-    $name=(string)$profile['public_name'];
-    $handle=(string)$profile['handle'];
-    $searchUrl='https://www.wikidata.org/w/api.php?'.http_build_query(['action'=>'wbsearchentities','search'=>$name,'language'=>'fr','uselang'=>'fr','format'=>'json','limit'=>6]);
-    $search=p50_json_get($searchUrl,12);
-    $best=null;$bestScore=0;
-    foreach((array)($search['search']??[]) as $candidate){
-        $hay=(string)($candidate['label']??'').' '.(string)($candidate['description']??'').' '.implode(' ',(array)($candidate['aliases']??[]));
-        $score=p50_name_score($hay,$name,$handle);
-        if($score>$bestScore){$bestScore=$score;$best=$candidate;}
+function p50_de_normalize_iso_date(string $value): string {
+    $value=trim($value);
+    if($value==='')return '';
+    if(preg_match('/^(\d{4})-(\d{2})-(\d{2})/',$value,$m)){
+        $y=(int)$m[1];$mo=(int)$m[2];$d=(int)$m[3];
+        return checkdate($mo,$d,$y)?sprintf('%04d-%02d-%02d',$y,$mo,$d):'';
     }
-    if(!$best||$bestScore<52||empty($best['id']))return ['found'=>0,'verified'=>0,'message'=>'Aucune entité Wikidata suffisamment proche'];
-    $qid=(string)$best['id'];
+    $dates=p50_de_parse_dates($value);
+    return $dates[0]??'';
+}
+
+function p50_de_jsonld_walk(mixed $value, array &$out): void {
+    if(!is_array($value))return;
+    $isList=array_is_list($value);
+    if(!$isList)$out[]=$value;
+    foreach($value as $child)if(is_array($child))p50_de_jsonld_walk($child,$out);
+}
+
+function p50_de_jsonld_nodes(string $html): array {
+    preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is',$html,$matches);
+    $nodes=[];
+    foreach((array)($matches[1]??[]) as $raw){
+        $raw=html_entity_decode(trim((string)$raw),ENT_QUOTES|ENT_HTML5,'UTF-8');
+        $decoded=json_decode($raw,true);
+        if(is_array($decoded))p50_de_jsonld_walk($decoded,$nodes);
+    }
+    return $nodes;
+}
+
+function p50_de_jsonld_types(array $node): array {
+    $types=$node['@type']??[];
+    if(is_string($types))$types=[$types];
+    return array_map(static fn($x)=>strtolower((string)$x),is_array($types)?$types:[]);
+}
+
+function p50_de_jsonld_string(mixed $value): string {
+    if(is_string($value))return trim($value);
+    if(is_array($value)){
+        foreach(['name','url','@id','contentUrl'] as $key)if(isset($value[$key])&&is_string($value[$key]))return trim($value[$key]);
+        foreach($value as $child){$v=p50_de_jsonld_string($child);if($v!=='')return $v;}
+    }
+    return '';
+}
+
+function p50_de_jsonld_urls(mixed $value): array {
+    $out=[];
+    if(is_string($value)&&filter_var($value,FILTER_VALIDATE_URL))$out[]=$value;
+    elseif(is_array($value))foreach($value as $child)$out=array_merge($out,p50_de_jsonld_urls($child));
+    return array_values(array_unique($out));
+}
+
+function p50_de_birth_context_dates(string $text): array {
+    $plain=html_entity_decode(strip_tags($text),ENT_QUOTES|ENT_HTML5,'UTF-8');
+    $patterns=[
+        '/\b(?:né|née)\s+(?:à\s+[^,.\n]{0,60}\s+)?le\s+([^,.\n]{4,55})/iu',
+        '/\b(?:date\s+de\s+naissance|naissance)\s*[:\-]\s*([^,.\n]{4,55})/iu',
+        '/\bborn\s+(?:in\s+[^,.\n]{0,60}\s+)?on\s+([^,.\n]{4,55})/iu',
+        '/\bdate\s+of\s+birth\s*[:\-]\s*([^,.\n]{4,55})/iu',
+    ];
+    $out=[];
+    foreach($patterns as $pattern){
+        preg_match_all($pattern,$plain,$matches,PREG_SET_ORDER);
+        foreach($matches as $m)$out=array_merge($out,p50_de_parse_dates((string)($m[1]??'')));
+    }
+    return array_values(array_unique($out));
+}
+
+function p50_de_text_excerpt(string $value,int $limit=500): string {
+    $value=trim(preg_replace('/\s+/u',' ',html_entity_decode(strip_tags($value),ENT_QUOTES|ENT_HTML5,'UTF-8'))??'');
+    if($value==='')return '';
+    return function_exists('mb_substr')?mb_substr($value,0,$limit,'UTF-8'):substr($value,0,$limit);
+}
+
+function p50_de_infer_category(string $text): string {
+    $t=p50_normalize_text($text);
+    $rules=[
+        'Humour / Divertissement'=>['humoriste','comedien','comedienne','comique','sketch','web humor','acteur comique'],
+        'Musique'=>['chanteur','chanteuse','rappeur','rappeuse','musicien','musicienne','artiste musical','disc jockey',' dj '],
+        'Médias'=>['journaliste','animateur','animatrice','presentateur','presentatrice','chroniqueur','television','radio'],
+        'Beauté'=>['maquilleur','maquilleuse','makeup','cosmetique','beaute'],
+        'Mode'=>['mannequin','styliste','fashion','mode'],
+        'Sport'=>['footballeur','footballeuse','athlete','sportif','sportive','football'],
+        'Business'=>['entrepreneur','entrepreneuse','homme d affaires','femme d affaires','business'],
+        'Cuisine'=>['chef cuisinier','cheffe cuisiniere','cuisinier','cuisiniere','gastronomie','food'],
+        'Photographie'=>['photographe','photographie'],
+        'Tech / Digital'=>['informaticien','informatique','technologie','digital','intelligence artificielle','developpeur'],
+        'Lifestyle'=>['influenceur','influenceuse','createur de contenu','creatrice de contenu','youtubeur','youtubeuse','tiktokeur','tiktokeuse','blogueur','blogueuse'],
+    ];
+    foreach($rules as $category=>$keywords)foreach($keywords as $keyword)if(str_contains(' '.$t.' ',' '.trim($keyword).' ' )||str_contains($t,trim($keyword)))return $category;
+    return '';
+}
+
+function p50_de_social_urls_from_html(string $html): array {
+    preg_match_all('/<a[^>]+href=["\']([^"\']+)["\']/i',$html,$matches);
+    $out=[];
+    foreach((array)($matches[1]??[]) as $url){
+        $url=html_entity_decode(trim((string)$url),ENT_QUOTES|ENT_HTML5,'UTF-8');
+        if(!filter_var($url,FILTER_VALIDATE_URL))continue;
+        $platform=p50_platform($url);
+        if($platform==='Web'||!p50_de_direct_social_path($platform,$url))continue;
+        $out[$platform]=$url;
+    }
+    return $out;
+}
+
+/** Analyse une page publique et transforme les données structurées en preuves. */
+function p50_de_collect_page_enrichment(array $profile,string $url,string $sourceType,string $sourceName,int $weight,bool $official=false): array {
+    if(!filter_var($url,FILTER_VALIDATE_URL)||!p50_public_http_url($url))return ['found'=>0,'message'=>'URL refusée'];
+    $r=p50_http_fetch($url,10,'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5');
+    if($r['body']==='')return ['found'=>0,'message'=>'Page vide','httpStatus'=>$r['status']];
+    $final=$r['finalUrl']?:$url;
+    if(str_starts_with($sourceType,'media_bio_')){
+        $finalHost=strtolower((string)(parse_url($final,PHP_URL_HOST)?:''));
+        $finalHost=preg_replace('/^www\./','',$finalHost)?:$finalHost;
+        if($finalHost!==''&&!str_contains($finalHost,'news.google.')){$sourceType='media_bio_'.substr(hash('sha256',$finalHost),0,16);$sourceName=$finalHost;}
+    }
+    $meta=p50_page_metadata($r['body'],$final);
+    $plain=p50_de_text_excerpt($r['body'],30000);
+    $name=(string)$profile['public_name'];$handle=(string)$profile['handle'];$profileId=(string)$profile['profile_id'];
+    $identityScore=p50_name_score(($meta['title']??'').' '.($meta['description']??'').' '.$plain.' '.$final,$name,$handle);
+    if(!$official&&$identityScore<48)return ['found'=>0,'message'=>'Identité insuffisamment proche','identityScore'=>$identityScore];
+    $found=0;$personNodes=[];
+    foreach(p50_de_jsonld_nodes($r['body']) as $node){
+        $types=p50_de_jsonld_types($node);
+        if(!array_intersect($types,['person','profilepage','organization']))continue;
+        $nodeName=p50_de_jsonld_string($node['name']??($node['mainEntity']['name']??''));
+        $nodeScore=p50_name_score($nodeName.' '.p50_de_jsonld_string($node['alternateName']??''),$name,$handle);
+        if($official||$nodeScore>=48)$personNodes[]=$node;
+    }
+    $birthDates=[];$sameAs=[];$image='';$description='';$occupation='';$nationality='';
+    foreach($personNodes as $node){
+        $birth=p50_de_normalize_iso_date(p50_de_jsonld_string($node['birthDate']??''));if($birth!=='')$birthDates[]=$birth;
+        $sameAs=array_merge($sameAs,p50_de_jsonld_urls($node['sameAs']??[]));
+        if($image==='')$image=p50_de_jsonld_string($node['image']??'');
+        if($description==='')$description=p50_de_jsonld_string($node['description']??'');
+        if($occupation==='')$occupation=p50_de_jsonld_string($node['jobTitle']??($node['hasOccupation']??''));
+        if($nationality==='')$nationality=p50_de_jsonld_string($node['nationality']??'');
+    }
+    if($official||$identityScore>=60)$birthDates=array_merge($birthDates,p50_de_birth_context_dates($plain));
+    $birthDates=array_values(array_unique($birthDates));
+    foreach($birthDates as $date){p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$sourceType,$sourceName,$final,$weight);$found++;}
+    $description=p50_de_text_excerpt($description!==''?$description:(string)($meta['description']??''),500);
+    if($description!==''&&($official||$identityScore>=60)){p50_de_add_fact_evidence($profileId,'bio',$description,$description,$sourceType,$sourceName,$final,min(98,$weight));$found++;}
+    if($occupation!==''){p50_de_add_fact_evidence($profileId,'occupation',$occupation,$occupation,$sourceType,$sourceName,$final,min(98,$weight));$found++;}
+    $category=p50_de_infer_category($occupation.' '.$description.' '.$plain);
+    if($category!==''){p50_de_add_fact_evidence($profileId,'category',$category,$category,$sourceType,$sourceName,$final,min(98,$weight));$found++;}
+    if($nationality!==''){p50_de_add_fact_evidence($profileId,'nationality',$nationality,$nationality,$sourceType,$sourceName,$final,min(98,$weight));$found++;}
+    if($image==='')$image=(string)($meta['image']??'');
+    if(filter_var($image,FILTER_VALIDATE_URL)&&p50_public_http_url($image)){p50_de_add_fact_evidence($profileId,'photo_url',$image,$image,$sourceType,$sourceName,$final,min(95,$weight));$found++;}
+    if($official){
+        p50_de_add_fact_evidence($profileId,'official_website',$final,$final,$sourceType,$sourceName,$final,max(96,$weight));$found++;
+        $sameAs=array_merge($sameAs,array_values(p50_de_social_urls_from_html($r['body'])));
+    }
+    foreach(array_values(array_unique($sameAs)) as $socialUrl){
+        $platform=p50_platform($socialUrl);if($platform==='Web')continue;
+        $validation=p50_de_validate_social_url($platform,$socialUrl,$name,$handle);
+        if($validation['normalizedUrl']===''||in_array($validation['status'],['wrong_platform','generic_or_content','invalid'],true))continue;
+        p50_de_add_social_evidence($profileId,$platform,$validation['normalizedUrl'],$sourceType,$sourceName,$final,$official?96:min(88,$weight),$validation);$found++;
+    }
+    return ['found'=>$found,'identityScore'=>$identityScore,'url'=>$final,'birthDates'=>$birthDates,'message'=>'Page enrichie'];
+}
+
+function p50_de_wikidata_labels(array $ids): array {
+    $ids=array_values(array_unique(array_filter(array_map('strval',$ids),static fn($x)=>preg_match('/^Q\d+$/',$x))));
+    if(!$ids)return [];
+    $url='https://www.wikidata.org/w/api.php?'.http_build_query(['action'=>'wbgetentities','ids'=>implode('|',array_slice($ids,0,50)),'props'=>'labels','languages'=>'fr|en','format'=>'json']);
+    $data=p50_json_get($url,12);$out=[];
+    foreach((array)($data['entities']??[]) as $id=>$entity){$out[$id]=(string)($entity['labels']['fr']['value']??$entity['labels']['en']['value']??$id);}
+    return $out;
+}
+
+function p50_de_wikimedia_file_url(string $file): string {
+    $file=trim($file);if($file==='')return '';
+    return 'https://commons.wikimedia.org/wiki/Special:Redirect/file/'.rawurlencode(str_replace(' ','_',$file));
+}
+
+function p50_de_collect_wikipedia_search(array $profile): array {
+    $name=(string)$profile['public_name'];$handle=(string)$profile['handle'];$profileId=(string)$profile['profile_id'];
+    $found=0;$pages=[];
+    foreach(['fr','en'] as $lang){
+        foreach(array_unique(array_filter([$name,ltrim($handle,'@')])) as $query){
+            $searchUrl='https://'.$lang.'.wikipedia.org/w/api.php?'.http_build_query(['action'=>'query','list'=>'search','srsearch'=>$query,'srlimit'=>5,'format'=>'json']);
+            $search=p50_json_get($searchUrl,10);
+            foreach((array)($search['query']['search']??[]) as $row){
+                $title=(string)($row['title']??'');if($title==='')continue;
+                $score=p50_name_score($title.' '.strip_tags((string)($row['snippet']??'')),$name,$handle);
+                if($score<50)continue;
+                $key=$lang.'|'.$title;if(!isset($pages[$key])||$score>$pages[$key]['score'])$pages[$key]=['lang'=>$lang,'title'=>$title,'score'=>$score];
+            }
+        }
+    }
+    uasort($pages,static fn($a,$b)=>$b['score']<=>$a['score']);
+    foreach(array_slice(array_values($pages),0,2) as $candidate){
+        $lang=$candidate['lang'];$title=$candidate['title'];$score=(int)$candidate['score'];
+        $api='https://'.$lang.'.wikipedia.org/w/api.php?'.http_build_query(['action'=>'query','prop'=>'extracts|info|pageimages','inprop'=>'url','exintro'=>1,'explaintext'=>1,'redirects'=>1,'piprop'=>'original','titles'=>$title,'format'=>'json']);
+        $data=p50_json_get($api,12);
+        foreach((array)($data['query']['pages']??[]) as $page){
+            $extract=(string)($page['extract']??'');$pageTitle=(string)($page['title']??$title);
+            $identity=p50_name_score($pageTitle.' '.$extract,$name,$handle);if($identity<55)continue;
+            $url=(string)($page['fullurl']??('https://'.$lang.'.wikipedia.org/wiki/'.rawurlencode(str_replace(' ','_',$pageTitle))));
+            $type='wikipedia_exact_'.$lang;
+            foreach(p50_de_birth_context_dates($extract) as $date){p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$type,'Wikipédia · '.$lang,$url,93);$found++;}
+            $bio=p50_de_text_excerpt($extract,500);if($bio!==''){p50_de_add_fact_evidence($profileId,'bio',$bio,$bio,$type,'Wikipédia · '.$lang,$url,93);$found++;}
+            $category=p50_de_infer_category($extract);if($category!==''){p50_de_add_fact_evidence($profileId,'category',$category,$category,$type,'Wikipédia · '.$lang,$url,92);$found++;}
+            $image=(string)($page['original']['source']??'');if(filter_var($image,FILTER_VALIDATE_URL)){p50_de_add_fact_evidence($profileId,'photo_url',$image,$image,$type,'Wikipédia · '.$lang,$url,90);$found++;}
+        }
+    }
+    return ['found'=>$found,'pagesChecked'=>min(2,count($pages)),'message'=>'Recherche Wikipédia terminée'];
+}
+
+function p50_de_biography_urls(string $name,int $limit=5): array {
+    $queries=['"'.$name.'" "né le"','"'.$name.'" "née le"','"'.$name.'" biographie','"'.$name.'" "date de naissance"','"'.$name.'" anniversaire'];
+    $urls=[];
+    if(function_exists('simplexml_load_string')){
+        // Bing RSS apporte des biographies et pages de référence, pas seulement l'actualité récente.
+        foreach($queries as $query){
+            $rss='https://www.bing.com/search?format=rss&q='.rawurlencode($query);
+            $r=p50_http_fetch($rss,10,'application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.5');
+            if(!$r['ok'])continue;
+            libxml_use_internal_errors(true);$xml=simplexml_load_string($r['body'],'SimpleXMLElement',LIBXML_NONET|LIBXML_NOCDATA);
+            if(!$xml||!isset($xml->channel->item))continue;
+            foreach($xml->channel->item as $item){
+                $u=trim((string)$item->link);if(filter_var($u,FILTER_VALIDATE_URL))$urls[]=$u;
+                if(count(array_unique($urls))>=$limit)break 2;
+            }
+        }
+        // Google News complète avec les médias ivoiriens indexés récemment.
+        if(count(array_unique($urls))<$limit){
+            foreach($queries as $query){
+                $rss='https://news.google.com/rss/search?q='.rawurlencode($query).'&hl=fr&gl=CI&ceid=CI:fr';
+                $r=p50_http_fetch($rss,10,'application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.5');
+                if(!$r['ok'])continue;
+                libxml_use_internal_errors(true);$xml=simplexml_load_string($r['body'],'SimpleXMLElement',LIBXML_NONET|LIBXML_NOCDATA);
+                if(!$xml||!isset($xml->channel->item))continue;
+                foreach($xml->channel->item as $item){
+                    $u=trim((string)$item->link);$description=(string)($item->description??'');
+                    if(preg_match_all('/href=["\'](https?:\/\/[^"\']+)["\']/i',$description,$links)){
+                        foreach((array)($links[1]??[]) as $candidate){
+                            $candidate=html_entity_decode((string)$candidate,ENT_QUOTES|ENT_HTML5,'UTF-8');
+                            $host=strtolower((string)(parse_url($candidate,PHP_URL_HOST)?:''));
+                            if($host!==''&&!str_contains($host,'google.')){$u=$candidate;break;}
+                        }
+                    }
+                    if(filter_var($u,FILTER_VALIDATE_URL))$urls[]=$u;
+                    if(count(array_unique($urls))>=$limit)break 2;
+                }
+            }
+        }
+    }
+    return array_slice(array_values(array_unique($urls)),0,$limit);
+}
+
+
+function p50_de_collect_biography_web(array $profile,int $limit=3): array {
+    $name=(string)$profile['public_name'];$found=0;$checked=0;$details=[];
+    foreach(p50_de_biography_urls($name,$limit) as $url){
+        $host=strtolower((string)(parse_url($url,PHP_URL_HOST)?:'web'));$host=preg_replace('/^www\./','',$host)?:$host;
+        $type='media_bio_'.substr(hash('sha256',$host),0,16);
+        $result=p50_de_collect_page_enrichment($profile,$url,$type,$host,86,false);
+        $checked++;$found+=(int)($result['found']??0);$details[]=$result;
+    }
+    return ['found'=>$found,'checked'=>$checked,'details'=>$details,'message'=>'Recherche biographique terminée'];
+}
+
+function p50_de_collect_wikidata(array $profile): array {
+    $name=(string)$profile['public_name'];$handle=(string)$profile['handle'];$profileId=(string)$profile['profile_id'];
+    $candidates=[];
+    foreach(['fr','en'] as $language){
+        foreach(array_unique(array_filter([$name,ltrim($handle,'@')])) as $query){
+            $searchUrl='https://www.wikidata.org/w/api.php?'.http_build_query(['action'=>'wbsearchentities','search'=>$query,'language'=>$language,'uselang'=>'fr','format'=>'json','limit'=>8]);
+            $search=p50_json_get($searchUrl,12);
+            foreach((array)($search['search']??[]) as $candidate){
+                $qid=(string)($candidate['id']??'');if($qid==='')continue;
+                $hay=(string)($candidate['label']??'').' '.(string)($candidate['description']??'').' '.implode(' ',(array)($candidate['aliases']??[]));
+                $score=p50_name_score($hay,$name,$handle);
+                if(str_contains(p50_normalize_text($hay),'ivoir'))$score=min(100,$score+8);
+                if(!isset($candidates[$qid])||$score>$candidates[$qid]['score'])$candidates[$qid]=['row'=>$candidate,'score'=>$score];
+            }
+        }
+    }
+    uasort($candidates,static fn($a,$b)=>$b['score']<=>$a['score']);
+    $bestEntry=$candidates?reset($candidates):null;
+    if(!$bestEntry||(int)$bestEntry['score']<52||empty($bestEntry['row']['id']))return ['found'=>0,'verified'=>0,'message'=>'Aucune entité Wikidata suffisamment proche'];
+    $best=$bestEntry['row'];$bestScore=(int)$bestEntry['score'];$qid=(string)$best['id'];
     $entityUrl='https://www.wikidata.org/wiki/Special:EntityData/'.rawurlencode($qid).'.json';
-    $entityData=p50_json_get($entityUrl,12);
-    $entity=$entityData['entities'][$qid]??null;
+    $entityData=p50_json_get($entityUrl,12);$entity=$entityData['entities'][$qid]??null;
     if(!is_array($entity))return ['found'=>0,'verified'=>0,'message'=>'Entité Wikidata inaccessible'];
-    $found=0;
+    $bestHay=(string)($best['label']??'').' '.(string)($best['description']??'').' '.implode(' ',(array)($best['aliases']??[]));
+    $trustedIdentity=$bestScore>=75||($bestScore>=65&&str_contains(p50_normalize_text($bestHay),'ivoir'));
+    $found=0;$sourceType=$trustedIdentity?'wikidata_high_match':'wikidata';$weight=$trustedIdentity?98:94;
     $birth=p50_de_wikidata_date($entity);
-    if($birth){p50_de_add_fact_evidence((string)$profile['profile_id'],'birth_date',$birth,$birth,'wikidata','Wikidata · '.$qid,$entityUrl,96);$found++;}
+    if($birth){p50_de_add_fact_evidence($profileId,'birth_date',$birth,$birth,$sourceType,'Wikidata · '.$qid,$entityUrl,$weight);$found++;}
+    $description=(string)($entity['descriptions']['fr']['value']??$entity['descriptions']['en']['value']??$best['description']??'');
+    if($description!==''){p50_de_add_fact_evidence($profileId,'bio',p50_de_text_excerpt($description,500),$description,$sourceType,'Wikidata · '.$qid,$entityUrl,$weight);$found++;}
+    $occupationIds=[];foreach(p50_de_wikidata_claims($entity,'P106') as $v)if(is_array($v)&&!empty($v['id']))$occupationIds[]=(string)$v['id'];
+    $occupationLabels=p50_de_wikidata_labels($occupationIds);$occupations=implode(', ',array_values($occupationLabels));
+    if($occupations!==''){p50_de_add_fact_evidence($profileId,'occupation',$occupations,$occupations,$sourceType,'Wikidata · '.$qid,$entityUrl,$weight);$found++;$cat=p50_de_infer_category($occupations.' '.$description);if($cat!==''){p50_de_add_fact_evidence($profileId,'category',$cat,$cat,$sourceType,'Wikidata · '.$qid,$entityUrl,$weight);$found++;}}
+    $nationIds=[];foreach(p50_de_wikidata_claims($entity,'P27') as $v)if(is_array($v)&&!empty($v['id']))$nationIds[]=(string)$v['id'];
+    $nationLabels=p50_de_wikidata_labels($nationIds);$nationality=implode(', ',array_values($nationLabels));
+    if($nationality!==''){p50_de_add_fact_evidence($profileId,'nationality',$nationality,$nationality,$sourceType,'Wikidata · '.$qid,$entityUrl,$weight);$found++;}
+    foreach(p50_de_wikidata_claims($entity,'P18') as $file){if(is_string($file)){ $image=p50_de_wikimedia_file_url($file);if($image!==''){p50_de_add_fact_evidence($profileId,'photo_url',$image,$image,$sourceType,'Wikidata · '.$qid,$entityUrl,94);$found++;break;}}}
     $properties=[
         'P2003'=>['Instagram',static fn($v)=>'https://instagram.com/'.ltrim((string)$v,'@')],
         'P7085'=>['TikTok',static fn($v)=>'https://tiktok.com/@'.ltrim((string)$v,'@')],
@@ -470,35 +806,51 @@ function p50_de_collect_wikidata(array $profile): array {
         'P2984'=>['Snapchat',static fn($v)=>'https://snapchat.com/add/'.ltrim((string)$v,'@')],
         'P856'=>['Web',static fn($v)=>(string)$v],
     ];
+    $officialSites=[];
     foreach($properties as $property=>[$platform,$builder]){
         foreach(p50_de_wikidata_claims($entity,$property) as $value){
-            if(is_array($value))continue;
-            $url=$builder($value);
+            if(is_array($value))continue;$url=$builder($value);
             $validation=p50_de_validate_social_url($platform,$url,$name,$handle);
             if(!$validation['ok']&&$platform!=='Web')continue;
-            p50_de_add_social_evidence((string)$profile['profile_id'],$platform,$validation['normalizedUrl']?:$url,'wikidata','Wikidata · '.$qid,$entityUrl,92,$validation);
-            $found++;
+            $normalized=$validation['normalizedUrl']?:$url;
+            p50_de_add_social_evidence($profileId,$platform,$normalized,$sourceType,'Wikidata · '.$qid,$entityUrl,$trustedIdentity?94:90,$validation);$found++;
+            if($platform==='Web'&&filter_var($normalized,FILTER_VALIDATE_URL))$officialSites[]=$normalized;
         }
     }
-    $wikiSite='';$wikiTitle='';
-    foreach(['frwiki','enwiki'] as $site){if(!empty($entity['sitelinks'][$site]['title'])){$wikiSite=$site;$wikiTitle=(string)$entity['sitelinks'][$site]['title'];break;}}
-    if($wikiTitle!==''){
-        $lang=$wikiSite==='frwiki'?'fr':'en';
-        $wikiApi='https://'.$lang.'.wikipedia.org/w/api.php?'.http_build_query(['action'=>'query','prop'=>'extracts|info','inprop'=>'url','exintro'=>1,'explaintext'=>1,'redirects'=>1,'titles'=>$wikiTitle,'format'=>'json']);
+    foreach(array_slice(array_values(array_unique($officialSites)),0,1) as $site){$page=p50_de_collect_page_enrichment($profile,$site,'official_site_wikidata','Site officiel',97,true);$found+=(int)($page['found']??0);}
+    $wikiFound=0;
+    foreach(['frwiki','enwiki'] as $site){
+        if(empty($entity['sitelinks'][$site]['title']))continue;
+        $lang=$site==='frwiki'?'fr':'en';$wikiTitle=(string)$entity['sitelinks'][$site]['title'];
+        $wikiApi='https://'.$lang.'.wikipedia.org/w/api.php?'.http_build_query(['action'=>'query','prop'=>'extracts|info|pageimages','inprop'=>'url','exintro'=>1,'explaintext'=>1,'redirects'=>1,'piprop'=>'original','titles'=>$wikiTitle,'format'=>'json']);
         $wiki=p50_json_get($wikiApi,12);
         foreach((array)($wiki['query']['pages']??[]) as $page){
-            $extract=(string)($page['extract']??'');
-            $pageUrl=(string)($page['fullurl']??('https://'.$lang.'.wikipedia.org/wiki/'.rawurlencode(str_replace(' ','_',$wikiTitle))));
-            foreach(p50_de_parse_dates($extract) as $date){
-                if($birth!==null&&$date!==$birth)continue;
-                p50_de_add_fact_evidence((string)$profile['profile_id'],'birth_date',$date,$date,'wikipedia','Wikipédia · '.$lang,$pageUrl,92);
-                $found++;
-                break;
-            }
+            $extract=(string)($page['extract']??'');$pageUrl=(string)($page['fullurl']??('https://'.$lang.'.wikipedia.org/wiki/'.rawurlencode(str_replace(' ','_',$wikiTitle))));$type='wikipedia_exact_'.$lang;
+            foreach(p50_de_birth_context_dates($extract) as $date){if($birth!==null&&$date!==$birth)continue;p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$type,'Wikipédia · '.$lang,$pageUrl,93);$found++;$wikiFound++;}
+            $bio=p50_de_text_excerpt($extract,500);if($bio!==''){p50_de_add_fact_evidence($profileId,'bio',$bio,$bio,$type,'Wikipédia · '.$lang,$pageUrl,93);$found++;}
+            $cat=p50_de_infer_category($extract);if($cat!==''){p50_de_add_fact_evidence($profileId,'category',$cat,$cat,$type,'Wikipédia · '.$lang,$pageUrl,92);$found++;}
+            $image=(string)($page['original']['source']??'');if(filter_var($image,FILTER_VALIDATE_URL)){p50_de_add_fact_evidence($profileId,'photo_url',$image,$image,$type,'Wikipédia · '.$lang,$pageUrl,90);$found++;}
         }
+        break;
     }
-    $verified=p50_de_profile_verified_count((string)$profile['profile_id']);
-    return ['found'=>$found,'verified'=>$verified,'qid'=>$qid,'identityScore'=>$bestScore,'message'=>'Collecte Wikidata/Wikipédia terminée'];
+    if($wikiFound===0){$fallback=p50_de_collect_wikipedia_search($profile);$found+=(int)($fallback['found']??0);}
+    $verified=p50_de_profile_verified_count($profileId);
+    return ['found'=>$found,'verified'=>$verified,'qid'=>$qid,'identityScore'=>$bestScore,'message'=>'Collecte structurée terminée'];
+}
+
+/** Collecteur principal V18 : sources structurées, pages officielles et biographies publiques. */
+function p50_de_collect_enrichment(array $profile,bool $deep=true): array {
+    $profileId=(string)$profile['profile_id'];$found=0;$details=[];
+    $structured=p50_de_collect_wikidata($profile);$found+=(int)($structured['found']??0);$details['structured']=$structured;
+    $facts=p50_de_verified_facts($profileId);
+    if(!isset($facts['birth_date'])&&$deep){$bio=p50_de_collect_biography_web($profile,3);$found+=(int)($bio['found']??0);$details['biography']=$bio;}
+    // Les sites Web déjà validés sont analysés même si Wikidata ne connaît pas le profil.
+    foreach(p50_de_social_links($profileId,true) as $link){
+        if(strcasecmp((string)$link['platform'],'Web')!==0)continue;
+        $official=p50_de_collect_page_enrichment($profile,(string)$link['url'],'official_site_verified','Site officiel vérifié',98,true);
+        $found+=(int)($official['found']??0);$details['officialSite']=$official;break;
+    }
+    return ['found'=>$found,'verified'=>p50_de_profile_verified_count($profileId),'details'=>$details,'message'=>'Enrichissement automatique terminé'];
 }
 
 
@@ -546,6 +898,13 @@ function p50_de_verified_facts(string $profileId): array {
     return $out;
 }
 
+function p50_de_best_fact(string $profileId,string $factKey,int $minConfidence=0): ?array {
+    $stmt=db()->prepare("SELECT fact_key,normalized_value,confidence,evidence_count,source_types,status,verified_at,last_seen_at FROM p50_facts WHERE profile_id=? AND fact_key=? AND confidence>=? ORDER BY (status='verified') DESC,confidence DESC,evidence_count DESC,last_seen_at DESC LIMIT 1");
+    $stmt->execute([$profileId,$factKey,max(0,min(100,$minConfidence))]);
+    $row=$stmt->fetch();
+    return $row?:null;
+}
+
 function p50_de_social_links(string $profileId, bool $verifiedOnly=false): array {
     $sql='SELECT profile_id,platform,normalized_url url,confidence,evidence_count,source_types,status,validation_json,checked_at,verified_at FROM p50_social_links WHERE profile_id=?';
     $params=[$profileId];
@@ -561,16 +920,19 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
     $state=p50_de_load_public_state();
     if(!$state)return false;
     $facts=p50_de_verified_facts($profileId);
+    $photoCandidate=p50_de_best_fact($profileId,'photo_url',60);
     $links=p50_de_social_links($profileId,true);
     $changed=false;
     foreach((array)($state['profiles']??[]) as &$p){
         if(!is_array($p)||(string)($p['id']??'')!==$profileId)continue;
+        $previousEngine=is_array($p['dataEngine']??null)?$p['dataEngine']:[];
         $publicLinks=[];$maxSocial=0;
         foreach($links as $link){$publicLinks[(string)$link['platform']]=(string)$link['url'];$maxSocial=max($maxSocial,(int)$link['confidence']);}
         if(($p['links']??[])!==$publicLinks){$p['links']=$publicLinks;$changed=true;}
         $p['quality']=is_array($p['quality']??null)?$p['quality']:[];
-        $p['quality']['identity']=100;
+        $p['quality']['identity']=max(90,(int)($p['quality']['identity']??0));
         $p['quality']['social']=$maxSocial;
+
         if(isset($facts['birth_date'])){
             $date=(string)$facts['birth_date']['normalized_value'];
             if(($p['birthDate']??null)!==$date){$p['birthDate']=$date;$changed=true;}
@@ -578,22 +940,57 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
             $p['ageStatus']='confirmed';
             $p['quality']['birth']=(int)$facts['birth_date']['confidence'];
         }else{
-            unset($p['birthDate'],$p['birthYear']);
-            $p['ageStatus']='unconfirmed';
-            $p['quality']['birth']=0;
+            // Ne jamais effacer une information déjà saisie : elle reste simplement non confirmée.
+            if(empty($p['birthDate'])){$p['ageStatus']=$p['ageStatus']??'unconfirmed';$p['quality']['birth']=0;}
         }
+
+        $autoBioValue=(string)($previousEngine['autoBioValue']??'');
+        if(isset($facts['bio'])){
+            $bio=(string)$facts['bio']['normalized_value'];
+            $currentBio=trim((string)($p['bio']??''));
+            if($currentBio===''||($autoBioValue!==''&&$currentBio===$autoBioValue)){$p['bio']=$bio;$autoBioValue=$bio;$changed=true;}
+        }
+        if(isset($facts['occupation'])){$p['occupation']=(string)$facts['occupation']['normalized_value'];$changed=true;}
+        if(isset($facts['nationality'])){$p['nationality']=(string)$facts['nationality']['normalized_value'];$changed=true;}
+        if(isset($facts['official_website'])){$p['officialWebsite']=(string)$facts['official_website']['normalized_value'];$changed=true;}
+        $autoCategoryValue=(string)($previousEngine['autoCategoryValue']??'');
+        if(isset($facts['category'])){
+            $suggested=(string)$facts['category']['normalized_value'];
+            $current=trim((string)($p['category']??''));
+            $generic=in_array(p50_normalize_text($current),['','autre','a verifier','influenceur','digital','lifestyle'],true);
+            if($generic||($autoCategoryValue!==''&&$current===$autoCategoryValue)){$p['category']=$suggested;$autoCategoryValue=$suggested;$changed=true;}
+            else $p['suggestedCategory']=$suggested;
+        }
+
+        if($photoCandidate&&in_array((string)($p['photoStatus']??'missing'),['missing','pending'],true)&&empty($p['photoUrl'])){
+            $url=(string)$photoCandidate['normalized_value'];
+            if(($p['photoCandidateUrl']??'')!==$url){$p['photoCandidateUrl']=$url;$changed=true;}
+            $p['photoStatus']='pending';
+            $p['photoSource']='Suggestion automatique PASS50';
+            $p['photoNote']='Photo proposée par le moteur : validation humaine obligatoire.';
+            $p['quality']['photo']=0;
+        }
+
         $p['lastCollectedAt']=gmdate('c');
-        $p['dataEngine']=['threshold'=>p50_de_threshold(),'publishedAt'=>gmdate('c'),'verifiedFacts'=>array_keys($facts),'verifiedSocialLinks'=>count($links)];
+        $p['dataEngine']=[
+            'threshold'=>p50_de_threshold(),
+            'publishedAt'=>gmdate('c'),
+            'verifiedFacts'=>array_keys($facts),
+            'verifiedSocialLinks'=>count($links),
+            'photoCandidate'=>(bool)$photoCandidate,
+            'autoBioValue'=>$autoBioValue,
+            'autoCategoryValue'=>$autoCategoryValue,
+        ];
         $changed=true;
         break;
     }
     unset($p);
-    if($changed){$state['dataEngineMeta']=['threshold'=>p50_de_threshold(),'lastPublishedAt'=>gmdate('c')];p50_de_save_public_state($state,$userId);}
+    if($changed){$state['dataEngineMeta']=['threshold'=>p50_de_threshold(),'lastPublishedAt'=>gmdate('c'),'version'=>18];p50_de_save_public_state($state,$userId);}
     return $changed;
 }
 
 function p50_de_publish_all(?string $userId=null): int {
-    $profiles=p50_de_registry_profiles(null,100,0);$count=0;
+    $profiles=p50_de_registry_profiles(null,1000,0,false);$count=0;
     foreach($profiles as $profile)if(p50_de_publish_profile((string)$profile['profile_id'],$userId))$count++;
     return $count;
 }
@@ -629,8 +1026,20 @@ function p50_de_collect_youtube_activity(array $profile): array {
     $youtube=null;
     foreach($links as $link)if(strcasecmp((string)$link['platform'],'YouTube')===0){$youtube=$link;break;}
     if(!$youtube)return ['found'=>0,'verified'=>0,'message'=>'Aucune chaîne YouTube vérifiée'];
+    $found=0;
+    // La page officielle YouTube fournit souvent une bio et une photo fiables.
+    $channelPage=p50_http_fetch((string)$youtube['url'],12,'text/html,*/*;q=0.7');
+    if($channelPage['body']!==''){
+        $meta=p50_page_metadata($channelPage['body'],$channelPage['finalUrl']?:$youtube['url']);
+        $identity=p50_name_score(($meta['title']??'').' '.($meta['description']??''),(string)$profile['public_name'],(string)$profile['handle']);
+        if($identity>=45){
+            $description=p50_de_text_excerpt((string)($meta['description']??''),500);
+            if($description!==''){p50_de_add_fact_evidence($profileId,'bio',$description,$description,'official_site_youtube','YouTube officiel',(string)$youtube['url'],94);$found++;$category=p50_de_infer_category($description);if($category!==''){p50_de_add_fact_evidence($profileId,'category',$category,$category,'official_site_youtube','YouTube officiel',(string)$youtube['url'],94);$found++;}}
+            $image=(string)($meta['image']??'');if(filter_var($image,FILTER_VALIDATE_URL)){p50_de_add_fact_evidence($profileId,'photo_url',$image,$image,'official_site_youtube','YouTube officiel',(string)$youtube['url'],92);$found++;}
+        }
+    }
     $channelId=p50_de_youtube_channel_id((string)$youtube['url']);
-    if(!$channelId)return ['found'=>0,'verified'=>0,'message'=>'Identifiant de chaîne YouTube introuvable'];
+    if(!$channelId)return ['found'=>$found,'verified'=>0,'message'=>'Identifiant de chaîne YouTube introuvable'];
     $feedUrl='https://www.youtube.com/feeds/videos.xml?channel_id='.rawurlencode($channelId);
     $r=p50_http_fetch($feedUrl,15,'application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.5');
     if(!$r['ok']||$r['body']==='')return ['found'=>0,'verified'=>0,'message'=>'Flux YouTube indisponible','httpStatus'=>$r['status']];
@@ -638,7 +1047,7 @@ function p50_de_collect_youtube_activity(array $profile): array {
     libxml_use_internal_errors(true);
     $xml=simplexml_load_string($r['body'],'SimpleXMLElement',LIBXML_NONET|LIBXML_NOCDATA);
     if(!$xml)return ['found'=>0,'verified'=>0,'message'=>'Flux YouTube invalide'];
-    $namespaces=$xml->getNamespaces(true);$found=0;
+    $namespaces=$xml->getNamespaces(true);
     foreach($xml->entry as $entry){
         $yt=isset($namespaces['yt'])?$entry->children($namespaces['yt']):null;
         $media=isset($namespaces['media'])?$entry->children($namespaces['media']):null;
@@ -690,30 +1099,44 @@ function p50_de_hub_payload(): array {
     p50_de_sync_registry_from_state();
     $state=p50_de_load_public_state();$stateMap=p50_de_profile_state_map($state);
     $profiles=[];$threshold=p50_de_threshold();
-    foreach(p50_de_registry_profiles(null,1000,0) as $r){
+    foreach(p50_de_registry_profiles(null,1000,0,false) as $r){
         $id=(string)$r['profile_id'];$sp=$stateMap[$id]??[];
         $facts=p50_de_verified_facts($id);$social=p50_de_social_links($id,false);
-        $runStmt=db()->prepare('SELECT status,collector,started_at,finished_at,error_message FROM p50_collection_runs WHERE profile_id=? ORDER BY started_at DESC LIMIT 1');$runStmt->execute([$id]);$lastRun=$runStmt->fetch()?:null;
-        $photoConfidence=((string)($sp['photoStatus']??'')==='validated')?100:0;
+        $birthBest=p50_de_best_fact($id,'birth_date',1);
+        $photoBest=p50_de_best_fact($id,'photo_url',1);
+        $categoryBest=p50_de_best_fact($id,'category',1);
+        $bioBest=p50_de_best_fact($id,'bio',1);
+        $nationalityBest=p50_de_best_fact($id,'nationality',1);
+        $runStmt=db()->prepare('SELECT status,collector,started_at,finished_at,error_message,items_found,items_verified FROM p50_collection_runs WHERE profile_id=? ORDER BY started_at DESC LIMIT 1');$runStmt->execute([$id]);$lastRun=$runStmt->fetch()?:null;
+        $photoConfidence=((string)($sp['photoStatus']??'')==='validated')?100:(int)($photoBest['confidence']??0);
         $scoreConfidence=(int)($sp['quality']['score']??0);
         $liveConfidence=(int)($sp['quality']['live']??0);
-        $birthConfidence=(int)($facts['birth_date']['confidence']??0);
+        $birthConfidence=(int)($birthBest['confidence']??0);
         $socialConfidence=0;$verifiedSocial=0;
         foreach($social as $l){if($l['status']==='verified'&&(int)$l['confidence']>=$threshold){$verifiedSocial++;$socialConfidence=max($socialConfidence,(int)$l['confidence']);}}
-        $qualities=['identity'=>100,'photo'=>$photoConfidence,'birth'=>$birthConfidence,'social'=>$socialConfidence,'score'=>$scoreConfidence,'live'=>$liveConfidence];
+        $identityConfidence=max(90,(int)($sp['quality']['identity']??0));
+        $qualities=['identity'=>$identityConfidence,'photo'=>$photoConfidence,'birth'=>$birthConfidence,'social'=>$socialConfidence,'score'=>$scoreConfidence,'live'=>$liveConfidence];
         $complete=count(array_filter($qualities,static fn($v)=>$v>=$threshold));
         $profiles[]=[
             'id'=>$id,'name'=>$r['public_name'],'handle'=>$r['handle'],'region'=>$r['region'],'category'=>$r['category'],
+            'eligible'=>(bool)$r['eligible'],'alive'=>(bool)$r['alive'],
             'quality'=>$qualities,'completeness'=>(int)round($complete/count($qualities)*100),
-            'facts'=>$facts,'socialLinks'=>$social,'verifiedSocialCount'=>$verifiedSocial,'lastRun'=>$lastRun,
+            'facts'=>$facts,'birthBest'=>$birthBest,'photoBest'=>$photoBest,'categoryBest'=>$categoryBest,'bioBest'=>$bioBest,'nationalityBest'=>$nationalityBest,
+            'socialLinks'=>$social,'verifiedSocialCount'=>$verifiedSocial,'lastRun'=>$lastRun,
             'lastCollectedAt'=>$lastRun['finished_at']??null,
         ];
     }
     $kpis=[
         'profiles'=>count($profiles),
-        'birthVerified'=>count(array_filter($profiles,static fn($p)=>$p['quality']['birth']>=$threshold)),
+        'eligible'=>count(array_filter($profiles,static fn($p)=>!empty($p['eligible']))),
+        'pending'=>count(array_filter($profiles,static fn($p)=>empty($p['eligible']))),
+        'birthVerified'=>count(array_filter($profiles,static fn($p)=>(int)($p['birthBest']['confidence']??0)>=$threshold&&($p['birthBest']['status']??'')==='verified')),
+        'birthCandidates'=>count(array_filter($profiles,static fn($p)=>!empty($p['birthBest'])&&(int)($p['birthBest']['confidence']??0)<$threshold)),
         'socialVerified'=>count(array_filter($profiles,static fn($p)=>$p['quality']['social']>=$threshold)),
+        'photoCandidates'=>count(array_filter($profiles,static fn($p)=>!empty($p['photoBest']))),
         'fullyReliable'=>count(array_filter($profiles,static fn($p)=>$p['completeness']>=67)),
+        'autoEnriched'=>count(array_filter($profiles,static fn($p)=>!empty($p['facts'])||!empty($p['photoBest'])||!empty($p['verifiedSocialCount']))),
+        'neverCollected'=>count(array_filter($profiles,static fn($p)=>empty($p['lastRun']))),
     ];
-    return ['ok'=>true,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
+    return ['ok'=>true,'engineVersion'=>18,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
 }
