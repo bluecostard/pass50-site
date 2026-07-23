@@ -1,9 +1,9 @@
-const CACHE='pass50-v22-8-live-open-fix';
+const CACHE='pass50-v22-9-quality-control-__BUILD_ID__';
 const ASSETS=[
   './',
   './index.html',
   './v9-tools.css?v=22.4',
-  './v9-tools.js?v=22.8',
+  './v9-tools.js?v=22.9',
   './pass50_nouveaux_candidats_90_v19.json?v=22.6',
   './data-engine-ui.js?v=22.6',
   './manifest.webmanifest?v=22.4',

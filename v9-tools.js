@@ -656,3 +656,60 @@ render();
 
   window.p50ImportCensus=p50ImportCensus;
 })();
+
+/* PASS50 V22.9 — Contrôle qualité des fiches */
+(function(){
+  function qaEsc(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function qaDirectLinks(p){
+    try{return typeof p50v9OfficialLinks==='function'?p50v9OfficialLinks(p):Object.entries(p?.links||{}).filter(([,u])=>/^https?:\/\//i.test(u||''));}
+    catch{return [];}
+  }
+  function qaEvent(p){try{return typeof primaryEvent==='function'?primaryEvent(p.id):null}catch{return null}}
+  function qaLive(p){return (db.liveStreams||[]).find(l=>l.profileId===p.id&&l.status==='live'&&/^https?:\/\//i.test(l.url||''));}
+  function qaProfile(p){
+    const links=qaDirectLinks(p),ev=qaEvent(p),content=(db.content||[]).find(c=>c.profileId===p.id);
+    const photo=Boolean((p.photoStatus==='validated'||p.photoManualLocked)&&((p.photoUrl||p.photoCandidateUrl)));
+    const birth=Boolean((p.birthDate||p.birthYear)&&(p.ageStatus==='confirmed'||p.birthManualLocked));
+    const socials=links.length>=2;
+    const event=Boolean(ev&&/^https?:\/\//i.test(ev.url||'')&&(ev.originalLinkValidated!==false));
+    let visual=false;
+    try{visual=Boolean((ev&&typeof publicCover==='function'&&publicCover(ev))||(content&&content.thumbnail)||(photo));}catch{visual=photo;}
+    const live=Boolean(qaLive(p));
+    const checks=[
+      {key:'socials',label:'Réseaux officiels',ok:socials,detail:links.length+' lien'+(links.length>1?'s':'')+' direct'+(links.length>1?'s':'')},
+      {key:'photo',label:'Photo officielle',ok:photo,detail:photo?'Validée et protégée':'Photo absente ou non validée'},
+      {key:'birth',label:'Âge / naissance',ok:birth,detail:birth?(p.birthDate||p.birthYear):'Date non publiée'},
+      {key:'event',label:'Actualité déclencheuse',ok:event,detail:event?'Lien original validé':'Aucun lien buzz validé'},
+      {key:'visual',label:'Vignette / visuel',ok:visual,detail:visual?'Visuel disponible':'Aucun visuel exploitable'},
+      {key:'ranking',label:'Classement',ok:Boolean(p.eligible&&Number(score(p))>0),detail:p.eligible?'Score '+Number(score(p)||0):'Non classable'}
+    ];
+    const passed=checks.filter(x=>x.ok).length;
+    return {profile:p,checks,passed,total:checks.length,percent:Math.round(passed/checks.length*100),live};
+  }
+  window.pass50QualityReport=function(){return (db.profiles||[]).map(qaProfile).sort((a,b)=>a.percent-b.percent||a.profile.name.localeCompare(b.profile.name,'fr'));};
+  function qaAction(key,id){
+    if(key==='socials'){window.PASS50_V9&&(PASS50_V9.linksProfileId=id);ui.adminTab='links';}
+    else if(key==='photo'||key==='visual'){ui.adminTab='media';setTimeout(()=>{const s=document.querySelector('#mediaSearch');if(s){s.value=profile(id)?.name||'';s.dispatchEvent(new Event('input',{bubbles:true}));}},80);}
+    else if(key==='birth'){ui.adminTab='hub';}
+    else if(key==='event'){window.PASS50_V9&&(PASS50_V9.newsProfileId=id);ui.adminTab='news';}
+    else if(key==='ranking'){ui.adminTab='profiles';}
+    renderAdmin();
+  }
+  window.renderQualityPane=function(){
+    const pane=document.querySelector('#adminPane');if(!pane)return;
+    const q=(window.__qaSearch||'').trim().toLowerCase();
+    const all=pass50QualityReport(),list=q?all.filter(r=>[r.profile.name,r.profile.handle,r.profile.category].join(' ').toLowerCase().includes(q)):all;
+    const complete=all.filter(r=>r.percent===100).length,critical=all.filter(r=>r.percent<50).length,avg=all.length?Math.round(all.reduce((s,r)=>s+r.percent,0)/all.length):0;
+    pane.innerHTML=`<div class="section-head"><div><div class="section-title">✅ CONTRÔLE QUALITÉ DES FI</div><div class="muted">Vérification automatique de la publication réelle des données.</div></div><button class="btn primary" id="qaRefresh">Relancer le contrôle</button></div>
+      <div class="hub-kpis"><div class="stat"><span class="muted">Complétude moyenne</span><b>${avg}%</b></div><div class="stat"><span class="muted">Fiches complètes</span><b>${complete}/${all.length}</b></div><div class="stat"><span class="muted">Fiches critiques</span><b>${critical}</b></div><div class="stat"><span class="muted">Contrôle</span><b>Temps réel</b></div></div>
+      <div class="admin-toolbar"><input id="qaSearch" value="${qaEsc(window.__qaSearch||'')}" placeholder="Rechercher une FI…" style="padding:11px;border-radius:12px;border:1px solid var(--line);background:#0f130f;color:#fff;width:100%"></div>
+      <div class="media-hint"><strong>Lecture :</strong> une fiche à 100 % possède au moins deux réseaux directs, une photo protégée, une naissance publiée, une actualité originale, un visuel et un score classable. Le LIVE est contrôlé séparément car il est temporaire.</div>
+      <div class="live-list">${list.map(r=>`<article class="link-card"><div class="link-card-head"><div><strong>${qaEsc(r.profile.name)}</strong><div class="muted">${qaEsc(r.profile.handle||'')} · ${qaEsc(r.profile.category||'')}</div></div><div><strong style="font-size:22px;color:${r.percent===100?'var(--lime)':r.percent<50?'var(--red)':'var(--orange)'}">${r.percent}%</strong><div class="muted">${r.passed}/${r.total} validés</div></div></div><div class="link-grid">${r.checks.map(c=>`<strong>${c.ok?'✅':'⚠️'} ${qaEsc(c.label)}</strong><span class="muted">${qaEsc(c.detail)}</span>${c.ok?'<span class="link-state ok">OK</span>':`<button class="btn small qa-fix" data-key="${c.key}" data-id="${qaEsc(r.profile.id)}">Corriger</button>`}`).join('')}</div>${r.live?'<div class="media-hint" style="margin-top:10px;color:var(--lime)">● LIVE confirmé et ouvrable</div>':''}</article>`).join('')||'<div class="tool-empty">Aucune fiche trouvée.</div>'}</div>`;
+  };
+  const prevPane=window.renderAdminPane;
+  window.renderAdminPane=function(){if(ui.adminTab==='quality')return renderQualityPane();return prevPane();};
+  const prevAdmin=window.renderAdmin;
+  window.renderAdmin=function(){prevAdmin();const menu=document.querySelector('#adminBody .admin-menu');if(menu&&!menu.querySelector('[data-admin-tab="quality"]')){const b=document.createElement('button');b.className='btn '+(ui.adminTab==='quality'?'primary':'');b.dataset.adminTab='quality';b.textContent='Contrôle qualité';menu.appendChild(b);}if(ui.adminTab==='quality')renderQualityPane();};
+  document.addEventListener('input',e=>{if(e.target.id==='qaSearch'){window.__qaSearch=e.target.value;renderQualityPane();}});
+  document.addEventListener('click',e=>{const fix=e.target.closest('.qa-fix');if(fix)return qaAction(fix.dataset.key,fix.dataset.id);if(e.target.id==='qaRefresh'){renderQualityPane();toast('Contrôle qualité actualisé');}});
+})();
