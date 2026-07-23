@@ -37,21 +37,23 @@ foreach ($items as $platform => $urlValue) {
     $r = p50_http_fetch($normalized,12,'text/html,*/*;q=0.6',true);
     if (!$r['ok'] && in_array($r['status'],[403,405,429],true)) $r = p50_http_fetch($normalized,12,'text/html,*/*;q=0.6',false);
     $checkedUrl = $r['finalUrl'] ?: $normalized;
-    $finalPath = strtolower(trim((string)(parse_url($checkedUrl,PHP_URL_PATH) ?: ''),'/'));
-    $platformBlockedRedirect = strtolower((string)$platform)==='facebook' && (preg_match('#^(login|checkpoint)(/|$)#i',$finalPath) || str_contains($checkedUrl,'login.php'));
-    // Facebook redirige souvent les robots non connectés vers login/checkpoint.
-    // Le chemin soumis reste la source de vérité lorsqu'il s'agit bien d'une page directe.
-    $status = $platformBlockedRedirect ? 'blocked_but_exists' : ($r['ok'] ? 'ok' : (in_array($r['status'],[403,405,429],true) ? 'blocked_but_exists' : 'broken'));
+    $finalNormalized = p50_de_normalize_social_url((string)$platform,$checkedUrl);
+    $redirectedAway = $finalNormalized !== '' && (!p50_platform_host_ok((string)$platform,$finalNormalized) || !p50_de_direct_social_path((string)$platform,$finalNormalized));
+    $explicitMissing = in_array((int)$r['status'],[404,410],true) && !$redirectedAway;
+    $remoteBlocked = $redirectedAway || in_array((int)$r['status'],[0,401,403,405,429,451],true) || (int)$r['status']>=500;
+    // Un profil direct ne doit pas être déclaré cassé simplement parce que le réseau
+    // refuse les robots ou redirige vers login/challenge/consent.
+    $status = $explicitMissing ? 'broken' : ($remoteBlocked ? 'blocked_but_exists' : ($r['ok'] ? 'ok' : 'blocked_but_exists'));
     $out[$platform] = [
         'status'=>$status,
         'httpStatus'=>$r['status'],
         'url'=>$normalized,
-        'finalUrl'=>$r['finalUrl'],
+        'finalUrl'=>$redirectedAway?'':$r['finalUrl'],
         'contentType'=>$r['contentType'],
         'message'=>match($status){
             'ok'=>'Lien direct accessible',
-            'blocked_but_exists'=>'Page directe acceptée ; la plateforme bloque ou redirige le contrôle automatique',
-            default=>'Lien inaccessible ou supprimé',
+            'blocked_but_exists'=>'Profil direct reconnu ; la plateforme empêche le contrôle automatique',
+            default=>'Profil introuvable ou supprimé',
         },
     ];
 }

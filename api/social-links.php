@@ -52,6 +52,13 @@ $validation=p50_de_validate_social_url($platform,$url,(string)$profile['public_n
 if($validation['normalizedUrl']==='')json_response(['error'=>$validation['message']??'URL invalide.','validation'=>$validation],422);
 if(in_array($validation['status'],['wrong_platform','generic_or_content','invalid'],true))json_response(['error'=>$validation['message'],'validation'=>$validation],422);
 $confirmed=!empty($in['confirmedOfficial']);
+if($confirmed){
+    // La confirmation explicite d'un propriétaire/admin prévaut sur les blocages anti-robots.
+    $validation['normalizedUrl']=p50_de_normalize_social_url($platform,$url) ?: $validation['normalizedUrl'];
+    $validation['ok']=true;
+    $validation['status']=$user['role']==='owner'?'owner_verified':'manual_verified';
+    $validation['message']=$user['role']==='owner'?'Compte officiel confirmé par le propriétaire PASS50':'Compte officiel confirmé par un administrateur PASS50';
+}
 $sourceType=$confirmed?($user['role']==='owner'?'manual_owner':'manual_admin'):'manual_candidate';
 $weight=$confirmed?($user['role']==='owner'?100:98):75;
 if($confirmed&&!empty($in['replaceExisting'])){

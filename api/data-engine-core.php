@@ -492,19 +492,25 @@ function p50_de_validate_social_url(string $platform, string $url, string $name 
     if (!p50_platform_host_ok($platform,$normalized)) return ['ok'=>false,'status'=>'wrong_platform','normalizedUrl'=>$normalized,'httpStatus'=>0,'nameScore'=>0,'message'=>'Le domaine ne correspond pas à la plateforme'];
     if (!p50_de_direct_social_path($platform,$normalized)) return ['ok'=>false,'status'=>'generic_or_content','normalizedUrl'=>$normalized,'httpStatus'=>0,'nameScore'=>0,'message'=>'Le lien doit pointer vers un profil officiel direct'];
     $r = p50_http_fetch($normalized,10,'text/html,*/*;q=0.7',true);
-    if (!$r['ok'] && in_array((int)$r['status'],[403,405,429],true)) $r = p50_http_fetch($normalized,10,'text/html,*/*;q=0.7');
-    $blocked = in_array((int)$r['status'],[403,429],true);
+    if (!$r['ok'] && in_array((int)$r['status'],[401,403,405,429,451],true)) $r = p50_http_fetch($normalized,10,'text/html,*/*;q=0.7');
+    $finalNormalized = p50_de_normalize_social_url($platform,$r['finalUrl'] ?: '');
+    $redirectedAway = $finalNormalized !== '' && (!p50_platform_host_ok($platform,$finalNormalized) || !p50_de_direct_social_path($platform,$finalNormalized));
+    $blockedStatus = in_array((int)$r['status'],[0,401,403,405,429,451],true) || (int)$r['status']>=500;
+    // Facebook, Instagram, TikTok et YouTube redirigent souvent les contrôles serveur
+    // vers login/challenge/consent. Le lien soumis reste la source de vérité.
+    $blocked = $redirectedAway || $blockedStatus;
     $metadata = $r['body'] !== '' ? p50_page_metadata($r['body'],$r['finalUrl'] ?: $normalized) : ['title'=>'','description'=>'','image'=>'','canonical'=>''];
     $nameScore = p50_name_score(($metadata['title']??'').' '.($metadata['description']??'').' '.$normalized,$name,$handle);
-    $ok = $r['ok'] || $blocked;
+    $explicitMissing = in_array((int)$r['status'],[404,410],true) && !$redirectedAway;
+    $ok = !$explicitMissing && ($r['ok'] || $blocked);
     return [
         'ok'=>$ok,
-        'status'=>$r['ok']?'accessible':($blocked?'blocked_but_exists':'unreachable'),
-        'normalizedUrl'=>p50_de_normalize_social_url($platform,$r['finalUrl'] ?: $normalized) ?: $normalized,
+        'status'=>$explicitMissing?'unreachable':($blocked?'blocked_but_exists':'accessible'),
+        'normalizedUrl'=>$redirectedAway||$finalNormalized===''?$normalized:$finalNormalized,
         'httpStatus'=>(int)$r['status'],
         'nameScore'=>$nameScore,
         'title'=>(string)($metadata['title']??''),
-        'message'=>$r['ok']?'Lien direct accessible':($blocked?'La plateforme bloque le contrôle automatique, mais le lien direct est valide':'Lien inaccessible'),
+        'message'=>$explicitMissing?'Profil introuvable':($blocked?'Profil direct valide ; la plateforme bloque le contrôle automatique':'Lien direct accessible'),
     ];
 }
 

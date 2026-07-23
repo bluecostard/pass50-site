@@ -2138,20 +2138,25 @@
   {
     "id": "census-no-limit",
     "name": "No Limit",
-    "known_alias": "No Limit",
+    "known_alias": "No Limit Vousda",
     "entity_type": "Personne",
     "zone": "CI",
     "category": "À catégoriser",
-    "census_status": "À vérifier – identité exacte et comptes officiels",
+    "census_status": "Recensé confirmé – comptes officiels fournis par le propriétaire",
     "verification_priority": "P1",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "Facebook": "https://www.facebook.com/NolimitVousda.Officiel/",
+      "Instagram": "https://www.instagram.com/nolimit_vousda/",
+      "TikTok": "https://www.tiktok.com/@nolimit_vousdv",
+      "YouTube": "https://www.youtube.com/@nolimitvousdv"
+    },
     "source": {
       "publisher": "Piste utilisateur PASS50",
       "date": "2026-07-23",
       "url": ""
     },
-    "notes": "Piste fournie par le propriétaire du projet. Homonymie importante : le moteur doit confirmer l’identité ivoirienne exacte et les comptes officiels avant toute publication ou notation."
+    "notes": "Identité suivie sous No Limit / No Limit Vousda. Quatre comptes officiels confirmés par le propriétaire PASS50 le 23 juillet 2026. Catégorie et données biographiques à poursuivre."
   }
 ]

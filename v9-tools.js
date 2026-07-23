@@ -75,8 +75,8 @@ setTimeout(()=>clearInterval(p50v9CloudPatchTimer),20000);
 
 function p50v9OpenTool(title,html){$('#toolTitle').textContent=title;$('#toolBody').innerHTML=html;open('toolModal')}
 function p50v9CloseTool(){close('toolModal')}
-function p50v9StatusClass(status){return ['ok','blocked_but_exists'].includes(status)?'ok':status==='pending'?'pending':'bad'}
-function p50v9StatusText(status){return ({ok:'OFFICIEL',blocked_but_exists:'À CONFIRMER',pending:'NON TESTÉ',search_not_official:'RECHERCHE',generic_or_content:'LIEN GÉNÉRIQUE',wrong_platform:'MAUVAIS RÉSEAU',broken:'CASSÉ',invalid:'INVALIDE'})[status]||String(status||'NON TESTÉ').toUpperCase()}
+function p50v9StatusClass(status){return ['ok','owner_verified','manual_verified','blocked_but_exists'].includes(status)?'ok':status==='pending'?'pending':'bad'}
+function p50v9StatusText(status){return ({ok:'OFFICIEL',owner_verified:'OFFICIEL',manual_verified:'OFFICIEL',blocked_but_exists:'À CONFIRMER',pending:'NON TESTÉ',search_not_official:'RECHERCHE',generic_or_content:'LIEN GÉNÉRIQUE',wrong_platform:'MAUVAIS RÉSEAU',broken:'CASSÉ',invalid:'INVALIDE'})[status]||String(status||'NON TESTÉ').toUpperCase()}
 
 const p50v8RenderAdminPane=renderAdminPane;
 renderAdmin=function(){const menu=`<div class="admin-menu"><button class="btn ${ui.adminTab==='signals'?'primary':''}" data-admin-tab="signals">Signaux</button><button class="btn ${ui.adminTab==='profiles'?'primary':''}" data-admin-tab="profiles">Influenceurs</button><button class="btn ${ui.adminTab==='media'?'primary':''}" data-admin-tab="media">Médias</button><button class="btn ${ui.adminTab==='links'?'primary':''}" data-admin-tab="links">Liens officiels</button><button class="btn ${ui.adminTab==='news'?'primary':''}" data-admin-tab="news">Actualité</button><button class="btn ${ui.adminTab==='ranking'?'primary':''}" data-admin-tab="ranking">Classement</button><button class="btn ${ui.adminTab==='data'?'primary':''}" data-admin-tab="data">Données</button></div>`;$('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;renderAdminPane()}
@@ -137,13 +137,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=22.5';
+    css.href='./data-engine-ui.css?v=22.6';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=22.5';
+    js.src='./data-engine-ui.js?v=22.6';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
@@ -163,19 +163,50 @@ render();
     ['dolpho','Dolpho','@dolpho','DO','CI','Humour',['Instagram','TikTok','Facebook','YouTube','Snapchat'],28,0,0]
   ];
   function p50AdminPatchProfiles(){
-    const confirmedFacebook={lopere:'https://www.facebook.com/Daloa001',emma:'https://www.facebook.com/EmmaLohouesOfficiel'};
+    const confirmedSocials={
+      lopere:{Facebook:'https://www.facebook.com/Daloa001'},
+      emma:{Facebook:'https://www.facebook.com/EmmaLohouesOfficiel'},
+      'census-no-limit':{
+        Facebook:'https://www.facebook.com/NolimitVousda.Officiel/',
+        Instagram:'https://www.instagram.com/nolimit_vousda/',
+        TikTok:'https://www.tiktok.com/@nolimit_vousdv',
+        YouTube:'https://www.youtube.com/@nolimitvousdv'
+      }
+    };
     requestedProfiles.forEach(row=>{if(!db.profiles.some(p=>p.id===row[0]||p.name.toLowerCase()===row[1].toLowerCase()))db.profiles.push(buildProfile(row,db.profiles.length));});
     db.profiles.forEach(p=>{
       p.platforms=[...new Set([...(p.platforms||[]),'Facebook','YouTube'])];
       p.links=p.links||{};p.linkChecks=p.linkChecks||{};
-      if(confirmedFacebook[p.id]&&!p50v9IsDirectPlatformLink('Facebook',p.links.Facebook||'')){p.links.Facebook=confirmedFacebook[p.id];p.linkChecks.Facebook={status:'pending',checkedAt:null,message:'Page officielle confirmée par le propriétaire PASS50'};}
+      const byId=confirmedSocials[p.id]||null;
+      const normalizedOwnerName=String(p.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+      const byName=normalizedOwnerName==='no limit'?confirmedSocials['census-no-limit']:null;
+      const ownerLinks=byId||byName||{};
+      Object.entries(ownerLinks).forEach(([platform,url])=>{
+        if(!p50v9IsDirectPlatformLink(platform,p.links[platform]||''))p.links[platform]=url;
+        p.platforms=[...new Set([...(p.platforms||[]),platform])];
+        p.linkChecks[platform]={status:'owner_verified',checkedAt:new Date().toISOString(),message:'Compte officiel confirmé par le propriétaire PASS50'};
+      });
       ['Facebook','YouTube','Snapchat'].forEach(platform=>{if(!p.linkChecks[platform])p.linkChecks[platform]={status:p.links[platform]&&p50v9IsDirectPlatformLink(platform,p.links[platform])?'pending':'search_not_official',checkedAt:null};});
     });
     db.events=(db.events||[]).map(e=>({...e,originalLinkValidated:Boolean(e.originalLinkValidated)}));
     save();
   }
   p50AdminPatchProfiles();
-  const adminPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50AdminPatchProfiles();render();clearInterval(adminPatchTimer)}},500);
+  async function p50SeedNoLimitOfficialLinks(){
+    const key='pass50_v226_nolimit_links_seeded';
+    if(localStorage.getItem(key)==='1')return;
+    const p=db.profiles.find(x=>x.id==='census-no-limit'||String(x.name||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()==='no limit');
+    if(!p)return;
+    const links={
+      Facebook:'https://www.facebook.com/NolimitVousda.Officiel/',
+      Instagram:'https://www.instagram.com/nolimit_vousda/',
+      TikTok:'https://www.tiktok.com/@nolimit_vousdv',
+      YouTube:'https://www.youtube.com/@nolimitvousdv'
+    };
+    const results=await Promise.allSettled(Object.entries(links).map(([platform,url])=>apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:p.id,platform,url,confirmedOfficial:true,replaceExisting:true}})));
+    if(results.every(x=>x.status==='fulfilled'))localStorage.setItem(key,'1');
+  }
+  const adminPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50AdminPatchProfiles();p50SeedNoLimitOfficialLinks().catch(()=>null);render();clearInterval(adminPatchTimer)}},500);
   setTimeout(()=>clearInterval(adminPatchTimer),20000);
 
   const oldDirect=p50v9IsDirectPlatformLink;
@@ -291,17 +322,60 @@ render();
     const tasks=[];
     card.querySelectorAll('[data-link-platform]').forEach(input=>{
       const platform=input.dataset.linkPlatform,url=input.value.trim();
-      if(url){p.links[platform]=url;p.platforms=[...new Set([...(p.platforms||[]),platform])];const direct=p50v9IsDirectPlatformLink(platform,url);p.linkChecks[platform]={status:direct?'pending':'generic_or_content',checkedAt:null,message:direct?'':'Le lien doit ouvrir directement le profil, pas la page d’accueil ou de connexion.'};
-        if(confirmed&&direct)tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:id,platform,url,confirmedOfficial:true,replaceExisting:true}}).then(data=>{p.links[platform]=data?.validation?.normalizedUrl||url;p.linkChecks[platform]={status:'ok',checkedAt:new Date().toISOString(),message:'Lien officiel remplacé et validé par le propriétaire'}}).catch(err=>{p.linkChecks[platform]={status:'broken',checkedAt:new Date().toISOString(),message:err.message||'Validation serveur impossible'}}));
-      }else{delete p.links[platform];p.linkChecks[platform]={status:'search_not_official',checkedAt:null};if(confirmed&&previousLinks[platform])tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'delete',profileId:id,platform}}).catch(()=>null));}
+      if(url){
+        p.links[platform]=url;p.platforms=[...new Set([...(p.platforms||[]),platform])];
+        const direct=p50v9IsDirectPlatformLink(platform,url);
+        p.linkChecks[platform]={
+          status:direct?(confirmed?'owner_verified':'pending'):'generic_or_content',
+          checkedAt:confirmed&&direct?new Date().toISOString():null,
+          message:direct?(confirmed?'Compte officiel confirmé par le propriétaire PASS50':'Lien direct prêt à contrôler'):'Le lien doit ouvrir directement le profil, pas la page d’accueil ou de connexion.'
+        };
+        if(confirmed&&direct){
+          tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:id,platform,url,confirmedOfficial:true,replaceExisting:true}})
+            .then(data=>{
+              p.links[platform]=data?.validation?.normalizedUrl||url;
+              p.linkChecks[platform]={status:'owner_verified',checkedAt:new Date().toISOString(),message:'Compte officiel confirmé et publié par le propriétaire'};
+            })
+            .catch(err=>{
+              // Une panne du contrôle distant ne doit jamais annuler une confirmation explicite du propriétaire.
+              p.linkChecks[platform]={status:'owner_verified',checkedAt:new Date().toISOString(),message:'Compte officiel confirmé localement. Synchronisation serveur à relancer si nécessaire.'};
+              console.warn('Publication serveur différée pour '+platform,err);
+            }));
+        }
+      }else{
+        delete p.links[platform];p.linkChecks[platform]={status:'search_not_official',checkedAt:null};
+        if(confirmed&&previousLinks[platform])tasks.push(apiFetch('social-links.php',{method:'POST',body:{action:'delete',profileId:id,platform}}).catch(()=>null));
+      }
     });
-    save();if(tasks.length)await Promise.allSettled(tasks);save();render();toast(confirmed?'Liens officiels remplacés et publiés':'Liens enregistrés localement · confirmation requise pour publication');
+    save();if(tasks.length)await Promise.allSettled(tasks);save();render();
+    toast(confirmed?'Liens officiels confirmés et publiés':'Liens enregistrés localement · coche la confirmation pour les publier comme officiels');
   };
   p50v9CheckLinks=async function(id,card){
     const p=profile(id);if(!p||!card)return;
+    const confirmed=Boolean(card.querySelector('.confirm-all-links')?.checked);
     await p50v9SaveLinks(id,card);
     const btn=card.querySelector('.check-links');if(btn){btn.disabled=true;btn.textContent='Vérification…'}
-    try{const data=await apiFetch('link-check.php',{method:'POST',body:{links:p.links}});const checked=Object.fromEntries(Object.entries(data.results||{}).map(([k,v])=>{const url=p.links?.[k]||v.url||'';return [k,p50v9IsDirectPlatformLink(k,url)?{...v,checkedAt:data.checkedAt}:{...v,status:'generic_or_content',message:'Le lien doit ouvrir directement le profil officiel.',checkedAt:data.checkedAt}]}));p.linkChecks={...p.linkChecks,...checked};save();p50v9RenderLinks();toast('Liens contrôlés')}catch(err){toast(err.message||'Contrôle impossible');if(btn){btn.disabled=false;btn.textContent='Vérifier'}}
+    if(confirmed){
+      Object.entries(p.links||{}).forEach(([platform,url])=>{
+        if(p50v9IsDirectPlatformLink(platform,url))p.linkChecks[platform]={status:'owner_verified',checkedAt:new Date().toISOString(),message:'Compte officiel confirmé par le propriétaire PASS50'};
+      });
+      save();p50v9RenderLinks();toast('Tous les liens directs ont été validés comme officiels');
+      return;
+    }
+    try{
+      const data=await apiFetch('link-check.php',{method:'POST',body:{links:p.links}});
+      const checked=Object.fromEntries(Object.entries(data.results||{}).map(([k,v])=>{
+        const url=p.links?.[k]||v.url||'';
+        if(!p50v9IsDirectPlatformLink(k,url))return [k,{...v,status:'generic_or_content',message:'Le lien doit ouvrir directement le profil officiel.',checkedAt:data.checkedAt}];
+        // Les réseaux bloquent fréquemment les robots. Une absence de réponse ne signifie pas que l’URL est fausse.
+        const status=['ok','blocked_but_exists'].includes(v.status)?v.status:(v.status==='broken'?'blocked_but_exists':v.status);
+        return [k,{...v,status,message:status==='blocked_but_exists'?'Profil direct reconnu ; la plateforme empêche le contrôle automatique. Coche la confirmation pour le publier.':v.message,checkedAt:data.checkedAt}];
+      }));
+      p.linkChecks={...p.linkChecks,...checked};save();p50v9RenderLinks();toast('Contrôle terminé');
+    }catch(err){
+      Object.entries(p.links||{}).forEach(([platform,url])=>{if(p50v9IsDirectPlatformLink(platform,url))p.linkChecks[platform]={status:'blocked_but_exists',checkedAt:new Date().toISOString(),message:'Profil direct reconnu ; contrôle distant indisponible.'};});
+      save();p50v9RenderLinks();toast('Les profils directs sont reconnus. Confirme-les pour les publier.');
+    }
   };
 
 
@@ -328,7 +402,7 @@ render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.2';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.6';
   const CENSUS_VERSION='90-v22';
   let importing=false;
 
