@@ -1,15 +1,15 @@
 (function(){
   const fallbackRenderAdminPane=renderAdminPane;
-  const DE={hub:null,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:''};
+  const DE={hub:null,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
 
   renderAdmin=function(){
-    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['hub','Data Hub'],['quality','Contrôle qualité'],['ranking','Classement'],['data','Maintenance']];
+    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['update','MAJ PASS50'],['hub','Data Hub'],['quality','Contrôle qualité'],['ranking','Classement'],['data','Maintenance']];
     const menu=`<div class="admin-menu">${items.map(([id,label])=>`<button class="btn ${ui.adminTab===id?'primary':''}" data-admin-tab="${id}">${label}</button>`).join('')}</div>`;
     $('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;
     renderAdminPane();
   };
 
-  renderAdminPane=function(){if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
+  renderAdminPane=function(){if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function deThreshold(){return Number(DE.hub?.threshold||90);}
@@ -45,6 +45,105 @@
     else return '';
     const dt=new Date(Date.UTC(y,m-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==m-1||dt.getUTCDate()!==d)return '';
     return `${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+
+
+  function deMajSavedStatus(){
+    try{return JSON.parse(localStorage.getItem('pass50.maj.status.v1')||'null');}catch{return null;}
+  }
+  function deMajPersistStatus(status){
+    try{localStorage.setItem('pass50.maj.status.v1',JSON.stringify(status));}catch{}
+  }
+  function deMajPercent(){
+    if(!DE.majTarget)return DE.majRunning?2:0;
+    return Math.max(0,Math.min(100,Math.round(DE.majSeen.size/DE.majTarget*100)));
+  }
+  function deRenderMajPass50(pane){
+    const saved=DE.majLastResult||deMajSavedStatus();
+    const last=saved?.finishedAt?new Date(saved.finishedAt).toLocaleString('fr-FR'):'Jamais';
+    pane.innerHTML=`<div class="data-engine-shell">
+      <div class="section-head"><div><div class="section-title">⚡ MAJ PASS50</div><div class="muted">Une seule action pour synchroniser les FI, collecter les données publiques disponibles, calculer les 15 critères, publier les scores et capturer le classement.</div></div></div>
+      <div class="media-hint"><strong>Fonctionnement :</strong> le traitement parcourt les ${Number(DE.hub?.kpis?.profiles||db?.profiles?.length||134)} FI par lots de 5. Tu peux quitter cet onglet, mais garde la page PASS50 ouverte jusqu’au message de fin.</div>
+      <div class="de-toolbar" style="margin-top:14px">
+        <button class="btn primary" id="deMajPass50">${DE.majRunning?'MAJ EN COURS…':'LANCER LA MAJ PASS50'}</button>
+        ${DE.majRunning?'<button class="btn danger" id="deStopMajPass50">ARRÊTER APRÈS CE LOT</button>':''}
+      </div>
+      <div id="deMajProgress" class="de-auto-box"></div>
+      <div class="de-kpis" style="margin-top:12px">
+        <div class="de-kpi"><strong>${Number(db?.profiles?.length||0)}</strong><span>FI ACTUELLES</span><small>Total chargé dans PASS50</small></div>
+        <div class="de-kpi"><strong>15</strong><span>CRITÈRES</span><small>Moteur algorithmique PASS50</small></div>
+        <div class="de-kpi"><strong>5</strong><span>PÉRIODES</span><small>2H · 24H · 48H · 7J · 15J</small></div>
+        <div class="de-kpi"><strong>${deEsc(last)}</strong><span>DERNIÈRE MAJ</span><small>${saved?.status==='success'?'Terminée avec succès':saved?.status==='stopped'?'Arrêtée':'Aucune exécution complète'}</small></div>
+      </div>
+      <div class="media-hint" style="margin-top:14px"><strong>Étapes exécutées automatiquement :</strong><br>1. Synchronisation des 134 FI · 2. Collecte et conservation des preuves · 3. Calcul des 15 critères · 4. Écriture dans les scores · 5. Reclassement · 6. Publication · 7. Capture du classement.</div>
+    </div>`;
+    deDrawMajProgress();
+  }
+  function deDrawMajProgress(){
+    const el=$('#deMajProgress');if(!el)return;
+    const pct=deMajPercent(),done=DE.majSeen.size,target=DE.majTarget||Number(DE.hub?.kpis?.profiles||db?.profiles?.length||0);
+    const stage=DE.majStage||'Prêt';
+    const message=DE.majMessage||'Aucune mise à jour en cours.';
+    el.innerHTML=`<div class="de-auto-line"><strong>${deEsc(stage)}</strong><span>${done}/${target||0} FI · ${pct} %</span></div><div class="de-progress de-progress-large"><i style="width:${pct}%"></i></div><div class="muted">${deEsc(message)}</div>`;
+    const btn=$('#deMajPass50');if(btn){btn.disabled=DE.majRunning;btn.textContent=DE.majRunning?'MAJ EN COURS…':'LANCER LA MAJ PASS50';}
+  }
+  async function deRunMajPass50(){
+    if(DE.majRunning)return;
+    DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set();DE.majStartedAt=new Date().toISOString();DE.majLastResult=null;
+    DE.majStage='1/7 · Synchronisation des FI';DE.majMessage='Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
+    let totals={found:0,verified:0,published:0,captured:0,batches:0};
+    try{
+      if(typeof window.PASS50_STEP12_STATUS==='object'&&Number(window.PASS50_STEP12_STATUS.present||0)<7&&typeof window.p50EnsureStep12Profiles==='function')window.p50EnsureStep12Profiles();
+      if(typeof syncCloudState==='function')await syncCloudState();
+      const sync=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});
+      DE.hub=sync.hub||DE.hub;DE.majTarget=Number(DE.hub?.kpis?.profiles||sync.syncedProfiles||db?.profiles?.length||0);
+      DE.majStage='2/7 · Collecte et conservation';DE.majMessage='Le moteur parcourt les FI par lots de 5…';deDrawMajProgress();
+
+      while(!DE.majStopRequested&&DE.majSeen.size<DE.majTarget){
+        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,publishVerified:true,excludeIds:[...DE.majSeen]}});
+        const ids=(data.processedIds||[]).map(String);
+        if(!ids.length)break;
+        const before=DE.majSeen.size;ids.forEach(id=>DE.majSeen.add(id));
+        totals.batches++;totals.found+=Number(data.found||0);totals.verified+=Number(data.verified||0);
+        DE.hub=data.hub||DE.hub;
+        DE.majStage='3/7 · Calcul des 15 critères';
+        DE.majMessage=`Lot ${totals.batches} : ${ids.length} FI · ${Number(data.found||0)} donnée(s) trouvée(s) · scores recalculés et enregistrés.`;
+        deDrawMajProgress();
+        if(DE.majSeen.size===before)break;
+        await new Promise(resolve=>setTimeout(resolve,180));
+      }
+
+      if(DE.majStopRequested){
+        const result={status:'stopped',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals};
+        DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='MAJ arrêtée';DE.majMessage=`${DE.majSeen.size}/${DE.majTarget} FI traitées. Relance le bouton pour effectuer un nouveau tour complet.`;toast('MAJ PASS50 arrêtée après le lot en cours');return;
+      }
+
+      DE.majStage='4/7 · Publication des scores';DE.majMessage='Écriture des données vérifiées et des scores calculés dans l’état PASS50…';deDrawMajProgress();
+      const published=await apiFetch('data-publish.php',{method:'POST',body:{}});totals.published=Number(published.publishedProfiles||0);DE.hub=published.hub||DE.hub;
+
+      DE.majStage='5/7 · Rechargement et reclassement';DE.majMessage='Récupération de l’état serveur puis reclassement automatique…';deDrawMajProgress();
+      if(typeof loadCloudState==='function')await loadCloudState();
+      if(typeof render==='function')render();
+
+      DE.majStage='6/7 · Synchronisation finale';DE.majMessage='Sauvegarde de l’état final et des nouvelles positions…';deDrawMajProgress();
+      if(typeof syncCloudState==='function')await syncCloudState();
+
+      DE.majStage='7/7 · Capture du classement';DE.majMessage='Enregistrement de la photographie du classement actuel…';deDrawMajProgress();
+      try{const snap=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});totals.captured=Number(snap.captured||0);}catch(error){console.warn('Capture classement non bloquante',error);}
+
+      await deLoadHub(true);
+      const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
+      DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='MAJ PASS50 terminée';DE.majMessage=`${result.processed}/${result.target} FI parcourues · ${totals.found} donnée(s) trouvée(s) · ${totals.published} profil(s) publié(s) · classement actualisé.`;
+      window.PASS50_MAJ_STATUS=result;
+      toast(`MAJ PASS50 terminée · ${result.processed} FI traitées`);
+    }catch(err){
+      console.error('MAJ PASS50',err);
+      const result={status:'error',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,error:String(err?.message||err)};
+      DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='Erreur pendant la MAJ';DE.majMessage=result.error;window.PASS50_MAJ_STATUS=result;toast(result.error||'MAJ PASS50 impossible');
+    }finally{
+      DE.majRunning=false;DE.majStopRequested=false;
+      if(ui.adminTab==='update')deRenderMajPass50($('#adminPane'));
+    }
   }
 
   function deRenderHub(pane){
@@ -139,6 +238,8 @@
 
   document.addEventListener('click',async e=>{
     try{
+      if(e.target.id==='deMajPass50')await deRunMajPass50();
+      if(e.target.id==='deStopMajPass50'){DE.majStopRequested=true;DE.majMessage='Arrêt demandé : le lot en cours se termine…';deDrawMajProgress();}
       if(e.target.id==='deSync')await deSync(e.target);
       if(e.target.id==='deCollectBatch')await deCollect(e.target);
       if(e.target.id==='dePriority16')await dePriority16(e.target);
@@ -161,4 +262,5 @@
     if(!e.target.matches('.de-link-form'))return;e.preventDefault();const form=e.target,fd=new FormData(form),button=form.querySelector('button[type=submit]');
     try{await deAction(button,async()=>{const data=await apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:form.dataset.profile,platform:form.dataset.platform,url:String(fd.get('url')||''),confirmedOfficial:fd.get('confirmedOfficial')==='on'}});if(!data.confirmed)throw new Error('La confirmation du compte officiel est obligatoire.');await loadCloudState();render();await deOpenSocial(form.dataset.profile);toast('Lien officiel validé');},'Vérification…');}catch(err){console.error(err);toast(err.message||'Lien non validé');}
   });
+  window.PASS50Maj={run:deRunMajPass50,status:()=>DE.majLastResult||deMajSavedStatus(),stop:()=>{DE.majStopRequested=true;}};
 })();

@@ -1,0 +1,19 @@
+{
+  "release": "PASS50 V23 stable + Etapes 1/2 + MAJ PASS50 1.0",
+  "checks": {
+    "menu_maj_pass50": true,
+    "button_unique": true,
+    "sync_profiles": true,
+    "collect_batches": true,
+    "publish_scores": true,
+    "capture_ranking": true,
+    "reload_and_render": true,
+    "15_criteria_server": true,
+    "step1_7_profiles": true,
+    "candidate_json_7": true,
+    "cache_busted": true
+  },
+  "census_file_entries": 97,
+  "production_expected_total": 134,
+  "generated_files": 61
+}
