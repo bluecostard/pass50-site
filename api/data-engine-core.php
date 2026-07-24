@@ -1125,32 +1125,46 @@ function p50_de_metric_number(mixed $value): int {
     return 0;
 }
 
-/** Score de tendance fondé sur preuves récentes, sans score inventé. */
-function p50_de_compute_trend_score(string $profileId): array {
-    $stmt=db()->prepare("SELECT platform,event_type,published_at,collected_at,metrics,confidence FROM p50_activity_events WHERE profile_id=? AND status='verified' AND confidence>=? AND COALESCE(published_at,collected_at)>=DATE_SUB(NOW(),INTERVAL 45 DAY) ORDER BY COALESCE(published_at,collected_at) DESC");
-    $stmt->execute([$profileId,p50_de_threshold()]);$events=$stmt->fetchAll();$links=p50_de_social_links($profileId,true);
-    $platforms=[];$latestTs=0;$sumViews=0;$maxViews=0;$eventCount30=0;$eventCount7=0;$weightedViews=0.0;$conf=[];
-    $now=time();
-    foreach($events as $event){
-        $metrics=decode_json_column($event['metrics']??null,[]);$views=p50_de_metric_number($metrics['views']??0);
-        $ts=strtotime((string)($event['published_at']?:$event['collected_at']))?:0;$ageHours=max(0,($now-$ts)/3600);
-        $decay=exp(-$ageHours/(24*6));$weightedViews+=$views*$decay;$sumViews+=$views;$maxViews=max($maxViews,$views);$latestTs=max($latestTs,$ts);
-        if($ageHours<=24*30)$eventCount30++;if($ageHours<=24*7)$eventCount7++;
-        $platforms[(string)$event['platform']]=true;$conf[]=(int)$event['confidence'];
-    }
-    foreach($links as $link){$platforms[(string)$link['platform']]=true;$conf[]=(int)$link['confidence'];}
-    $freshHours=$latestTs>0?max(0,($now-$latestTs)/3600):9999;
-    $viewScore=$weightedViews>0?min(58.0,max(0.0,(log10($weightedViews+1)-3.0)*14.5)):0.0;
-    $activityScore=min(18.0,$eventCount7*3.2+max(0,$eventCount30-$eventCount7)*0.8);
-    $freshness=$freshHours<=12?12:($freshHours<=48?9:($freshHours<=168?6:($freshHours<=720?2:0)));
-    $diversity=min(8.0,count($platforms)*2.0);$score=(int)round(min(100,max(0,8+$viewScore+$activityScore+$freshness+$diversity)));
-    $confidence=$conf?(int)round(array_sum($conf)/count($conf)):0;
-    $classable=$confidence>=p50_de_threshold()&&count($links)>=1&&($eventCount30>=2||$maxViews>=50000||$sumViews>=100000);
-    return ['score'=>$score,'confidence'=>$confidence,'classable'=>$classable,'events30'=>$eventCount30,'events7'=>$eventCount7,'sumViews'=>$sumViews,'maxViews'=>$maxViews,'platforms'=>array_keys($platforms),'latestAt'=>$latestTs?gmdate('c',$latestTs):null];
+/** Algorithme PASS50 15 critères — données publiques réellement disponibles. */
+function p50_de_15c_window(string $profileId,int $hours): array {
+    $stmt=db()->prepare("SELECT platform,event_type,published_at,collected_at,metrics,confidence FROM p50_activity_events WHERE profile_id=? AND status='verified' AND confidence>=? AND COALESCE(published_at,collected_at)>=DATE_SUB(NOW(),INTERVAL ? HOUR) ORDER BY COALESCE(published_at,collected_at) ASC");
+    $stmt->execute([$profileId,p50_de_threshold(),$hours]);$events=$stmt->fetchAll();$links=p50_de_social_links($profileId,true);
+    $views=$likes=$comments=$shares=$saves=0;$latest=0;$platforms=[];$conf=[];$velocities=[];$now=time();
+    foreach($events as $e){$m=decode_json_column($e['metrics']??null,[]);$v=p50_de_metric_number($m['views']??0);$l=p50_de_metric_number($m['likes']??0);$c=p50_de_metric_number($m['comments']??0);$sh=p50_de_metric_number($m['shares']??($m['reposts']??0));$sv=p50_de_metric_number($m['saves']??0);$views+=$v;$likes+=$l;$comments+=$c;$shares+=$sh;$saves+=$sv;$ts=strtotime((string)($e['published_at']?:$e['collected_at']))?:0;$latest=max($latest,$ts);$age=max(1,($now-$ts)/3600);if($v>0)$velocities[]=$v/$age;$platforms[(string)$e['platform']]=true;$conf[]=(int)$e['confidence'];}
+    foreach($links as $l){$platforms[(string)$l['platform']]=true;$conf[]=(int)$l['confidence'];}
+    $followers=0; // indisponible publiquement de façon homogène : critère omis si absent.
+    $engagement=$views>0?($likes+3*$comments+5*$shares+4*$saves)/$views:null;
+    $shareRate=$views>0?($shares+$saves)/$views:null;
+    $velocity=$velocities?array_sum($velocities)/count($velocities):null;
+    $freshHours=$latest?max(0,($now-$latest)/3600):null;
+    $raw=[
+      'c1'=>$followers>0?log10(1+$followers):null,
+      'c2'=>$views>0?log10(1+$views):null,
+      'c3'=>null,
+      'c4'=>$engagement,
+      'c5'=>$shareRate,
+      'c6'=>$comments>0?log10(1+$comments):null,
+      'c7'=>$velocity!==null?log10(1+$velocity):null,
+      'c8'=>count($platforms)>0?(float)count($platforms):null,
+      'c9'=>$shares>0?log10(1+$shares):null,
+      'c10'=>null,'c11'=>null,'c12'=>null,
+      'c13'=>count($events)>0?(float)count($events):null,
+      'c14'=>($views>0&&($likes+$comments+$shares)>0)?max(0,min(100,70+min(25,log10(1+$views)*3)-min(20,abs(($likes+$comments+$shares)/max(1,$views)-0.08)*100))):null,
+      'c15'=>$shares>0?log10(1+$shares):null,
+    ];
+    $weights=['c1'=>.06,'c2'=>.08,'c3'=>.07,'c4'=>.08,'c5'=>.09,'c6'=>.05,'c7'=>.10,'c8'=>.08,'c9'=>.06,'c10'=>.06,'c11'=>.05,'c12'=>.04,'c13'=>.04,'c14'=>.07,'c15'=>.07];
+    $scores=[];$sum=0.0;$available=0.0;
+    foreach($raw as $k=>$v){if($v===null||!is_finite((float)$v))continue;$x=(float)$v;$score=match($k){'c2','c6','c7','c9','c15'=>max(0,min(100,20+$x*16)),'c4'=>max(0,min(100,$x*500)),'c5'=>max(0,min(100,$x*1000)),'c8'=>max(0,min(100,$x*20)),'c13'=>max(0,min(100,$x*8)),'c14'=>max(0,min(100,$x)),default=>max(0,min(100,50+$x*10))};$scores[$k]=round($score,2);$sum+=$score*$weights[$k];$available+=$weights[$k];}
+    $base=$available>0?$sum/$available:0;$coverage=$available*100;$confidenceSource=$conf?(array_sum($conf)/count($conf)):0;$fresh=$freshHours===null?0:max(0,100-min(100,$freshHours*2));$confidence=.5*($coverage/100)+.3*($fresh/100)+.2*($confidenceSource/100);$score=max(0,min(100,$base*(.75+.25*$confidence)));
+    arsort($scores);$top=array_slice(array_keys($scores),0,3);
+    return ['score'=>(int)round($score),'baseScore'=>round($base,2),'confidence'=>(int)round($confidence*100),'coverage'=>round($coverage,2),'criteria'=>$scores,'raw'=>$raw,'measuredCriteria'=>count($scores),'topCriteria'=>$top,'events'=>count($events),'platforms'=>array_keys($platforms),'latestAt'=>$latest?gmdate('c',$latest):null,'freshHours'=>$freshHours];
 }
-
-function p50_de_period_scores(int $base): array {
-    return ['2H'=>$base,'24H'=>max(0,min(100,$base-1)),'48H'=>max(0,min(100,$base-2)),'7J'=>max(0,min(100,$base-4)),'15J'=>max(0,min(100,$base-6))];
+function p50_de_compute_trend_score(string $profileId): array {
+    $w=p50_de_15c_window($profileId,24);$w['classable']=$w['confidence']>=65&&$w['coverage']>=60&&$w['measuredCriteria']>=6;$w['events30']=$w['events'];$w['events7']=$w['events'];$w['sumViews']=0;$w['maxViews']=0;return $w;
+}
+function p50_de_period_scores(int|string $profile): array {
+    if(is_int($profile))return ['2H'=>$profile,'24H'=>$profile,'48H'=>$profile,'7J'=>$profile,'15J'=>$profile];
+    return ['2H'=>p50_de_15c_window($profile,2)['score'],'24H'=>p50_de_15c_window($profile,24)['score'],'48H'=>p50_de_15c_window($profile,48)['score'],'7J'=>p50_de_15c_window($profile,168)['score'],'15J'=>(int)round(p50_de_15c_window($profile,360)['score']*.55)];
 }
 
 /** Collecteur principal V22 : sources structurées, archives publiques et activité sociale. */
@@ -1325,7 +1339,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
         $wasCandidate=empty($p['eligible'])||array_key_exists('classable',$p)&&empty($p['classable']);
         $autoManaged=!empty($previousEngine['autoScore'])||$wasCandidate||p50_de_is_priority_profile($profileId);
         if($autoManaged&&$trend['classable']){
-            $periodScores=p50_de_period_scores((int)$trend['score']);$p['scores']=array_merge((array)($p['scores']??[]),$periodScores);$p['score']=$periodScores['2H'];
+            $periodScores=p50_de_period_scores($profileId);$p['scores']=array_merge((array)($p['scores']??[]),$periodScores);$p['score']=$periodScores['2H'];
             $p['eligible']=true;$p['classable']=true;$p['quality']['score']=(int)$trend['confidence'];
             $badges=[];if($trend['score']>=88)$badges[]='HOT';if($trend['score']>=82)$badges[]='UP';if(($trend['events7']??0)>=3)$badges[]='VIRAL';$p['badges']=array_values(array_unique($badges));
             $changed=true;
@@ -1340,7 +1354,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
             'autoBioValue'=>$autoBioValue,
             'autoCategoryValue'=>$autoCategoryValue,
             'autoScore'=>$autoManaged,
-            'trend'=>$trend,
+            'trend'=>$trend,'algorithmVersion'=>'15C-v1','dataConfidence'=>(int)($trend['confidence']??0),'measuredCoverage'=>(float)($trend['coverage']??0),'measuredCriteria'=>(int)($trend['measuredCriteria']??0),
             'priorityWave'=>p50_de_is_priority_profile($profileId)?'V22-16':'',
         ];
         $changed=true;

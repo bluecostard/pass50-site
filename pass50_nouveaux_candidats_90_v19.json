@@ -2158,5 +2158,131 @@
       "url": ""
     },
     "notes": "Identité suivie sous No Limit / No Limit Vousda. Quatre comptes officiels confirmés par le propriétaire PASS50 le 23 juillet 2026. Catégorie et données biographiques à poursuivre."
+  },
+  {
+    "id": "census-african-ryou",
+    "name": "African Ryou",
+    "known_alias": "@african_ryou",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Humour / Culture ivoirienne / Lifestyle / Fitness",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {},
+    "source": {
+      "publisher": "Brut Afrique",
+      "url": "https://www.brut.media/afrique/videos/afrique/societe/lecon-de-nouchi-avec-ryou"
+    },
+    "notes": "Ajout approuvé PASS50."
+  },
+  {
+    "id": "census-samuella-kouassi",
+    "name": "Samuella Kouassi",
+    "known_alias": "@samuellakouassiofficiel",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Lifestyle / Mode / Divertissement",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {},
+    "source": {
+      "publisher": "SEN Influenceurs",
+      "url": "https://seninfluenceurs.com/service/view/188"
+    },
+    "notes": "Ajout approuvé PASS50."
+  },
+  {
+    "id": "census-nadiani",
+    "name": "Nadiani",
+    "known_alias": "Imane Nadiani Touré / @officialnad_",
+    "entity_type": "Personne",
+    "zone": "BOTH",
+    "category": "Mode / Beauté / Lifestyle / Entrepreneuriat",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {},
+    "source": {
+      "publisher": "Portfolio public Nadiani",
+      "url": "https://nadiani.my.canva.site/"
+    },
+    "notes": "Ajout approuvé PASS50."
+  },
+  {
+    "id": "census-investisseur-africain",
+    "name": "L’Investisseur Africain",
+    "known_alias": "Jean-Yves Bragbo / @sbragbo",
+    "entity_type": "Personne",
+    "zone": "BOTH",
+    "category": "Business / Investissement / Entrepreneuriat / Diaspora",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {},
+    "source": {
+      "publisher": "Site public",
+      "url": "https://www.investisseur-africain.com/cgv"
+    },
+    "notes": "Ajout approuvé PASS50."
+  },
+  {
+    "id": "census-laura-ziehi",
+    "name": "Laura Ziehi",
+    "known_alias": "@laura.ziehi",
+    "entity_type": "Personne",
+    "zone": "BOTH",
+    "category": "Lifestyle / Mode / Divertissement",
+    "census_status": "Recensé confirmé — réseaux à compléter",
+    "verification_priority": "P1",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {},
+    "source": {
+      "publisher": "Pannelle Talents",
+      "url": "https://pannelle.com/reseaupannelle/talents/laura-ziehi/"
+    },
+    "notes": "Ajout approuvé PASS50."
+  },
+  {
+    "id": "census-aya-robert",
+    "name": "Aya Robert",
+    "known_alias": "Aya Robert",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "TikTok / Lives / Débats / Divertissement",
+    "census_status": "À vérifier — compte officiel actuel",
+    "verification_priority": "P1",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {},
+    "source": {
+      "publisher": "Digital Mag CI",
+      "url": "https://digitalmag.ci/reseaux-sociaux-portrait-robot-de-tiktok-en-cote-divoire/"
+    },
+    "notes": "Ajout approuvé PASS50."
+  },
+  {
+    "id": "census-smookii-gamer",
+    "name": "SmOokii Gamer",
+    "known_alias": "Smooki Gamer / @smookii_gamer",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Gaming / Humour / Divertissement",
+    "census_status": "Recensé confirmé — réseaux à compléter",
+    "verification_priority": "P1",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {},
+    "source": {
+      "publisher": "PASS50 veille publique",
+      "url": ""
+    },
+    "notes": "Ajout approuvé PASS50."
   }
 ]
