@@ -1,0 +1,142 @@
+[
+  {
+    "id": "census-african-ryou",
+    "name": "African Ryou",
+    "known_alias": "@african_ryou",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Humour / Culture ivoirienne / Lifestyle / Fitness",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "official_socials": {},
+    "platforms_detected": [
+      "Instagram",
+      "TikTok",
+      "YouTube",
+      "Snapchat"
+    ],
+    "source": {
+      "publisher": "Brut Afrique",
+      "date": "2025-10-13",
+      "url": "https://www.brut.media/afrique/videos/afrique/societe/lecon-de-nouchi-avec-ryou"
+    },
+    "notes": "Ajout approuvé par le propriétaire PASS50. Comptes officiels à valider manuellement avant publication.",
+    "priority_wave": "V27 — intégration immédiate"
+  },
+  {
+    "id": "census-samuella-kouassi",
+    "name": "Samuella Kouassi",
+    "known_alias": "@samuellakouassiofficiel",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Lifestyle / Mode / Divertissement",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "official_socials": {},
+    "platforms_detected": [
+      "Instagram",
+      "TikTok",
+      "YouTube",
+      "Facebook"
+    ],
+    "source": {
+      "publisher": "SEN Influenceurs",
+      "date": "2026-07-24",
+      "url": "https://seninfluenceurs.com/service/view/188"
+    },
+    "notes": "Ajout approuvé par le propriétaire PASS50. Aucun score fictif.",
+    "priority_wave": "V27 — intégration immédiate"
+  },
+  {
+    "id": "census-nadiani",
+    "name": "Nadiani",
+    "known_alias": "Imane Nadiani Touré / @officialnad_",
+    "entity_type": "Personne",
+    "zone": "BOTH",
+    "category": "Mode / Beauté / Lifestyle / Entrepreneuriat",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "official_socials": {},
+    "platforms_detected": [
+      "Instagram",
+      "TikTok",
+      "YouTube"
+    ],
+    "source": {
+      "publisher": "Portfolio public Nadiani",
+      "date": "2026-07-24",
+      "url": "https://nadiani.my.canva.site/"
+    },
+    "notes": "Nom public : Nadiani. Imane Nadiani Touré est conservé comme alias.",
+    "priority_wave": "V27 — intégration immédiate"
+  },
+  {
+    "id": "census-investisseur-africain",
+    "name": "L’Investisseur Africain",
+    "known_alias": "Jean-Yves Bragbo / Jean Yves Bragbo / @sbragbo",
+    "entity_type": "Personne",
+    "zone": "BOTH",
+    "category": "Business / Investissement / Entrepreneuriat / Diaspora",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "official_socials": {},
+    "platforms_detected": [
+      "YouTube",
+      "Facebook",
+      "LinkedIn",
+      "Instagram"
+    ],
+    "source": {
+      "publisher": "L’Investisseur Africain — site public",
+      "date": "2026-07-24",
+      "url": "https://www.investisseur-africain.com/cgv"
+    },
+    "notes": "Nom public : L’Investisseur Africain. Jean-Yves Bragbo est conservé comme identité/alias.",
+    "priority_wave": "V27 — intégration immédiate"
+  },
+  {
+    "id": "census-laura-ziehi",
+    "name": "Laura Ziehi",
+    "known_alias": "@laura.ziehi",
+    "entity_type": "Personne",
+    "zone": "BOTH",
+    "category": "Lifestyle / Mode / Divertissement",
+    "census_status": "Recensé confirmé — réseaux à compléter",
+    "verification_priority": "P1",
+    "official_socials": {},
+    "platforms_detected": [
+      "Instagram",
+      "TikTok",
+      "Snapchat"
+    ],
+    "source": {
+      "publisher": "Pannelle Talents",
+      "date": "2026-07-24",
+      "url": "https://pannelle.com/reseaupannelle/talents/laura-ziehi/"
+    },
+    "notes": "Ajout approuvé au statut « à recenser ». Réseaux à revalider.",
+    "priority_wave": "V27 — à recenser"
+  },
+  {
+    "id": "census-aya-robert",
+    "name": "Aya Robert",
+    "known_alias": "Aya Robert",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "TikTok / Lives / Débats / Divertissement",
+    "census_status": "À vérifier — compte officiel actuel",
+    "verification_priority": "P1",
+    "official_socials": {},
+    "platforms_detected": [
+      "TikTok",
+      "Facebook"
+    ],
+    "source": {
+      "publisher": "Digital Mag Côte d’Ivoire",
+      "date": "2024-09-20",
+      "url": "https://digitalmag.ci/reseaux-sociaux-portrait-robot-de-tiktok-en-cote-divoire/"
+    },
+    "notes": "Ajout approuvé au statut « à recenser ». Aucun compte officiel affiché avant revalidation.",
+    "priority_wave": "V27 — à recenser"
+  }
+]
