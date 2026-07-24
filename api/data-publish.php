@@ -10,5 +10,4 @@ p50_de_sync_registry_from_state();
 $in=json_input();
 $profileId=trim((string)($in['profileId']??''));
 $count=$profileId!==''?(p50_de_publish_profile($profileId,$user['id'])?1:0):p50_de_publish_all($user['id']);
-$algorithm=p50_s12_calculate_all($user['id']);
-json_response(['ok'=>true,'publishedProfiles'=>$count,'algorithm'=>$algorithm,'threshold'=>p50_de_threshold(),'hub'=>p50_de_hub_payload()]);
+json_response(['ok'=>true,'publishedProfiles'=>$count,'threshold'=>p50_de_threshold(),'hub'=>p50_de_hub_payload()]);

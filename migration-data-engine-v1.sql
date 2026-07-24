@@ -86,6 +86,23 @@ CREATE TABLE IF NOT EXISTS p50_social_link_evidence (
   INDEX idx_p50_social_evidence_url (profile_id,platform,url_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+CREATE TABLE IF NOT EXISTS p50_social_link_audit (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  profile_id VARCHAR(100) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  action_type VARCHAR(32) NOT NULL,
+  previous_url TEXT NULL,
+  new_url TEXT NULL,
+  actor_id CHAR(36) NULL,
+  actor_role VARCHAR(24) NOT NULL DEFAULT '',
+  actor_name VARCHAR(190) NOT NULL DEFAULT '',
+  metadata_json LONGTEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_p50_social_audit_profile (profile_id,created_at),
+  INDEX idx_p50_social_audit_platform (profile_id,platform,created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS p50_social_links (
   profile_id VARCHAR(100) NOT NULL,
   platform VARCHAR(32) NOT NULL,
@@ -144,17 +161,3 @@ CREATE TABLE IF NOT EXISTS p50_engine_settings (
 INSERT INTO p50_engine_settings(setting_key,setting_value)
 VALUES('confidence_threshold','90')
 ON DUPLICATE KEY UPDATE setting_value=setting_value;
-
-
-CREATE TABLE IF NOT EXISTS p50_algorithm_scores (
-  profile_id VARCHAR(100) NOT NULL,
-  period_key VARCHAR(16) NOT NULL,
-  score DECIMAL(6,2) NOT NULL DEFAULT 0,
-  confidence DECIMAL(6,2) NOT NULL DEFAULT 0,
-  coverage DECIMAL(6,2) NOT NULL DEFAULT 0,
-  criteria_json LONGTEXT NOT NULL,
-  raw_json LONGTEXT NOT NULL,
-  calculated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY(profile_id,period_key),
-  INDEX idx_p50_algorithm_period_score(period_key,score)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

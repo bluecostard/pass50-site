@@ -28,14 +28,21 @@ if (!p50_exact_content_path($platform,$url)) {
     json_response(['error'=>'Ce lien semble pointer vers un profil ou une page générale. Colle le lien exact de la vidéo, publication ou article.','platform'=>$platform],422);
 }
 
-$title='';$author='';$thumbnail='';$canonical=$url;$source='Métadonnées publiques';$blocked=false;
+$title='';$author='';$thumbnail='';$canonical=$url;$source='Métadonnées publiques';$blocked=false;$thumbnailTrusted=false;
 try {
     if ($platform === 'YouTube') {
         $o = p50_json_get('https://www.youtube.com/oembed?format=json&url='.rawurlencode($url),15);
-        if ($o) { $title=(string)($o['title']??'');$author=(string)($o['author_name']??'');$thumbnail=(string)($o['thumbnail_url']??'');$source='YouTube oEmbed'; }
+        if ($o) { $title=(string)($o['title']??'');$author=(string)($o['author_name']??'');$thumbnail=(string)($o['thumbnail_url']??'');$source='YouTube oEmbed';$thumbnailTrusted=$thumbnail!==''; }
+        if ($thumbnail==='') {
+            $host=strtolower((string)(parse_url($url,PHP_URL_HOST)?:''));$path=(string)(parse_url($url,PHP_URL_PATH)?:'');$query=[];parse_str((string)(parse_url($url,PHP_URL_QUERY)?:''),$query);$videoId='';
+            if(str_contains($host,'youtu.be'))$videoId=trim($path,'/');
+            elseif(!empty($query['v']))$videoId=(string)$query['v'];
+            elseif(preg_match('#/(?:shorts|live)/([A-Za-z0-9_-]{6,})#',$path,$mm))$videoId=$mm[1];
+            if($videoId!==''){$thumbnail='https://i.ytimg.com/vi/'.rawurlencode($videoId).'/hqdefault.jpg';$source='Miniature YouTube directe';$thumbnailTrusted=true;}
+        }
     } elseif ($platform === 'TikTok') {
         $o = p50_json_get('https://www.tiktok.com/oembed?url='.rawurlencode($url),15);
-        if ($o) { $title=(string)($o['title']??'');$author=(string)($o['author_name']??'');$thumbnail=(string)($o['thumbnail_url']??'');$canonical=(string)($o['author_url']??$url);$canonical=$url;$source='TikTok oEmbed'; }
+        if ($o) { $title=(string)($o['title']??'');$author=(string)($o['author_name']??'');$thumbnail=(string)($o['thumbnail_url']??'');$canonical=(string)($o['author_url']??$url);$canonical=$url;$source='TikTok oEmbed';$thumbnailTrusted=$thumbnail!==''; }
     }
     if ($title === '' || $thumbnail === '') {
         $r = p50_http_fetch($url,15,'text/html,*/*;q=0.7');
@@ -43,7 +50,7 @@ try {
         if ($r['body'] !== '') {
             $m = p50_page_metadata($r['body'],$r['finalUrl'] ?: $url);
             if ($title==='') $title=(string)($m['title']??'');
-            if ($thumbnail==='') $thumbnail=(string)($m['image']??'');
+            if ($thumbnail==='') {$thumbnail=(string)($m['image']??'');if($thumbnail!=='')$thumbnailTrusted=true;}
             if (!empty($m['canonical'])) {
                 $candidate=(string)$m['canonical'];
                 if(p50_platform($candidate)===$platform&&p50_exact_content_path($platform,$candidate))$canonical=$candidate;
@@ -63,6 +70,7 @@ json_response([
     'title'=>$title,
     'author'=>$author,
     'thumbnail'=>$thumbnail,
+    'thumbnailTrusted'=>$thumbnailTrusted,
     'source'=>$source,
     'blocked'=>$blocked,
     'message'=>$blocked?'La plateforme bloque la lecture automatique, mais le format du lien original est valide.':'Lien original reconnu.',
