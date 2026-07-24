@@ -1125,13 +1125,78 @@ function p50_de_metric_number(mixed $value): int {
     return 0;
 }
 
+/** Convertit les actualités validées dans l'administration en activités mesurables. */
+function p50_de_state_event_datetime(array $event): string {
+    foreach(['publishedAt','published_at','detectedAt','createdAt','updatedAt'] as $key){
+        $value=trim((string)($event[$key]??''));
+        if($value==='')continue;
+        $ts=strtotime($value);if($ts!==false)return gmdate('Y-m-d H:i:s',$ts);
+    }
+    $label=p50_normalize_text((string)($event['publishedLabel']??''));
+    $now=time();
+    if(preg_match('/il y a ([0-9]+) min/',$label,$m))return gmdate('Y-m-d H:i:s',$now-(int)$m[1]*60);
+    if(preg_match('/il y a ([0-9]+) h/',$label,$m))return gmdate('Y-m-d H:i:s',$now-(int)$m[1]*3600);
+    if(str_contains($label,"aujourd")||str_contains($label,'recent')||str_contains($label,'actuel'))return gmdate('Y-m-d H:i:s',$now-2*3600);
+    return gmdate('Y-m-d H:i:s',$now-6*3600);
+}
+
+function p50_de_state_metric_values(array $event): array {
+    $metrics=is_array($event['metrics']??null)?$event['metrics']:[];
+    $label=trim((string)($event['metric']??''));
+    $number=p50_de_metric_number($label);
+    $normalized=p50_normalize_text($label);
+    if($number>0){
+        if(str_contains($normalized,'vue'))$metrics['views']=$number;
+        elseif(str_contains($normalized,'partage')||str_contains($normalized,'relais'))$metrics['shares']=$number;
+        elseif(str_contains($normalized,'comment'))$metrics['comments']=$number;
+        else $metrics['signalVolume']=$number;
+    }
+    $metrics['platformCount']=count(array_values(array_filter((array)($event['platforms']??[]))));
+    $metrics['manualValidated']=true;
+    $metrics['signalLabel']=$label;
+    return $metrics;
+}
+
+function p50_de_import_state_activities(string $profileId): int {
+    $state=p50_de_load_public_state();$count=0;
+    foreach((array)($state['events']??[]) as $event){
+        if(!is_array($event)||(string)($event['profileId']??'')!==$profileId)continue;
+        if(($event['originalLinkValidated']??false)!==true)continue;
+        $url=trim((string)($event['resolvedUrl']??$event['canonicalUrl']??$event['submittedUrl']??$event['url']??''));
+        if(!filter_var($url,FILTER_VALIDATE_URL))continue;
+        $platforms=array_values(array_filter(array_map('strval',(array)($event['platforms']??[]))));
+        $platform=$platforms[0]??p50_platform($url);if($platform==='')$platform='Web';
+        $type=trim((string)($event['type']??'Actualité'))?:'Actualité';
+        $title=trim((string)($event['title']??'Actualité validée'))?:'Actualité validée';
+        $published=p50_de_state_event_datetime($event);
+        $metrics=p50_de_state_metric_values($event);
+        $confidenceLabel=p50_normalize_text((string)($event['confidence']??''));
+        $confidence=str_contains($confidenceLabel,'eleve')?98:(str_contains($confidenceLabel,'moyen')?94:92);
+        p50_de_add_activity($profileId,$platform,$type,$title,$url,$published,$metrics,$confidence);
+        $count++;
+    }
+    return $count;
+}
+
 /** Algorithme PASS50 15 critères — données publiques réellement disponibles. */
 function p50_de_15c_window(string $profileId,int $hours): array {
-    $stmt=db()->prepare("SELECT platform,event_type,published_at,collected_at,metrics,confidence FROM p50_activity_events WHERE profile_id=? AND status='verified' AND confidence>=? AND COALESCE(published_at,collected_at)>=DATE_SUB(NOW(),INTERVAL ? HOUR) ORDER BY COALESCE(published_at,collected_at) ASC");
+    $stmt=db()->prepare("SELECT id,platform,event_type,published_at,collected_at,metrics,confidence FROM p50_activity_events WHERE profile_id=? AND status='verified' AND confidence>=? AND COALESCE(published_at,collected_at)>=DATE_SUB(NOW(),INTERVAL ? HOUR) ORDER BY COALESCE(published_at,collected_at) ASC");
     $stmt->execute([$profileId,p50_de_threshold(),$hours]);$events=$stmt->fetchAll();$links=p50_de_social_links($profileId,true);
     $views=$likes=$comments=$shares=$saves=0;$latest=0;$platforms=[];$conf=[];$velocities=[];$now=time();
-    foreach($events as $e){$m=decode_json_column($e['metrics']??null,[]);$v=p50_de_metric_number($m['views']??0);$l=p50_de_metric_number($m['likes']??0);$c=p50_de_metric_number($m['comments']??0);$sh=p50_de_metric_number($m['shares']??($m['reposts']??0));$sv=p50_de_metric_number($m['saves']??0);$views+=$v;$likes+=$l;$comments+=$c;$shares+=$sh;$saves+=$sv;$ts=strtotime((string)($e['published_at']?:$e['collected_at']))?:0;$latest=max($latest,$ts);$age=max(1,($now-$ts)/3600);if($v>0)$velocities[]=$v/$age;$platforms[(string)$e['platform']]=true;$conf[]=(int)$e['confidence'];}
-    foreach($links as $l){$platforms[(string)$l['platform']]=true;$conf[]=(int)$l['confidence'];}
+    foreach($events as $e){
+        $m=decode_json_column($e['metrics']??null,[]);
+        $v=p50_de_metric_number($m['views']??($m['signalVolume']??0));
+        $l=p50_de_metric_number($m['likes']??0);$c=p50_de_metric_number($m['comments']??0);
+        $sh=p50_de_metric_number($m['shares']??($m['reposts']??0));$sv=p50_de_metric_number($m['saves']??0);
+        $views+=$v;$likes+=$l;$comments+=$c;$shares+=$sh;$saves+=$sv;
+        $ts=strtotime((string)($e['published_at']?:$e['collected_at']))?:0;$latest=max($latest,$ts);
+        $age=max(1,($now-$ts)/3600);if($v>0)$velocities[]=$v/$age;
+        $platforms[(string)$e['platform']]=true;
+        $extraPlatforms=max(0,(int)($m['platformCount']??0)-1);
+        for($i=0;$i<$extraPlatforms;$i++)$platforms['signal_'.$e['id'].'_'.$i]=true;
+        $conf[]=(int)$e['confidence'];
+    }
+    foreach($links as $l)$conf[]=(int)$l['confidence'];
     $followers=0; // indisponible publiquement de façon homogène : critère omis si absent.
     $engagement=$views>0?($likes+3*$comments+5*$shares+4*$saves)/$views:null;
     $shareRate=$views>0?($shares+$saves)/$views:null;
@@ -1271,6 +1336,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
     if(!$state)return false;
     $registry=p50_de_registry_profiles($profileId,1,0,false);
     if($registry){p50_de_collect_state_facts($registry[0]);p50_de_collect_curated_evidence_v221($registry[0]);}
+    p50_de_import_state_activities($profileId);
     p50_de_rebuild_profile_facts($profileId);
     $facts=p50_de_verified_facts($profileId);
     $photoCandidate=p50_de_best_fact($profileId,'photo_url',60);
@@ -1336,12 +1402,21 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
         }
 
         $trend=p50_de_compute_trend_score($profileId);
-        $wasCandidate=empty($p['eligible'])||array_key_exists('classable',$p)&&empty($p['classable']);
-        $autoManaged=!empty($previousEngine['autoScore'])||$wasCandidate||p50_de_is_priority_profile($profileId);
-        if($autoManaged&&$trend['classable']){
-            $periodScores=p50_de_period_scores($profileId);$p['scores']=array_merge((array)($p['scores']??[]),$periodScores);$p['score']=$periodScores['2H'];
+        $previousScores=(array)($p['scores']??[]);
+        $scoreUpdated=false;
+        if($trend['classable']){
+            // Tous les profils disposant d'assez de données sont recalculés,
+            // y compris ceux qui étaient déjà classés avant l'installation du moteur.
+            $periodScores=p50_de_period_scores($profileId);
+            foreach($periodScores as $period=>$value){
+                if((int)($previousScores[$period]??-1)!==(int)$value)$scoreUpdated=true;
+            }
+            $p['scores']=array_merge($previousScores,$periodScores);
+            $p['score']=$periodScores['2H'];
             $p['eligible']=true;$p['classable']=true;$p['quality']['score']=(int)$trend['confidence'];
-            $badges=[];if($trend['score']>=88)$badges[]='HOT';if($trend['score']>=82)$badges[]='UP';if(($trend['events7']??0)>=3)$badges[]='VIRAL';$p['badges']=array_values(array_unique($badges));
+            $badges=array_values(array_filter((array)($p['badges']??[]),fn($b)=>!in_array($b,['HOT','UP','VIRAL'],true)));
+            if($trend['score']>=88)$badges[]='HOT';if($trend['score']>=82)$badges[]='UP';if(($trend['events7']??0)>=3)$badges[]='VIRAL';
+            $p['badges']=array_values(array_unique($badges));
             $changed=true;
         }
         $p['lastCollectedAt']=gmdate('c');
@@ -1353,7 +1428,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
             'photoCandidate'=>(bool)$photoCandidate,
             'autoBioValue'=>$autoBioValue,
             'autoCategoryValue'=>$autoCategoryValue,
-            'autoScore'=>$autoManaged,
+            'autoScore'=>(bool)$trend['classable'],'scoreUpdated'=>$scoreUpdated,'previousScores'=>$previousScores,
             'trend'=>$trend,'algorithmVersion'=>'15C-v1','dataConfidence'=>(int)($trend['confidence']??0),'measuredCoverage'=>(float)($trend['coverage']??0),'measuredCriteria'=>(int)($trend['measuredCriteria']??0),
             'priorityWave'=>p50_de_is_priority_profile($profileId)?'V22-16':'',
         ];

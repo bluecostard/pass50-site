@@ -91,7 +91,7 @@
     if(DE.majRunning)return;
     DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set();DE.majStartedAt=new Date().toISOString();DE.majLastResult=null;
     DE.majStage='1/7 · Synchronisation des FI';DE.majMessage='Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
-    let totals={found:0,verified:0,published:0,captured:0,batches:0};
+    let totals={found:0,verified:0,published:0,recalculated:0,scoresChanged:0,captured:0,batches:0};
     try{
       if(typeof window.PASS50_STEP12_STATUS==='object'&&Number(window.PASS50_STEP12_STATUS.present||0)<7&&typeof window.p50EnsureStep12Profiles==='function')window.p50EnsureStep12Profiles();
       if(typeof syncCloudState==='function')await syncCloudState();
@@ -107,7 +107,7 @@
         totals.batches++;totals.found+=Number(data.found||0);totals.verified+=Number(data.verified||0);
         DE.hub=data.hub||DE.hub;
         DE.majStage='3/7 · Calcul des 15 critères';
-        DE.majMessage=`Lot ${totals.batches} : ${ids.length} FI · ${Number(data.found||0)} donnée(s) trouvée(s) · scores recalculés et enregistrés.`;
+        DE.majMessage=`Lot ${totals.batches} : ${ids.length} FI · ${Number(data.found||0)} donnée(s) trouvée(s). Le calcul final sera vérifié à la publication.`;
         deDrawMajProgress();
         if(DE.majSeen.size===before)break;
         await new Promise(resolve=>setTimeout(resolve,180));
@@ -119,7 +119,7 @@
       }
 
       DE.majStage='4/7 · Publication des scores';DE.majMessage='Écriture des données vérifiées et des scores calculés dans l’état PASS50…';deDrawMajProgress();
-      const published=await apiFetch('data-publish.php',{method:'POST',body:{}});totals.published=Number(published.publishedProfiles||0);DE.hub=published.hub||DE.hub;
+      const published=await apiFetch('data-publish.php',{method:'POST',body:{}});totals.published=Number(published.publishedProfiles||0);totals.recalculated=Number(published.recalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);DE.hub=published.hub||DE.hub;
 
       DE.majStage='5/7 · Rechargement et reclassement';DE.majMessage='Récupération de l’état serveur puis reclassement automatique…';deDrawMajProgress();
       if(typeof loadCloudState==='function')await loadCloudState();
@@ -133,7 +133,7 @@
 
       await deLoadHub(true);
       const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
-      DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='MAJ PASS50 terminée';DE.majMessage=`${result.processed}/${result.target} FI parcourues · ${totals.found} donnée(s) trouvée(s) · ${totals.published} profil(s) publié(s) · classement actualisé.`;
+      DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=totals.scoresChanged>0?'MAJ PASS50 terminée':'MAJ terminée · aucun score modifié';DE.majMessage=totals.scoresChanged>0?`${result.processed}/${result.target} FI parcourues · ${totals.found} donnée(s) trouvée(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · classement actualisé.`:`${result.processed}/${result.target} FI parcourues · ${totals.found} donnée(s) trouvée(s) · ${totals.recalculated} profil(s) calculable(s), mais aucun score n'a changé. Le classement a été conservé.`;
       window.PASS50_MAJ_STATUS=result;
       toast(`MAJ PASS50 terminée · ${result.processed} FI traitées`);
     }catch(err){

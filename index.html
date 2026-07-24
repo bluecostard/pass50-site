@@ -300,7 +300,24 @@ function migrateDb(){
 }
 let session={userId:sessionStorage.getItem('pass50_session')||null};let ui={period:'2H',region:'ALL',adminTab:'signals'};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-function normalizeLiveStreams(){if(!Array.isArray(db.liveStreams))db.liveStreams=[];const now=Date.now();db.liveStreams=db.liveStreams.filter(x=>x&&x.profileId&&(!x.endsAt||new Date(x.endsAt).getTime()>now));db.profiles.forEach(p=>{p.badges=(p.badges||[]).filter(b=>b!=='LIVE');if(db.liveStreams.some(x=>x.profileId===p.id&&x.status==='live'))p.badges.unshift('LIVE');});}
+function normalizeLiveStreams(){
+  if(!Array.isArray(db.liveStreams))db.liveStreams=[];
+  const now=Date.now();
+  db.liveStreams=db.liveStreams.filter(x=>{
+    if(!x||x.status!=='live'||!x.profileId||!/^https?:\/\//i.test(String(x.url||'')))return false;
+    const end=x.endsAt?new Date(x.endsAt).getTime():0;
+    const rawStart=x.startedAt||x.detectedAt||x.createdAt||x.updatedAt||'';
+    const start=rawStart?new Date(rawStart).getTime():0;
+    if(Number.isFinite(end)&&end>0&&end<=now)return false;
+    if(!Number.isFinite(start)||start<=0)return false;
+    if(start>now+300000||now-start>8*3600000)return false;
+    return true;
+  });
+  db.profiles.forEach(p=>{
+    p.badges=(p.badges||[]).filter(b=>b!=='LIVE');
+    if(db.liveStreams.some(x=>x.profileId===p.id&&x.status==='live'))p.badges.unshift('LIVE');
+  });
+}
 function save(){normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));if(window.__pass50CloudReady)scheduleCloudSync();}
 migrateDb();applyPass50V6Patch();save();
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),2200)}
@@ -727,6 +744,6 @@ async function initCloud(){
 initCloud();
 
 </script>
-<script src="./v9-tools.js?v=23-step12-maj1.0"></script>
+<script src="./v9-tools.js?v=15.0"></script>
 </body>
 </html>

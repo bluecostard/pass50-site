@@ -171,8 +171,31 @@ function p50_live_manual_from_state(): array {
     $state=p50_de_load_public_state();$now=time();$out=[];
     foreach((array)($state['liveStreams']??[]) as $live){
         if(!is_array($live)||($live['status']??'')!=='live'||empty($live['profileId'])||empty($live['url']))continue;
-        $ends=(string)($live['endsAt']??'');
-        if($ends!==''&&strtotime($ends)!==false&&strtotime($ends)<=$now)continue;
+
+        $endTs=0;
+        $ends=trim((string)($live['endsAt']??''));
+        if($ends!==''){
+            $parsed=strtotime($ends);
+            if($parsed!==false)$endTs=$parsed;
+        }
+        if($endTs>0&&$endTs<=$now)continue;
+
+        $startTs=0;
+        foreach(['startedAt','detectedAt','createdAt','updatedAt'] as $key){
+            $value=trim((string)($live[$key]??''));
+            if($value==='')continue;
+            $parsed=strtotime($value);
+            if($parsed!==false){$startTs=$parsed;break;}
+        }
+
+        // Un ancien LIVE sans aucune date est un enregistrement orphelin :
+        // il ne doit jamais être réaffiché indéfiniment.
+        if($startTs<=0&&$endTs<=0)continue;
+
+        // Protection supplémentaire des anciens enregistrements incomplets.
+        // Les nouveaux LIVE manuels ont toujours endsAt.
+        if($endTs<=0&&$startTs>0&&($now-$startTs)>8*3600)continue;
+
         $live['id']=(string)($live['id']??('manual_'.substr(hash('sha256',(string)$live['url']),0,16)));
         $live['source']='manual';$out[]=$live;
     }
@@ -185,7 +208,7 @@ p50_de_sync_registry_from_state();
 global $config;
 $batch=max(1,min(12,(int)($config['data_engine']['live_batch_size']??6)));
 $refresh=max(30,min(300,(int)($config['data_engine']['live_refresh_seconds']??50)));
-$stale=max(15,min(180,(int)($config['data_engine']['live_stale_minutes']??45)));
+$stale=max(20,min(60,(int)($config['data_engine']['live_stale_minutes']??25)));
 $sources=p50_live_sources();$total=count($sources);$scanned=0;$found=0;$scanPerformed=false;
 $lastScan=(string)p50_de_get_setting('live_radar_last_scan_at','');
 $lastTs=$lastScan!==''?(strtotime($lastScan)?:0):0;
