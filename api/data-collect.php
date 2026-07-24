@@ -12,7 +12,6 @@ $in=json_input();
 $profileId=trim((string)($in['profileId']??''));
 $limit=max(1,min(5,(int)($in['limit']??5)));
 $deep=!array_key_exists('deep',$in)||!empty($in['deep']);
-$publish=!array_key_exists('publishVerified',$in)||!empty($in['publishVerified']);
 $excludeRaw=$in['excludeIds']??[];
 $excludeIds=[];
 if(is_array($excludeRaw)){
@@ -36,7 +35,6 @@ foreach($profiles as $profile){
         $socialActivity=p50_de_collect_social_activity($profile);
         $found+=(int)($socialActivity['found']??0);
         $verified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0)+(int)($socialActivity['verified']??0);
-        if($publish)p50_de_publish_profile((string)$profile['profile_id'],$user['id']);
         p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts,'curatedEvidenceImported'=>$curatedFacts]);
         $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment];
         $processedIds[]=(string)$profile['profile_id'];$totalFound+=$found;$totalVerified+=$verified;
@@ -48,4 +46,5 @@ foreach($profiles as $profile){
     }
 }
 $remainingNeverCollected=(int)db()->query("SELECT COUNT(*) FROM p50_profile_registry r LEFT JOIN (SELECT DISTINCT profile_id FROM p50_collection_runs) x ON x.profile_id=r.profile_id WHERE r.alive=1 AND x.profile_id IS NULL")->fetchColumn();
-json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);
+$metricSummary=p50_de_usable_metric_summary($processedIds);
+json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'usableMetrics'=>$metricSummary['usableMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);

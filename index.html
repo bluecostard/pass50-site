@@ -631,6 +631,7 @@ const CLOUD={
   baseUrl:String(apiConfig.baseUrl||'').replace(/\/$/,''),
   token:localStorage.getItem('pass50_api_token')||'',
   syncTimer:null,
+  stateRevision:0,
   ready:false,
   coulesTotals:{},
   coulesMyVotes:{},
@@ -651,7 +652,7 @@ async function apiFetch(path,{method='GET',body=null,formData=null,auth=true}={}
 }
 function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};return copy;}
 function scheduleCloudSync(){
-  if(!CLOUD.enabled||!CLOUD.ready)return;
+  if(window.majPass50Running||!CLOUD.enabled||!CLOUD.ready)return;
   clearTimeout(CLOUD.syncTimer);
   CLOUD.syncTimer=setTimeout(async()=>{try{await Promise.all([syncCloudPrefs(),syncCloudState()]);}catch(err){console.warn('Cloud sync',err)}},500);
 }
@@ -660,8 +661,11 @@ async function syncCloudPrefs(){
   await apiFetch('preferences.php',{method:'POST',body:{favorites:u.favorites||[],following:u.following||[],followAlerts:u.followAlerts||{},notificationMode:u.notificationMode||'daily'}});
 }
 async function syncCloudState(){
+  if(window.majPass50Running)return {ok:true,skipped:true,reason:'maj_pass50_running'};
   const u=currentUser();if(!u||!['owner','admin'].includes(u.role)||!CLOUD.enabled||!CLOUD.token)return;
-  await apiFetch('state.php',{method:'POST',body:{data:cloudSafeState()}});
+  const result=await apiFetch('state.php',{method:'POST',body:{data:cloudSafeState(),baseRevision:Number(CLOUD.stateRevision||0)}});
+  if(Number.isFinite(Number(result?.stateRevision)))CLOUD.stateRevision=Number(result.stateRevision);
+  return result;
 }
 function p50RecoverableDirectLink(platform,url){
   try{
@@ -687,6 +691,7 @@ async function loadCloudState(){
   const manualPhotos=Object.fromEntries((db.profiles||[]).filter(p=>p.photoManualLocked).map(p=>[p.id,{photoUrl:p.photoUrl||'',photoCandidateUrl:p.photoCandidateUrl||'',photoStatus:p.photoStatus||'pending',photoSource:p.photoSource||'Ajout manuel',photoNote:p.photoNote||'',photoPosition:p.photoPosition||'50% 50%',photoManualLocked:true,photoManualUpdatedAt:p.photoManualUpdatedAt||new Date().toISOString()}]));
   const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p.birthManualLocked&&p.birthDate).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(p.birthDate.slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...(p.quality||{}),birth:100},dataEngine:{...(p.dataEngine||{}),verifiedFacts:[...new Set([...(p.dataEngine?.verifiedFacts||[]),'birth_date'])]}}]));
   const data=await apiFetch('state.php',{auth:false});
+  if(Number.isFinite(Number(data?.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
   if(data?.data){const cloud=data.data;db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{if(manualPhotos[p.id])Object.assign(p,manualPhotos[p.id]);if(manualBirths[p.id])Object.assign(p,manualBirths[p.id]);if(manualLinks[p.id]){p.links={...(p.links||{}),...manualLinks[p.id].links};p.linkChecks={...(p.linkChecks||{}),...manualLinks[p.id].linkChecks};}});localStorage.setItem(APP_KEY,JSON.stringify(db));}
 }
 function hydrateApiUser(apiUser,notes=[]){

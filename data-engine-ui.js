@@ -1,4 +1,5 @@
 (function(){
+  window.majPass50Running=Boolean(window.majPass50Running);
   const fallbackRenderAdminPane=renderAdminPane;
   const DE={hub:null,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
 
@@ -33,7 +34,7 @@
         p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=p.quality||{};p.quality.birth=confidence;p.dataEngine=p.dataEngine||{};p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];changed++;
       }
     }
-    if(changed){localStorage.setItem(APP_KEY,JSON.stringify(db));if(window.__pass50CloudReady&&typeof scheduleCloudSync==='function')scheduleCloudSync();}
+    if(changed){localStorage.setItem(APP_KEY,JSON.stringify(db));if(!DE.majRunning&&window.__pass50CloudReady&&typeof scheduleCloudSync==='function')scheduleCloudSync();}
     return changed;
   }
 
@@ -89,22 +90,24 @@
   }
   async function deRunMajPass50(){
     if(DE.majRunning)return;
+    window.majPass50Running=true;
+    if(typeof CLOUD==='object'&&CLOUD?.syncTimer){clearTimeout(CLOUD.syncTimer);CLOUD.syncTimer=null;}
     DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set();DE.majStartedAt=new Date().toISOString();DE.majLastResult=null;
+    let completedSuccessfully=false;
     DE.majStage='1/7 · Synchronisation des FI';DE.majMessage='Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
-    let totals={found:0,verified:0,published:0,recalculated:0,scoresChanged:0,captured:0,batches:0};
+    let totals={found:0,verified:0,usableMetrics:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0};
     try{
       if(typeof window.PASS50_STEP12_STATUS==='object'&&Number(window.PASS50_STEP12_STATUS.present||0)<7&&typeof window.p50EnsureStep12Profiles==='function')window.p50EnsureStep12Profiles();
-      if(typeof syncCloudState==='function')await syncCloudState();
       const sync=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});
       DE.hub=sync.hub||DE.hub;DE.majTarget=Number(DE.hub?.kpis?.profiles||sync.syncedProfiles||db?.profiles?.length||0);
       DE.majStage='2/7 · Collecte et conservation';DE.majMessage='Le moteur parcourt les FI par lots de 5…';deDrawMajProgress();
 
       while(!DE.majStopRequested&&DE.majSeen.size<DE.majTarget){
-        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,publishVerified:true,excludeIds:[...DE.majSeen]}});
+        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,excludeIds:[...DE.majSeen]}});
         const ids=(data.processedIds||[]).map(String);
         if(!ids.length)break;
         const before=DE.majSeen.size;ids.forEach(id=>DE.majSeen.add(id));
-        totals.batches++;totals.found+=Number(data.found||0);totals.verified+=Number(data.verified||0);
+        totals.batches++;totals.found+=Number(data.found||0);totals.verified+=Number(data.verified||0);totals.usableMetrics+=Number(data.usableMetrics||0);totals.measurableProfiles+=Number(data.measurableProfiles||0);
         DE.hub=data.hub||DE.hub;
         DE.majStage='3/7 · Calcul des 15 critères';
         DE.majMessage=`Lot ${totals.batches} : ${ids.length} FI · ${Number(data.found||0)} donnée(s) trouvée(s). Le calcul final sera vérifié à la publication.`;
@@ -119,22 +122,23 @@
       }
 
       DE.majStage='4/7 · Publication des scores';DE.majMessage='Écriture des données vérifiées et des scores calculés dans l’état PASS50…';deDrawMajProgress();
-      const published=await apiFetch('data-publish.php',{method:'POST',body:{}});totals.published=Number(published.publishedProfiles||0);totals.recalculated=Number(published.recalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);DE.hub=published.hub||DE.hub;
+      const published=await apiFetch('data-publish.php',{method:'POST',body:{period:ui.period}});totals.published=Number(published.publishedProfiles||0);totals.usableMetrics=Number(published.usableMetrics??totals.usableMetrics);totals.measurableProfiles=Number(published.measurableProfiles??totals.measurableProfiles);totals.recalculated=Number(published.recalculatedProfiles||0);totals.notRecalculated=Number(published.notRecalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);totals.ranksChanged=Number(published.ranksChanged||0);DE.hub=published.hub||DE.hub;
 
       DE.majStage='5/7 · Rechargement et reclassement';DE.majMessage='Récupération de l’état serveur puis reclassement automatique…';deDrawMajProgress();
       if(typeof loadCloudState==='function')await loadCloudState();
       if(typeof render==='function')render();
 
-      DE.majStage='6/7 · Synchronisation finale';DE.majMessage='Sauvegarde de l’état final et des nouvelles positions…';deDrawMajProgress();
-      if(typeof syncCloudState==='function')await syncCloudState();
+      DE.majStage='6/7 · État final publié';DE.majMessage='Les nouveaux scores et le classement trié ont été publiés en une seule écriture atomique.';deDrawMajProgress();
 
       DE.majStage='7/7 · Capture du classement';DE.majMessage='Enregistrement de la photographie du classement actuel…';deDrawMajProgress();
       try{const snap=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});totals.captured=Number(snap.captured||0);}catch(error){console.warn('Capture classement non bloquante',error);}
 
       await deLoadHub(true);
       const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
-      DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=totals.scoresChanged>0?'MAJ PASS50 terminée':'MAJ terminée · aucun score modifié';DE.majMessage=totals.scoresChanged>0?`${result.processed}/${result.target} FI parcourues · ${totals.found} donnée(s) trouvée(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · classement actualisé.`:`${result.processed}/${result.target} FI parcourues · ${totals.found} donnée(s) trouvée(s) · ${totals.recalculated} profil(s) calculable(s), mais aucun score n'a changé. Le classement a été conservé.`;
+      const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
+      DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=rankingChanged?'MAJ PASS50 terminée · classement actualisé':'MAJ PASS50 terminée';DE.majMessage=rankingChanged?`${totals.found} donnée(s) trouvée(s) · ${totals.usableMetrics} métrique(s) exploitable(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s) · classement actualisé.`:`Collecte terminée, mais aucun score ni rang n'a changé. ${totals.found} donnée(s) trouvée(s) · ${totals.usableMetrics} métrique(s) exploitable(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s).`;
       window.PASS50_MAJ_STATUS=result;
+      completedSuccessfully=true;
       toast(`MAJ PASS50 terminée · ${result.processed} FI traitées`);
     }catch(err){
       console.error('MAJ PASS50',err);
@@ -142,6 +146,8 @@
       DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='Erreur pendant la MAJ';DE.majMessage=result.error;window.PASS50_MAJ_STATUS=result;toast(result.error||'MAJ PASS50 impossible');
     }finally{
       DE.majRunning=false;DE.majStopRequested=false;
+      window.majPass50Running=false;
+      if(completedSuccessfully&&typeof scheduleCloudSync==='function')scheduleCloudSync();
       if(ui.adminTab==='update')deRenderMajPass50($('#adminPane'));
     }
   }
@@ -187,13 +193,13 @@
   async function deAction(button,work,label){const old=button?.textContent;if(button){button.disabled=true;button.textContent=label||'Traitement…';}try{return await work();}finally{if(button){button.disabled=false;button.textContent=old;}}}
   async function deSync(btn){await deAction(btn,async()=>{const data=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();render();toast(`${data.syncedProfiles} profils synchronisés`);},'Synchronisation…');}
   async function deCollect(btn,profileId=''){
-    await deAction(btn,async()=>{const data=await apiFetch('data-collect.php',{method:'POST',body:{profileId,limit:profileId?1:5,deep:true,publishVerified:true}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.processed} profil(s) enrichi(s) · ${data.found} donnée(s) trouvée(s) · ${data.verified} vérifiée(s)`);},'Enrichissement…');
+    await deAction(btn,async()=>{const data=await apiFetch('data-collect.php',{method:'POST',body:{profileId,limit:profileId?1:5,deep:true}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.processed} profil(s) enrichi(s) · ${data.found} donnée(s) trouvée(s) · ${data.verified} vérifiée(s)`);},'Enrichissement…');
   }
   async function deAutoEnrich(btn){
     if(DE.autoRunning)return;DE.autoRunning=true;DE.stopRequested=false;DE.autoSeen=new Set();DE.autoTarget=Number(DE.hub?.kpis?.profiles||0);DE.autoMessage='Démarrage du moteur…';deSetAutoUi();deAutoProgress();
     try{
       while(!DE.stopRequested&&DE.autoSeen.size<DE.autoTarget){
-        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,publishVerified:true,excludeIds:[...DE.autoSeen]}});
+        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,excludeIds:[...DE.autoSeen]}});
         const ids=(data.processedIds||[]).map(String);if(!ids.length){
           DE.autoMessage=DE.autoSeen.size>=DE.autoTarget?'Tous les profils ont été parcourus.':'Aucun autre profil disponible dans le registre actif.';
           break;

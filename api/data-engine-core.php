@@ -166,6 +166,17 @@ function p50_de_ensure_schema(): void {
             UNIQUE KEY uq_p50_activity_url (profile_id,url_hash),
             INDEX idx_p50_activity_public (profile_id,status,confidence,published_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS p50_activity_metric_history (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            profile_id VARCHAR(100) NOT NULL,
+            platform VARCHAR(32) NOT NULL,
+            url_hash CHAR(64) CHARACTER SET ascii NOT NULL,
+            metrics LONGTEXT NOT NULL,
+            usable_metric_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+            captured_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_p50_metric_history_profile_date (profile_id,captured_at),
+            INDEX idx_p50_metric_history_url_date (profile_id,url_hash,captured_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS p50_engine_settings (
             setting_key VARCHAR(100) PRIMARY KEY,
             setting_value LONGTEXT NOT NULL,
@@ -206,9 +217,18 @@ function p50_de_load_public_state(): array {
     return is_array($state) ? $state : [];
 }
 
-function p50_de_save_public_state(array $state, ?string $userId = null): void {
+function p50_de_save_public_state(array $state, ?string $userId = null, bool $incrementRevision = true): void {
+    if($incrementRevision)$state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
     $stmt = db()->prepare("INSERT INTO app_state(id,data,updated_by) VALUES('public',?,?) ON DUPLICATE KEY UPDATE data=VALUES(data),updated_by=VALUES(updated_by),updated_at=NOW()");
     $stmt->execute([json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $userId]);
+}
+
+function p50_de_load_public_state_for_update(): array {
+    $stmt=db()->query("SELECT data FROM app_state WHERE id='public' LIMIT 1 FOR UPDATE");
+    $raw=$stmt->fetchColumn();
+    if(!$raw)return [];
+    $state=json_decode((string)$raw,true);
+    return is_array($state)?$state:[];
 }
 
 function p50_de_profile_state_map(array $state): array {
@@ -1125,6 +1145,42 @@ function p50_de_metric_number(mixed $value): int {
     return 0;
 }
 
+/** Garde uniquement les valeurs numériques qui alimentent réellement le moteur 15C. */
+function p50_de_normalize_score_metrics(array $metrics): array {
+    $aliases=[
+        'views'=>['views','viewCount','playCount','reach','impressions','signalVolume'],
+        'likes'=>['likes','likeCount','reactions'],
+        'comments'=>['comments','commentCount','replies'],
+        'shares'=>['shares','shareCount','reposts','quotes'],
+        'saves'=>['saves','saveCount'],
+        'followers'=>['followers','subscriberCount'],
+    ];
+    $out=[];
+    foreach($aliases as $target=>$keys){
+        $value=0;
+        foreach($keys as $key){
+            if(!array_key_exists($key,$metrics))continue;
+            $value+=p50_de_metric_number($metrics[$key]);
+        }
+        if($value>0)$out[$target]=$value;
+    }
+    return $out;
+}
+
+function p50_de_usable_metric_summary(array $profileIds=[]): array {
+    $where="status='verified' AND confidence>=?";$params=[p50_de_threshold()];
+    $ids=array_values(array_unique(array_filter(array_map('strval',$profileIds))));
+    if($ids){$where.=' AND profile_id IN ('.implode(',',array_fill(0,count($ids),'?')).')';$params=array_merge($params,$ids);}
+    $stmt=db()->prepare("SELECT profile_id,metrics FROM p50_activity_events WHERE $where");
+    $stmt->execute($params);$metrics=0;$profiles=[];
+    foreach($stmt->fetchAll() as $row){
+        $usable=p50_de_normalize_score_metrics(decode_json_column($row['metrics']??null,[]));
+        $metrics+=count($usable);
+        if($usable)$profiles[(string)$row['profile_id']]=true;
+    }
+    return ['usableMetrics'=>$metrics,'measurableProfiles'=>count($profiles)];
+}
+
 /** Convertit les actualités validées dans l'administration en activités mesurables. */
 function p50_de_state_event_datetime(array $event): string {
     foreach(['publishedAt','published_at','detectedAt','createdAt','updatedAt'] as $key){
@@ -1184,10 +1240,9 @@ function p50_de_15c_window(string $profileId,int $hours): array {
     $stmt->execute([$profileId,p50_de_threshold(),$hours]);$events=$stmt->fetchAll();$links=p50_de_social_links($profileId,true);
     $views=$likes=$comments=$shares=$saves=0;$latest=0;$platforms=[];$conf=[];$velocities=[];$now=time();
     foreach($events as $e){
-        $m=decode_json_column($e['metrics']??null,[]);
-        $v=p50_de_metric_number($m['views']??($m['signalVolume']??0));
-        $l=p50_de_metric_number($m['likes']??0);$c=p50_de_metric_number($m['comments']??0);
-        $sh=p50_de_metric_number($m['shares']??($m['reposts']??0));$sv=p50_de_metric_number($m['saves']??0);
+        $m=p50_de_normalize_score_metrics(decode_json_column($e['metrics']??null,[]));
+        $v=(int)($m['views']??0);$l=(int)($m['likes']??0);$c=(int)($m['comments']??0);
+        $sh=(int)($m['shares']??0);$sv=(int)($m['saves']??0);
         $views+=$v;$likes+=$l;$comments+=$c;$shares+=$sh;$saves+=$sv;
         $ts=strtotime((string)($e['published_at']?:$e['collected_at']))?:0;$latest=max($latest,$ts);
         $age=max(1,($now-$ts)/3600);if($v>0)$velocities[]=$v/$age;
@@ -1197,7 +1252,8 @@ function p50_de_15c_window(string $profileId,int $hours): array {
         $conf[]=(int)$e['confidence'];
     }
     foreach($links as $l)$conf[]=(int)$l['confidence'];
-    $followers=0; // indisponible publiquement de façon homogène : critère omis si absent.
+    $followers=0;
+    foreach($events as $e){$m=p50_de_normalize_score_metrics(decode_json_column($e['metrics']??null,[]));$followers=max($followers,(int)($m['followers']??0));}
     $engagement=$views>0?($likes+3*$comments+5*$shares+4*$saves)/$views:null;
     $shareRate=$views>0?($shares+$saves)/$views:null;
     $velocity=$velocities?array_sum($velocities)/count($velocities):null;
@@ -1331,8 +1387,9 @@ function p50_de_social_links(string $profileId, bool $verifiedOnly=false): array
     return $rows;
 }
 
-function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
-    $state=p50_de_load_public_state();
+function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array &$sharedState=null): bool {
+    $ownsState=$sharedState===null;
+    $state=$ownsState?p50_de_load_public_state():$sharedState;
     if(!$state)return false;
     $registry=p50_de_registry_profiles($profileId,1,0,false);
     if($registry){p50_de_collect_state_facts($registry[0]);p50_de_collect_curated_evidence_v221($registry[0]);}
@@ -1428,7 +1485,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
             'photoCandidate'=>(bool)$photoCandidate,
             'autoBioValue'=>$autoBioValue,
             'autoCategoryValue'=>$autoCategoryValue,
-            'autoScore'=>(bool)$trend['classable'],'scoreUpdated'=>$scoreUpdated,'previousScores'=>$previousScores,
+            'autoScore'=>(bool)$trend['classable'],'scoreStatus'=>$trend['classable']?'recalculated':'not_recalculated','scoresPreserved'=>!$trend['classable'],'scoreUpdated'=>$scoreUpdated,'previousScores'=>$previousScores,
             'trend'=>$trend,'algorithmVersion'=>'15C-v1','dataConfidence'=>(int)($trend['confidence']??0),'measuredCoverage'=>(float)($trend['coverage']??0),'measuredCriteria'=>(int)($trend['measuredCriteria']??0),
             'priorityWave'=>p50_de_is_priority_profile($profileId)?'V22-16':'',
         ];
@@ -1436,7 +1493,10 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null): bool {
         break;
     }
     unset($p);
-    if($changed){$state['dataEngineMeta']=['threshold'=>p50_de_threshold(),'lastPublishedAt'=>gmdate('c'),'version'=>22];p50_de_save_public_state($state,$userId);}
+    if($changed){
+        $state['dataEngineMeta']=['threshold'=>p50_de_threshold(),'lastPublishedAt'=>gmdate('c'),'version'=>22];
+        if($ownsState)p50_de_save_public_state($state,$userId);else $sharedState=$state;
+    }
     return $changed;
 }
 
@@ -1444,6 +1504,68 @@ function p50_de_publish_all(?string $userId=null): int {
     $profiles=p50_de_registry_profiles(null,1000,0,false);$count=0;
     foreach($profiles as $profile)if(p50_de_publish_profile((string)$profile['profile_id'],$userId))$count++;
     return $count;
+}
+
+function p50_de_rank_map(array $state,string $period): array {
+    $eligible=array_values(array_filter((array)($state['profiles']??[]),static fn($p)=>is_array($p)&&(!array_key_exists('alive',$p)||!empty($p['alive']))&&!empty($p['eligible'])&&($p['classable']??true)!==false));
+    usort($eligible,static function($a,$b)use($period){
+        $delta=(float)($b['scores'][$period]??0)<=>(float)($a['scores'][$period]??0);
+        return $delta!==0?$delta:strcmp((string)($a['name']??''),(string)($b['name']??''));
+    });
+    $out=[];foreach($eligible as $index=>$p)if(!empty($p['id']))$out[(string)$p['id']]=$index+1;
+    return $out;
+}
+
+function p50_de_sort_state_profiles(array &$state,string $period): void {
+    $ranks=p50_de_rank_map($state,$period);
+    usort($state['profiles'],static function($a,$b)use($ranks){
+        $ar=$ranks[(string)($a['id']??'')]??PHP_INT_MAX;$br=$ranks[(string)($b['id']??'')]??PHP_INT_MAX;
+        return $ar<=>$br ?: strcmp((string)($a['name']??''),(string)($b['name']??''));
+    });
+}
+
+/**
+ * Calcule tout l'état en mémoire et ne l'écrit qu'une fois. Toute exception avant
+ * cette écriture laisse app_state intact grâce à la transaction.
+ */
+function p50_de_publish_score_pipeline(?string $userId=null,string $period='2H'): array {
+    if(!in_array($period,['2H','24H','48H','7J','15J'],true))$period='2H';
+    $pdo=db();$pdo->beginTransaction();
+    try{
+        $state=p50_de_load_public_state_for_update();
+        if(!$state)throw new RuntimeException('État public introuvable.');
+        $beforeScores=[];foreach((array)($state['profiles']??[]) as $p)if(is_array($p)&&!empty($p['id']))$beforeScores[(string)$p['id']]=(array)($p['scores']??[]);
+        $beforeRanks=p50_de_rank_map($state,$period);
+        $published=0;$recalculated=0;$notRecalculated=0;
+        foreach(p50_de_registry_profiles(null,1000,0,false) as $registry){
+            $id=(string)$registry['profile_id'];
+            if(p50_de_publish_profile($id,$userId,$state))$published++;
+            $profile=null;foreach((array)($state['profiles']??[]) as $candidate)if((string)($candidate['id']??'')===$id){$profile=$candidate;break;}
+            if(($profile['dataEngine']['trend']['classable']??false)===true)$recalculated++;else $notRecalculated++;
+        }
+        p50_de_sort_state_profiles($state,$period);
+        $afterRanks=p50_de_rank_map($state,$period);$scoreChanges=[];$rankChanges=[];
+        foreach((array)($state['profiles']??[]) as $p){
+            $id=(string)($p['id']??'');if($id==='')continue;
+            $periodChanges=[];$new=(array)($p['scores']??[]);
+            foreach(['2H','24H','48H','7J','15J'] as $key){
+                $oldValue=(int)($beforeScores[$id][$key]??0);$newValue=(int)($new[$key]??0);
+                if($oldValue!==$newValue)$periodChanges[$key]=['before'=>$oldValue,'after'=>$newValue,'delta'=>$newValue-$oldValue];
+            }
+            if($periodChanges)$scoreChanges[]=['profileId'=>$id,'name'=>(string)($p['name']??$id),'periods'=>$periodChanges];
+            $oldRank=$beforeRanks[$id]??null;$newRank=$afterRanks[$id]??null;
+            if($oldRank!==$newRank)$rankChanges[]=['profileId'=>$id,'name'=>(string)($p['name']??$id),'before'=>$oldRank,'after'=>$newRank];
+        }
+        $metricSummary=p50_de_usable_metric_summary();
+        $state['dataEngineMeta']['pipeline']=['publishedAt'=>gmdate('c'),'period'=>$period,'usableMetrics'=>$metricSummary['usableMetrics'],'recalculatedProfiles'=>$recalculated,'scoresChanged'=>count($scoreChanges),'ranksChanged'=>count($rankChanges)];
+        $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
+        p50_de_save_public_state($state,$userId,false);
+        $pdo->commit();
+        return ['publishedProfiles'=>$published,'usableMetrics'=>$metricSummary['usableMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'recalculatedProfiles'=>$recalculated,'notRecalculatedProfiles'=>$notRecalculated,'scoresChanged'=>count($scoreChanges),'ranksChanged'=>count($rankChanges),'scoreChanges'=>array_slice($scoreChanges,0,50),'rankChanges'=>array_slice($rankChanges,0,50)];
+    }catch(Throwable $e){
+        if($pdo->inTransaction())$pdo->rollBack();
+        throw $e;
+    }
 }
 
 
@@ -1455,6 +1577,11 @@ function p50_de_add_activity(string $profileId,string $platform,string $type,str
         VALUES(?,?,?,?,?,?,?,?,?,?,NOW())
         ON DUPLICATE KEY UPDATE title=VALUES(title),published_at=VALUES(published_at),metrics=VALUES(metrics),confidence=GREATEST(confidence,VALUES(confidence)),status=IF(GREATEST(confidence,VALUES(confidence))>=?,'verified',status),collected_at=NOW()");
     $stmt->execute([$profileId,$platform,$type,$safeTitle,$url,p50_de_hash($url),$publishedAt,json_encode($metrics,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),max(0,min(100,$confidence)),$status,p50_de_threshold()]);
+    $usable=p50_de_normalize_score_metrics($metrics);
+    if($usable){
+        db()->prepare('INSERT INTO p50_activity_metric_history(profile_id,platform,url_hash,metrics,usable_metric_count,captured_at) VALUES(?,?,?,?,?,NOW())')
+            ->execute([$profileId,$platform,p50_de_hash($url),json_encode($usable,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),count($usable)]);
+    }
 }
 
 function p50_de_youtube_channel_id(string $url): ?string {
