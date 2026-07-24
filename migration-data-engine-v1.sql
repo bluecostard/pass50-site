@@ -152,6 +152,18 @@ CREATE TABLE IF NOT EXISTS p50_activity_events (
   INDEX idx_p50_activity_public (profile_id,status,confidence,published_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS p50_activity_metric_history (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  profile_id VARCHAR(100) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  url_hash CHAR(64) CHARACTER SET ascii NOT NULL,
+  metrics LONGTEXT NOT NULL,
+  usable_metric_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  captured_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_p50_metric_history_profile_date (profile_id,captured_at),
+  INDEX idx_p50_metric_history_url_date (profile_id,url_hash,captured_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS p50_engine_settings (
   setting_key VARCHAR(100) PRIMARY KEY,
   setting_value LONGTEXT NOT NULL,
