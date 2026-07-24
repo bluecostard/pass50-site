@@ -1,4 +1,5 @@
 (function(){
+  window.majPass50Running=Boolean(window.majPass50Running);
   const fallbackRenderAdminPane=renderAdminPane;
   const DE={hub:null,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
 
@@ -89,7 +90,10 @@
   }
   async function deRunMajPass50(){
     if(DE.majRunning)return;
+    window.majPass50Running=true;
+    if(typeof CLOUD==='object'&&CLOUD?.syncTimer){clearTimeout(CLOUD.syncTimer);CLOUD.syncTimer=null;}
     DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set();DE.majStartedAt=new Date().toISOString();DE.majLastResult=null;
+    let completedSuccessfully=false;
     DE.majStage='1/7 · Synchronisation des FI';DE.majMessage='Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
     let totals={found:0,verified:0,usableMetrics:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0};
     try{
@@ -99,7 +103,7 @@
       DE.majStage='2/7 · Collecte et conservation';DE.majMessage='Le moteur parcourt les FI par lots de 5…';deDrawMajProgress();
 
       while(!DE.majStopRequested&&DE.majSeen.size<DE.majTarget){
-        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,publishVerified:true,excludeIds:[...DE.majSeen]}});
+        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,excludeIds:[...DE.majSeen]}});
         const ids=(data.processedIds||[]).map(String);
         if(!ids.length)break;
         const before=DE.majSeen.size;ids.forEach(id=>DE.majSeen.add(id));
@@ -134,6 +138,7 @@
       const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
       DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=rankingChanged?'MAJ PASS50 terminée · classement actualisé':'MAJ PASS50 terminée';DE.majMessage=rankingChanged?`${totals.found} donnée(s) trouvée(s) · ${totals.usableMetrics} métrique(s) exploitable(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s) · classement actualisé.`:`Collecte terminée, mais aucun score ni rang n'a changé. ${totals.found} donnée(s) trouvée(s) · ${totals.usableMetrics} métrique(s) exploitable(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s).`;
       window.PASS50_MAJ_STATUS=result;
+      completedSuccessfully=true;
       toast(`MAJ PASS50 terminée · ${result.processed} FI traitées`);
     }catch(err){
       console.error('MAJ PASS50',err);
@@ -141,6 +146,8 @@
       DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='Erreur pendant la MAJ';DE.majMessage=result.error;window.PASS50_MAJ_STATUS=result;toast(result.error||'MAJ PASS50 impossible');
     }finally{
       DE.majRunning=false;DE.majStopRequested=false;
+      window.majPass50Running=false;
+      if(completedSuccessfully&&typeof scheduleCloudSync==='function')scheduleCloudSync();
       if(ui.adminTab==='update')deRenderMajPass50($('#adminPane'));
     }
   }
@@ -186,13 +193,13 @@
   async function deAction(button,work,label){const old=button?.textContent;if(button){button.disabled=true;button.textContent=label||'Traitement…';}try{return await work();}finally{if(button){button.disabled=false;button.textContent=old;}}}
   async function deSync(btn){await deAction(btn,async()=>{const data=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();render();toast(`${data.syncedProfiles} profils synchronisés`);},'Synchronisation…');}
   async function deCollect(btn,profileId=''){
-    await deAction(btn,async()=>{const data=await apiFetch('data-collect.php',{method:'POST',body:{profileId,limit:profileId?1:5,deep:true,publishVerified:true}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.processed} profil(s) enrichi(s) · ${data.found} donnée(s) trouvée(s) · ${data.verified} vérifiée(s)`);},'Enrichissement…');
+    await deAction(btn,async()=>{const data=await apiFetch('data-collect.php',{method:'POST',body:{profileId,limit:profileId?1:5,deep:true}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.processed} profil(s) enrichi(s) · ${data.found} donnée(s) trouvée(s) · ${data.verified} vérifiée(s)`);},'Enrichissement…');
   }
   async function deAutoEnrich(btn){
     if(DE.autoRunning)return;DE.autoRunning=true;DE.stopRequested=false;DE.autoSeen=new Set();DE.autoTarget=Number(DE.hub?.kpis?.profiles||0);DE.autoMessage='Démarrage du moteur…';deSetAutoUi();deAutoProgress();
     try{
       while(!DE.stopRequested&&DE.autoSeen.size<DE.autoTarget){
-        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,publishVerified:true,excludeIds:[...DE.autoSeen]}});
+        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,excludeIds:[...DE.autoSeen]}});
         const ids=(data.processedIds||[]).map(String);if(!ids.length){
           DE.autoMessage=DE.autoSeen.size>=DE.autoTarget?'Tous les profils ont été parcourus.':'Aucun autre profil disponible dans le registre actif.';
           break;

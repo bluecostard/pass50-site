@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 33290)
+Total output lines: 754
+
 <!doctype html>
 <html lang="fr">
 <head>
@@ -299,99 +302,7 @@ function migrateDb(){
   db.version=Math.max(Number(db.version||1),5);
 }
 let session={userId:sessionStorage.getItem('pass50_session')||null};let ui={period:'2H',region:'ALL',adminTab:'signals'};
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-function normalizeLiveStreams(){
-  if(!Array.isArray(db.liveStreams))db.liveStreams=[];
-  const now=Date.now();
-  db.liveStreams=db.liveStreams.filter(x=>{
-    if(!x||x.status!=='live'||!x.profileId||!/^https?:\/\//i.test(String(x.url||'')))return false;
-    const end=x.endsAt?new Date(x.endsAt).getTime():0;
-    const rawStart=x.startedAt||x.detectedAt||x.createdAt||x.updatedAt||'';
-    const start=rawStart?new Date(rawStart).getTime():0;
-    if(Number.isFinite(end)&&end>0&&end<=now)return false;
-    if(!Number.isFinite(start)||start<=0)return false;
-    if(start>now+300000||now-start>8*3600000)return false;
-    return true;
-  });
-  db.profiles.forEach(p=>{
-    p.badges=(p.badges||[]).filter(b=>b!=='LIVE');
-    if(db.liveStreams.some(x=>x.profileId===p.id&&x.status==='live'))p.badges.unshift('LIVE');
-  });
-}
-function save(){normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));if(window.__pass50CloudReady)scheduleCloudSync();}
-migrateDb();applyPass50V6Patch();save();
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),2200)}
-function currentUser(){return db.users.find(u=>u.id===session.userId)||null}
-function userPrefs(){const u=currentUser();if(!u)return null;u.favorites=u.favorites||[];u.following=u.following||[];u.followAlerts=u.followAlerts||{};u.notificationMode=u.notificationMode||'daily';u.soundEnabled=Boolean(u.soundEnabled);return u}
-function score(p){return Number(p.scores[ui.period]||0)}
-function regionEligible(p){return ui.region==='ALL'||p.region===ui.region||p.region==='BOTH'}
-function activeLives(){normalizeLiveStreams();return db.liveStreams.filter(x=>x.status==='live').sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt));}
-function renderLiveHeader(){const lives=activeLives(),count=$('#liveCount');if(count)count.textContent=lives.length?`(${lives.length})`:'';}
-function liveAvatarHtml(p,live){
-  if(p)return avatarHtml(p,'live-avatar');
-  const label=String(live?.profileId||'LIVE').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase()||'LV';
-  return `<div class="avatar live-avatar"><span>${safeAttr(label)}</span></div>`;
-}
-function liveWatchUrl(live){
-  const url=String(live?.url||'').trim();
-  if(!/^https?:\/\//i.test(url))return '';
-  try{
-    const parsed=new URL(url),host=parsed.hostname.toLowerCase();
-    if((host==='youtube.com'||host.endsWith('.youtube.com')||host==='youtu.be')&&!parsed.pathname)return '';
-    return parsed.href;
-  }catch{return ''}
-}
-function openLives(){
-  const lives=activeLives();
-  $('#liveBody').innerHTML=lives.length?`<div class="live-list">${lives.map(l=>{
-    const p=profile(l.profileId),url=liveWatchUrl(l),viewers=Number(l.viewers||0);
-    const action=url?`<a class="btn primary live-watch-link" href="${safeAttr(url)}" target="_blank" rel="noopener noreferrer">REGARDER SUR ${safeAttr(l.platform||'LA PLATEFORME')} →</a>`:`<span class="btn disabled" aria-disabled="true">LIEN DU LIVE INDISPONIBLE</span>`;
-    return `<article class="live-card">${liveAvatarHtml(p,l)}<div><strong>${safeAttr(p?.name||l.profileName||'Influenceur')}</strong><div class="live-platform"><span class="live-pulse"></span>EN DIRECT SUR ${safeAttr(l.platform||'UNE PLATEFORME')}</div><div class="muted">${safeAttr(l.title||'Direct en cours')}${viewers?` · ${viewers.toLocaleString('fr-FR')} spectateur(s)`:''}</div></div>${action}</article>`;
-  }).join('')}</div>`:`<div class="live-empty"><strong>Aucun direct détecté pour le moment.</strong><div style="margin-top:6px">Cette fenêtre se met à jour automatiquement.</div></div>`;
-  open('liveModal');
-}
-async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));render();}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
-function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false;}
-function ranking(){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));}
-function completeRanking(){
-  const visible=db.profiles.filter(p=>p.alive&&regionEligible(p));
-  const classable=visible.filter(isClassableProfile).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));
-  const pending=visible.filter(p=>!isClassableProfile(p)).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
-  return [...classable,...pending];
-}
-function coulesCandidates(){
-  if(!CLOUD?.enabled||!Array.isArray(CLOUD.coulesCandidates))return [];
-  return CLOUD.coulesCandidates.map(item=>{const p=profile(item.profileId);return p?{...p,decline:Number(item.decline||0),coulesCurrentAverage:item.currentAverage,coulesPreviousAverage:item.previousAverage,coulesPreviousPeak:item.previousPeak,coulesCurrentRank:item.currentRank}:null}).filter(Boolean).slice(0,2);
-}
-function coulesPollKey(){return coulesCandidates().map(p=>p.id).sort().join('__')||'aucun_duel'}
-function localCoulesVotes(key=coulesPollKey()){db.coulesPoll.votesByPoll[key]=db.coulesPoll.votesByPoll[key]||{};return db.coulesPoll.votesByPoll[key]}
-function coulesVoteCounts(){const key=coulesPollKey(),candidates=coulesCandidates(),counts=Object.fromEntries(candidates.map(p=>[p.id,0]));if(CLOUD?.enabled&&CLOUD.coulesTotals?.[key])Object.assign(counts,CLOUD.coulesTotals[key]);else Object.values(localCoulesVotes(key)).forEach(id=>{if(id in counts)counts[id]++});return counts}
-function coulesMyVote(){const key=coulesPollKey(),u=currentUser();if(!u)return null;if(CLOUD?.enabled&&CLOUD.coulesMyVotes?.[key])return CLOUD.coulesMyVotes[key];return localCoulesVotes(key)[u.id]||null}
-function coulesResults(){const candidates=coulesCandidates(),counts=coulesVoteCounts(),total=Object.values(counts).reduce((a,b)=>a+Number(b||0),0),shares={};candidates.forEach(p=>shares[p.id]=total?Math.round((Number(counts[p.id]||0)/total)*100):0);return {candidates,counts,total,shares,key:coulesPollKey()}}
-function coulesEvolution(id,shares,key){const prev=db.coulesPoll.previousSharesByPoll[key]?.[id];if(prev===undefined)return '<span class="muted">Nouveau duel</span>';const d=shares[id]-prev;return d>0?`<span class="up">↗ +${d} pt${d>1?'s':''}</span>`:d<0?`<span class="down">↘ ${d} pt${d<-1?'s':''}</span>`:'<span class="flat">— stable</span>'}
-function snapshotCoulesShares(){const r=coulesResults();db.coulesPoll.previousSharesByPoll[r.key]={...r.shares}}
-async function voteCoule(profileId){if(!requireAuth())return;const r=coulesResults(),u=currentUser();if(!r.candidates.some(p=>p.id===profileId))return;const previous=coulesMyVote();if(previous===profileId)return toast('Votre vote est déjà enregistré');snapshotCoulesShares();localCoulesVotes(r.key)[u.id]=profileId;save();renderSunk();toast(previous?'Vote modifié':'Vote enregistré');if(CLOUD.enabled){try{await castCloudCoulesVote(r.key,profileId);await loadCloudCoulesPoll();renderSunk()}catch(err){console.warn(err);toast('Vote sauvegardé localement')}}}
-function formatTrendScore(s){return `${Math.round(Number(s)||0)}/100`}
-function arrow(p){return p.delta>0?`<span class="motion-up">↑</span> +${p.delta}`:p.delta<0?`<span class="motion-down">↓</span> ${p.delta}`:'—';}
-function arrowClass(p){return p.delta>0?'up':p.delta<0?'down':'flat'}
-function badgeHtml(b){const cls={VIRAL:'viral',HOT:'hot',LIVE:'live-badge',NEW:'new',RECORD:'record',UP:'hot'}[b]||'new';const icon={VIRAL:'✦',HOT:'🔥',LIVE:'●',NEW:'✦',RECORD:'★',UP:'↗'}[b]||'✦';return `<span class="badge ${cls}"><span class="badge-icon">${icon}</span> ${b}</span>`}
-function profile(id){return db.profiles.find(p=>p.id===id)}
-function primaryEvent(id){return (db.events||[]).find(e=>e.profileId===id)||null}
-function safeAttr(v){return String(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
-function publicPhoto(p){return p&&p.photoStatus==='validated'&&(p.photoUrl||p.photoCandidateUrl)?(p.photoUrl||p.photoCandidateUrl):''}
-function candidatePhoto(p){return p?(p.photoUrl||p.photoCandidateUrl||''):''}
-function avatarHtml(p,extra=''){const url=publicPhoto(p),position=p.photoPosition||'50% 50%';return `<div class="avatar ${extra}"><span>${p.initials}</span>${url?`<img src="${safeAttr(url)}" alt="${safeAttr(p.name)}" loading="lazy" referrerpolicy="no-referrer" style="object-position:${safeAttr(position)}" onerror="this.style.display='none'">`:''}</div>`}
-function publicCover(e){return e&&e.coverStatus==='validated'&&(e.coverUrl||e.coverCandidateUrl)?(e.coverUrl||e.coverCandidateUrl):''}
-function triggerThumbHtml(e){const url=publicCover(e);return `<div class="trigger-thumb"><span>${e.icon||'⚡'}</span>${url?`<img src="${safeAttr(url)}" alt="Couverture" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:''}</div>`}
-function mediaStatusText(s){return ({validated:'VALIDÉ',pending:'À VALIDER',rejected:'REJETÉ',missing:'MANQUANT'})[s]||'MANQUANT'}
-function youtubeThumb(url){try{const u=new URL(url);let id='';if(u.hostname.includes('youtu.be'))id=u.pathname.slice(1);else if(u.hostname.includes('youtube.com'))id=u.searchParams.get('v')||u.pathname.match(/(?:shorts|embed)\/([^/?]+)/)?.[1]||'';return id?`https://img.youtube.com/vi/${id}/hqdefault.jpg`:''}catch{return ''}}
-function compressImage(file,kind='profile'){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=reject;reader.onload=()=>{const img=new Image();img.onerror=reject;img.onload=()=>{const maxW=kind==='event'?960:560,maxH=kind==='event'?540:700,ratio=Math.min(maxW/img.width,maxH/img.height,1),canvas=document.createElement('canvas');canvas.width=Math.round(img.width*ratio);canvas.height=Math.round(img.height*ratio);canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',.82))};img.src=reader.result};reader.readAsDataURL(file)})}
-function eventHtml(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigger-empty"><strong>Élément déclencheur non encore validé</strong><div style="margin-top:5px">Le profil est classé sur la base de plusieurs signaux, mais aucun contenu principal n’a encore été sélectionné.</div></div>`;return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${triggerThumbHtml(e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${e.platforms.join(' · ')} · ${e.publishedLabel} · Confiance ${e.confidence}</div><div class="trigger-reason">${e.reason}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric}</span><a class="btn small primary" href="${e.url}" target="_blank" rel="noopener">Voir l’élément original ↗</a></div></section>`}
-
-function ageText(p){if(p.agePublic===false)return'Masqué';const confidence=Number(p?.quality?.birth||0),verifiedFacts=Array.isArray(p?.dataEngine?.verifiedFacts)?p.dataEngine.verifiedFacts:[],confirmed=p.ageStatus==='confirmed'||confidence>=90||verifiedFacts.includes('birth_date');if(confirmed&&p.birthDate){const b=new Date(p.birthDate+'T00:00:00'),n=new Date();if(!Number.isNaN(b.getTime())){let age=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))age--;return `${age} ans`;}}if(p.birthYear){const a=new Date().getFullYear()-Number(p.birthYear);return confirmed?`${a} ans`:`≈ ${a-1}–${a} ans`;}return'Non confirmé'}
-function render(){normalizeLiveStreams();renderLiveHeader();renderHero();renderTop10();renderContent();renderSunk();renderHeader();$('#lastPublished').textContent='Mise à jour : '+new Date(db.publishedAt).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});}
-function renderHeader(){const u=currentUser();$('#accountBtn').textContent=u?'Mon espace':'Se connecter';const unread=u?db.notifications.filter(n=>n.userId===u.id&&!n.read).length:0;$('#unreadCount').textContent=unread?`(${unread})`:'';}
-function heroCard(p,index){const u=userPrefs(),fav=u?.favorites.includes(p.id),fol=u?.following.includes(p.id);return `<article class="rank-card ${['first','second','third'][index]}" data-profile="${p.id}"><div class="rank-num">${index+1}</div>${avatarHtml(p)}<div style="min-height:26px">${p.badges.slice(0,2).map(badgeHtml).join(' ')}</div><div class="rank-name">${p.name.toUpperCase()}</div><div class="handle">${p.handle}</div><div class="score-row"><div class="score-block"><span class="score-label">TREND SCORE <span class="score-info" tabindex="0">i</span></span><div class="score score-animate" data-score="${score(p)}">${formatTrendScore(score(p))}</div></div><div class="${arrowClass(p)}">${arrow(p)}</div></div><div class="card-actions"><button class="btn fav ${fav?'on':''}" data-id="${p.id}">${fav?'★ Favori':'☆ Favori'}</button><button class="btn follow ${fol?'on':''}" data-id="${p.id}">${fol?'Ne plus suivre':'＋ Suivre'}</button></div></article>`}
+const $=…3290 tokens truncated…ri'}</button><button class="btn follow ${fol?'on':''}" data-id="${p.id}">${fol?'Ne plus suivre':'＋ Suivre'}</button></div></article>`}
 function publishedTime(){return new Date(db.publishedAt||Date.now()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
 function renderHero(){
   const r=ranking(),top=r.slice(0,3),total=top.reduce((a,p)=>a+score(p),0);
@@ -631,6 +542,7 @@ const CLOUD={
   baseUrl:String(apiConfig.baseUrl||'').replace(/\/$/,''),
   token:localStorage.getItem('pass50_api_token')||'',
   syncTimer:null,
+  stateRevision:0,
   ready:false,
   coulesTotals:{},
   coulesMyVotes:{},
@@ -651,7 +563,7 @@ async function apiFetch(path,{method='GET',body=null,formData=null,auth=true}={}
 }
 function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};return copy;}
 function scheduleCloudSync(){
-  if(!CLOUD.enabled||!CLOUD.ready)return;
+  if(window.majPass50Running||!CLOUD.enabled||!CLOUD.ready)return;
   clearTimeout(CLOUD.syncTimer);
   CLOUD.syncTimer=setTimeout(async()=>{try{await Promise.all([syncCloudPrefs(),syncCloudState()]);}catch(err){console.warn('Cloud sync',err)}},500);
 }
@@ -660,8 +572,11 @@ async function syncCloudPrefs(){
   await apiFetch('preferences.php',{method:'POST',body:{favorites:u.favorites||[],following:u.following||[],followAlerts:u.followAlerts||{},notificationMode:u.notificationMode||'daily'}});
 }
 async function syncCloudState(){
+  if(window.majPass50Running)return {ok:true,skipped:true,reason:'maj_pass50_running'};
   const u=currentUser();if(!u||!['owner','admin'].includes(u.role)||!CLOUD.enabled||!CLOUD.token)return;
-  await apiFetch('state.php',{method:'POST',body:{data:cloudSafeState()}});
+  const result=await apiFetch('state.php',{method:'POST',body:{data:cloudSafeState(),baseRevision:Number(CLOUD.stateRevision||0)}});
+  if(Number.isFinite(Number(result?.stateRevision)))CLOUD.stateRevision=Number(result.stateRevision);
+  return result;
 }
 function p50RecoverableDirectLink(platform,url){
   try{
@@ -687,6 +602,7 @@ async function loadCloudState(){
   const manualPhotos=Object.fromEntries((db.profiles||[]).filter(p=>p.photoManualLocked).map(p=>[p.id,{photoUrl:p.photoUrl||'',photoCandidateUrl:p.photoCandidateUrl||'',photoStatus:p.photoStatus||'pending',photoSource:p.photoSource||'Ajout manuel',photoNote:p.photoNote||'',photoPosition:p.photoPosition||'50% 50%',photoManualLocked:true,photoManualUpdatedAt:p.photoManualUpdatedAt||new Date().toISOString()}]));
   const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p.birthManualLocked&&p.birthDate).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(p.birthDate.slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...(p.quality||{}),birth:100},dataEngine:{...(p.dataEngine||{}),verifiedFacts:[...new Set([...(p.dataEngine?.verifiedFacts||[]),'birth_date'])]}}]));
   const data=await apiFetch('state.php',{auth:false});
+  if(Number.isFinite(Number(data?.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
   if(data?.data){const cloud=data.data;db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{if(manualPhotos[p.id])Object.assign(p,manualPhotos[p.id]);if(manualBirths[p.id])Object.assign(p,manualBirths[p.id]);if(manualLinks[p.id]){p.links={...(p.links||{}),...manualLinks[p.id].links};p.linkChecks={...(p.linkChecks||{}),...manualLinks[p.id].linkChecks};}});localStorage.setItem(APP_KEY,JSON.stringify(db));}
 }
 function hydrateApiUser(apiUser,notes=[]){

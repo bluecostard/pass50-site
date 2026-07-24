@@ -217,7 +217,8 @@ function p50_de_load_public_state(): array {
     return is_array($state) ? $state : [];
 }
 
-function p50_de_save_public_state(array $state, ?string $userId = null): void {
+function p50_de_save_public_state(array $state, ?string $userId = null, bool $incrementRevision = true): void {
+    if($incrementRevision)$state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
     $stmt = db()->prepare("INSERT INTO app_state(id,data,updated_by) VALUES('public',?,?) ON DUPLICATE KEY UPDATE data=VALUES(data),updated_by=VALUES(updated_by),updated_at=NOW()");
     $stmt->execute([json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $userId]);
 }
@@ -1557,7 +1558,8 @@ function p50_de_publish_score_pipeline(?string $userId=null,string $period='2H')
         }
         $metricSummary=p50_de_usable_metric_summary();
         $state['dataEngineMeta']['pipeline']=['publishedAt'=>gmdate('c'),'period'=>$period,'usableMetrics'=>$metricSummary['usableMetrics'],'recalculatedProfiles'=>$recalculated,'scoresChanged'=>count($scoreChanges),'ranksChanged'=>count($rankChanges)];
-        p50_de_save_public_state($state,$userId);
+        $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
+        p50_de_save_public_state($state,$userId,false);
         $pdo->commit();
         return ['publishedProfiles'=>$published,'usableMetrics'=>$metricSummary['usableMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'recalculatedProfiles'=>$recalculated,'notRecalculatedProfiles'=>$notRecalculated,'scoresChanged'=>count($scoreChanges),'ranksChanged'=>count($rankChanges),'scoreChanges'=>array_slice($scoreChanges,0,50),'rankChanges'=>array_slice($rankChanges,0,50)];
     }catch(Throwable $e){

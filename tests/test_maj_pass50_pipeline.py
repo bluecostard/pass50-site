@@ -11,6 +11,8 @@ CORE = (ROOT / "api/data-engine-core.php").read_text(encoding="utf-8")
 COLLECT = (ROOT / "api/data-collect.php").read_text(encoding="utf-8")
 PUBLISH = (ROOT / "api/data-publish.php").read_text(encoding="utf-8")
 UI = (ROOT / "data-engine-ui.js").read_text(encoding="utf-8")
+INDEX = (ROOT / "index.html").read_text(encoding="utf-8")
+STATE_API = (ROOT / "api/state.php").read_text(encoding="utf-8")
 PERIODS = ("2H", "24H", "48H", "7J", "15J")
 
 
@@ -112,6 +114,14 @@ def sample_state():
     }
 
 
+def accept_state_write(current_revision, base_revision, current_state, incoming_state):
+    if base_revision < current_revision:
+        return current_state, current_revision, False
+    if incoming_state == current_state:
+        return current_state, current_revision, True
+    return incoming_state, current_revision + 1, True
+
+
 class PipelineBehaviorTests(unittest.TestCase):
     def test_collection_without_metrics_preserves_scores_and_ranking(self):
         original = sample_state()
@@ -157,6 +167,33 @@ class PipelineSourceContractTests(unittest.TestCase):
             self.assertIn(counter, UI)
         self.assertIn("Collecte terminée, mais aucun score ni rang n'a changé.", UI)
         self.assertIn("totals.scoresChanged>0||totals.ranksChanged>0", UI)
+
+    def test_pending_frontend_sync_is_cancelled_before_update(self):
+        start = UI.index("async function deRunMajPass50")
+        collect = UI.index("data-hub.php", start)
+        prefix = UI[start:collect]
+        self.assertIn("window.majPass50Running=true", prefix)
+        self.assertIn("clearTimeout(CLOUD.syncTimer)", prefix)
+        self.assertIn("CLOUD.syncTimer=null", prefix)
+
+    def test_frontend_cloud_writes_are_blocked_during_update(self):
+        self.assertIn("if(window.majPass50Running||!CLOUD.enabled||!CLOUD.ready)return;", INDEX)
+        self.assertIn("if(window.majPass50Running)return {ok:true,skipped:true", INDEX)
+        self.assertIn("window.majPass50Running=false", UI)
+        self.assertNotIn("publishVerified:true", UI)
+
+    def test_stale_frontend_state_cannot_overwrite_newer_state(self):
+        current = {"profiles": [{"id": "a", "scores": {"2H": 80}}]}
+        stale = {"profiles": [{"id": "a", "scores": {"2H": 20}}]}
+        final, revision, accepted = accept_state_write(4, 3, current, stale)
+        self.assertFalse(accepted)
+        self.assertEqual(revision, 4)
+        self.assertEqual(final, current)
+        self.assertIn("$baseRevision<$currentRevision", STATE_API)
+        self.assertIn("'code'=>'stale_state'", STATE_API)
+        self.assertIn("LIMIT 1 FOR UPDATE", STATE_API)
+        self.assertIn("bool $incrementRevision = true", CORE)
+        self.assertIn("p50_de_save_public_state($state,$userId,false)", CORE)
 
 
 if __name__ == "__main__":
