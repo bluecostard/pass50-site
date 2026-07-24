@@ -1,0 +1,86 @@
+-- PASS50 Metrics Collector V1
+CREATE TABLE IF NOT EXISTS p50_metric_accounts (
+  profile_id VARCHAR(100) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  profile_url TEXT NOT NULL,
+  external_id VARCHAR(191) NULL,
+  username VARCHAR(191) NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'pending',
+  last_error TEXT NULL,
+  last_resolved_at DATETIME NULL,
+  last_collected_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY(profile_id, platform),
+  INDEX idx_p50_metric_accounts_status(platform,status,last_collected_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS p50_metric_snapshots (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  profile_id VARCHAR(100) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  external_account_id VARCHAR(191) NULL,
+  content_id VARCHAR(191) NOT NULL DEFAULT '',
+  content_url TEXT NULL,
+  content_title VARCHAR(500) NULL,
+  published_at DATETIME NULL,
+  captured_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  followers BIGINT NULL,
+  total_views BIGINT NULL,
+  content_count BIGINT NULL,
+  views BIGINT NULL,
+  likes BIGINT NULL,
+  comments BIGINT NULL,
+  shares BIGINT NULL,
+  saves BIGINT NULL,
+  reposts BIGINT NULL,
+  quotes BIGINT NULL,
+  source_reliability DECIMAL(5,4) NOT NULL DEFAULT 0.9000,
+  raw_payload LONGTEXT NULL,
+  UNIQUE KEY uq_p50_snapshot(profile_id,platform,content_id,captured_at),
+  INDEX idx_p50_snapshot_profile_time(profile_id,captured_at),
+  INDEX idx_p50_snapshot_content_time(profile_id,platform,content_id,captured_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS p50_metric_criteria (
+  profile_id VARCHAR(100) NOT NULL,
+  period_key VARCHAR(16) NOT NULL,
+  calculated_at DATETIME NOT NULL,
+  c1 DECIMAL(7,2) NULL,
+  c2 DECIMAL(7,2) NULL,
+  c3 DECIMAL(7,2) NULL,
+  c4 DECIMAL(7,2) NULL,
+  c5 DECIMAL(7,2) NULL,
+  c6 DECIMAL(7,2) NULL,
+  c7 DECIMAL(7,2) NULL,
+  c8 DECIMAL(7,2) NULL,
+  c9 DECIMAL(7,2) NULL,
+  c10 DECIMAL(7,2) NULL,
+  c11 DECIMAL(7,2) NULL,
+  c12 DECIMAL(7,2) NULL,
+  c13 DECIMAL(7,2) NULL,
+  c14 DECIMAL(7,2) NULL,
+  c15 DECIMAL(7,2) NULL,
+  confidence DECIMAL(7,2) NOT NULL DEFAULT 0,
+  coverage DECIMAL(7,2) NOT NULL DEFAULT 0,
+  penalties DECIMAL(7,2) NOT NULL DEFAULT 0,
+  score DECIMAL(7,2) NOT NULL DEFAULT 0,
+  details LONGTEXT NOT NULL,
+  PRIMARY KEY(profile_id,period_key),
+  INDEX idx_p50_criteria_period_score(period_key,score)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS p50_metric_runs (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  run_uuid CHAR(36) NOT NULL,
+  profile_id VARCHAR(100) NULL,
+  platform VARCHAR(32) NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'running',
+  collected_accounts INT UNSIGNED NOT NULL DEFAULT 0,
+  collected_contents INT UNSIGNED NOT NULL DEFAULT 0,
+  error_message TEXT NULL,
+  started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  finished_at DATETIME NULL,
+  UNIQUE KEY uq_p50_metric_run_uuid(run_uuid),
+  INDEX idx_p50_metric_run_time(status,started_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
