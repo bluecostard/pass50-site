@@ -148,6 +148,7 @@ function p50_de_ensure_schema(): void {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
     ];
     foreach ($sql as $statement) db()->exec($statement);
+    db()->exec("CREATE TABLE IF NOT EXISTS p50_algorithm_scores (profile_id VARCHAR(100) NOT NULL, period_key VARCHAR(16) NOT NULL, score DECIMAL(6,2) NOT NULL DEFAULT 0, confidence DECIMAL(6,2) NOT NULL DEFAULT 0, coverage DECIMAL(6,2) NOT NULL DEFAULT 0, criteria_json LONGTEXT NOT NULL, raw_json LONGTEXT NOT NULL, calculated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(profile_id,period_key), INDEX idx_p50_algorithm_period_score(period_key,score)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $stmt = db()->prepare("INSERT INTO p50_engine_settings(setting_key,setting_value) VALUES('confidence_threshold',?) ON DUPLICATE KEY UPDATE setting_value=setting_value");
     $stmt->execute([(string)p50_de_threshold()]);
     $done = true;
@@ -197,6 +198,7 @@ function p50_de_profile_state_map(array $state): array {
 
 function p50_de_sync_registry_from_state(): int {
     p50_de_ensure_schema();
+    if(function_exists('p50_s12_ensure_profiles'))p50_s12_ensure_profiles(null);
     $state = p50_de_load_public_state();
     $count = 0;
     $sql = "INSERT INTO p50_profile_registry(profile_id,public_name,handle,region,category,alive,eligible,state_hash,last_state_sync_at)
@@ -717,3 +719,52 @@ function p50_de_hub_payload(): array {
     ];
     return ['ok'=>true,'threshold'=>$threshold,'kpis'=>$kpis,'profiles'=>$profiles,'generatedAt'=>gmdate('c')];
 }
+
+/* BEGIN PASS50 STEP 1+2 SERVER V12 */
+function p50_s12_candidates(): array { return [['id'=>'census-african-ryou','name'=>'African Ryou','handle'=>'@african_ryou','region'=>'CI','category'=>'Humour / Culture ivoirienne / Lifestyle / Fitness','platforms'=>['Instagram', 'TikTok', 'YouTube', 'Snapchat'],'knownAlias'=>'@african_ryou','censusStatus'=>'Recensé confirmé — intégration prioritaire'],['id'=>'census-samuella-kouassi','name'=>'Samuella Kouassi','handle'=>'@samuellakouassiofficiel','region'=>'CI','category'=>'Lifestyle / Mode / Divertissement','platforms'=>['Instagram', 'TikTok', 'YouTube', 'Facebook'],'knownAlias'=>'@samuellakouassiofficiel','censusStatus'=>'Recensé confirmé — intégration prioritaire'],['id'=>'census-nadiani','name'=>'Nadiani','handle'=>'@officialnad_','region'=>'BOTH','category'=>'Mode / Beauté / Lifestyle / Entrepreneuriat','platforms'=>['Instagram', 'TikTok', 'YouTube'],'knownAlias'=>'Imane Nadiani Touré / @officialnad_','censusStatus'=>'Recensé confirmé — intégration prioritaire'],['id'=>'census-investisseur-africain','name'=>'L’Investisseur Africain','handle'=>'@sbragbo','region'=>'BOTH','category'=>'Business / Investissement / Entrepreneuriat / Diaspora','platforms'=>['YouTube', 'Facebook', 'LinkedIn', 'Instagram'],'knownAlias'=>'Jean-Yves Bragbo / Jean Yves Bragbo / @sbragbo','censusStatus'=>'Recensé confirmé — intégration prioritaire'],['id'=>'census-laura-ziehi','name'=>'Laura Ziehi','handle'=>'@laura.ziehi','region'=>'BOTH','category'=>'Lifestyle / Mode / Divertissement','platforms'=>['Instagram', 'TikTok', 'Snapchat'],'knownAlias'=>'@laura.ziehi','censusStatus'=>'Recensé confirmé — réseaux à compléter'],['id'=>'census-aya-robert','name'=>'Aya Robert','handle'=>'@aya_robert','region'=>'CI','category'=>'TikTok / Lives / Débats / Divertissement','platforms'=>['TikTok', 'Facebook'],'knownAlias'=>'Aya Robert','censusStatus'=>'À vérifier — compte officiel actuel'],['id'=>'census-smookii-gamer','name'=>'SmOokii Gamer','handle'=>'@smookii_gamer','region'=>'CI','category'=>'Gaming / Humour / Divertissement','platforms'=>['TikTok', 'Facebook', 'Instagram', 'YouTube'],'knownAlias'=>'Smooki Gamer / SmOokii Gamer / @smookii_gamer','censusStatus'=>'Recensé confirmé — réseaux à compléter']]; }
+
+function p50_s12_profile(array $c): array {
+    $scores=[];foreach(['2H','24H','48H','7J','15J'] as $period)$scores[$period]=0;
+    $words=preg_split('/\s+/u',str_replace(["’","'"],' ',$c['name']))?:[];$initials='';foreach(array_slice(array_filter($words),0,2) as $w)$initials.=mb_strtoupper(mb_substr($w,0,1));
+    return ['id'=>$c['id'],'name'=>$c['name'],'handle'=>$c['handle'],'initials'=>$initials?:'P','region'=>$c['region'],'category'=>$c['category'],'platforms'=>$c['platforms'],'scores'=>$scores,'delta'=>0,'decline'=>0,'alive'=>true,'eligible'=>false,'classable'=>false,'badges'=>[],'links'=>[],'linkChecks'=>[],'photoUrl'=>'','photoCandidateUrl'=>'','photoStatus'=>'missing','photoSource'=>'','photoNote'=>'Photo officielle à valider.','photoPosition'=>'50% 18%','ageStatus'=>'unconfirmed','knownAlias'=>$c['knownAlias'],'censusStatus'=>$c['censusStatus'],'algorithm15'=>['status'=>'waiting_data','coverage'=>0,'confidence'=>0,'measuredCriteria'=>0,'version'=>'15C-v1']];
+}
+
+function p50_s12_ensure_profiles(?string $userId=null): array {
+    $state=p50_de_load_public_state();if(!$state)$state=['profiles'=>[],'events'=>[],'content'=>[],'liveStreams'=>[]];
+    $state['profiles']=is_array($state['profiles']??null)?$state['profiles']:[];$added=0;
+    foreach(p50_s12_candidates() as $c){
+        $found=false;foreach($state['profiles'] as &$p){if(!is_array($p))continue;if((string)($p['id']??'')===$c['id']||mb_strtolower((string)($p['name']??''))===mb_strtolower($c['name'])){$found=true;$p['knownAlias']=$p['knownAlias']??$c['knownAlias'];$p['censusStatus']=$p['censusStatus']??$c['censusStatus'];break;}}unset($p);
+        if(!$found){$state['profiles'][]=p50_s12_profile($c);$added++;}
+    }
+    $present=0;foreach(p50_s12_candidates() as $c)foreach($state['profiles'] as $p)if((string)($p['id']??'')===$c['id']){$present++;break;}
+    $state['step12Server']=['version'=>'12.0','present'=>$present,'total'=>count($state['profiles']),'updatedAt'=>gmdate('c')];
+    if($added>0||!isset($state['step12ServerPersisted'])){$state['step12ServerPersisted']=gmdate('c');p50_de_save_public_state($state,$userId);}
+    return ['added'=>$added,'present'=>$present,'total'=>count($state['profiles'])];
+}
+
+function p50_s12_period_hours(string $period): float {return match($period){'2H'=>2.0,'24H'=>24.0,'48H'=>48.0,'7J'=>168.0,'15J'=>360.0,default=>24.0};}
+function p50_s12_clamp(float $v,float $min=0,float $max=100): float {return max($min,min($max,$v));}
+function p50_s12_percentile(float $value,array $values): float {$v=array_values(array_filter(array_map('floatval',$values),static fn($x)=>is_finite($x)));if(!$v)return 50;sort($v,SORT_NUMERIC);$below=0;$equal=0;foreach($v as $x){if($x<$value)$below++;elseif($x==$value)$equal++;}return p50_s12_clamp((($below+.5*$equal)/count($v))*100);}
+
+function p50_s12_raw_metrics(string $profileId,string $period): array {
+    $hours=p50_s12_period_hours($period);$stmt=db()->prepare('SELECT platform,event_type,published_at,collected_at,metrics,confidence FROM p50_activity_events WHERE profile_id=? AND COALESCE(published_at,collected_at)>=DATE_SUB(NOW(),INTERVAL ? HOUR)');$stmt->execute([$profileId,(int)ceil($hours)]);$rows=$stmt->fetchAll();
+    $views=0;$likes=0;$comments=0;$shares=0;$platforms=[];$velocity=0;$media=0;$confidence=[];
+    foreach($rows as $row){$m=decode_json_column($row['metrics']??null,[]);$rv=(float)($m['views']??0);$rl=(float)($m['likes']??0);$rc=(float)($m['comments']??0);$rs=(float)($m['shares']??$m['reposts']??0);$views+=$rv;$likes+=$rl;$comments+=$rc;$shares+=$rs;$platforms[(string)$row['platform']]=true;$confidence[]=(int)$row['confidence'];$published=strtotime((string)($row['published_at']??$row['collected_at']));if($published)$velocity+=$rv/max(1,(time()-$published)/3600);if(in_array(strtolower((string)$row['event_type']),['article','news','media'],true))$media++;}
+    $links=p50_de_social_links($profileId,true);$verifiedLinks=count($links);foreach($links as $l)$platforms[(string)$l['platform']]=true;
+    $engagement=$views>0?($likes+3*$comments+5*$shares)/$views:null;$shareRate=$views>0?$shares/$views:null;$commentRate=$views>0?$comments/$views:null;
+    $snap=db()->prepare('SELECT trend_score FROM p50_ranking_snapshots WHERE profile_id=? AND period_key=? ORDER BY captured_at DESC LIMIT 2');$snap->execute([$profileId,$period]);$history=array_map('floatval',$snap->fetchAll(PDO::FETCH_COLUMN));$growth=count($history)>=2?$history[0]-$history[1]:null;
+    $auth=$verifiedLinks>0?min(100,60+$verifiedLinks*8):null;$persistence=count($rows);
+    return ['c1'=>$verifiedLinks?:null,'c2'=>$views?:null,'c3'=>$growth,'c4'=>$engagement,'c5'=>$shareRate,'c6'=>$commentRate,'c7'=>$velocity?:null,'c8'=>count($platforms)?:null,'c9'=>count($rows)?:null,'c10'=>null,'c11'=>$media?:null,'c12'=>null,'c13'=>$persistence?:null,'c14'=>$auth,'c15'=>null,'sourceConfidence'=>$confidence?array_sum($confidence)/count($confidence):0];
+}
+
+function p50_s12_calculate_all(?string $userId=null): array {
+    p50_s12_ensure_profiles($userId);$state=p50_de_load_public_state();$profiles=(array)($state['profiles']??[]);$periods=['2H','24H','48H','7J','15J'];$weights=['c1'=>.06,'c2'=>.08,'c3'=>.07,'c4'=>.08,'c5'=>.09,'c6'=>.05,'c7'=>.10,'c8'=>.08,'c9'=>.06,'c10'=>.06,'c11'=>.05,'c12'=>.04,'c13'=>.04,'c14'=>.07,'c15'=>.07];
+    $raw=[];$pop=[];foreach($profiles as $p){if(!is_array($p)||empty($p['id']))continue;$id=(string)$p['id'];foreach($periods as $period){$raw[$id][$period]=p50_s12_raw_metrics($id,$period);foreach($weights as $k=>$w)if(isset($raw[$id][$period][$k])&&is_numeric($raw[$id][$period][$k]))$pop[$period][$k][]=(float)$raw[$id][$period][$k];}}
+    $updated=0;foreach($profiles as &$p){if(!is_array($p)||empty($p['id']))continue;$id=(string)$p['id'];$windowScores=[];$details=[];foreach($periods as $period){$sum=0;$available=0;$criteria=[];foreach($weights as $k=>$w){if(!isset($raw[$id][$period][$k])||!is_numeric($raw[$id][$period][$k]))continue;$score=p50_s12_percentile((float)$raw[$id][$period][$k],$pop[$period][$k]??[]);$criteria[$k]=round($score,2);$sum+=$score*$w;$available+=$w;}$coverage=$available*100;$base=$available>0?$sum/$available:0;$freshness=(float)($raw[$id][$period]['sourceConfidence']??0);$confidence=.5*($coverage/100)+.3*min(1,$freshness/100)+.2*.9;$final=p50_s12_clamp($base*(.75+.25*$confidence));$windowScores[$period]=round($final,2);$details[$period]=['raw'=>$raw[$id][$period],'criteria'=>$criteria,'coverage'=>round($coverage,2),'confidence'=>round($confidence*100,2),'score'=>$windowScores[$period]];}
+        $p['scores']=array_merge((array)($p['scores']??[]),$windowScores);$d24=$details['24H'];$measured=count($d24['criteria']);$p['algorithm15']=['version'=>'15C-v1','coverage'=>$d24['coverage'],'confidence'=>$d24['confidence'],'measuredCriteria'=>$measured,'calculatedAt'=>gmdate('c'),'explanation'=>p50_s12_explanation($d24['criteria'])];$p['quality']=is_array($p['quality']??null)?$p['quality']:[];$p['quality']['score']=(int)round($d24['confidence']);$p['dataConfidence']=$d24['confidence'];$p['measuredCoverage']=$d24['coverage'];if($d24['coverage']>=60&&$d24['confidence']>=65){$p['eligible']=true;$p['classable']=true;}$updated++;
+        $stmt=db()->prepare("INSERT INTO p50_algorithm_scores(profile_id,period_key,score,confidence,coverage,criteria_json,raw_json,calculated_at) VALUES(?,?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE score=VALUES(score),confidence=VALUES(confidence),coverage=VALUES(coverage),criteria_json=VALUES(criteria_json),raw_json=VALUES(raw_json),calculated_at=NOW()");foreach($periods as $period)$stmt->execute([$id,$period,$windowScores[$period],$details[$period]['confidence'],$details[$period]['coverage'],json_encode($details[$period]['criteria'],JSON_UNESCAPED_UNICODE),json_encode($details[$period]['raw'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+    }unset($p);$state['profiles']=$profiles;$state['algorithm15Meta']=['version'=>'15C-v1','updatedProfiles'=>$updated,'calculatedAt'=>gmdate('c')];p50_de_save_public_state($state,$userId);return ['updated'=>$updated,'total'=>count($profiles)];
+}
+function p50_s12_explanation(array $criteria): string {$names=['c1'=>'audience active','c2'=>'portée réelle','c3'=>'croissance','c4'=>'engagement','c5'=>'partages','c6'=>'commentaires','c7'=>'vitesse de propagation','c8'=>'diffusion multiplateforme','c9'=>'amplification tierce','c10'=>'recherches','c11'=>'résonance médiatique','c12'=>'sentiment','c13'=>'persistance','c14'=>'authenticité','c15'=>'impact réel'];arsort($criteria);$top=array_slice(array_keys($criteria),0,3);return $top?'Score porté par '.implode(', ',array_map(static fn($k)=>$names[$k]??$k,$top)).'.':'Données encore insuffisantes pour une explication complète.';}
+/* END PASS50 STEP 1+2 SERVER V12 */
+

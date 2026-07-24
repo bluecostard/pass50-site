@@ -7,7 +7,7 @@ const ASSETS=[
   './assets/pass50-wordmark.png',
   './assets/pass50-logo-email.png',
   './v9-tools.css',
-  './v9-tools.js?v=10.1',
+  './v9-tools.js',
   './data-engine-ui.js',
   './assets/hero-media-1.svg',
   './assets/hero-media-2.svg',

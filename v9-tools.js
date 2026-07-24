@@ -259,76 +259,85 @@ render();
 
   render();
 })();
-/* BEGIN PASS50 STEP1 V10 */
+/* BEGIN PASS50 STEP 1+2 V12 */
 (function(){
 'use strict';
-const P50_STEP1_VERSION='10.1';
-const P50_STEP1_PROFILES=[{"id":"african-ryou","name":"African Ryou","handle":"@african_ryou","initials":"AR","region":"CI","category":"Humour / Culture / Fitness","platforms":["Instagram","TikTok","YouTube","Snapchat"],"aliases":["African Ryou","@african_ryou"],"status":"Recensé confirmé — intégration prioritaire"},{"id":"samuella-kouassi","name":"Samuella Kouassi","handle":"@samuellakouassiofficiel","initials":"SK","region":"CI","category":"Lifestyle / Mode / Divertissement","platforms":["Instagram","TikTok","YouTube","Facebook"],"aliases":["Samuella Kouassi","@samuellakouassiofficiel"],"status":"Recensé confirmé — intégration prioritaire"},{"id":"nadiani","name":"Nadiani","handle":"@officialnad_","initials":"NA","region":"BOTH","category":"Mode / Beauté / Lifestyle","platforms":["Instagram","TikTok","YouTube"],"aliases":["Nadiani","Imane Nadiani Touré","@officialnad_"],"status":"Recensé confirmé — intégration prioritaire"},{"id":"investisseur-africain","name":"L’Investisseur Africain","handle":"@sbragbo","initials":"IA","region":"BOTH","category":"Business / Investissement / Diaspora","platforms":["YouTube","Facebook","LinkedIn","Instagram"],"aliases":["L’Investisseur Africain","Jean-Yves Bragbo","@sbragbo"],"status":"Recensé confirmé — intégration prioritaire"},{"id":"laura-ziehi","name":"Laura Ziehi","handle":"@laura.ziehi","initials":"LZ","region":"BOTH","category":"Lifestyle / Mode / Divertissement","platforms":["Instagram","TikTok","Snapchat"],"aliases":["Laura Ziehi","@laura.ziehi"],"status":"Recensé confirmé — réseaux à compléter"},{"id":"aya-robert","name":"Aya Robert","handle":"@ayarobert","initials":"AR","region":"CI","category":"TikTok / Lives / Débats","platforms":["TikTok","Facebook"],"aliases":["Aya Robert"],"status":"À vérifier — compte officiel actuel"},{"id":"smookii-gamer","name":"SmOokii Gamer","handle":"@smookii_gamer","initials":"SG","region":"CI","category":"Gaming / Divertissement","platforms":["TikTok"],"aliases":["Smooki Gamer","SmOokii Gamer","@smookii_gamer"],"status":"Recensé confirmé — compte TikTok à valider","links":{"TikTok":"https://www.tiktok.com/@smookii_gamer"}}];
-const P50_STEP1_IDS=P50_STEP1_PROFILES.map(x=>x.id);
-const P50_LIVE_FIRST_SEEN='pass50.live.firstseen.v10';
+const P50S12_VERSION='12.0';
+const P50S12_CANDIDATES=[{"id":"census-african-ryou","name":"African Ryou","handle":"@african_ryou","region":"CI","category":"Humour / Culture ivoirienne / Lifestyle / Fitness","platforms":["Instagram","TikTok","YouTube","Snapchat"],"knownAlias":"@african_ryou","censusStatus":"Recensé confirmé — intégration prioritaire"},{"id":"census-samuella-kouassi","name":"Samuella Kouassi","handle":"@samuellakouassiofficiel","region":"CI","category":"Lifestyle / Mode / Divertissement","platforms":["Instagram","TikTok","YouTube","Facebook"],"knownAlias":"@samuellakouassiofficiel","censusStatus":"Recensé confirmé — intégration prioritaire"},{"id":"census-nadiani","name":"Nadiani","handle":"@officialnad_","region":"BOTH","category":"Mode / Beauté / Lifestyle / Entrepreneuriat","platforms":["Instagram","TikTok","YouTube"],"knownAlias":"Imane Nadiani Touré / @officialnad_","censusStatus":"Recensé confirmé — intégration prioritaire"},{"id":"census-investisseur-africain","name":"L’Investisseur Africain","handle":"@sbragbo","region":"BOTH","category":"Business / Investissement / Entrepreneuriat / Diaspora","platforms":["YouTube","Facebook","LinkedIn","Instagram"],"knownAlias":"Jean-Yves Bragbo / Jean Yves Bragbo / @sbragbo","censusStatus":"Recensé confirmé — intégration prioritaire"},{"id":"census-laura-ziehi","name":"Laura Ziehi","handle":"@laura.ziehi","region":"BOTH","category":"Lifestyle / Mode / Divertissement","platforms":["Instagram","TikTok","Snapchat"],"knownAlias":"@laura.ziehi","censusStatus":"Recensé confirmé — réseaux à compléter"},{"id":"census-aya-robert","name":"Aya Robert","handle":"@aya_robert","region":"CI","category":"TikTok / Lives / Débats / Divertissement","platforms":["TikTok","Facebook"],"knownAlias":"Aya Robert","censusStatus":"À vérifier — compte officiel actuel"},{"id":"census-smookii-gamer","name":"SmOokii Gamer","handle":"@smookii_gamer","region":"CI","category":"Gaming / Humour / Divertissement","platforms":["TikTok","Facebook","Instagram","YouTube"],"knownAlias":"Smooki Gamer / SmOokii Gamer / @smookii_gamer","censusStatus":"Recensé confirmé — réseaux à compléter"}];
+const P50S12_PERIODS=['2H','24H','48H','7J','15J'];
 
-function p50n(v=''){return String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’'`´]/g,'').replace(/[^a-z0-9]+/g,'').trim()}
-function p50findCandidate(c){
- const names=[c.name,c.handle,...(c.aliases||[])].map(p50n).filter(Boolean);
- return (db.profiles||[]).find(p=>{const values=[p.id,p.name,p.handle,p.knownAlias].map(p50n);return values.some(v=>v&&names.includes(v))})||null;
-}
-function p50newProfile(c){
- const scores=Object.fromEntries(periods.map(k=>[k,0]));
- const links={...(c.links||{})};
- const checks={};Object.keys(links).forEach(k=>checks[k]={status:'pending',checkedAt:null,message:'Lien direct repéré, validation propriétaire requise'});
- return {id:c.id,name:c.name,handle:c.handle,initials:c.initials,region:c.region,category:c.category,platforms:[...(c.platforms||[])],scores,delta:0,decline:0,alive:true,eligible:false,classable:false,ageStatus:'unconfirmed',birthDate:null,birthYear:null,agePublic:true,photoUrl:'',photoCandidateUrl:'',photoStatus:'missing',photoSource:'',photoNote:'Photo officielle à valider.',photoPosition:'50% 50%',badges:[],links,linkChecks:checks,knownAlias:(c.aliases||[]).join(' / '),censusStatus:c.status,verificationPriority:c.status.includes('prioritaire')?'P0':'P1',censusImportedAt:new Date().toISOString()};
-}
-function p50mergeStep1(){
+function p50s12Norm(v=''){return String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’'`´]/g,'').replace(/[^a-z0-9]+/g,'');}
+function p50s12Initials(name=''){return (String(name).replace(/[’']/g,' ').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('')||'P').toUpperCase();}
+function p50s12MergeProfiles(){
+ if(typeof db==='undefined'||!db)return {added:0,present:0,total:0};
  db.profiles=Array.isArray(db.profiles)?db.profiles:[];let added=0;
- P50_STEP1_PROFILES.forEach(c=>{let p=p50findCandidate(c);if(!p){p=p50newProfile(c);db.profiles.push(p);added++}else{p.knownAlias=p.knownAlias||(c.aliases||[]).join(' / ');p.censusStatus=p.censusStatus||c.status;p.platforms=[...new Set([...(p.platforms||[]),...(c.platforms||[])])];p.links=p.links||{};p.linkChecks=p.linkChecks||{};Object.entries(c.links||{}).forEach(([k,u])=>{if(!p.links[k])p.links[k]=u;if(!p.linkChecks[k])p.linkChecks[k]={status:'pending',checkedAt:null,message:'Validation propriétaire requise'}});if(p.eligible!==true)p.eligible=false;if(p.classable!==true)p.classable=false;}});
- db.version=Math.max(Number(db.version||0),10);db.censusVersion='step1-v10';db.step1Status={version:P50_STEP1_VERSION,present:P50_STEP1_IDS.filter(id=>db.profiles.some(p=>p.id===id)).length,total:db.profiles.length,updatedAt:new Date().toISOString()};
- return {added,...db.step1Status};
+ for(const c of P50S12_CANDIDATES){
+  let p=db.profiles.find(x=>String(x.id)===c.id||p50s12Norm(x.name)===p50s12Norm(c.name)||p50s12Norm(x.handle)===p50s12Norm(c.handle));
+  if(!p){
+   p={id:c.id,name:c.name,handle:c.handle,initials:p50s12Initials(c.name),region:c.region,category:c.category,platforms:[...c.platforms],scores:Object.fromEntries(P50S12_PERIODS.map(k=>[k,0])),delta:0,decline:0,alive:true,eligible:false,classable:false,badges:[],links:{},linkChecks:{},photoUrl:'',photoCandidateUrl:'',photoStatus:'missing',photoSource:'',photoNote:'Photo officielle à valider.',photoPosition:'50% 18%',ageStatus:'unconfirmed',knownAlias:c.knownAlias,censusStatus:c.censusStatus,algorithm15:{status:'waiting_data',coverage:0,confidence:0,version:'15C-v1'}};
+   db.profiles.push(p);added++;
+  }else{
+   p.knownAlias=p.knownAlias||c.knownAlias;p.censusStatus=p.censusStatus||c.censusStatus;
+   p.platforms=[...new Set([...(p.platforms||[]),...c.platforms])];
+   if(p.alive===undefined)p.alive=true;
+  }
+ }
+ db.step12={version:P50S12_VERSION,present:P50S12_CANDIDATES.filter(c=>db.profiles.some(p=>p.id===c.id)).length,total:db.profiles.length,updatedAt:new Date().toISOString()};
+ return {added,present:db.step12.present,total:db.step12.total};
 }
 
-function p50url(value=''){try{const u=new URL(String(value||'').trim(),location.href);return /^https?:$/.test(u.protocol)?u:null}catch{return null}}
-function p50ExactContent(value=''){
- const u=p50url(value);if(!u)return false;const h=u.hostname.toLowerCase().replace(/^www\./,''),path=u.pathname.replace(/\/+/g,'/'),clean=path.replace(/\/+$/,'')||'/';
- if(h==='youtu.be')return /^\/[A-Za-z0-9_-]{6,}\/?$/.test(path);
- if(h.endsWith('youtube.com')||h.endsWith('youtube-nocookie.com'))return (clean==='/watch'&&/^[A-Za-z0-9_-]{6,}$/.test(u.searchParams.get('v')||''))||/^\/(?:shorts|live|embed)\/[A-Za-z0-9_-]{6,}$/i.test(clean);
- if(h.endsWith('tiktok.com'))return /^\/@[^/]+\/video\/\d+\/?$/i.test(path);
- if(h.endsWith('instagram.com'))return /^\/(?:p|reel|reels|tv)\/[^/?#]+\/?$/i.test(path);
- if(h==='fb.watch')return clean!=='/';
- if(h.endsWith('facebook.com'))return ['v','story_fbid','fbid'].some(k=>u.searchParams.get(k))||/^\/(?:[^/]+\/)?videos\/[^/?#]+\/?$/i.test(path)||/^\/(?:reel|posts)\/[^/?#]+\/?$/i.test(path)||/^\/share\/(?:v|r|p)\/[^/?#]+\/?$/i.test(path)||/^\/watch\/[^/?#]+\/?$/i.test(path);
- if(h==='x.com'||h==='twitter.com')return /^\/[^/]+\/status\/\d+\/?$/i.test(path);
- const seg=clean.split('/').filter(Boolean);return seg.length>0&&!['home','feed','watch','login','search','explore','results'].includes((seg[0]||'').toLowerCase())&&!u.searchParams.has('search_query')&&!u.searchParams.has('q');
-}
-function p50EventUrl(e){if(!e||e.originalLinkValidated!==true)return '';return [e.resolvedUrl,e.canonicalUrl,e.submittedUrl,e.url,e.originalUrl].map(x=>String(x||'').trim()).find(p50ExactContent)||''}
-p50v9ExactContentLink=p50ExactContent;
-
-function p50time(v){const t=v?new Date(v).getTime():NaN;return Number.isFinite(t)?t:0}
-function p50liveFresh(x,now=Date.now()){
+function p50s12Time(v){const t=v?new Date(v).getTime():NaN;return Number.isFinite(t)?t:0;}
+function p50s12FreshLive(x,now=Date.now()){
  if(!x||!x.profileId||String(x.status||'').toLowerCase()!=='live')return false;
- const end=p50time(x.endsAt);if(end&&end<=now)return false;
- const start=p50time(x.startedAt||x.detectedAt||x.createdAt||x.publishedAt);if(start&&now-start>8*3600000)return false;
- if(!start){let map={};try{map=JSON.parse(localStorage.getItem(P50_LIVE_FIRST_SEEN)||'{}')}catch{}const key=String(x.id||x.url||x.profileId+':'+(x.platform||'live'));if(!map[key]){map[key]=now;try{localStorage.setItem(P50_LIVE_FIRST_SEEN,JSON.stringify(map))}catch{}}if(now-Number(map[key]||now)>10*60000)return false;}
+ const end=p50s12Time(x.endsAt);if(end&&end<=now)return false;
+ const start=p50s12Time(x.startedAt||x.detectedAt||x.createdAt||x.updatedAt);
+ if(start&&now-start>8*60*60*1000)return false;
+ if(!start){x._p50FirstSeen=x._p50FirstSeen||new Date().toISOString();if(now-p50s12Time(x._p50FirstSeen)>10*60*1000)return false;}
  return true;
 }
-normalizeLiveStreams=function(){if(!Array.isArray(db.liveStreams))db.liveStreams=[];db.liveStreams=db.liveStreams.filter(x=>p50liveFresh(x));(db.profiles||[]).forEach(p=>{p.badges=(p.badges||[]).filter(b=>b!=='LIVE');if(db.liveStreams.some(x=>x.profileId===p.id&&x.status==='live'))p.badges.unshift('LIVE')})};
-refreshLiveStatus=async function(){try{const r=await fetch('./api/live-status.php?v=10.1',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();if(Array.isArray(data.liveStreams)){db.liveStreams=data.liveStreams.filter(x=>p50liveFresh(x));normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));render()}return data}catch(err){console.warn('Radar LIVE indisponible',err);normalizeLiveStreams();renderLiveHeader();return null}};
+normalizeLiveStreams=function(){
+ if(!Array.isArray(db.liveStreams))db.liveStreams=[];db.liveStreams=db.liveStreams.filter(x=>p50s12FreshLive(x));
+ (db.profiles||[]).forEach(p=>{p.badges=(p.badges||[]).filter(b=>b!=='LIVE');if(db.liveStreams.some(x=>x.profileId===p.id&&x.status==='live'))p.badges.unshift('LIVE');});
+};
 
-const p50queue={timer:null,retry:null,running:false,dirty:false,promise:null,rev:Number(db?.clientRevision||0)};
-function p50canSync(){const u=typeof currentUser==='function'?currentUser():null;return Boolean(typeof CLOUD!=='undefined'&&CLOUD.enabled&&CLOUD.ready&&CLOUD.token&&u&&['owner','admin'].includes(u.role))}
-async function p50flush(){
- if(!p50canSync())return null;if(p50queue.running){p50queue.dirty=true;return p50queue.promise}p50queue.running=true;
- p50queue.promise=(async()=>{try{do{p50queue.dirty=false;const snapshot=cloudSafeState();snapshot.clientRevision=++p50queue.rev;snapshot.clientUpdatedAt=new Date().toISOString();snapshot.step1Version=P50_STEP1_VERSION;db.clientRevision=snapshot.clientRevision;db.clientUpdatedAt=snapshot.clientUpdatedAt;await apiFetch('state.php',{method:'POST',body:{data:snapshot,clientRevision:snapshot.clientRevision,clientUpdatedAt:snapshot.clientUpdatedAt}});try{await syncCloudPrefs()}catch{}}while(p50queue.dirty);return true}catch(err){console.warn('Synchronisation différée',err);p50queue.dirty=true;clearTimeout(p50queue.retry);p50queue.retry=setTimeout(p50flush,2500);return false}finally{p50queue.running=false;p50queue.promise=null;if(p50queue.dirty){clearTimeout(p50queue.timer);p50queue.timer=setTimeout(p50flush,80)}}})();return p50queue.promise;
+function p50s12HttpUrl(v=''){try{const u=new URL(String(v).trim(),location.href);return /^https?:$/.test(u.protocol)?u:null;}catch{return null;}}
+function p50s12ExactContent(v=''){
+ const u=p50s12HttpUrl(v);if(!u)return false;const h=u.hostname.toLowerCase().replace(/^www\./,'');const p=u.pathname.replace(/\/+/g,'/');const clean=p.replace(/\/+$/,'')||'/';
+ if(h==='youtu.be')return /^\/[A-Za-z0-9_-]{6,}\/?$/.test(p);
+ if(h.endsWith('youtube.com'))return (clean==='/watch'&&/^[A-Za-z0-9_-]{6,}$/.test(u.searchParams.get('v')||''))||/^\/(?:shorts|live|embed)\/[A-Za-z0-9_-]{6,}$/i.test(clean);
+ if(h.endsWith('facebook.com'))return ['v','story_fbid','fbid'].some(k=>u.searchParams.get(k))||/^\/(?:[^/]+\/)?videos\/[^/?#]+\/?$/i.test(p)||/^\/(?:reel|posts)\/[^/?#]+\/?$/i.test(p)||/^\/share\/(?:v|r|p)\/[^/?#]+\/?$/i.test(p);
+ if(h==='fb.watch')return clean!=='/';
+ if(h.endsWith('instagram.com'))return /^\/(?:p|reel|reels|tv)\/[^/?#]+\/?$/i.test(p);
+ if(h.endsWith('tiktok.com'))return /^\/@[^/]+\/video\/\d+\/?$/i.test(p);
+ if(h==='x.com'||h==='twitter.com')return /^\/[^/]+\/status\/\d+\/?$/i.test(p);
+ return clean!=='/';
 }
-scheduleCloudSync=function(){if(!p50canSync())return;p50queue.dirty=true;clearTimeout(p50queue.timer);p50queue.timer=setTimeout(p50flush,650)};
-syncCloudState=async function(){p50queue.dirty=true;return p50flush()};
+function p50s12EventUrl(e){if(!e||e.originalLinkValidated!==true)return '';return [e.resolvedUrl,e.canonicalUrl,e.submittedUrl,e.url,e.originalUrl].map(x=>String(x||'').trim()).find(p50s12ExactContent)||'';}
+window.p50s12ExactContent=p50s12ExactContent;window.p50s12EventUrl=p50s12EventUrl;
+if(typeof p50v9ExactContentLink==='function')p50v9ExactContentLink=p50s12ExactContent;
 
-function p50repairEvents(){let changed=false;(db.events||[]).forEach(e=>{const u=p50EventUrl(e);if(u&&e.url!==u){e.url=u;changed=true}if(u&&!e.resolvedUrl){e.resolvedUrl=u;changed=true}const c=(db.content||[]).find(x=>x.profileId===e.profileId);if(u&&c&&c.url!==u){c.url=u;changed=true}});return changed}
-eventHtml=function(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigger-empty"><strong>Élément déclencheur non encore validé</strong><div style="margin-top:5px">Aucun lien original n’a encore été sélectionné dans Administration → Actualité.</div></div>`;const u=p50EventUrl(e),link=u?`<a class="btn small primary" href="${safeAttr(u)}" target="_blank" rel="noopener noreferrer">Voir l’élément original ↗</a>`:'<span class="muted">Lien original à valider dans Administration → Actualité</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type||'Actualité'}</span></div><div class="trigger-main">${triggerThumbHtml(e)}<div><div class="trigger-title">${e.title||'Actualité validée'}</div><div class="trigger-meta">${(e.platforms||[]).join(' · ')} · ${e.publishedLabel||''} · Confiance ${e.confidence||'à vérifier'}</div><div class="trigger-reason">${e.reason||''}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric||'Signal détecté'}</span>${link}</div></section>`};
-renderContent=function(){const grid=$('#contentGrid');if(!grid)return;const items=[...(db.content||[])].filter(c=>profile(c.profileId)).sort((a,b)=>score(profile(b.profileId))-score(profile(a.profileId))).slice(0,5);grid.innerHTML=items.map((c,i)=>{const p=profile(c.profileId),e=primaryEvent(c.profileId),u=p50EventUrl(e)||(p50ExactContent(c.url)?c.url:''),cover=publicCover(e),body=`${cover?`<img class="cover-bg" src="${safeAttr(cover)}" alt="" referrerpolicy="no-referrer">`:''}<div><strong>#${i+1} · ${p.name}</strong><div style="margin-top:8px">${badgeHtml(c.badge)}</div></div><div class="play">▶</div><div class="content-meta"><span>${c.platform}</span><span>${c.views} · ${c.time}</span></div>`;return u?`<a class="content-card ${cover?'has-cover':''}" href="${safeAttr(u)}" target="_blank" rel="noopener noreferrer" data-content="${c.id}">${body}</a>`:`<article class="content-card ${cover?'has-cover':''}" data-content="${c.id}">${body}<div class="platform-hidden-note">Lien original à valider</div></article>`}).join('')};
+const p50s12Queue={timer:null,running:false,dirty:false,promise:null,retry:null};
+function p50s12CanSync(){const u=typeof currentUser==='function'?currentUser():null;return Boolean(typeof CLOUD!=='undefined'&&CLOUD?.enabled&&CLOUD?.ready&&CLOUD?.token&&u&&['owner','admin'].includes(u.role));}
+async function p50s12Flush(){
+ if(!p50s12CanSync())return null;if(p50s12Queue.running){p50s12Queue.dirty=true;return p50s12Queue.promise;}
+ p50s12Queue.running=true;p50s12Queue.promise=(async()=>{try{do{p50s12Queue.dirty=false;const snapshot=cloudSafeState();snapshot.clientUpdatedAt=new Date().toISOString();snapshot.step12Version=P50S12_VERSION;await apiFetch('state.php',{method:'POST',body:{data:snapshot}});try{await syncCloudPrefs();}catch{}}while(p50s12Queue.dirty);return true;}catch(err){console.warn('[PASS50 S12] Synchronisation différée',err);p50s12Queue.dirty=true;clearTimeout(p50s12Queue.retry);p50s12Queue.retry=setTimeout(p50s12Flush,2500);return false;}finally{p50s12Queue.running=false;p50s12Queue.promise=null;if(p50s12Queue.dirty)setTimeout(p50s12Flush,80);}})();return p50s12Queue.promise;
+}
+scheduleCloudSync=function(){if(!p50s12CanSync())return;p50s12Queue.dirty=true;clearTimeout(p50s12Queue.timer);p50s12Queue.timer=setTimeout(p50s12Flush,650);};
+syncCloudState=async function(){p50s12Queue.dirty=true;return p50s12Flush();};
 
-function p50apply(show=false){const census=p50mergeStep1(),eventChanged=p50repairEvents(),before=(db.liveStreams||[]).length;normalizeLiveStreams();const changed=census.added||eventChanged||before!==(db.liveStreams||[]).length;try{localStorage.setItem(APP_KEY,JSON.stringify(db))}catch{}if(changed&&typeof save==='function')save();render();window.PASS50_STEP1_STATUS={...census,liveRemoved:before-(db.liveStreams||[]).length};if(show&&typeof toast==='function')toast(`${db.profiles.length} profils recensés · ${census.present}/7 ajouts présents`);return window.PASS50_STEP1_STATUS}
-window.p50ApplyStep1=p50apply;window.p50FlushStep1=p50flush;
-p50apply(false);setTimeout(()=>p50apply(false),1200);setTimeout(()=>p50apply(false),4500);
-const cloudTimer=setInterval(async()=>{if(window.__pass50CloudReady){const s=p50apply(false);if(p50canSync()){p50queue.dirty=true;await p50flush();if(typeof toast==='function')toast(`${s.total} profils recensés · étape 1 enregistrée`);clearInterval(cloudTimer)}}},1000);setTimeout(()=>clearInterval(cloudTimer),300000);
-setInterval(()=>{const before=(db.liveStreams||[]).length;normalizeLiveStreams();if(before!==(db.liveStreams||[]).length){try{localStorage.setItem(APP_KEY,JSON.stringify(db))}catch{}render()}else renderLiveHeader()},5000);
-console.info('[PASS50 STEP1 V10]',p50apply(false));
+function p50s12AlgoHtml(p){const a=p.algorithm15||{};const coverage=Number(a.coverage||p.measuredCoverage||0);const confidence=Number(a.confidence||p.dataConfidence||0);const measured=Number(a.measuredCriteria||0);return `<div class="stats" style="margin-top:12px"><div class="stat"><span class="muted">Confiance données</span><b>${Math.round(confidence)}%</b></div><div class="stat"><span class="muted">Couverture</span><b>${Math.round(coverage)}%</b></div><div class="stat"><span class="muted">Critères mesurés</span><b>${measured}/15</b></div><div class="stat"><span class="muted">Moteur</span><b style="font-size:15px">15 critères</b></div></div>${a.explanation?`<div class="media-hint" style="margin-top:12px"><strong>Lecture automatique :</strong> ${a.explanation}</div>`:''}`;}
+
+function p50s12InstallProfileView(){
+ openProfile=function(id){close('top50Modal');const p=profile(id),u=userPrefs(),bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)],links=typeof p50v9OfficialLinks==='function'?p50v9OfficialLinks(p):Object.entries(p.links||{}).filter(([,url])=>url);$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${ranking().findIndex(x=>x.id===id)+1} · ${p.category}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name}</h2><div class="handle">${p.handle}</div><div style="margin-top:11px">${(p.badges||[]).map(badgeHtml).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${p50s12AlgoHtml(p)}${eventHtml(p)}<div class="chart">${bars.map(h=>`<div class="bar" style="height:${Math.max(8,h)}%"></div>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener noreferrer">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé.</div>':''}</div></div>`;open('profileModal');};
+}
+
+eventHtml=function(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigger-empty"><strong>Élément déclencheur non encore validé</strong><div style="margin-top:5px">Aucun lien original n’a encore été sélectionné dans Administration → Actualité.</div></div>`;const url=p50s12EventUrl(e);const link=url?`<a class="btn small primary" href="${safeAttr(url)}" target="_blank" rel="noopener noreferrer">Voir l’élément original ↗</a>`:'<span class="muted">Lien original à valider dans Administration → Actualité</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type||'Actualité'}</span></div><div class="trigger-main">${triggerThumbHtml(e)}<div><div class="trigger-title">${e.title||'Actualité validée'}</div><div class="trigger-meta">${(e.platforms||[]).join(' · ')} · ${e.publishedLabel||''} · Confiance ${e.confidence||'à vérifier'}</div><div class="trigger-reason">${e.reason||''}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric||'Signal détecté'}</span>${link}</div></section>`;};
+
+function p50s12Repair(show=false){const result=p50s12MergeProfiles();for(const e of (db.events||[])){const url=p50s12EventUrl(e);if(url){e.url=url;e.resolvedUrl=url;const c=(db.content||[]).find(x=>x.profileId===e.profileId);if(c)c.url=url;}}normalizeLiveStreams();try{localStorage.setItem(APP_KEY,JSON.stringify(db));}catch{}if(typeof render==='function')render();window.PASS50_STEP12_STATUS={...result,version:P50S12_VERSION};if(show&&typeof toast==='function')toast(`${result.total} profils · ${result.present}/7 ajouts présents`);return window.PASS50_STEP12_STATUS;}
+window.p50Step12Repair=p50s12Repair;
+p50s12InstallProfileView();p50s12Repair(false);setTimeout(()=>p50s12Repair(false),1200);setTimeout(()=>p50s12Repair(false),4500);
+const cloudTimer=setInterval(async()=>{if(window.__pass50CloudReady){const s=p50s12Repair(false);if(p50s12CanSync()){await p50s12Flush();if(typeof toast==='function')toast(`${s.total} profils · moteur 15 critères actif`);clearInterval(cloudTimer);}}},1000);setTimeout(()=>clearInterval(cloudTimer),300000);
+setInterval(()=>{const before=(db.liveStreams||[]).length;normalizeLiveStreams();if(before!==(db.liveStreams||[]).length){try{localStorage.setItem(APP_KEY,JSON.stringify(db));}catch{}render();}},5000);
+console.info('[PASS50 STEP 1+2]',p50s12Repair(false));
 })();
-/* END PASS50 STEP1 V10 */
+/* END PASS50 STEP 1+2 V12 */

@@ -144,3 +144,17 @@ CREATE TABLE IF NOT EXISTS p50_engine_settings (
 INSERT INTO p50_engine_settings(setting_key,setting_value)
 VALUES('confidence_threshold','90')
 ON DUPLICATE KEY UPDATE setting_value=setting_value;
+
+
+CREATE TABLE IF NOT EXISTS p50_algorithm_scores (
+  profile_id VARCHAR(100) NOT NULL,
+  period_key VARCHAR(16) NOT NULL,
+  score DECIMAL(6,2) NOT NULL DEFAULT 0,
+  confidence DECIMAL(6,2) NOT NULL DEFAULT 0,
+  coverage DECIMAL(6,2) NOT NULL DEFAULT 0,
+  criteria_json LONGTEXT NOT NULL,
+  raw_json LONGTEXT NOT NULL,
+  calculated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(profile_id,period_key),
+  INDEX idx_p50_algorithm_period_score(period_key,score)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

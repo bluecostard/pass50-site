@@ -35,4 +35,5 @@ foreach($profiles as $profile){
         $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'error','error'=>'Collecte impossible pour ce profil.'];
     }
 }
-json_response(['ok'=>true,'processed'=>count($profiles),'found'=>$totalFound,'verified'=>$totalVerified,'nextOffset'=>$profileId!==''?null:$offset+count($profiles),'results'=>$results,'hub'=>p50_de_hub_payload()]);
+$algorithm=p50_s12_calculate_all($user['id']);
+json_response(['ok'=>true,'processed'=>count($profiles),'found'=>$totalFound,'verified'=>$totalVerified,'nextOffset'=>$profileId!==''?null:$offset+count($profiles),'results'=>$results,'algorithm'=>$algorithm,'hub'=>p50_de_hub_payload()]);

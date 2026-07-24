@@ -47,5 +47,6 @@ $nextOffset=$offset+count($profiles);
 $total=(int)db()->query('SELECT COUNT(*) FROM p50_profile_registry WHERE alive=1 AND eligible=1')->fetchColumn();
 if($nextOffset>=$total)$nextOffset=0;
 p50_de_set_setting('cron_offset',$nextOffset);
+$algorithm=p50_s12_calculate_all(null);
 $snapshots=$action==='cycle'?p50_de_capture_snapshots('2H'):0;
-json_response(['ok'=>true,'action'=>$action,'processed'=>count($profiles),'found'=>$found,'verified'=>$verified,'snapshots'=>$snapshots,'offset'=>$offset,'nextOffset'=>$nextOffset,'results'=>$results]);
+json_response(['ok'=>true,'action'=>$action,'processed'=>count($profiles),'found'=>$found,'verified'=>$verified,'snapshots'=>$snapshots,'algorithm'=>$algorithm,'offset'=>$offset,'nextOffset'=>$nextOffset,'results'=>$results]);
