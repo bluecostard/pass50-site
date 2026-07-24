@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/data-engine-core.php';
-set_time_limit(300);
+set_time_limit(240);
 p50_de_ensure_schema();
 
 global $config;
@@ -11,30 +11,30 @@ $provided=(string)($_SERVER['HTTP_X_PASS50_CRON']??($_GET['token']??''));
 if($expected===''||$provided===''||!hash_equals($expected,$provided))json_response(['error'=>'Jeton cron invalide.'],403);
 
 $action=(string)($_GET['action']??'cycle');
-$batch=max(1,min(5,(int)($config['data_engine']['batch_size']??5)));
+$batch=max(1,min(10,(int)($config['data_engine']['batch_size']??5)));
 if($action==='snapshot'){
     $count=p50_de_capture_snapshots((string)($_GET['period']??'2H'));
     json_response(['ok'=>true,'action'=>'snapshot','captured'=>$count]);
 }
-if(!in_array($action,['collect','cycle','priority16'],true))json_response(['error'=>'Action cron inconnue.'],422);
+if(!in_array($action,['collect','cycle'],true))json_response(['error'=>'Action cron inconnue.'],422);
 
 p50_de_sync_registry_from_state();
-$profiles=$action==='priority16'?array_values(array_filter(p50_de_registry_profiles(null,1000,0,false),static fn($p)=>p50_de_is_priority_profile((string)$p['profile_id']))):p50_de_profiles_for_collection($batch,null);
+$offset=max(0,(int)p50_de_get_setting('cron_offset',0));
+$profiles=p50_de_registry_profiles(null,$batch,$offset);
+if(!$profiles&&$offset>0){$offset=0;$profiles=p50_de_registry_profiles(null,$batch,0);}
 $results=[];$found=0;$verified=0;
 foreach($profiles as $profile){
-    $run=p50_de_begin_run((string)$profile['profile_id'],'cron_auto_enrichment_v22',null,['deep'=>true]);
+    $run=p50_de_begin_run((string)$profile['profile_id'],'cron_wikidata_wikipedia',null,['offset'=>$offset]);
     try{
         $stateLinks=p50_de_collect_state_links($profile);
         $stateFacts=p50_de_collect_state_facts($profile);
-        $enrichment=p50_de_collect_enrichment($profile,true);
-        $profileFound=$stateLinks+$stateFacts+(int)($enrichment['found']??0);
+        $collected=p50_de_collect_wikidata($profile);
+        $profileFound=$stateLinks+$stateFacts+(int)($collected['found']??0);
         $youtube=p50_de_collect_youtube_activity($profile);
         $profileFound+=(int)($youtube['found']??0);
-        $socialActivity=p50_de_collect_social_activity($profile);
-        $profileFound+=(int)($socialActivity['found']??0);
-        $profileVerified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0)+(int)($socialActivity['verified']??0);
+        $profileVerified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0);
         p50_de_publish_profile((string)$profile['profile_id'],null);
-        p50_de_finish_run($run['id'],'success',$profileFound,$profileVerified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity]);
+        p50_de_finish_run($run['id'],'success',$profileFound,$profileVerified,null,['collector'=>$collected,'youtube'=>$youtube]);
         $found+=$profileFound;$verified+=$profileVerified;
         $results[]=['profileId'=>$profile['profile_id'],'status'=>'success','found'=>$profileFound,'verified'=>$profileVerified];
     }catch(Throwable $e){
@@ -43,6 +43,9 @@ foreach($profiles as $profile){
         $results[]=['profileId'=>$profile['profile_id'],'status'=>'error'];
     }
 }
+$nextOffset=$offset+count($profiles);
+$total=(int)db()->query('SELECT COUNT(*) FROM p50_profile_registry WHERE alive=1 AND eligible=1')->fetchColumn();
+if($nextOffset>=$total)$nextOffset=0;
+p50_de_set_setting('cron_offset',$nextOffset);
 $snapshots=$action==='cycle'?p50_de_capture_snapshots('2H'):0;
-$remainingNeverCollected=(int)db()->query("SELECT COUNT(*) FROM p50_profile_registry r LEFT JOIN (SELECT DISTINCT profile_id FROM p50_collection_runs) x ON x.profile_id=r.profile_id WHERE r.alive=1 AND x.profile_id IS NULL")->fetchColumn();
-json_response(['ok'=>true,'action'=>$action,'processed'=>count($profiles),'found'=>$found,'verified'=>$verified,'snapshots'=>$snapshots,'remainingNeverCollected'=>$remainingNeverCollected,'results'=>$results]);
+json_response(['ok'=>true,'action'=>$action,'processed'=>count($profiles),'found'=>$found,'verified'=>$verified,'snapshots'=>$snapshots,'offset'=>$offset,'nextOffset'=>$nextOffset,'results'=>$results]);

@@ -1,20 +1,19 @@
-const CACHE='pass50-v23-stable-__BUILD_ID__';
+const CACHE='pass50-admin-data-v2-__BUILD_ID__';
 const ASSETS=[
   './',
   './index.html',
-  './v9-tools.css?v=22.4',
-  './v9-tools.js?v=23.0',
-  './pass50_nouveaux_candidats_90_v19.json?v=22.6',
-  './data-engine-ui.js?v=23.0',
-  './manifest.webmanifest?v=22.4',
-  './icon.svg?v=22.4',
-  './favicon-32.png?v=22.4',
-  './apple-touch-icon.png?v=22.4',
-  './assets/hero-media-1.jpg',
-  './assets/hero-media-2.jpg',
-  './assets/hero-media-3.jpg',
-  './assets/hero-media-4.jpg',
-  './data-engine-ui.css?v=23.0'
+  './manifest.webmanifest',
+  './icon.svg',
+  './assets/pass50-wordmark.png',
+  './assets/pass50-logo-email.png',
+  './v9-tools.css',
+  './v9-tools.js?v=10.1',
+  './data-engine-ui.js',
+  './assets/hero-media-1.svg',
+  './assets/hero-media-2.svg',
+  './assets/hero-media-3.svg',
+  './assets/hero-media-4.svg',
+  './data-engine-ui.css'
 ];
 
 self.addEventListener('install',event=>{
