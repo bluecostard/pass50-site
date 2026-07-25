@@ -46,5 +46,5 @@ foreach($profiles as $profile){
     }
 }
 $remainingNeverCollected=(int)db()->query("SELECT COUNT(*) FROM p50_profile_registry r LEFT JOIN (SELECT DISTINCT profile_id FROM p50_collection_runs) x ON x.profile_id=r.profile_id WHERE r.alive=1 AND x.profile_id IS NULL")->fetchColumn();
-$metricSummary=p50_de_usable_metric_summary($processedIds);
-json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'usableMetrics'=>$metricSummary['usableMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);
+$metricSummary=p50_de_metric_summary($processedIds);
+json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);
