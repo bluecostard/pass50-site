@@ -6,16 +6,23 @@ const P50_RADAR_STATUSES = [
     'collected','no_recent_content','public_metrics_unavailable','invalid_url',
     'unsupported_url','rate_limited','temporarily_unavailable','timeout','http_error',
     'content_removed_or_private','detected_content_inaccessible','budget_exceeded','duplicate','error',
+    'youtube_api_collected','youtube_api_unconfigured','youtube_invalid_url',
+    'youtube_no_recent_video','youtube_quota_exceeded','youtube_forbidden',
+    'youtube_api_error','youtube_budget_exceeded',
 ];
 
-function p50_radar_begin_batch(int $batchLimit=20,int $profileLimit=5): void {
+function p50_radar_begin_batch(int $batchLimit=20,int $profileLimit=5,int $youtubeProfiles=0): void {
     p50_network_begin_cycle($batchLimit,$profileLimit,4);
+    if(p50_radar_youtube_key()!=='')p50_network_reserve_youtube($youtubeProfiles);
     $GLOBALS['p50_youtube_run']=[
         'videos'=>[],'channels'=>[],'apiRequests'=>0,'apiCacheHits'=>0,
         'quotaLimit'=>20,'configured'=>p50_radar_youtube_key()!=='',
+        'profilesWithLink'=>0,'profilesSeen'=>[],'callsAttempted'=>0,
+        'callsSucceeded'=>0,'videosRetrieved'=>0,'videosSeen'=>[],
+        'errors403'=>0,'errors429'=>0,
     ];
     if(!$GLOBALS['p50_youtube_run']['configured']){
-        error_log('PASS50 Radar: YouTube Data API v3 non configurée dans api/config.php ; collecte publique uniquement.');
+        error_log('PASS50 Radar: youtube_api_unconfigured');
     }
 }
 
@@ -153,6 +160,12 @@ function p50_radar_youtube_status(): array {
         'apiRequests'=>(int)($run['apiRequests']??0),
         'cacheHits'=>(int)($run['apiCacheHits']??0),
         'quotaLimit'=>(int)($run['quotaLimit']??20),
+        'profilesWithLink'=>(int)($run['profilesWithLink']??0),
+        'callsAttempted'=>(int)($run['callsAttempted']??0),
+        'callsSucceeded'=>(int)($run['callsSucceeded']??0),
+        'videosRetrieved'=>(int)($run['videosRetrieved']??0),
+        'errors403'=>(int)($run['errors403']??0),
+        'errors429'=>(int)($run['errors429']??0),
     ];
 }
 
@@ -171,17 +184,22 @@ function p50_radar_youtube_api(string $resource,array $params,int $ttlSeconds): 
         }
     }
     $run=&$GLOBALS['p50_youtube_run'];
-    if((int)$run['apiRequests']>=(int)$run['quotaLimit'])throw new RuntimeException('budget_exceeded');
+    if((int)$run['apiRequests']>=(int)$run['quotaLimit'])throw new RuntimeException('youtube_quota_exceeded');
     $run['apiRequests']++;
     $url='https://www.googleapis.com/youtube/v3/'.$resource.'?'.http_build_query($params+['key'=>$key]);
     $response=p50_radar_fetch($url,'application/json');
+    if(($response['collectionStatus']??'')==='budget_exceeded')throw new RuntimeException('youtube_budget_exceeded');
+    $run['callsAttempted']++;
     if(!$response['ok']||$response['body']===''){
-        $status=p50_radar_network_status($response);
-        if((int)($response['status']??0)===403)$status='rate_limited';
+        $httpStatus=(int)($response['status']??0);
+        if($httpStatus===403){$run['errors403']++;throw new RuntimeException('youtube_forbidden');}
+        if($httpStatus===429){$run['errors429']++;throw new RuntimeException('youtube_quota_exceeded');}
+        $status='youtube_api_error';
         throw new RuntimeException($status);
     }
     $data=json_decode((string)$response['body'],true);
-    if(!is_array($data)||isset($data['error']))throw new RuntimeException('temporarily_unavailable');
+    if(!is_array($data)||isset($data['error']))throw new RuntimeException('youtube_api_error');
+    $run['callsSucceeded']++;
     $expires=gmdate('Y-m-d H:i:s',time()+max(60,$ttlSeconds));
     db()->prepare('INSERT INTO p50_youtube_api_cache(cache_key,resource_type,response_json,expires_at,updated_at) VALUES(?,?,?,?,UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE response_json=VALUES(response_json),expires_at=VALUES(expires_at),updated_at=UTC_TIMESTAMP()')
         ->execute([$cacheKey,$resource,json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$expires]);
@@ -248,13 +266,17 @@ function p50_radar_youtube_video(string $profileId,string $videoId,int $confiden
         return $cached;
     }
     $url='https://youtube.com/watch?v='.$videoId;$metrics=[];$published=null;$title='';
-    $channelId='';$channel='';$subscribers=null;
+    $channelId='';$channel='';$subscribers=null;$apiDiagnostic='';
     $key=p50_radar_youtube_key();
     if($key!==''){
         try{
             $data=p50_radar_youtube_api('videos',['part'=>'snippet,statistics','id'=>$videoId],900);
             $video=$data['items'][0]??null;
-            if(!is_array($video))throw new RuntimeException('temporarily_unavailable');
+            if(!is_array($video))throw new RuntimeException('youtube_api_error');
+            if(empty($GLOBALS['p50_youtube_run']['videosSeen'][$videoId])){
+                $GLOBALS['p50_youtube_run']['videosSeen'][$videoId]=true;
+                $GLOBALS['p50_youtube_run']['videosRetrieved']++;
+            }
             $stats=(array)($video['statistics']??[]);
             $metrics=['views'=>$stats['viewCount']??null,'likes'=>$stats['likeCount']??null,'comments'=>$stats['commentCount']??null];
             $snippet=(array)($video['snippet']??[]);
@@ -270,6 +292,7 @@ function p50_radar_youtube_video(string $profileId,string $videoId,int $confiden
             }
             $source='YouTube Data API v3';
         }catch(Throwable $apiError){
+            $apiDiagnostic=(string)$apiError->getMessage();
             $content=p50_radar_content_document($url,'YouTube');
             if(!$content['ok']){
                 $failure=in_array($apiError->getMessage(),P50_RADAR_STATUSES,true)?$apiError->getMessage():$content['status'];
@@ -286,7 +309,7 @@ function p50_radar_youtube_video(string $profileId,string $videoId,int $confiden
         $metrics=(array)$content['metrics'];$published=$content['publishedAt'];$title=(string)$content['title'];
     }
     $status=p50_radar_present_metrics($metrics)?'collected':'public_metrics_unavailable';
-    $result=p50_radar_result($profileId,'YouTube',$status,['contentId'=>$videoId,'canonicalUrl'=>$url,'publishedAt'=>$published,'metrics'=>$metrics,'confidence'=>$confidence,'source'=>$source,'title'=>$title,'channelId'=>$channelId,'channel'=>$channel,'subscribers'=>$subscribers]);
+    $result=p50_radar_result($profileId,'YouTube',$status,['contentId'=>$videoId,'canonicalUrl'=>$url,'publishedAt'=>$published,'metrics'=>$metrics,'confidence'=>$confidence,'source'=>$source,'title'=>$title,'channelId'=>$channelId,'channel'=>$channel,'subscribers'=>$subscribers,'accessStatus'=>$apiDiagnostic]);
     $GLOBALS['p50_youtube_run']['videos'][$videoId]=$result;
     return $result;
 }
@@ -313,10 +336,10 @@ function p50_radar_youtube_channel_id(array $reference): string {
 
 function p50_radar_youtube_adapter(string $profileId,string $url,int $confidence): array {
     $ref=p50_radar_youtube_reference($url);
-    if($ref['kind']==='invalid')return [p50_radar_result($profileId,'YouTube','invalid_url',['canonicalUrl'=>$ref['canonicalUrl']])];
+    if(in_array($ref['kind'],['invalid','unsupported'],true))return [p50_radar_result($profileId,'YouTube','youtube_invalid_url',['canonicalUrl'=>$ref['canonicalUrl']])];
     if(in_array($ref['kind'],['video','short'],true))return [p50_radar_youtube_video($profileId,$ref['id'],$confidence)];
     $channelId=p50_radar_youtube_channel_id($ref);
-    if($channelId==='')return [p50_radar_result($profileId,'YouTube','unsupported_url',['canonicalUrl'=>$ref['canonicalUrl']])];
+    if($channelId==='')return [p50_radar_result($profileId,'YouTube',p50_radar_youtube_key()===''?'youtube_api_unconfigured':'youtube_api_error',['canonicalUrl'=>$ref['canonicalUrl']])];
     $feed=p50_radar_fetch('https://www.youtube.com/feeds/videos.xml?channel_id='.rawurlencode($channelId),'application/atom+xml,application/xml');
     if(!$feed['ok']||$feed['body']==='')return [p50_radar_result($profileId,'YouTube',$feed['collectionStatus'],['canonicalUrl'=>$ref['canonicalUrl']])];
     if(!function_exists('simplexml_load_string'))return [p50_radar_result($profileId,'YouTube','temporarily_unavailable',['canonicalUrl'=>$ref['canonicalUrl']])];
@@ -329,7 +352,24 @@ function p50_radar_youtube_adapter(string $profileId,string $url,int $confidence
         if($id===''||$ts===false||$ts<time()-7*86400)continue;
         $out[]=p50_radar_youtube_video($profileId,$id,$confidence,'YouTube Atom + public');
     }
-    return $out?:[p50_radar_result($profileId,'YouTube','no_recent_content',['canonicalUrl'=>$ref['canonicalUrl'],'source'=>'YouTube Atom'])];
+    return $out?:[p50_radar_result($profileId,'YouTube','youtube_no_recent_video',['canonicalUrl'=>$ref['canonicalUrl'],'source'=>'YouTube Atom'])];
+}
+
+function p50_radar_youtube_log_status(array $items): string {
+    if(p50_radar_youtube_key()==='')return 'youtube_api_unconfigured';
+    $statuses=[];
+    foreach($items as $item){
+        $statuses[]=(string)($item['collectionStatus']??'');
+        if(str_starts_with((string)($item['accessStatus']??''),'youtube_'))$statuses[]=(string)$item['accessStatus'];
+    }
+    $statuses=array_values(array_unique($statuses));
+    if(in_array('youtube_invalid_url',$statuses,true))return 'youtube_invalid_url';
+    if(in_array('youtube_forbidden',$statuses,true))return 'youtube_forbidden';
+    if(in_array('youtube_quota_exceeded',$statuses,true))return 'youtube_quota_exceeded';
+    if(in_array('youtube_budget_exceeded',$statuses,true))return 'youtube_budget_exceeded';
+    if(in_array('youtube_no_recent_video',$statuses,true)||in_array('no_recent_content',$statuses,true))return 'youtube_no_recent_video';
+    if(in_array('collected',$statuses,true)||in_array('duplicate',$statuses,true))return 'youtube_api_collected';
+    return 'youtube_api_error';
 }
 
 function p50_radar_x_adapter(string $profileId,string $url,int $confidence): array {
@@ -443,7 +483,7 @@ function p50_radar_metric_deltas(array $previous,array $current): array {
 }
 
 function p50_radar_store(array $item): array {
-    if($item['collectionStatus']!=='collected')return ['captureRecorded'=>false,'duplicate'=>false,'activeMetrics'=>0];
+    if(!in_array($item['collectionStatus'],['collected','youtube_api_collected'],true))return ['captureRecorded'=>false,'duplicate'=>false,'activeMetrics'=>0];
     $metrics=p50_radar_present_metrics((array)$item['metrics']);
     if(!$metrics)return ['captureRecorded'=>false,'duplicate'=>false,'activeMetrics'=>0];
     $pdo=db();$ownsTransaction=!$pdo->inTransaction();if($ownsTransaction)$pdo->beginTransaction();
@@ -470,9 +510,17 @@ function p50_radar_store(array $item): array {
 function p50_radar_collect_profile(array $profile): array {
     p50_radar_ensure_schema();
     $profileId=(string)$profile['profile_id'];$links=p50_de_social_links($profileId,true);
+    usort($links,static fn(array $a,array $b): int=>((string)$a['platform']==='YouTube'?0:1)<=>((string)$b['platform']==='YouTube'?0:1));
     $summary=['profileId'=>$profileId,'officialLinksAnalyzed'=>0,'recentPublications'=>0,'capturesRecorded'=>0,'activeMetrics'=>0,'unavailablePlatforms'=>0,'items'=>[]];
     foreach($links as $link){
         $platform=(string)$link['platform'];$url=(string)$link['url'];$confidence=(int)$link['confidence'];$summary['officialLinksAnalyzed']++;
+        if($platform==='YouTube'){
+            $reference=p50_radar_youtube_reference($url);
+            if(!in_array($reference['kind'],['invalid','unsupported'],true)&&empty($GLOBALS['p50_youtube_run']['profilesSeen'][$profileId])){
+                $GLOBALS['p50_youtube_run']['profilesSeen'][$profileId]=true;
+                $GLOBALS['p50_youtube_run']['profilesWithLink']++;
+            }
+        }
         try{
             $items=match($platform){
                 'YouTube'=>p50_radar_youtube_adapter($profileId,$url,$confidence),
@@ -496,7 +544,7 @@ function p50_radar_collect_profile(array $profile): array {
         unset($item);
         if($platformUnavailable)$summary['unavailablePlatforms']++;
         $summary['recentPublications']+=$detected;$summary['capturesRecorded']+=$captures;$summary['items']=array_merge($summary['items'],$items);
-        $status=$items[0]['collectionStatus']??'error';
+        $status=$platform==='YouTube'?p50_radar_youtube_log_status($items):($items[0]['collectionStatus']??'error');
         $metadata=['items'=>count($items)];
         if($platform==='YouTube'){
             $metadata['youtubeApi']=p50_radar_youtube_status();

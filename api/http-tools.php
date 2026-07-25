@@ -19,11 +19,25 @@ function p50_network_begin_cycle(int $batchLimit=20,int $profileLimit=5,int $tim
     $GLOBALS['p50_network_cycle']=[
         'active'=>true,'batchLimit'=>max(1,$batchLimit),'profileLimit'=>max(1,$profileLimit),
         'timeout'=>max(1,min(8,$timeout)),'used'=>0,'profileUsed'=>0,'cache'=>[],
+        'youtubeReservations'=>0,'profileYoutubeReservation'=>false,
     ];
 }
 
 function p50_network_begin_profile(): void {
-    if(isset($GLOBALS['p50_network_cycle']))$GLOBALS['p50_network_cycle']['profileUsed']=0;
+    if(isset($GLOBALS['p50_network_cycle'])){
+        $GLOBALS['p50_network_cycle']['profileUsed']=0;
+        $GLOBALS['p50_network_cycle']['profileYoutubeReservation']=$GLOBALS['p50_network_cycle']['youtubeReservations']>0;
+    }
+}
+
+function p50_network_reserve_youtube(int $profiles): void {
+    if(isset($GLOBALS['p50_network_cycle']))$GLOBALS['p50_network_cycle']['youtubeReservations']=max(0,min($profiles,(int)$GLOBALS['p50_network_cycle']['batchLimit']));
+}
+
+function p50_network_release_youtube_profile(): void {
+    if(!isset($GLOBALS['p50_network_cycle'])||empty($GLOBALS['p50_network_cycle']['profileYoutubeReservation']))return;
+    $GLOBALS['p50_network_cycle']['youtubeReservations']=max(0,(int)$GLOBALS['p50_network_cycle']['youtubeReservations']-1);
+    $GLOBALS['p50_network_cycle']['profileYoutubeReservation']=false;
 }
 
 function p50_network_stats(): array {
@@ -62,12 +76,25 @@ function p50_http_fetch(string $url, int $timeout = 15, string $accept = 'applic
     if($active)$head=false;
     $cacheKey=p50_network_cache_key($url);
     if($active&&isset($cycle['cache'][$cacheKey]))return $cycle['cache'][$cacheKey]+['cached'=>true];
+    $isYoutubeApi=strtolower((string)(parse_url($url,PHP_URL_HOST)?:''))==='www.googleapis.com'
+        &&str_starts_with((string)(parse_url($url,PHP_URL_PATH)?:''),'/youtube/v3/');
+    $remaining=$active?(int)$cycle['batchLimit']-(int)$cycle['used']:0;
+    if($active&&!$isYoutubeApi&&$remaining<=(int)($cycle['youtubeReservations']??0)){
+        return ['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'contentType'=>'','error'=>'budget_exceeded','collectionStatus'=>'budget_exceeded','cached'=>false];
+    }
     if($active&&($cycle['used']>=$cycle['batchLimit']||$cycle['profileUsed']>=$cycle['profileLimit'])){
         return ['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'contentType'=>'','error'=>'budget_exceeded','collectionStatus'=>'budget_exceeded','cached'=>false];
     }
     $effectiveTimeout=$active?min($timeout,(int)$cycle['timeout']):$timeout;$attempt=0;
     do{
-        if($active){$cycle['used']++;$cycle['profileUsed']++;}$attempt++;
+        if($active){
+            $cycle['used']++;$cycle['profileUsed']++;
+            if($isYoutubeApi&&!empty($cycle['profileYoutubeReservation'])){
+                $cycle['youtubeReservations']=max(0,(int)$cycle['youtubeReservations']-1);
+                $cycle['profileYoutubeReservation']=false;
+            }
+        }
+        $attempt++;
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,CURLOPT_FOLLOWLOCATION => true,CURLOPT_MAXREDIRS => 5,

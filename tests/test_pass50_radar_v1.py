@@ -15,6 +15,7 @@ HTTP_TOOLS = (ROOT / "api/http-tools.php").read_text(encoding="utf-8")
 MIGRATION = (ROOT / "migration-data-engine-v1.sql").read_text(encoding="utf-8")
 METRICS_CORE = (ROOT / "api/metrics-core.php").read_text(encoding="utf-8")
 LIVE_CHECK = (ROOT / "api/live-check-youtube.php").read_text(encoding="utf-8")
+BOOTSTRAP = (ROOT / "api/bootstrap.php").read_text(encoding="utf-8")
 
 
 def canonicalize(url):
@@ -171,7 +172,7 @@ class RadarBehaviorTests(unittest.TestCase):
         self.assertEqual(budget.fetch("https://example.com/1"), "response")
         self.assertEqual(budget.fetch("https://example.com/2"), "response")
         self.assertEqual(budget.fetch("https://example.com/3"), "budget_exceeded")
-        self.assertIn("p50_radar_begin_batch(20,5)", COLLECT)
+        self.assertIn("p50_radar_begin_batch(20,5,count($profiles))", COLLECT)
 
     def test_timeout_is_isolated_and_retry_is_bounded(self):
         budget = NetworkBudget(batch=20, profile=5)
@@ -223,6 +224,8 @@ class RadarBehaviorTests(unittest.TestCase):
 
 class RadarPipelineContractTests(unittest.TestCase):
     def test_youtube_key_comes_only_from_api_config(self):
+        self.assertLess(COLLECT.index("require __DIR__ . '/bootstrap.php';"), COLLECT.index("require __DIR__ . '/radar-core.php';"))
+        self.assertIn("$config = require $configFile;", BOOTSTRAP)
         key_function = re.search(r"function p50_radar_youtube_key\(\): string \{.*?\n}", RADAR, re.S)
         self.assertIsNotNone(key_function)
         self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", key_function.group(0))
@@ -252,7 +255,7 @@ class RadarPipelineContractTests(unittest.TestCase):
 
     def test_missing_key_is_explicit_and_public_collection_remains(self):
         self.assertIn("'mode'=>!empty($run['configured'])?'youtube_data_api_v3':'public_only'", RADAR)
-        self.assertIn("API non configurée", RADAR)
+        self.assertIn("youtube_api_unconfigured", RADAR)
         self.assertIn("p50_radar_content_document($url,'YouTube')", RADAR)
 
     def test_api_key_is_removed_from_shared_cache_identity(self):
@@ -283,18 +286,48 @@ class RadarPipelineContractTests(unittest.TestCase):
         self.assertNotIn("data-admin-tab=\"radar\"", UI)
 
     def test_real_collectors_share_the_global_budget_and_url_cache(self):
-        budget_start = COLLECT.index("p50_radar_begin_batch(20,5)")
+        budget_start = COLLECT.index("p50_radar_begin_batch(20,5,count($profiles))")
         enrichment = COLLECT.index("p50_de_collect_enrichment($profile")
         radar = COLLECT.index("p50_radar_collect_profile($profile)")
         self.assertLess(budget_start, enrichment)
-        self.assertLess(enrichment, radar)
+        self.assertLess(radar, enrichment)
         self.assertIn("p50_network_begin_profile()", COLLECT)
         self.assertIn("$cycle['cache'][$cacheKey]", HTTP_TOOLS)
         self.assertIn("$cacheKey=p50_network_cache_key($url)", HTTP_TOOLS)
+        self.assertIn("p50_network_reserve_youtube($youtubeProfiles)", RADAR)
+        self.assertIn("p50_network_release_youtube_profile()", COLLECT)
+        self.assertIn("$remaining<=(int)($cycle['youtubeReservations']", HTTP_TOOLS)
         self.assertNotIn("curl_init(", CORE)
         self.assertNotIn("curl_init(", RADAR)
         self.assertNotIn("p50_de_collect_youtube_activity($profile)", COLLECT)
         self.assertNotIn("p50_de_collect_social_activity($profile)", COLLECT)
+
+    def test_youtube_runtime_diagnostics_and_exact_statuses(self):
+        for counter in ("profilesWithLink", "callsAttempted", "callsSucceeded", "videosRetrieved", "errors403", "errors429"):
+            self.assertIn(counter, RADAR)
+        for status in (
+            "youtube_api_collected", "youtube_api_unconfigured", "youtube_invalid_url",
+            "youtube_no_recent_video", "youtube_quota_exceeded", "youtube_forbidden",
+            "youtube_api_error", "youtube_budget_exceeded",
+        ):
+            self.assertIn(status, RADAR)
+        self.assertIn("$httpStatus===403", RADAR)
+        self.assertIn("$httpStatus===429", RADAR)
+
+    def test_youtube_is_prioritized_and_receives_an_api_attempt(self):
+        self.assertIn("usort($links", RADAR)
+        self.assertIn("(string)$a['platform']==='YouTube'?0:1", RADAR)
+        self.assertLess(RADAR.index("$run['callsAttempted']++"), RADAR.index("$run['callsSucceeded']++"))
+        self.assertLess(
+            COLLECT.index("p50_de_collect_state_links($profile)"),
+            COLLECT.index("p50_radar_collect_profile($profile)"),
+        )
+
+    def test_youtube_key_value_is_never_exposed(self):
+        status_function = re.search(r"function p50_radar_youtube_status\(\): array \{.*?\n}", RADAR, re.S)
+        self.assertIsNotNone(status_function)
+        self.assertNotRegex(status_function.group(0), r"['\"](?:apiKey|key)['\"]\s*=>")
+        self.assertNotRegex(RADAR, r"error_log\([^\n]*\$key")
 
     def test_existing_radar_table_is_migrated_and_captures_are_linked(self):
         self.assertIn("information_schema.COLUMNS", RADAR)

@@ -22,7 +22,7 @@ if(is_array($excludeRaw)){
     }
 }
 $profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null,array_keys($excludeIds));
-p50_radar_begin_batch(20,5);
+p50_radar_begin_batch(20,5,count($profiles));
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
 $radarTotals=['fiTraversed'=>0,'officialLinksAnalyzed'=>0,'recentPublications'=>0,'capturesRecorded'=>0,'activeMetrics'=>0,'unavailablePlatforms'=>0,'youtubeApi'=>p50_radar_youtube_status()];
 foreach($profiles as $profile){
@@ -32,11 +32,12 @@ foreach($profiles as $profile){
         $imported=p50_de_collect_state_links($profile);
         $importedFacts=p50_de_collect_state_facts($profile);
         $curatedFacts=p50_de_collect_curated_evidence_v221($profile);
+        // Les liens officiels sont importés avant Radar. YouTube est prioritaire
+        // dans Radar afin que l'enrichissement générique ne consomme pas son budget.
+        $radar=p50_radar_collect_profile($profile);
+        p50_network_release_youtube_profile();
         $enrichment=p50_de_collect_enrichment($profile,$deep);
         $found=$imported+$importedFacts+$curatedFacts+(int)($enrichment['found']??0);
-        // Le Radar remplace ici les anciens passages YouTube/social afin qu'une même
-        // source ne soit pas interrogée deux fois pendant le même cycle MAJ.
-        $radar=p50_radar_collect_profile($profile);
         $radarTotals['fiTraversed']++;
         foreach(['officialLinksAnalyzed','recentPublications','capturesRecorded','activeMetrics','unavailablePlatforms'] as $counter)$radarTotals[$counter]+=(int)($radar[$counter]??0);
         $found+=(int)($radar['recentPublications']??0);
@@ -45,6 +46,7 @@ foreach($profiles as $profile){
         $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment,'radar'=>$radar];
         $processedIds[]=(string)$profile['profile_id'];$totalFound+=$found;$totalVerified+=$verified;
     }catch(Throwable $e){
+        p50_network_release_youtube_profile();
         error_log('PASS50 data collect '.$profile['profile_id'].': '.$e->getMessage());
         p50_de_finish_run($run['id'],'error',0,0,$e->getMessage());
         $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'error','error'=>'Collecte impossible pour ce profil.'];
