@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/duel-history-core.php';
 if ($_SERVER['REQUEST_METHOD']==='GET') {
     $poll=trim((string)($_GET['poll']??''));
     if($poll==='') json_response(['error'=>'Sondage manquant.'],422);
@@ -12,5 +13,12 @@ if ($_SERVER['REQUEST_METHOD']==='GET') {
 require_method('POST');
 $u=auth_user();$in=json_input();$poll=trim((string)($in['pollKey']??''));$profile=trim((string)($in['profileId']??''));
 if($poll===''||$profile==='')json_response(['error'=>'Vote invalide.'],422);
-$stmt=db()->prepare('INSERT INTO coules_votes(poll_key,user_id,profile_id) VALUES(?,?,?) ON DUPLICATE KEY UPDATE profile_id=VALUES(profile_id),updated_at=NOW()');$stmt->execute([$poll,$u['id'],$profile]);
-json_response(['ok'=>true]);
+p50_duel_history_ensure_schema();$pdo=db();$pdo->beginTransaction();
+try{
+    $stmt=$pdo->prepare('INSERT INTO coules_votes(poll_key,user_id,profile_id) VALUES(?,?,?) ON DUPLICATE KEY UPDATE profile_id=VALUES(profile_id),updated_at=NOW()');$stmt->execute([$poll,$u['id'],$profile]);
+    $historyId=p50_duel_capture_vote_history((string)$u['id'],$poll,$profile);
+    $pdo->commit();json_response(['ok'=>true,'historyId'=>$historyId]);
+}catch(Throwable $e){
+    if($pdo->inTransaction())$pdo->rollBack();
+    throw $e;
+}
