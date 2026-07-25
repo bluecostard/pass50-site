@@ -15,34 +15,76 @@ function p50_public_http_url(string $url): bool {
     return true;
 }
 
-function p50_http_fetch(string $url, int $timeout = 15, string $accept = 'application/json,text/html;q=0.9,*/*;q=0.6', bool $head = false): array {
-    if (!p50_public_http_url($url)) return ['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'contentType'=>'','error'=>'URL distante refusée'];
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 5,
-        CURLOPT_TIMEOUT => $timeout,
-        CURLOPT_CONNECTTIMEOUT => min(7, $timeout),
-        CURLOPT_USERAGENT => 'PASS50-FreeTools/9.0 (+https://pass50.store)',
-        CURLOPT_HTTPHEADER => ['Accept: ' . $accept, 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7'],
-        CURLOPT_NOBODY => $head,
-        CURLOPT_HEADER => false,
-    ]);
-    $body = curl_exec($ch);
-    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $finalUrl = (string)curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
-    $contentType = strtolower((string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE));
-    $error = curl_error($ch);
-    curl_close($ch);
-    return [
-        'ok' => is_string($body) && $status >= 200 && $status < 400,
-        'status' => $status,
-        'body' => is_string($body) ? $body : '',
-        'finalUrl' => $finalUrl ?: $url,
-        'contentType' => $contentType,
-        'error' => $error,
+function p50_network_begin_cycle(int $batchLimit=20,int $profileLimit=5,int $timeout=4): void {
+    $GLOBALS['p50_network_cycle']=[
+        'active'=>true,'batchLimit'=>max(1,$batchLimit),'profileLimit'=>max(1,$profileLimit),
+        'timeout'=>max(1,min(8,$timeout)),'used'=>0,'profileUsed'=>0,'cache'=>[],
     ];
+}
+
+function p50_network_begin_profile(): void {
+    if(isset($GLOBALS['p50_network_cycle']))$GLOBALS['p50_network_cycle']['profileUsed']=0;
+}
+
+function p50_network_stats(): array {
+    $cycle=$GLOBALS['p50_network_cycle']??[];
+    $limit=(int)($cycle['batchLimit']??0);$used=(int)($cycle['used']??0);
+    return ['limit'=>$limit,'used'=>$used,'remaining'=>max(0,$limit-$used),'status'=>$limit>0&&$used>=$limit?'budget_exceeded':'available'];
+}
+
+function p50_network_cache_key(string $url): string {
+    $parts=parse_url(trim($url));if(!$parts||empty($parts['host']))return trim($url);
+    $query=[];parse_str((string)($parts['query']??''),$raw);
+    foreach($raw as $key=>$value){
+        if(preg_match('/^(utm_|fbclid$|gclid$|ref$|source$|feature$|si$|is_from_webapp$|sender_device$|web_id$)/i',(string)$key))continue;
+        $query[(string)$key]=$value;
+    }
+    ksort($query);$host=strtolower((string)$parts['host']);if(str_starts_with($host,'www.'))$host=substr($host,4);
+    $path=preg_replace('#/+#','/',(string)($parts['path']??'/'))?:'/';$path=$path==='/'?'/':rtrim($path,'/');
+    return strtolower((string)($parts['scheme']??'https')).'://'.$host.$path.($query?'?'.http_build_query($query):'');
+}
+
+function p50_network_failure_status(int $status,string $error): string {
+    $error=strtolower($error);
+    if($status===429)return 'rate_limited';
+    if(in_array($status,[401,403,404,410],true))return 'content_removed_or_private';
+    if($status>=500)return 'temporarily_unavailable';
+    if($status>=400)return 'http_error';
+    if($status===0&&(str_contains($error,'timed out')||str_contains($error,'timeout')))return 'timeout';
+    return $status===0?'temporarily_unavailable':'http_error';
+}
+
+function p50_http_fetch(string $url, int $timeout = 15, string $accept = 'application/json,text/html;q=0.9,*/*;q=0.6', bool $head = false, array $extraHeaders=[]): array {
+    if (!p50_public_http_url($url)) return ['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'contentType'=>'','error'=>'URL distante refusée','collectionStatus'=>'invalid_url','cached'=>false];
+    if(isset($GLOBALS['p50_network_cycle'])&&is_array($GLOBALS['p50_network_cycle'])){$cycle=&$GLOBALS['p50_network_cycle'];$active=!empty($cycle['active']);}
+    else{$cycle=[];$active=false;}
+    if($active)$head=false;
+    $cacheKey=p50_network_cache_key($url);
+    if($active&&isset($cycle['cache'][$cacheKey]))return $cycle['cache'][$cacheKey]+['cached'=>true];
+    if($active&&($cycle['used']>=$cycle['batchLimit']||$cycle['profileUsed']>=$cycle['profileLimit'])){
+        return ['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'contentType'=>'','error'=>'budget_exceeded','collectionStatus'=>'budget_exceeded','cached'=>false];
+    }
+    $effectiveTimeout=$active?min($timeout,(int)$cycle['timeout']):$timeout;$attempt=0;
+    do{
+        if($active){$cycle['used']++;$cycle['profileUsed']++;}$attempt++;
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,CURLOPT_FOLLOWLOCATION => true,CURLOPT_MAXREDIRS => 5,
+            CURLOPT_TIMEOUT => $effectiveTimeout,CURLOPT_CONNECTTIMEOUT => min(4,$effectiveTimeout),
+            CURLOPT_USERAGENT => 'PASS50-FreeTools/9.0 (+https://pass50.store)',
+            CURLOPT_HTTPHEADER => array_merge(['Accept: '.$accept,'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7'],$extraHeaders),
+            CURLOPT_NOBODY => $head,CURLOPT_HEADER => false,
+        ]);
+        $body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+        $finalUrl=(string)curl_getinfo($ch,CURLINFO_EFFECTIVE_URL);$contentType=strtolower((string)curl_getinfo($ch,CURLINFO_CONTENT_TYPE));
+        $error=curl_error($ch);curl_close($ch);$failure=p50_network_failure_status($status,$error);
+        $temporary=in_array($failure,['timeout','temporarily_unavailable'],true);
+    }while($active&&$temporary&&$attempt<2&&$cycle['used']<$cycle['batchLimit']&&$cycle['profileUsed']<$cycle['profileLimit']);
+    $result=['ok'=>is_string($body)&&$status>=200&&$status<400,'status'=>$status,'body'=>is_string($body)?$body:'',
+        'finalUrl'=>$finalUrl?:$url,'contentType'=>$contentType,'error'=>$error,
+        'collectionStatus'=>is_string($body)&&$status>=200&&$status<400?'collected':$failure,'cached'=>false];
+    if($active)$cycle['cache'][$cacheKey]=$result;
+    return $result;
 }
 
 function p50_json_get(string $url, int $timeout = 15): array {

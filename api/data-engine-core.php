@@ -1211,10 +1211,11 @@ function p50_de_activity_content_id(string $platform,string $url): string {
     return '';
 }
 
-function p50_de_activity_key(string $profileId,string $platform,string $url): string {
+function p50_de_activity_key(string $profileId,string $platform,string $url,string $contentId=''): string {
     $normalized=p50_de_normalize_activity_url($url);
-    $contentId=p50_de_activity_content_id($platform,$normalized);
-    return p50_de_hash($profileId.'|'.strtolower(trim($platform)).'|'.($contentId!==''?$contentId:$normalized));
+    $logicalId=trim($contentId);
+    if($logicalId==='')$logicalId=p50_de_activity_content_id($platform,$normalized);
+    return p50_de_hash($profileId.'|'.strtolower(trim($platform)).'|'.($logicalId!==''?$logicalId:$normalized));
 }
 
 function p50_de_unique_activity_rows(array $rows): array {
@@ -1643,10 +1644,10 @@ function p50_de_publish_score_pipeline(?string $userId=null,string $period='2H')
 }
 
 
-function p50_de_add_activity(string $profileId,string $platform,string $type,string $title,string $url,?string $publishedAt,array $metrics,int $confidence): void {
-    if(!filter_var($url,FILTER_VALIDATE_URL))return;
+function p50_de_add_activity(string $profileId,string $platform,string $type,string $title,string $url,?string $publishedAt,array $metrics,int $confidence,string $contentId=''): array {
+    if(!filter_var($url,FILTER_VALIDATE_URL))return ['stored'=>false,'captureRecorded'=>false,'reason'=>'invalid_url'];
     $normalizedUrl=p50_de_normalize_activity_url($url);
-    $eventKey=p50_de_activity_key($profileId,$platform,$normalizedUrl);
+    $eventKey=p50_de_activity_key($profileId,$platform,$normalizedUrl,$contentId);
     $status=$confidence>=p50_de_threshold()?'verified':'candidate';
     $safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
     $stmt=db()->prepare("INSERT INTO p50_activity_events(profile_id,platform,event_type,title,url,url_hash,published_at,metrics,confidence,status,collected_at)
@@ -1661,8 +1662,10 @@ function p50_de_add_activity(string $profileId,string $platform,string $type,str
         if((string)($last->fetchColumn()?:'')!==$encoded){
             db()->prepare('INSERT INTO p50_activity_metric_history(profile_id,platform,url_hash,metrics,usable_metric_count,captured_at) VALUES(?,?,?,?,?,NOW())')
                 ->execute([$profileId,$platform,$eventKey,$encoded,count($usable)]);
+            return ['stored'=>true,'captureRecorded'=>true,'reason'=>'collected'];
         }
     }
+    return ['stored'=>true,'captureRecorded'=>false,'reason'=>$usable?'duplicate':'public_metrics_unavailable'];
 }
 
 function p50_de_youtube_channel_id(string $url): ?string {
