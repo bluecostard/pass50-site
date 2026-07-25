@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS p50_radar_collection_log (
 
 CREATE TABLE IF NOT EXISTS p50_radar_metric_captures (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  event_id BIGINT UNSIGNED NOT NULL,
+  event_id BIGINT UNSIGNED NULL,
   profile_id VARCHAR(100) NOT NULL,
   platform VARCHAR(32) NOT NULL,
   content_key CHAR(64) CHARACTER SET ascii NOT NULL,
@@ -195,6 +195,44 @@ CREATE TABLE IF NOT EXISTS p50_radar_metric_captures (
   INDEX idx_p50_radar_capture_content(profile_id,platform,content_key,captured_at),
   INDEX idx_p50_radar_capture_date(captured_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @p50_event_id_column = (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='p50_radar_metric_captures' AND COLUMN_NAME='event_id'
+);
+SET @p50_event_id_sql = IF(
+  @p50_event_id_column=0,
+  'ALTER TABLE p50_radar_metric_captures ADD COLUMN event_id BIGINT UNSIGNED NULL AFTER id',
+  'SELECT 1'
+);
+PREPARE p50_event_id_stmt FROM @p50_event_id_sql;
+EXECUTE p50_event_id_stmt;
+DEALLOCATE PREPARE p50_event_id_stmt;
+
+INSERT INTO p50_activity_events(profile_id,platform,event_type,title,url,url_hash,published_at,metrics,confidence,status,collected_at)
+SELECT c.profile_id,c.platform,'radar','Contenu Radar historique',c.canonical_url,c.content_key,c.published_at,c.metrics,90,'verified',c.captured_at
+FROM p50_radar_metric_captures c
+LEFT JOIN p50_activity_events e ON e.profile_id=c.profile_id AND e.url_hash=c.content_key
+WHERE c.event_id IS NULL AND e.id IS NULL AND c.canonical_url<>'' AND c.content_key<>''
+ON DUPLICATE KEY UPDATE url_hash=VALUES(url_hash);
+
+UPDATE p50_radar_metric_captures c
+JOIN p50_activity_events e ON e.profile_id=c.profile_id AND e.url_hash=c.content_key
+SET c.event_id=e.id
+WHERE c.event_id IS NULL;
+
+SET @p50_event_id_index = (
+  SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='p50_radar_metric_captures' AND INDEX_NAME='idx_p50_radar_capture_event'
+);
+SET @p50_event_index_sql = IF(
+  @p50_event_id_index=0,
+  'CREATE INDEX idx_p50_radar_capture_event ON p50_radar_metric_captures(event_id,captured_at)',
+  'SELECT 1'
+);
+PREPARE p50_event_index_stmt FROM @p50_event_index_sql;
+EXECUTE p50_event_index_stmt;
+DEALLOCATE PREPARE p50_event_index_stmt;
 
 CREATE TABLE IF NOT EXISTS p50_engine_settings (
   setting_key VARCHAR(100) PRIMARY KEY,

@@ -26,6 +26,7 @@ p50_radar_begin_batch(20,5);
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
 $radarTotals=['fiTraversed'=>0,'officialLinksAnalyzed'=>0,'recentPublications'=>0,'capturesRecorded'=>0,'activeMetrics'=>0,'unavailablePlatforms'=>0];
 foreach($profiles as $profile){
+    p50_network_begin_profile();
     $run=p50_de_begin_run((string)$profile['profile_id'],'auto_enrichment_v22',$user['id'],['deep'=>$deep]);
     try{
         $imported=p50_de_collect_state_links($profile);
@@ -53,4 +54,4 @@ foreach($profiles as $profile){
 }
 $remainingNeverCollected=(int)db()->query("SELECT COUNT(*) FROM p50_profile_registry r LEFT JOIN (SELECT DISTINCT profile_id FROM p50_collection_runs) x ON x.profile_id=r.profile_id WHERE r.alive=1 AND x.profile_id IS NULL")->fetchColumn();
 $metricSummary=p50_de_metric_summary($processedIds);
-json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'radar'=>$radarTotals,'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);
+json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'radar'=>$radarTotals,'network'=>p50_network_stats(),'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);

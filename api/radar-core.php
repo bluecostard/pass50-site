@@ -9,45 +9,23 @@ const P50_RADAR_STATUSES = [
 ];
 
 function p50_radar_begin_batch(int $batchLimit=20,int $profileLimit=5): void {
-    $GLOBALS['p50_radar_network']=['batchLimit'=>max(1,$batchLimit),'profileLimit'=>max(1,$profileLimit),'used'=>0,'profileUsed'=>0,'cache'=>[]];
+    p50_network_begin_cycle($batchLimit,$profileLimit,4);
 }
 
 function p50_radar_begin_profile(): void {
-    if(!isset($GLOBALS['p50_radar_network']))p50_radar_begin_batch();
-    $GLOBALS['p50_radar_network']['profileUsed']=0;
+    p50_network_begin_profile();
 }
 
 function p50_radar_network_status(array $response): string {
-    $status=(int)($response['status']??0);$error=strtolower((string)($response['error']??''));
-    if($status===429)return 'rate_limited';
-    if(in_array($status,[401,403,404,410],true))return 'content_removed_or_private';
-    if($status>=500)return 'temporarily_unavailable';
-    if($status>=400)return 'http_error';
-    if($status===0&&(str_contains($error,'timed out')||str_contains($error,'timeout')))return 'timeout';
-    return $status===0?'temporarily_unavailable':'http_error';
+    return (string)($response['collectionStatus']??p50_network_failure_status((int)($response['status']??0),(string)($response['error']??'')));
 }
 
 function p50_radar_fetch(string $url,string $accept='text/html,*/*;q=0.6',bool $allowRetry=true): array {
-    if(!isset($GLOBALS['p50_radar_network']))p50_radar_begin_batch();
-    $network=&$GLOBALS['p50_radar_network'];$cacheKey=p50_de_normalize_activity_url($url);
-    if(isset($network['cache'][$cacheKey]))return $network['cache'][$cacheKey]+['cached'=>true];
-    if($network['used'] >= $network['batchLimit']||$network['profileUsed'] >= $network['profileLimit']){
-        return ['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'contentType'=>'','error'=>'budget_exceeded','collectionStatus'=>'budget_exceeded','cached'=>false];
-    }
-    $network['used']++;$network['profileUsed']++;
-    $response=p50_http_fetch($url,4,$accept);
-    $response['collectionStatus']=$response['ok']?'collected':p50_radar_network_status($response);$response['cached']=false;
-    if(!$response['ok']&&$allowRetry&&in_array($response['collectionStatus'],['timeout','temporarily_unavailable'],true)
-        &&$network['used']<$network['batchLimit']&&$network['profileUsed']<$network['profileLimit']){
-        $network['used']++;$network['profileUsed']++;
-        $retry=p50_http_fetch($url,4,$accept);
-        $retry['collectionStatus']=$retry['ok']?'collected':p50_radar_network_status($retry);$retry['cached']=false;$response=$retry;
-    }
-    $network['cache'][$cacheKey]=$response;
-    return $response;
+    return p50_http_fetch($url,4,$accept);
 }
 
 function p50_radar_ensure_schema(): void {
+    static $done=false;if($done)return;$done=true;
     db()->exec("CREATE TABLE IF NOT EXISTS p50_radar_collection_log (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         profile_id VARCHAR(100) NOT NULL,
@@ -64,7 +42,7 @@ function p50_radar_ensure_schema(): void {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     db()->exec("CREATE TABLE IF NOT EXISTS p50_radar_metric_captures (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        event_id BIGINT UNSIGNED NOT NULL,
+        event_id BIGINT UNSIGNED NULL,
         profile_id VARCHAR(100) NOT NULL,
         platform VARCHAR(32) NOT NULL,
         content_key CHAR(64) CHARACTER SET ascii NOT NULL,
@@ -78,6 +56,17 @@ function p50_radar_ensure_schema(): void {
         INDEX idx_p50_radar_capture_content(profile_id,platform,content_key,captured_at),
         INDEX idx_p50_radar_capture_date(captured_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $column=db()->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='p50_radar_metric_captures' AND COLUMN_NAME='event_id'")->fetchColumn();
+    if((int)$column===0)db()->exec("ALTER TABLE p50_radar_metric_captures ADD COLUMN event_id BIGINT UNSIGNED NULL AFTER id");
+    db()->exec("INSERT INTO p50_activity_events(profile_id,platform,event_type,title,url,url_hash,published_at,metrics,confidence,status,collected_at)
+        SELECT c.profile_id,c.platform,'radar','Contenu Radar historique',c.canonical_url,c.content_key,c.published_at,c.metrics,90,'verified',c.captured_at
+        FROM p50_radar_metric_captures c
+        LEFT JOIN p50_activity_events e ON e.profile_id=c.profile_id AND e.url_hash=c.content_key
+        WHERE c.event_id IS NULL AND e.id IS NULL AND c.canonical_url<>'' AND c.content_key<>''
+        ON DUPLICATE KEY UPDATE url_hash=VALUES(url_hash)");
+    db()->exec("UPDATE p50_radar_metric_captures c JOIN p50_activity_events e ON e.profile_id=c.profile_id AND e.url_hash=c.content_key SET c.event_id=e.id WHERE c.event_id IS NULL");
+    $index=db()->query("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='p50_radar_metric_captures' AND INDEX_NAME='idx_p50_radar_capture_event'")->fetchColumn();
+    if((int)$index===0)db()->exec("CREATE INDEX idx_p50_radar_capture_event ON p50_radar_metric_captures(event_id,captured_at)");
 }
 
 function p50_radar_empty_metrics(): array {
@@ -146,27 +135,10 @@ function p50_radar_json(string $url): array {
 }
 
 function p50_radar_json_headers(string $url,array $headers): array {
-    if(!p50_public_http_url($url))throw new RuntimeException('error');
-    if(!isset($GLOBALS['p50_radar_network']))p50_radar_begin_batch();
-    $network=&$GLOBALS['p50_radar_network'];$cacheKey='authorized-json|'.p50_de_normalize_activity_url($url);
-    if(isset($network['cache'][$cacheKey]))return $network['cache'][$cacheKey];
-    if($network['used'] >= $network['batchLimit']||$network['profileUsed'] >= $network['profileLimit'])throw new RuntimeException('budget_exceeded');
-    $attempt=0;$body=false;$status=0;$error='';
-    do{
-        $network['used']++;$network['profileUsed']++;$attempt++;
-        $ch=curl_init($url);if($ch===false)throw new RuntimeException('temporarily_unavailable');
-        curl_setopt_array($ch,[
-            CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>3,
-            CURLOPT_CONNECTTIMEOUT=>3,CURLOPT_TIMEOUT=>4,CURLOPT_USERAGENT=>'PASS50-Radar/1.0',
-            CURLOPT_HTTPHEADER=>array_merge(['Accept: application/json'],$headers),
-        ]);
-        $body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$error=curl_error($ch);curl_close($ch);
-        $temporary=$status>=500||($status===0&&(str_contains(strtolower($error),'timeout')||str_contains(strtolower($error),'timed out')));
-    }while($temporary&&$attempt<2&&$network['used']<$network['batchLimit']&&$network['profileUsed']<$network['profileLimit']);
-    if($body===false||$status<200||$status>=300)throw new RuntimeException(p50_radar_network_status(['status'=>$status,'error'=>$error]));
-    $data=json_decode((string)$body,true);
+    $response=p50_http_fetch($url,4,'application/json',false,$headers);
+    if(!$response['ok']||$response['body']==='')throw new RuntimeException(p50_radar_network_status($response));
+    $data=json_decode((string)$response['body'],true);
     if(!is_array($data))throw new RuntimeException('error');
-    $network['cache'][$cacheKey]=$data;
     return $data;
 }
 
@@ -381,7 +353,6 @@ function p50_radar_store(array $item): array {
 
 function p50_radar_collect_profile(array $profile): array {
     p50_radar_ensure_schema();
-    p50_radar_begin_profile();
     $profileId=(string)$profile['profile_id'];$links=p50_de_social_links($profileId,true);
     $summary=['profileId'=>$profileId,'officialLinksAnalyzed'=>0,'recentPublications'=>0,'capturesRecorded'=>0,'activeMetrics'=>0,'unavailablePlatforms'=>0,'items'=>[]];
     foreach($links as $link){

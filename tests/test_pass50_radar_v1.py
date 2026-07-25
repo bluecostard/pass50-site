@@ -11,6 +11,8 @@ RADAR = (ROOT / "api/radar-core.php").read_text(encoding="utf-8")
 CORE = (ROOT / "api/data-engine-core.php").read_text(encoding="utf-8")
 COLLECT = (ROOT / "api/data-collect.php").read_text(encoding="utf-8")
 UI = (ROOT / "data-engine-ui.js").read_text(encoding="utf-8")
+HTTP_TOOLS = (ROOT / "api/http-tools.php").read_text(encoding="utf-8")
+MIGRATION = (ROOT / "migration-data-engine-v1.sql").read_text(encoding="utf-8")
 
 
 def canonicalize(url):
@@ -198,7 +200,7 @@ class RadarBehaviorTests(unittest.TestCase):
     def test_capture_without_event_is_refused(self):
         self.assertIn("SELECT id FROM p50_activity_events", RADAR)
         self.assertIn("Événement Radar introuvable après écriture.", RADAR)
-        self.assertIn("event_id BIGINT UNSIGNED NOT NULL", RADAR)
+        self.assertIn("event_id BIGINT UNSIGNED NULL", RADAR)
 
     def test_identical_consecutive_capture_is_not_inserted(self):
         item = {"profileId": "a", "platform": "YouTube", "contentId": "same", "canonicalUrl": "https://youtube.com/watch?v=same", "metrics": {"views": 10}}
@@ -241,6 +243,29 @@ class RadarPipelineContractTests(unittest.TestCase):
         self.assertIn("require __DIR__ . '/radar-core.php';", COLLECT)
         self.assertIn("p50_radar_collect_profile($profile)", COLLECT)
         self.assertNotIn("data-admin-tab=\"radar\"", UI)
+
+    def test_real_collectors_share_the_global_budget_and_url_cache(self):
+        budget_start = COLLECT.index("p50_radar_begin_batch(20,5)")
+        enrichment = COLLECT.index("p50_de_collect_enrichment($profile")
+        radar = COLLECT.index("p50_radar_collect_profile($profile)")
+        self.assertLess(budget_start, enrichment)
+        self.assertLess(enrichment, radar)
+        self.assertIn("p50_network_begin_profile()", COLLECT)
+        self.assertIn("$cycle['cache'][$cacheKey]", HTTP_TOOLS)
+        self.assertIn("$cacheKey=p50_network_cache_key($url)", HTTP_TOOLS)
+        self.assertNotIn("curl_init(", CORE)
+        self.assertNotIn("curl_init(", RADAR)
+        self.assertNotIn("p50_de_collect_youtube_activity($profile)", COLLECT)
+        self.assertNotIn("p50_de_collect_social_activity($profile)", COLLECT)
+
+    def test_existing_radar_table_is_migrated_and_captures_are_linked(self):
+        self.assertIn("information_schema.COLUMNS", RADAR)
+        self.assertIn("ADD COLUMN event_id BIGINT UNSIGNED NULL", RADAR)
+        self.assertIn("UPDATE p50_radar_metric_captures c JOIN p50_activity_events e", RADAR)
+        self.assertIn("WHERE c.event_id IS NULL", RADAR)
+        self.assertIn("information_schema.STATISTICS", RADAR)
+        self.assertIn("ADD COLUMN event_id BIGINT UNSIGNED NULL", MIGRATION)
+        self.assertNotRegex(MIGRATION, r"\b(?:DROP|TRUNCATE|DELETE)\b")
 
 
 if __name__ == "__main__":
