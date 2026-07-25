@@ -95,7 +95,7 @@
     DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set();DE.majStartedAt=new Date().toISOString();DE.majLastResult=null;
     let completedSuccessfully=false;
     DE.majStage='1/7 · Synchronisation des FI';DE.majMessage='Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
-    let totals={found:0,verified:0,usableMetrics:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0};
+    let totals={found:0,verified:0,historicalMetrics:0,uniqueEvents:0,activeMetrics:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0};
     try{
       if(typeof window.PASS50_STEP12_STATUS==='object'&&Number(window.PASS50_STEP12_STATUS.present||0)<7&&typeof window.p50EnsureStep12Profiles==='function')window.p50EnsureStep12Profiles();
       const sync=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});
@@ -107,7 +107,7 @@
         const ids=(data.processedIds||[]).map(String);
         if(!ids.length)break;
         const before=DE.majSeen.size;ids.forEach(id=>DE.majSeen.add(id));
-        totals.batches++;totals.found+=Number(data.found||0);totals.verified+=Number(data.verified||0);totals.usableMetrics+=Number(data.usableMetrics||0);totals.measurableProfiles+=Number(data.measurableProfiles||0);
+        totals.batches++;totals.found+=Number(data.found||0);totals.verified+=Number(data.verified||0);totals.historicalMetrics+=Number(data.historicalMetrics||0);totals.uniqueEvents+=Number(data.uniqueEvents||0);totals.activeMetrics+=Number(data.activeMetrics||0);totals.measurableProfiles+=Number(data.measurableProfiles||0);
         DE.hub=data.hub||DE.hub;
         DE.majStage='3/7 · Calcul des 15 critères';
         DE.majMessage=`Lot ${totals.batches} : ${ids.length} FI · ${Number(data.found||0)} donnée(s) trouvée(s). Le calcul final sera vérifié à la publication.`;
@@ -122,7 +122,7 @@
       }
 
       DE.majStage='4/7 · Publication des scores';DE.majMessage='Écriture des données vérifiées et des scores calculés dans l’état PASS50…';deDrawMajProgress();
-      const published=await apiFetch('data-publish.php',{method:'POST',body:{period:ui.period}});totals.published=Number(published.publishedProfiles||0);totals.usableMetrics=Number(published.usableMetrics??totals.usableMetrics);totals.measurableProfiles=Number(published.measurableProfiles??totals.measurableProfiles);totals.recalculated=Number(published.recalculatedProfiles||0);totals.notRecalculated=Number(published.notRecalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);totals.ranksChanged=Number(published.ranksChanged||0);DE.hub=published.hub||DE.hub;
+      const published=await apiFetch('data-publish.php',{method:'POST',body:{period:ui.period}});totals.published=Number(published.publishedProfiles||0);totals.historicalMetrics=Number(published.historicalMetrics??totals.historicalMetrics);totals.uniqueEvents=Number(published.uniqueEvents??totals.uniqueEvents);totals.activeMetrics=Number(published.activeMetrics??totals.activeMetrics);totals.measurableProfiles=Number(published.measurableProfiles??totals.measurableProfiles);totals.recalculated=Number(published.recalculatedProfiles||0);totals.notRecalculated=Number(published.notRecalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);totals.ranksChanged=Number(published.ranksChanged||0);DE.hub=published.hub||DE.hub;
 
       DE.majStage='5/7 · Rechargement et reclassement';DE.majMessage='Récupération de l’état serveur puis reclassement automatique…';deDrawMajProgress();
       if(typeof loadCloudState==='function')await loadCloudState();
@@ -136,7 +136,8 @@
       await deLoadHub(true);
       const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
       const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
-      DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=rankingChanged?'MAJ PASS50 terminée · classement actualisé':'MAJ PASS50 terminée';DE.majMessage=rankingChanged?`${totals.found} donnée(s) trouvée(s) · ${totals.usableMetrics} métrique(s) exploitable(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s) · classement actualisé.`:`Collecte terminée, mais aucun score ni rang n'a changé. ${totals.found} donnée(s) trouvée(s) · ${totals.usableMetrics} métrique(s) exploitable(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s).`;
+      const counters=`${totals.found} donnée(s) trouvée(s) · ${totals.historicalMetrics} métrique(s) historique(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.activeMetrics} métrique(s) dans la fenêtre active · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s).`;
+      DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=rankingChanged?'MAJ PASS50 terminée · classement actualisé':'MAJ PASS50 terminée';DE.majMessage=totals.activeMetrics===0?`Collecte terminée, mais aucune métrique récente n'est disponible pour recalculer les scores. ${counters}`:rankingChanged?`${counters} Classement actualisé.`:`Collecte terminée. Les profils ont été recalculés, mais aucun score ni rang n'a changé. ${counters}`;
       window.PASS50_MAJ_STATUS=result;
       completedSuccessfully=true;
       toast(`MAJ PASS50 terminée · ${result.processed} FI traitées`);

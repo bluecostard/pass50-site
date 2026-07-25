@@ -4,6 +4,7 @@ import math
 import pathlib
 import re
 import unittest
+from datetime import datetime, timedelta, timezone
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -122,6 +123,35 @@ def accept_state_write(current_revision, base_revision, current_state, incoming_
     return incoming_state, current_revision + 1, True
 
 
+def time_weight(age_hours):
+    if age_hours <= 24:
+        return 1.0
+    if age_hours <= 48:
+        return 0.90
+    if age_hours <= 72:
+        return 0.75
+    if age_hours <= 120:
+        return 0.55
+    if age_hours <= 168:
+        return 0.35
+    return 0.0
+
+
+def event_key(event):
+    return event["profile_id"], event["platform"].lower(), event["url"].split("?")[0].rstrip("/")
+
+
+def summarize_events(events, now):
+    unique = {event_key(event): event for event in events}
+    historical = sum(len(event["metrics"]) for event in unique.values())
+    active = sum(
+        len(event["metrics"])
+        for event in unique.values()
+        if time_weight((now - event["published_at"]).total_seconds() / 3600) > 0
+    )
+    return historical, len(unique), active
+
+
 class PipelineBehaviorTests(unittest.TestCase):
     def test_collection_without_metrics_preserves_scores_and_ranking(self):
         original = sample_state()
@@ -145,6 +175,40 @@ class PipelineBehaviorTests(unittest.TestCase):
         self.assertEqual(final["profiles"][0]["id"], "b")
         self.assertGreaterEqual(counters["ranksChanged"], 2)
 
+    def test_rolling_window_time_weights(self):
+        expected = ((12, 1.00), (36, .90), (60, .75), (96, .55), (144, .35), (192, 0))
+        for age, weight in expected:
+            with self.subTest(age=age):
+                self.assertEqual(time_weight(age), weight)
+
+    def test_identical_events_count_once(self):
+        now = datetime.now(timezone.utc)
+        event = {"profile_id": "a", "platform": "X", "url": "https://x.com/a/status/1?utm_source=test", "published_at": now - timedelta(hours=3), "metrics": {"views": 100, "comments": 2}}
+        duplicate = dict(event, url="https://x.com/a/status/1")
+        self.assertEqual(summarize_events([event, duplicate], now), (2, 1, 2))
+
+    def test_six_day_event_can_trigger_recalculation(self):
+        weight = time_weight(6 * 24)
+        weighted = {key: value * weight for key, value in {"views": 1_000_000, "likes": 100_000, "comments": 20_000, "shares": 10_000}.items()}
+        coverage = .72
+        confidence = .5 * coverage + .3 * weight + .2 * .94
+        self.assertEqual(weight, .35)
+        self.assertIsNotNone(score_from_metrics(weighted))
+        self.assertGreaterEqual(len(("c2", "c4", "c5", "c6", "c7", "c8", "c9", "c13", "c14", "c15")), 6)
+        self.assertGreaterEqual(confidence, .65)
+
+    def test_eight_day_event_does_not_trigger_recalculation(self):
+        self.assertEqual(time_weight(8 * 24), 0)
+
+    def test_historical_unique_and_active_counters_are_coherent(self):
+        now = datetime.now(timezone.utc)
+        events = [
+            {"profile_id": "a", "platform": "X", "url": "https://x.com/a/status/1", "published_at": now - timedelta(days=1), "metrics": {"views": 10, "comments": 1}},
+            {"profile_id": "a", "platform": "X", "url": "https://x.com/a/status/1?utm_source=x", "published_at": now - timedelta(days=1), "metrics": {"views": 10, "comments": 1}},
+            {"profile_id": "b", "platform": "YouTube", "url": "https://youtube.com/watch?v=old", "published_at": now - timedelta(days=8), "metrics": {"views": 20}},
+        ]
+        self.assertEqual(summarize_events(events, now), (3, 2, 2))
+
 
 class PipelineSourceContractTests(unittest.TestCase):
     def test_collection_has_no_intermediate_publication(self):
@@ -163,10 +227,23 @@ class PipelineSourceContractTests(unittest.TestCase):
         self.assertIn("p50_de_publish_score_pipeline(", PUBLISH)
 
     def test_admin_counters_and_exact_no_change_message_exist(self):
-        for counter in ("found", "usableMetrics", "recalculated", "scoresChanged", "ranksChanged", "published"):
+        for counter in ("found", "historicalMetrics", "uniqueEvents", "activeMetrics", "recalculated", "scoresChanged", "ranksChanged", "published"):
             self.assertIn(counter, UI)
-        self.assertIn("Collecte terminée, mais aucun score ni rang n'a changé.", UI)
+        self.assertIn("Collecte terminée, mais aucune métrique récente n'est disponible pour recalculer les scores.", UI)
+        self.assertIn("Collecte terminée. Les profils ont été recalculés, mais aucun score ni rang n'a changé.", UI)
         self.assertIn("totals.scoresChanged>0||totals.ranksChanged>0", UI)
+
+    def test_rolling_window_is_server_side_admissibility_base(self):
+        self.assertIn("p50_de_15c_window($profileId,168)", CORE)
+        self.assertIn("function p50_de_time_weight(", CORE)
+        for fragment in ("return 1.0", "return .90", "return .75", "return .55", "return .35", "return 0.0"):
+            self.assertIn(fragment, CORE)
+
+    def test_server_deduplicates_before_metrics_and_history(self):
+        self.assertIn("p50_de_unique_activity_rows(", CORE)
+        self.assertIn("p50_de_activity_key(", CORE)
+        self.assertIn("p50_de_normalize_activity_url(", CORE)
+        self.assertIn("SELECT metrics FROM p50_activity_metric_history", CORE)
 
     def test_pending_frontend_sync_is_cancelled_before_update(self):
         start = UI.index("async function deRunMajPass50")
