@@ -15,6 +15,7 @@ HTTP_TOOLS = (ROOT / "api/http-tools.php").read_text(encoding="utf-8")
 MIGRATION = (ROOT / "migration-data-engine-v1.sql").read_text(encoding="utf-8")
 METRICS_CORE = (ROOT / "api/metrics-core.php").read_text(encoding="utf-8")
 LIVE_CHECK = (ROOT / "api/live-check-youtube.php").read_text(encoding="utf-8")
+BOOTSTRAP = (ROOT / "api/bootstrap.php").read_text(encoding="utf-8")
 
 
 def canonicalize(url):
@@ -223,6 +224,8 @@ class RadarBehaviorTests(unittest.TestCase):
 
 class RadarPipelineContractTests(unittest.TestCase):
     def test_youtube_key_comes_only_from_api_config(self):
+        self.assertLess(COLLECT.index("require __DIR__ . '/bootstrap.php';"), COLLECT.index("require __DIR__ . '/radar-core.php';"))
+        self.assertIn("$config = require $configFile;", BOOTSTRAP)
         key_function = re.search(r"function p50_radar_youtube_key\(\): string \{.*?\n}", RADAR, re.S)
         self.assertIsNotNone(key_function)
         self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", key_function.group(0))
