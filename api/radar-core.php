@@ -19,7 +19,8 @@ function p50_radar_begin_batch(int $batchLimit=20,int $profileLimit=5,int $youtu
         'quotaLimit'=>20,'configured'=>p50_radar_youtube_key()!=='',
         'profilesWithLink'=>0,'profilesSeen'=>[],'callsAttempted'=>0,
         'callsSucceeded'=>0,'videosRetrieved'=>0,'videosSeen'=>[],
-        'errors403'=>0,'errors429'=>0,
+        'errors403'=>0,'errors429'=>0,'budgetExceeded'=>0,
+        'invalidUrls'=>0,'noRecentProfiles'=>0,'statusProfiles'=>[],
     ];
     if(!$GLOBALS['p50_youtube_run']['configured']){
         error_log('PASS50 Radar: youtube_api_unconfigured');
@@ -166,7 +167,20 @@ function p50_radar_youtube_status(): array {
         'videosRetrieved'=>(int)($run['videosRetrieved']??0),
         'errors403'=>(int)($run['errors403']??0),
         'errors429'=>(int)($run['errors429']??0),
+        'budgetExceeded'=>(int)($run['budgetExceeded']??0),
+        'invalidUrls'=>(int)($run['invalidUrls']??0),
+        'noRecentProfiles'=>(int)($run['noRecentProfiles']??0),
     ];
+}
+
+function p50_radar_youtube_record_profile_status(string $profileId,string $status): void {
+    $run=&$GLOBALS['p50_youtube_run'];
+    $key=$profileId."\n".$status;
+    if(!empty($run['statusProfiles'][$key]))return;
+    $run['statusProfiles'][$key]=true;
+    if($status==='youtube_invalid_url')$run['invalidUrls']++;
+    if($status==='youtube_no_recent_video')$run['noRecentProfiles']++;
+    if(in_array($status,['youtube_quota_exceeded','youtube_budget_exceeded'],true))$run['budgetExceeded']++;
 }
 
 function p50_radar_youtube_api(string $resource,array $params,int $ttlSeconds): array {
@@ -545,6 +559,7 @@ function p50_radar_collect_profile(array $profile): array {
         if($platformUnavailable)$summary['unavailablePlatforms']++;
         $summary['recentPublications']+=$detected;$summary['capturesRecorded']+=$captures;$summary['items']=array_merge($summary['items'],$items);
         $status=$platform==='YouTube'?p50_radar_youtube_log_status($items):($items[0]['collectionStatus']??'error');
+        if($platform==='YouTube')p50_radar_youtube_record_profile_status($profileId,$status);
         $metadata=['items'=>count($items)];
         if($platform==='YouTube'){
             $metadata['youtubeApi']=p50_radar_youtube_status();

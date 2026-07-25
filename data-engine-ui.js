@@ -59,6 +59,18 @@
     if(!DE.majTarget)return DE.majRunning?2:0;
     return Math.max(0,Math.min(100,Math.round(DE.majSeen.size/DE.majTarget*100)));
   }
+  function deYoutubeMajStatus(youtube,captures){
+    if(!youtube.configured)return 'API YouTube non configurée';
+    if(youtube.callsAttempted===0)return 'API configurée mais aucun appel tenté';
+    if(youtube.callsSucceeded===0)return 'Appels tentés mais tous échoués';
+    if(youtube.videosRetrieved===0)return 'Appels réussis mais aucune vidéo récente';
+    if(captures===0)return 'Vidéos récupérées mais aucune capture enregistrée';
+    return 'Captures enregistrées avec succès';
+  }
+  function deYoutubeMajSummary(youtube,captures){
+    const configured=youtube.configured?'oui':'non';
+    return `YouTube — Clé configurée : ${configured} · ${youtube.profilesWithLink} profil(s) avec lien · ${youtube.callsAttempted} appel(s) tenté(s) · ${youtube.callsSucceeded} réussi(s) · ${youtube.videosRetrieved} vidéo(s) récupérée(s) · ${youtube.errors403} erreur(s) 403 · ${youtube.errors429} erreur(s) 429 · ${youtube.budgetExceeded} budget(s) dépassé(s) · ${youtube.invalidUrls} URL(s) invalide(s) · ${youtube.noRecentProfiles} profil(s) sans vidéo récente · ${deYoutubeMajStatus(youtube,captures)}.`;
+  }
   function deRenderMajPass50(pane){
     const saved=DE.majLastResult||deMajSavedStatus();
     const last=saved?.finishedAt?new Date(saved.finishedAt).toLocaleString('fr-FR'):'Jamais';
@@ -95,7 +107,7 @@
     DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set();DE.majStartedAt=new Date().toISOString();DE.majLastResult=null;
     let completedSuccessfully=false;
     DE.majStage='1/7 · Synchronisation des FI';DE.majMessage='Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
-    let totals={found:0,verified:0,historicalMetrics:0,fiTraversed:0,officialLinksAnalyzed:0,recentPublications:0,uniqueEvents:0,capturesRecorded:0,activeMetrics:0,unavailablePlatforms:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0};
+    let totals={found:0,verified:0,historicalMetrics:0,fiTraversed:0,officialLinksAnalyzed:0,recentPublications:0,uniqueEvents:0,capturesRecorded:0,activeMetrics:0,unavailablePlatforms:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0,youtube:{configured:false,profilesWithLink:0,callsAttempted:0,callsSucceeded:0,videosRetrieved:0,errors403:0,errors429:0,budgetExceeded:0,invalidUrls:0,noRecentProfiles:0}};
     try{
       if(typeof window.PASS50_STEP12_STATUS==='object'&&Number(window.PASS50_STEP12_STATUS.present||0)<7&&typeof window.p50EnsureStep12Profiles==='function')window.p50EnsureStep12Profiles();
       const sync=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});
@@ -109,6 +121,9 @@
         const before=DE.majSeen.size;ids.forEach(id=>DE.majSeen.add(id));
         const radar=data.radar||{};
         totals.batches++;totals.found+=Number(data.found||0);totals.verified+=Number(data.verified||0);totals.historicalMetrics+=Number(data.historicalMetrics||0);totals.fiTraversed+=Number(radar.fiTraversed||data.processed||0);totals.officialLinksAnalyzed+=Number(radar.officialLinksAnalyzed||0);totals.recentPublications+=Number(radar.recentPublications||0);totals.uniqueEvents+=Number(data.uniqueEvents||0);totals.capturesRecorded+=Number(radar.capturesRecorded||0);totals.activeMetrics+=Number(data.activeMetrics||0);totals.unavailablePlatforms+=Number(radar.unavailablePlatforms||0);totals.measurableProfiles+=Number(data.measurableProfiles||0);
+        const youtube=radar.youtubeApi||{};
+        totals.youtube.configured=totals.youtube.configured||Boolean(youtube.configured);
+        for(const counter of ['profilesWithLink','callsAttempted','callsSucceeded','videosRetrieved','errors403','errors429','budgetExceeded','invalidUrls','noRecentProfiles'])totals.youtube[counter]+=Number(youtube[counter]||0);
         DE.hub=data.hub||DE.hub;
         DE.majStage='3/7 · Calcul des 15 critères';
         DE.majMessage=`Lot ${totals.batches} : ${ids.length} FI · ${Number(data.found||0)} donnée(s) trouvée(s). Le calcul final sera vérifié à la publication.`;
@@ -137,7 +152,7 @@
       await deLoadHub(true);
       const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
       const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
-      const counters=`${totals.fiTraversed} FI parcourue(s) · ${totals.officialLinksAnalyzed} lien(s) officiel(s) analysé(s) · ${totals.recentPublications} publication(s) récente(s) détectée(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.capturesRecorded} capture(s) métrique(s) enregistrée(s) · ${totals.activeMetrics} métrique(s) active(s) · ${totals.unavailablePlatforms} plateforme(s) indisponible(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s).`;
+      const counters=`${totals.fiTraversed} FI parcourue(s) · ${totals.officialLinksAnalyzed} lien(s) officiel(s) analysé(s) · ${totals.recentPublications} publication(s) récente(s) détectée(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.capturesRecorded} capture(s) métrique(s) enregistrée(s) · ${totals.activeMetrics} métrique(s) active(s) · ${totals.unavailablePlatforms} plateforme(s) indisponible(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s). ${deYoutubeMajSummary(totals.youtube,totals.capturesRecorded)}`;
       DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=rankingChanged?'MAJ PASS50 terminée · classement actualisé':'MAJ PASS50 terminée';DE.majMessage=totals.activeMetrics===0?`Collecte terminée, mais aucune métrique récente n'est disponible pour recalculer les scores. ${counters}`:rankingChanged?`${counters} Classement actualisé.`:`Collecte terminée. Les profils ont été recalculés, mais aucun score ni rang n'a changé. ${counters}`;
       window.PASS50_MAJ_STATUS=result;
       completedSuccessfully=true;
