@@ -6,6 +6,9 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 INDEX = (ROOT / "index.html").read_text(encoding="utf-8")
 API = (ROOT / "api/vote-share.php").read_text(encoding="utf-8")
+DUEL_HISTORY = (ROOT / "api/duel-history-core.php").read_text(encoding="utf-8")
+COULES = (ROOT / "api/coules.php").read_text(encoding="utf-8")
+DATA_ENGINE = (ROOT / "api/data-engine-core.php").read_text(encoding="utf-8")
 SCHEMA = (ROOT / "schema.sql").read_text(encoding="utf-8")
 
 
@@ -70,7 +73,7 @@ class ShareVoteAudioContractTests(unittest.TestCase):
         self.assertIn("link_copied", API)
 
     def test_12_qr_targets_profile_campaign(self):
-        for value in ("'profile'=>$profileId", "'source'=>'vote_share'", "'medium'=>'social'"):
+        for value in ("'profile'=>$selectedId", "'source'=>'vote_share'", "'medium'=>'social'"):
             self.assertIn(value, API)
         self.assertIn("data='+encodeURIComponent(card.campaignUrl)", INDEX)
 
@@ -100,6 +103,77 @@ class ShareVoteAudioContractTests(unittest.TestCase):
         self.assertNotRegex(API, r"['\"](?:email|displayName|userId)['\"]\s*=>")
         self.assertIn("p50_vote_share_sessions", SCHEMA)
         self.assertIn("p50_vote_share_events", SCHEMA)
+
+
+class ShareVoteDuelHistoryTests(unittest.TestCase):
+    def test_both_candidates_are_present_on_the_card(self):
+        self.assertIn("'candidates'=>$candidates", API)
+        self.assertIn("card.candidates.slice(0,2)", INDEX)
+        self.assertIn("MON VOTE · LE DUEL", INDEX)
+        self.assertIn("'VS'", INDEX)
+
+    def test_opponent_is_derived_from_the_voted_poll(self):
+        self.assertIn("explode('__',$pollKey)", DUEL_HISTORY)
+        self.assertIn("count($ids)===2", DUEL_HISTORY)
+        self.assertIn("!in_array($selectedId,$ids,true)", DUEL_HISTORY)
+        self.assertNotRegex(API, r"\$input\[['\"]opponent")
+
+    def test_selected_candidate_is_explicit_and_highlighted(self):
+        self.assertIn("'selectedProfileId'=>$selectedId", API)
+        self.assertIn("candidate.profileId===card.selectedProfileId", INDEX)
+        self.assertIn("✓ MON VOTE", INDEX)
+        self.assertIn("ctx.strokeStyle=selected?'#b7ff00'", INDEX)
+
+    def test_percentages_are_only_rendered_when_frozen_values_exist(self):
+        self.assertIn("$history['candidate_a_percentage']!==null&&$history['candidate_b_percentage']!==null", API)
+        self.assertIn("card.percentagesAvailable&&Number.isFinite", INDEX)
+        self.assertIn("$percentagesAvailable=false", API)
+
+    def test_no_fake_opponent_or_result_can_be_supplied(self):
+        self.assertIn("p50_duel_candidate_ids($pollKey)", API)
+        self.assertIn("p50_duel_public_candidates($ids,$snapshot)", API)
+        self.assertNotRegex(API, r"\$input\[['\"](?:percentage|candidateA|candidateB|opponent)")
+
+    def test_each_confirmed_vote_creates_an_immutable_snapshot(self):
+        vote_write = COULES.index("INSERT INTO coules_votes")
+        history_write = COULES.index("p50_duel_capture_vote_history")
+        self.assertLess(vote_write, history_write)
+        self.assertIn("INSERT INTO p50_duel_vote_history", DUEL_HISTORY)
+        self.assertNotRegex(DUEL_HISTORY, r"(?:UPDATE|DELETE FROM)\s+p50_duel_vote_history")
+
+    def test_snapshot_contains_vote_state_and_ranking_fields(self):
+        for field in (
+            "poll_key", "candidate_a_id", "candidate_b_id", "selected_profile_id",
+            "candidate_a_percentage", "candidate_b_percentage", "total_votes",
+            "candidate_a_rank", "candidate_b_rank", "candidate_a_score",
+            "candidate_b_score", "state_revision", "state_updated_at", "voted_at",
+        ):
+            self.assertIn(field, DUEL_HISTORY)
+
+    def test_later_vote_changes_do_not_recalculate_an_old_card(self):
+        self.assertIn("p50_duel_history_for_share", API)
+        self.assertIn("$snapshotSource='frozen_history'", API)
+        share_payload = re.search(r"function p50_share_duel_payload\(.*?\n}", API, re.S).group(0)
+        self.assertNotIn("COUNT(*) AS vote_count", share_payload)
+
+    def test_old_vote_without_history_has_labeled_result_free_fallback(self):
+        self.assertIn("$snapshotSource='current_fallback'", API)
+        self.assertIn("$percentagesAvailable=false", API)
+        self.assertIn("Historique absent : profils actuels affichés sans résultat.", API)
+        self.assertIn("card.snapshotSource==='current_fallback'", INDEX)
+
+    def test_share_session_references_the_used_history(self):
+        self.assertIn("history_id", API)
+        self.assertIn("$history['id']??null", API)
+        self.assertIn("idx_vote_share_history", SCHEMA)
+
+    def test_history_survives_app_state_recalculation_and_publication(self):
+        self.assertNotIn("p50_duel_vote_history", DATA_ENGINE)
+        self.assertNotRegex(DUEL_HISTORY, r"(?:TRUNCATE|DROP|DELETE FROM)\s+p50_duel_vote_history")
+        self.assertIn("idx_duel_history_user", SCHEMA)
+        self.assertIn("idx_duel_history_poll", SCHEMA)
+        self.assertIn("idx_duel_history_voted", SCHEMA)
+        self.assertIn("idx_duel_history_selected", SCHEMA)
 
 
 if __name__ == "__main__":
