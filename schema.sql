@@ -67,3 +67,27 @@ CREATE TABLE coules_votes (
   CONSTRAINT fk_coules_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_coules_poll_profile (poll_key,profile_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE p50_vote_share_sessions (
+  id CHAR(64) CHARACTER SET ascii PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  poll_key VARCHAR(190) NOT NULL,
+  profile_id VARCHAR(100) NOT NULL,
+  vote_updated_at DATETIME NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_vote_share_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_vote_share_user_date (user_id,created_at),
+  INDEX idx_vote_share_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE p50_vote_share_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  share_id CHAR(64) CHARACTER SET ascii NOT NULL,
+  event_name VARCHAR(40) NOT NULL,
+  platform VARCHAR(30) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_vote_share_session FOREIGN KEY (share_id) REFERENCES p50_vote_share_sessions(id) ON DELETE CASCADE,
+  INDEX idx_vote_share_event_date (event_name,created_at),
+  INDEX idx_vote_share_session (share_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
