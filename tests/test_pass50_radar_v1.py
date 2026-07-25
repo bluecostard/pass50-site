@@ -303,7 +303,7 @@ class RadarPipelineContractTests(unittest.TestCase):
         self.assertNotIn("p50_de_collect_social_activity($profile)", COLLECT)
 
     def test_youtube_runtime_diagnostics_and_exact_statuses(self):
-        for counter in ("profilesWithLink", "callsAttempted", "callsSucceeded", "videosRetrieved", "errors403", "errors429"):
+        for counter in ("profilesWithLink", "callsAttempted", "callsSucceeded", "videosRetrieved", "errors403", "errors429", "budgetExceeded", "invalidUrls", "noRecentProfiles"):
             self.assertIn(counter, RADAR)
         for status in (
             "youtube_api_collected", "youtube_api_unconfigured", "youtube_invalid_url",
@@ -313,6 +313,29 @@ class RadarPipelineContractTests(unittest.TestCase):
             self.assertIn(status, RADAR)
         self.assertIn("$httpStatus===403", RADAR)
         self.assertIn("$httpStatus===429", RADAR)
+
+    def test_update_summary_displays_safe_youtube_diagnostics(self):
+        self.assertIn("const youtube=radar.youtubeApi||{}", UI)
+        for label in (
+            "Clé configurée", "profil(s) avec lien", "appel(s) tenté(s)", "réussi(s)",
+            "vidéo(s) récupérée(s)", "erreur(s) 403", "erreur(s) 429",
+            "budget(s) dépassé(s)", "URL(s) invalide(s)", "profil(s) sans vidéo récente",
+        ):
+            self.assertIn(label, UI)
+        for status in (
+            "API configurée mais aucun appel tenté", "Appels tentés mais tous échoués",
+            "Appels réussis mais aucune vidéo récente",
+            "Vidéos récupérées mais aucune capture enregistrée",
+            "Captures enregistrées avec succès",
+        ):
+            self.assertIn(status, UI)
+
+    def test_update_summary_never_exposes_youtube_secrets_or_google_payloads(self):
+        summary = re.search(r"function deYoutubeMajSummary\(.*?\n  }", UI, re.S)
+        self.assertIsNotNone(summary)
+        self.assertNotIn("PASS50_YOUTUBE_API_KEY", summary.group(0))
+        self.assertNotRegex(summary.group(0), r"(?:key=|googleapis\.com|response_json|response\.body)")
+        self.assertIn("'youtubeApi'=>p50_radar_youtube_status()", COLLECT)
 
     def test_youtube_is_prioritized_and_receives_an_api_attempt(self):
         self.assertIn("usort($links", RADAR)
