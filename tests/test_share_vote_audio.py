@@ -72,10 +72,12 @@ class ShareVoteAudioContractTests(unittest.TestCase):
         self.assertIn("navigator.clipboard.writeText(VOTE_SHARE.card.campaignUrl)", INDEX)
         self.assertIn("link_copied", API)
 
-    def test_12_qr_targets_profile_campaign(self):
+    def test_12_campaign_targets_selected_profile_without_qr(self):
         for value in ("'profile'=>$selectedId", "'source'=>'vote_share'", "'medium'=>'social'"):
             self.assertIn(value, API)
-        self.assertIn("data='+encodeURIComponent(card.campaignUrl)", INDEX)
+        self.assertIn("lines.push('','Vote toi aussi sur PASS50 :',card.campaignUrl)", INDEX)
+        self.assertNotIn("api.qrserver.com", INDEX)
+        self.assertNotIn("qrUrl", INDEX)
 
     def test_13_analytics_does_not_claim_unverifiable_share(self):
         self.assertIn("native_share_triggered", API)
@@ -174,6 +176,51 @@ class ShareVoteDuelHistoryTests(unittest.TestCase):
         self.assertIn("idx_duel_history_poll", SCHEMA)
         self.assertIn("idx_duel_history_voted", SCHEMA)
         self.assertIn("idx_duel_history_selected", SCHEMA)
+
+
+class ShareVoteMessageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.message = re.search(r"function voteShareMessage\(card\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.panel = re.search(r"function voteSharePanel\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.native = re.search(r"async function nativeVoteShare\(\)\{.*?\n}", INDEX, re.S).group(0)
+
+    def test_whatsapp_message_contains_exact_question(self):
+        self.assertIn("Qui est le plus coulé des 2 ?", self.message)
+
+    def test_selected_candidate_is_displayed(self):
+        self.assertIn("candidate.profileId===card.selectedProfileId", self.message)
+        self.assertIn("✅ Mon choix : ${selected?.name||''}", self.message)
+
+    def test_both_frozen_percentages_are_displayed_when_available(self):
+        self.assertIn("card.percentagesAvailable", self.message)
+        self.assertIn("${candidates[0].name} : ${Number(candidates[0].percentage)} %", self.message)
+        self.assertIn("${candidates[1].name} : ${Number(candidates[1].percentage)} %", self.message)
+        self.assertIn("$history['candidate_a_percentage']", API)
+        self.assertIn("$history['candidate_b_percentage']", API)
+
+    def test_no_percentage_is_added_when_history_has_none(self):
+        condition = self.message.index("if(card.percentagesAvailable")
+        percentage_lines = self.message.index("candidates[0].percentage")
+        campaign = self.message.index("Vote toi aussi sur PASS50")
+        self.assertLess(condition, percentage_lines)
+        self.assertLess(percentage_lines, campaign)
+        self.assertIn("$percentagesAvailable=false", API)
+
+    def test_no_qr_code_or_qr_copy_is_present(self):
+        self.assertNotIn("api.qrserver.com", INDEX)
+        self.assertNotIn("qrUrl", INDEX)
+        self.assertNotRegex(INDEX, r"(?i)QR code")
+
+    def test_campaign_link_is_present_once_in_message(self):
+        self.assertEqual(self.message.count("card.campaignUrl"), 1)
+        self.assertIn("Vote toi aussi sur PASS50 :", self.message)
+
+    def test_native_share_and_whatsapp_use_identical_text(self):
+        self.assertIn("const shareText=voteShareMessage(card)", self.panel)
+        self.assertIn("encodeURIComponent(shareText)", self.panel)
+        self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.native)
+        self.assertIn("text:shareText", self.native)
 
 
 if __name__ == "__main__":
