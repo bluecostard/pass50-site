@@ -181,6 +181,7 @@ CREATE TABLE IF NOT EXISTS p50_radar_collection_log (
 
 CREATE TABLE IF NOT EXISTS p50_radar_metric_captures (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  event_id BIGINT UNSIGNED NOT NULL,
   profile_id VARCHAR(100) NOT NULL,
   platform VARCHAR(32) NOT NULL,
   content_key CHAR(64) CHARACTER SET ascii NOT NULL,
@@ -190,6 +191,7 @@ CREATE TABLE IF NOT EXISTS p50_radar_metric_captures (
   metrics LONGTEXT NOT NULL,
   metric_deltas LONGTEXT NOT NULL,
   captured_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_p50_radar_capture_event(event_id,captured_at),
   INDEX idx_p50_radar_capture_content(profile_id,platform,content_key,captured_at),
   INDEX idx_p50_radar_capture_date(captured_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

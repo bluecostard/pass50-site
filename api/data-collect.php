@@ -22,6 +22,7 @@ if(is_array($excludeRaw)){
     }
 }
 $profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null,array_keys($excludeIds));
+p50_radar_begin_batch(20,5);
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
 $radarTotals=['fiTraversed'=>0,'officialLinksAnalyzed'=>0,'recentPublications'=>0,'capturesRecorded'=>0,'activeMetrics'=>0,'unavailablePlatforms'=>0];
 foreach($profiles as $profile){
@@ -32,16 +33,14 @@ foreach($profiles as $profile){
         $curatedFacts=p50_de_collect_curated_evidence_v221($profile);
         $enrichment=p50_de_collect_enrichment($profile,$deep);
         $found=$imported+$importedFacts+$curatedFacts+(int)($enrichment['found']??0);
-        $youtube=p50_de_collect_youtube_activity($profile);
-        $found+=(int)($youtube['found']??0);
-        $socialActivity=p50_de_collect_social_activity($profile);
-        $found+=(int)($socialActivity['found']??0);
+        // Le Radar remplace ici les anciens passages YouTube/social afin qu'une même
+        // source ne soit pas interrogée deux fois pendant le même cycle MAJ.
         $radar=p50_radar_collect_profile($profile);
         $radarTotals['fiTraversed']++;
         foreach(['officialLinksAnalyzed','recentPublications','capturesRecorded','activeMetrics','unavailablePlatforms'] as $counter)$radarTotals[$counter]+=(int)($radar[$counter]??0);
         $found+=(int)($radar['recentPublications']??0);
-        $verified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0)+(int)($socialActivity['verified']??0);
-        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity,'radar'=>$radar,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts,'curatedEvidenceImported'=>$curatedFacts]);
+        $verified=p50_de_profile_verified_count((string)$profile['profile_id']);
+        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'radar'=>$radar,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts,'curatedEvidenceImported'=>$curatedFacts]);
         $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment,'radar'=>$radar];
         $processedIds[]=(string)$profile['profile_id'];$totalFound+=$found;$totalVerified+=$verified;
     }catch(Throwable $e){

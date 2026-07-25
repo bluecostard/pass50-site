@@ -72,6 +72,31 @@ def store_capture(history, item):
     return True, metric_delta(previous or {}, metrics), updated
 
 
+class NetworkBudget:
+    def __init__(self, batch=20, profile=5):
+        self.batch_limit = batch
+        self.profile_limit = profile
+        self.used = 0
+        self.profile_used = 0
+        self.cache = {}
+
+    def next_profile(self):
+        self.profile_used = 0
+
+    def fetch(self, url, temporary_failure=False):
+        if url in self.cache:
+            return "cached"
+        if self.used >= self.batch_limit or self.profile_used >= self.profile_limit:
+            return "budget_exceeded"
+        self.used += 1
+        self.profile_used += 1
+        if temporary_failure and self.used < self.batch_limit and self.profile_used < self.profile_limit:
+            self.used += 1
+            self.profile_used += 1
+        self.cache[url] = "response"
+        return "response"
+
+
 class RadarBehaviorTests(unittest.TestCase):
     def test_youtube_channel_url_is_recognized(self):
         self.assertEqual(youtube_reference("https://www.youtube.com/channel/UC123"), ("channel", "UC123"))
@@ -128,6 +153,68 @@ class RadarBehaviorTests(unittest.TestCase):
         self.assertIn("foreach($links as $link)", RADAR)
         self.assertIn("catch(Throwable $e)", RADAR)
         self.assertIn("'error'=>'Collecte publique impossible'", RADAR)
+
+    def test_legacy_and_radar_share_one_useful_request(self):
+        budget = NetworkBudget()
+        self.assertEqual(budget.fetch("https://youtube.com/channel/example"), "response")
+        self.assertEqual(budget.fetch("https://youtube.com/channel/example"), "cached")
+        self.assertEqual(budget.used, 1)
+        self.assertNotIn("p50_de_collect_youtube_activity($profile)", COLLECT)
+        self.assertNotIn("p50_de_collect_social_activity($profile)", COLLECT)
+
+    def test_network_budget_blocks_excess_requests(self):
+        budget = NetworkBudget(batch=2, profile=2)
+        self.assertEqual(budget.fetch("https://example.com/1"), "response")
+        self.assertEqual(budget.fetch("https://example.com/2"), "response")
+        self.assertEqual(budget.fetch("https://example.com/3"), "budget_exceeded")
+        self.assertIn("p50_radar_begin_batch(20,5)", COLLECT)
+
+    def test_timeout_is_isolated_and_retry_is_bounded(self):
+        budget = NetworkBudget(batch=20, profile=5)
+        self.assertEqual(budget.fetch("https://slow.example", temporary_failure=True), "response")
+        self.assertEqual(budget.used, 2)
+        budget.next_profile()
+        self.assertEqual(budget.fetch("https://healthy.example"), "response")
+        self.assertIn("'timeout'", RADAR)
+
+    def test_detected_but_inaccessible_content_has_exact_status(self):
+        self.assertIn("'detected_content_inaccessible'", RADAR)
+        self.assertIn("'Contenu détecté mais inaccessible'", RADAR)
+        for status in ("timeout", "rate_limited", "http_error", "content_removed_or_private"):
+            self.assertIn(f"'{status}'", RADAR)
+
+    def test_web_home_page_is_not_an_event(self):
+        self.assertIn("$path!==''&&$path!=='index.php'", RADAR)
+        self.assertIn("!$content['isPublication']", RADAR)
+
+    def test_rss_without_date_is_rejected(self):
+        self.assertIn("$ts===false", RADAR)
+        self.assertIn("$title===''", RADAR)
+
+    def test_generic_open_graph_is_rejected(self):
+        self.assertIn("Article|NewsArticle|BlogPosting|VideoObject|SocialMediaPosting", RADAR)
+        self.assertIn("$structured||in_array(strtolower($ogType)", RADAR)
+
+    def test_capture_without_event_is_refused(self):
+        self.assertIn("SELECT id FROM p50_activity_events", RADAR)
+        self.assertIn("Événement Radar introuvable après écriture.", RADAR)
+        self.assertIn("event_id BIGINT UNSIGNED NOT NULL", RADAR)
+
+    def test_identical_consecutive_capture_is_not_inserted(self):
+        item = {"profileId": "a", "platform": "YouTube", "contentId": "same", "canonicalUrl": "https://youtube.com/watch?v=same", "metrics": {"views": 10}}
+        _, _, history = store_capture({}, item)
+        recorded, delta, _ = store_capture(history, item)
+        self.assertFalse(recorded)
+        self.assertEqual(delta, {})
+
+    def test_delta_is_scoped_to_the_correct_event(self):
+        first = {"profileId": "a", "platform": "YouTube", "contentId": "one", "canonicalUrl": "https://youtube.com/watch?v=one", "metrics": {"views": 100}}
+        other = dict(first, contentId="two", canonicalUrl="https://youtube.com/watch?v=two", metrics={"views": 500})
+        _, _, history = store_capture({}, first)
+        _, _, history = store_capture(history, other)
+        recorded, delta, _ = store_capture(history, dict(first, metrics={"views": 130}))
+        self.assertTrue(recorded)
+        self.assertEqual(delta["views"], 30)
 
 
 class RadarPipelineContractTests(unittest.TestCase):
