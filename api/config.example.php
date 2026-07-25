@@ -41,8 +41,6 @@ return [
         'live_stale_minutes' => 45,
     ],
     'metrics' => [
-        // Facultatif : sinon le Radar utilise uniquement les flux et métadonnées publics.
-        'youtube_api_key' => getenv('PASS50_YOUTUBE_API_KEY') ?: '',
         // Facultatif : réservé au connecteur officiel X déjà présent dans metrics-core.php.
         'x_bearer_token' => getenv('PASS50_X_BEARER_TOKEN') ?: '',
     ],

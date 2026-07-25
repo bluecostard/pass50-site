@@ -179,6 +179,15 @@ CREATE TABLE IF NOT EXISTS p50_radar_collection_log (
   INDEX idx_p50_radar_status_date(collection_status,collected_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS p50_youtube_api_cache (
+  cache_key CHAR(64) CHARACTER SET ascii PRIMARY KEY,
+  resource_type VARCHAR(32) NOT NULL,
+  response_json LONGTEXT NOT NULL,
+  expires_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_p50_youtube_cache_expiry(expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS p50_radar_metric_captures (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   event_id BIGINT UNSIGNED NULL,

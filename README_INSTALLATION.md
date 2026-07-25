@@ -43,10 +43,9 @@ Importer ensuite :
 migration-metrics-v1.sql
 ```
 
-Dans `api/config.php`, ajouter :
+Dans `api/config.php`, ajouter les jetons non-YouTube :
 
 ```php
-define('PASS50_YOUTUBE_API_KEY', 'VOTRE_CLE_GOOGLE');
 define('PASS50_X_BEARER_TOKEN', '');
 define('PASS50_METRICS_CRON_TOKEN', 'UNE_CHAINE_LONGUE_ET_ALEATOIRE');
 ```
@@ -57,6 +56,7 @@ define('PASS50_METRICS_CRON_TOKEN', 'UNE_CHAINE_LONGUE_ET_ALEATOIRE');
 2. Activer YouTube Data API v3.
 3. Créer une clé API.
 4. Restreindre la clé à YouTube Data API v3 et aux adresses IP du serveur lorsque possible.
+5. Définir la clé uniquement dans la variable d’environnement `PASS50_YOUTUBE_API_KEY`. Ne jamais la copier dans un fichier PHP.
 
 ## Collecte manuelle
 

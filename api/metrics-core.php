@@ -73,7 +73,6 @@ function p50m_sync_accounts_from_state(): int {
 }
 
 function p50m_youtube_key(): string {
-    if(defined('PASS50_YOUTUBE_API_KEY'))return trim((string)PASS50_YOUTUBE_API_KEY);
     return trim((string)(getenv('PASS50_YOUTUBE_API_KEY')?:''));
 }
 
