@@ -1,22 +1,30 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/duel-history-core.php';
 require_method('POST');
 $user=auth_user();
 
 function p50_share_ensure_schema(): void {
+    p50_duel_history_ensure_schema();
     db()->exec("CREATE TABLE IF NOT EXISTS p50_vote_share_sessions (
         id CHAR(64) CHARACTER SET ascii PRIMARY KEY,
         user_id CHAR(36) NOT NULL,
         poll_key VARCHAR(190) NOT NULL,
         profile_id VARCHAR(100) NOT NULL,
+        history_id CHAR(64) CHARACTER SET ascii NULL,
         vote_updated_at DATETIME NOT NULL,
         expires_at DATETIME NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_vote_share_user_date(user_id,created_at),
         INDEX idx_vote_share_expiry(expires_at),
+        INDEX idx_vote_share_history(history_id),
         CONSTRAINT fk_vote_share_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $column=db()->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='p50_vote_share_sessions' AND COLUMN_NAME='history_id'")->fetchColumn();
+    if((int)$column===0)db()->exec("ALTER TABLE p50_vote_share_sessions ADD COLUMN history_id CHAR(64) CHARACTER SET ascii NULL AFTER profile_id, ADD INDEX idx_vote_share_history(history_id)");
+    $historyIndex=db()->query("SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='p50_vote_share_sessions' AND INDEX_NAME='idx_vote_share_history'")->fetchColumn();
+    if((int)$historyIndex===0)db()->exec("CREATE INDEX idx_vote_share_history ON p50_vote_share_sessions(history_id)");
     db()->exec("CREATE TABLE IF NOT EXISTS p50_vote_share_events (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         share_id CHAR(64) CHARACTER SET ascii NOT NULL,
@@ -29,29 +37,36 @@ function p50_share_ensure_schema(): void {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
-function p50_share_public_state(): array {
-    $raw=db()->query("SELECT data FROM app_state WHERE id='public' LIMIT 1")->fetchColumn();
-    $state=is_string($raw)?json_decode($raw,true):[];
-    return is_array($state)?$state:[];
+function p50_share_initials(string $name): string {
+    preg_match_all('/[\pL\pN]+/u',$name,$parts);
+    return strtoupper(substr(implode('',array_map(static fn($part)=>substr($part,0,1),array_slice($parts[0]??[],0,2))),0,2));
 }
 
-function p50_share_profile_payload(string $profileId,string $voteDate): array {
+function p50_share_duel_payload(string $pollKey,string $selectedId,string $voteDate,?array $history): array {
     global $config;
-    $state=p50_share_public_state();$profiles=(array)($state['profiles']??[]);
-    $profile=null;
-    foreach($profiles as $candidate)if(is_array($candidate)&&(string)($candidate['id']??'')===$profileId){$profile=$candidate;break;}
-    if(!$profile)json_response(['error'=>'Profil public introuvable.'],404);
-    $ranked=array_values(array_filter($profiles,static fn($p)=>is_array($p)&&!empty($p['alive'])&&!empty($p['eligible'])&&($p['classable']??true)!==false));
-    usort($ranked,static fn($a,$b)=>((float)($b['scores']['2H']??$b['score']??0))<=>((float)($a['scores']['2H']??$a['score']??0)));
-    $rank=0;foreach($ranked as $index=>$candidate)if((string)($candidate['id']??'')===$profileId){$rank=$index+1;break;}
-    $score=max(0,min(100,(int)round((float)($profile['scores']['2H']??$profile['score']??0))));
-    $photo=($profile['photoStatus']??'')==='validated'?(string)($profile['photoUrl']??$profile['photoCandidateUrl']??''):'';
+    if($history){
+        $candidates=[];
+        foreach(['a','b'] as $side){
+            $id=(string)$history['candidate_'.$side.'_id'];$name=(string)$history['candidate_'.$side.'_name'];
+            $candidate=['profileId'=>$id,'name'=>$name,'initials'=>p50_share_initials($name),'photoUrl'=>(string)($history['candidate_'.$side.'_photo']??''),'selected'=>$id===$selectedId,'rank'=>$history['candidate_'.$side.'_rank']!==null?(int)$history['candidate_'.$side.'_rank']:null,'score'=>$history['candidate_'.$side.'_score']!==null?(float)$history['candidate_'.$side.'_score']:null];
+            if($history['candidate_'.$side.'_percentage']!==null)$candidate['percentage']=(int)$history['candidate_'.$side.'_percentage'];
+            $candidates[]=$candidate;
+        }
+        $percentagesAvailable=$history['candidate_a_percentage']!==null&&$history['candidate_b_percentage']!==null;
+        $voteDate=(string)$history['voted_at'];$snapshotSource='frozen_history';$stateRevision=$history['state_revision']!==null?(int)$history['state_revision']:null;
+    }else{
+        $ids=p50_duel_candidate_ids($pollKey);if(!$ids||!in_array($selectedId,$ids,true))json_response(['error'=>'Duel du vote invalide.'],422);
+        $snapshot=p50_duel_state_snapshot();$profiles=p50_duel_public_candidates($ids,$snapshot);if(count($profiles)!==2)json_response(['error'=>'Candidats publics du duel introuvables.'],404);
+        $candidates=[];foreach($ids as $id)$candidates[]=$profiles[$id]+['selected'=>$id===$selectedId];
+        $percentagesAvailable=false;$snapshotSource='current_fallback';$stateRevision=$snapshot['state']['stateRevision']??null;
+    }
     $base=rtrim((string)$config['app']['base_url'],'/');
-    $campaign=$base.'/?'.http_build_query(['profile'=>$profileId,'source'=>'vote_share','medium'=>'social']);
+    $campaign=$base.'/?'.http_build_query(['profile'=>$selectedId,'source'=>'vote_share','medium'=>'social']);
     return [
-        'profileId'=>$profileId,'name'=>(string)($profile['name']??$profileId),
-        'initials'=>(string)($profile['initials']??''),'photoUrl'=>$photo,
-        'rank'=>$rank,'score'=>$score,'voteDate'=>gmdate('c',strtotime($voteDate)),
+        'profileId'=>$selectedId,'selectedProfileId'=>$selectedId,'candidates'=>$candidates,
+        'percentagesAvailable'=>$percentagesAvailable,'voteDate'=>gmdate('c',strtotime($voteDate)),
+        'snapshotSource'=>$snapshotSource,'stateRevision'=>$stateRevision,
+        'fallbackReason'=>$history?null:'Historique absent : profils actuels affichés sans résultat.',
         'pass50Url'=>$base,'campaignUrl'=>$campaign,
     ];
 }
@@ -67,9 +82,10 @@ if($action==='prepare'){
     $rate=db()->prepare('SELECT COUNT(*) FROM p50_vote_share_sessions WHERE user_id=? AND created_at>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1 HOUR)');
     $rate->execute([$user['id']]);if((int)$rate->fetchColumn()>=10)json_response(['error'=>'Limite de génération atteinte. Réessayez plus tard.'],429);
     $id=bin2hex(random_bytes(32));$expires=gmdate('Y-m-d H:i:s',time()+3600);
-    db()->prepare('INSERT INTO p50_vote_share_sessions(id,user_id,poll_key,profile_id,vote_updated_at,expires_at) VALUES(?,?,?,?,?,?)')
-        ->execute([$id,$user['id'],$poll,$profile,$row['updated_at'],$expires]);
-    $payload=p50_share_profile_payload($profile,(string)$row['updated_at']);
+    $history=p50_duel_history_for_share((string)$user['id'],$poll,$profile);
+    db()->prepare('INSERT INTO p50_vote_share_sessions(id,user_id,poll_key,profile_id,history_id,vote_updated_at,expires_at) VALUES(?,?,?,?,?,?,?)')
+        ->execute([$id,$user['id'],$poll,$profile,$history['id']??null,$row['updated_at'],$expires]);
+    $payload=p50_share_duel_payload($poll,$profile,(string)$row['updated_at'],$history);
     json_response(['ok'=>true,'shareId'=>$id,'expiresAt'=>gmdate('c',strtotime($expires)),'card'=>$payload]);
 }
 if($action==='analytics'){
