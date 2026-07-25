@@ -13,6 +13,8 @@ COLLECT = (ROOT / "api/data-collect.php").read_text(encoding="utf-8")
 UI = (ROOT / "data-engine-ui.js").read_text(encoding="utf-8")
 HTTP_TOOLS = (ROOT / "api/http-tools.php").read_text(encoding="utf-8")
 MIGRATION = (ROOT / "migration-data-engine-v1.sql").read_text(encoding="utf-8")
+METRICS_CORE = (ROOT / "api/metrics-core.php").read_text(encoding="utf-8")
+LIVE_CHECK = (ROOT / "api/live-check-youtube.php").read_text(encoding="utf-8")
 
 
 def canonicalize(url):
@@ -220,6 +222,42 @@ class RadarBehaviorTests(unittest.TestCase):
 
 
 class RadarPipelineContractTests(unittest.TestCase):
+    def test_youtube_key_comes_only_from_api_config(self):
+        key_function = re.search(r"function p50_radar_youtube_key\(\): string \{.*?\n}", RADAR, re.S)
+        self.assertIsNotNone(key_function)
+        self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", key_function.group(0))
+        self.assertNotIn("getenv(", key_function.group(0))
+        self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", METRICS_CORE)
+        self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", LIVE_CHECK)
+        for source in (RADAR, METRICS_CORE, LIVE_CHECK):
+            self.assertNotRegex(source, r"getenv\(['\"](?:PASS50_)?YOUTUBE_API_KEY")
+
+    def test_youtube_api_has_persistent_cache_and_quota_guard(self):
+        self.assertIn("CREATE TABLE IF NOT EXISTS p50_youtube_api_cache", RADAR)
+        self.assertIn("expires_at>UTC_TIMESTAMP()", RADAR)
+        self.assertIn("'quotaLimit'=>20", RADAR)
+        self.assertIn("apiRequests']>=", RADAR)
+        self.assertIn("CREATE TABLE IF NOT EXISTS p50_youtube_api_cache", MIGRATION)
+
+    def test_same_youtube_video_is_fetched_once_per_update(self):
+        self.assertIn("['videos'][$videoId]", RADAR)
+        self.assertIn("$GLOBALS['p50_youtube_run']['videos'][$videoId]=$result", RADAR)
+
+    def test_youtube_api_fields_feed_radar(self):
+        for field in ("viewCount", "likeCount", "commentCount", "publishedAt", "channelId", "channelTitle", "subscriberCount"):
+            self.assertIn(field, RADAR)
+        self.assertIn("$metrics['followers']=$subscribers", RADAR)
+        self.assertIn("'youtubeApi'=>p50_radar_youtube_status()", COLLECT)
+        self.assertIn("$metadata['videos']", RADAR)
+
+    def test_missing_key_is_explicit_and_public_collection_remains(self):
+        self.assertIn("'mode'=>!empty($run['configured'])?'youtube_data_api_v3':'public_only'", RADAR)
+        self.assertIn("API non configurée", RADAR)
+        self.assertIn("p50_radar_content_document($url,'YouTube')", RADAR)
+
+    def test_api_key_is_removed_from_shared_cache_identity(self):
+        self.assertIn("strcasecmp((string)$key,'key')===0", HTTP_TOOLS)
+
     def test_no_intermediate_app_state_publication(self):
         self.assertNotIn("p50_de_save_public_state(", RADAR)
         self.assertNotIn("p50_de_publish_profile(", RADAR)

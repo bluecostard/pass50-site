@@ -2,13 +2,13 @@
 declare(strict_types=1);
 /*
  * À lancer par cron toutes les 5 minutes.
- * Variables IONOS : YOUTUBE_API_KEY, PASS50_LIVE_ADMIN_TOKEN.
+ * Configuration : api/config.php.
  * Fichier de configuration : api/data/youtube-channels.json
  */
-header('Content-Type: application/json; charset=utf-8');
-$key = getenv('YOUTUBE_API_KEY') ?: '';
-$token = getenv('PASS50_LIVE_ADMIN_TOKEN') ?: '';
-if ($key === '' || $token === '') { http_response_code(500); echo json_encode(['error'=>'Variables serveur manquantes']); exit; }
+require __DIR__.'/bootstrap.php';
+$key = trim((string)($config['metrics']['PASS50_YOUTUBE_API_KEY']??''));
+$token = trim((string)($config['data_engine']['live_admin_token']??''));
+if ($key === '' || $token === '') json_response(['error'=>'Configuration serveur manquante'],500);
 $configFile = __DIR__.'/data/youtube-channels.json';
 $config = json_decode(@file_get_contents($configFile) ?: '[]', true);
 if (!is_array($config)) $config=[];

@@ -34,7 +34,7 @@ def main():
     print('✓ API YouTube et X ajoutées')
     print('\nÀ faire :')
     print('1. Importer migration-metrics-v1.sql dans MySQL.')
-    print('2. Ajouter PASS50_YOUTUBE_API_KEY et PASS50_METRICS_CRON_TOKEN dans api/config.php.')
+    print('2. Renseigner PASS50_YOUTUBE_API_KEY et les jetons nécessaires dans api/config.php sur le serveur.')
     print('3. Publier les fichiers.')
     print('4. Ouvrir Administration → Métriques → Collecter maintenant.')
     return 0

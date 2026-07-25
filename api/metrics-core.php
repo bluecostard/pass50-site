@@ -73,8 +73,8 @@ function p50m_sync_accounts_from_state(): int {
 }
 
 function p50m_youtube_key(): string {
-    if(defined('PASS50_YOUTUBE_API_KEY'))return trim((string)PASS50_YOUTUBE_API_KEY);
-    return trim((string)(getenv('PASS50_YOUTUBE_API_KEY')?:''));
+    global $config;
+    return trim((string)($config['metrics']['PASS50_YOUTUBE_API_KEY']??''));
 }
 
 function p50m_x_token(): string {
@@ -94,7 +94,7 @@ function p50m_youtube_identifier(string $url): array {
 
 function p50m_collect_youtube(array $account): array {
     $key=p50m_youtube_key();
-    if($key==='')throw new RuntimeException('PASS50_YOUTUBE_API_KEY non configurée.');
+    if($key==='')throw new RuntimeException('Clé YouTube non configurée dans api/config.php.');
     [$kind,$identifier]=p50m_youtube_identifier((string)$account['profile_url']);
     if($identifier==='')throw new RuntimeException('URL YouTube directe invalide.');
 

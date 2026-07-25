@@ -36,6 +36,7 @@ function p50_network_cache_key(string $url): string {
     $parts=parse_url(trim($url));if(!$parts||empty($parts['host']))return trim($url);
     $query=[];parse_str((string)($parts['query']??''),$raw);
     foreach($raw as $key=>$value){
+        if(strcasecmp((string)$key,'key')===0)continue;
         if(preg_match('/^(utm_|fbclid$|gclid$|ref$|source$|feature$|si$|is_from_webapp$|sender_device$|web_id$)/i',(string)$key))continue;
         $query[(string)$key]=$value;
     }
