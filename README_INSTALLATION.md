@@ -43,11 +43,13 @@ Importer ensuite :
 migration-metrics-v1.sql
 ```
 
-Dans `api/config.php`, ajouter les jetons non-YouTube :
+Dans le fichier `api/config.php` conservé uniquement sur le serveur IONOS, renseigner les clés dans la section `metrics` :
 
 ```php
-define('PASS50_X_BEARER_TOKEN', '');
-define('PASS50_METRICS_CRON_TOKEN', 'UNE_CHAINE_LONGUE_ET_ALEATOIRE');
+'metrics' => [
+    'PASS50_YOUTUBE_API_KEY' => 'VOTRE_CLE_GOOGLE',
+    'x_bearer_token' => '',
+],
 ```
 
 ## Obtenir la clé YouTube
@@ -56,7 +58,7 @@ define('PASS50_METRICS_CRON_TOKEN', 'UNE_CHAINE_LONGUE_ET_ALEATOIRE');
 2. Activer YouTube Data API v3.
 3. Créer une clé API.
 4. Restreindre la clé à YouTube Data API v3 et aux adresses IP du serveur lorsque possible.
-5. Définir la clé uniquement dans la variable d’environnement `PASS50_YOUTUBE_API_KEY`. Ne jamais la copier dans un fichier PHP.
+5. Enregistrer la clé uniquement dans `api/config.php` sur le serveur IONOS. Ce fichier est exclu du déploiement Git.
 
 ## Collecte manuelle
 

@@ -39,8 +39,12 @@ return [
         'live_refresh_seconds' => 50,
         // Sécurité : un live automatique non revu depuis ce délai est retiré.
         'live_stale_minutes' => 45,
+        // Jeton du contrôle LIVE, uniquement dans api/config.php sur le serveur.
+        'live_admin_token' => '',
     ],
     'metrics' => [
+        // À renseigner uniquement dans api/config.php sur le serveur IONOS.
+        'PASS50_YOUTUBE_API_KEY' => '',
         // Facultatif : réservé au connecteur officiel X déjà présent dans metrics-core.php.
         'x_bearer_token' => getenv('PASS50_X_BEARER_TOKEN') ?: '',
     ],

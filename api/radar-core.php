@@ -15,7 +15,7 @@ function p50_radar_begin_batch(int $batchLimit=20,int $profileLimit=5): void {
         'quotaLimit'=>20,'configured'=>p50_radar_youtube_key()!=='',
     ];
     if(!$GLOBALS['p50_youtube_run']['configured']){
-        error_log('PASS50 Radar: YouTube Data API v3 non configurée (PASS50_YOUTUBE_API_KEY absente) ; collecte publique uniquement.');
+        error_log('PASS50 Radar: YouTube Data API v3 non configurée dans api/config.php ; collecte publique uniquement.');
     }
 }
 
@@ -140,7 +140,8 @@ function p50_radar_youtube_reference(string $url): array {
 }
 
 function p50_radar_youtube_key(): string {
-    return trim((string)(getenv('PASS50_YOUTUBE_API_KEY')?:''));
+    global $config;
+    return trim((string)($config['metrics']['PASS50_YOUTUBE_API_KEY']??''));
 }
 
 function p50_radar_youtube_status(): array {
@@ -148,7 +149,7 @@ function p50_radar_youtube_status(): array {
     return [
         'configured'=>(bool)($run['configured']??(p50_radar_youtube_key()!=='')),
         'mode'=>!empty($run['configured'])?'youtube_data_api_v3':'public_only',
-        'message'=>!empty($run['configured'])?'YouTube Data API v3 configurée.':'API non configurée : PASS50_YOUTUBE_API_KEY absente, données publiques uniquement.',
+        'message'=>!empty($run['configured'])?'YouTube Data API v3 configurée.':'API non configurée dans api/config.php : données publiques uniquement.',
         'apiRequests'=>(int)($run['apiRequests']??0),
         'cacheHits'=>(int)($run['apiCacheHits']??0),
         'quotaLimit'=>(int)($run['quotaLimit']??20),

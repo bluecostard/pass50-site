@@ -13,6 +13,8 @@ COLLECT = (ROOT / "api/data-collect.php").read_text(encoding="utf-8")
 UI = (ROOT / "data-engine-ui.js").read_text(encoding="utf-8")
 HTTP_TOOLS = (ROOT / "api/http-tools.php").read_text(encoding="utf-8")
 MIGRATION = (ROOT / "migration-data-engine-v1.sql").read_text(encoding="utf-8")
+METRICS_CORE = (ROOT / "api/metrics-core.php").read_text(encoding="utf-8")
+LIVE_CHECK = (ROOT / "api/live-check-youtube.php").read_text(encoding="utf-8")
 
 
 def canonicalize(url):
@@ -220,12 +222,15 @@ class RadarBehaviorTests(unittest.TestCase):
 
 
 class RadarPipelineContractTests(unittest.TestCase):
-    def test_youtube_key_comes_only_from_environment(self):
+    def test_youtube_key_comes_only_from_api_config(self):
         key_function = re.search(r"function p50_radar_youtube_key\(\): string \{.*?\n}", RADAR, re.S)
         self.assertIsNotNone(key_function)
-        self.assertIn("getenv('PASS50_YOUTUBE_API_KEY')", key_function.group(0))
-        self.assertNotIn("$config", key_function.group(0))
-        self.assertNotIn("youtube_api_key", key_function.group(0))
+        self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", key_function.group(0))
+        self.assertNotIn("getenv(", key_function.group(0))
+        self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", METRICS_CORE)
+        self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", LIVE_CHECK)
+        for source in (RADAR, METRICS_CORE, LIVE_CHECK):
+            self.assertNotRegex(source, r"getenv\(['\"](?:PASS50_)?YOUTUBE_API_KEY")
 
     def test_youtube_api_has_persistent_cache_and_quota_guard(self):
         self.assertIn("CREATE TABLE IF NOT EXISTS p50_youtube_api_cache", RADAR)
