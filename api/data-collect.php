@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/data-engine-core.php';
+require __DIR__ . '/radar-core.php';
 require_method('POST');
 $user=auth_user();
 require_role($user,'owner','admin');
@@ -22,6 +23,7 @@ if(is_array($excludeRaw)){
 }
 $profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null,array_keys($excludeIds));
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
+$radarTotals=['fiTraversed'=>0,'officialLinksAnalyzed'=>0,'recentPublications'=>0,'capturesRecorded'=>0,'activeMetrics'=>0,'unavailablePlatforms'=>0];
 foreach($profiles as $profile){
     $run=p50_de_begin_run((string)$profile['profile_id'],'auto_enrichment_v22',$user['id'],['deep'=>$deep]);
     try{
@@ -34,17 +36,22 @@ foreach($profiles as $profile){
         $found+=(int)($youtube['found']??0);
         $socialActivity=p50_de_collect_social_activity($profile);
         $found+=(int)($socialActivity['found']??0);
+        $radar=p50_radar_collect_profile($profile);
+        $radarTotals['fiTraversed']++;
+        foreach(['officialLinksAnalyzed','recentPublications','capturesRecorded','activeMetrics','unavailablePlatforms'] as $counter)$radarTotals[$counter]+=(int)($radar[$counter]??0);
+        $found+=(int)($radar['recentPublications']??0);
         $verified=p50_de_profile_verified_count((string)$profile['profile_id'])+(int)($youtube['verified']??0)+(int)($socialActivity['verified']??0);
-        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts,'curatedEvidenceImported'=>$curatedFacts]);
-        $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment];
+        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'youtube'=>$youtube,'socialActivity'=>$socialActivity,'radar'=>$radar,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts,'curatedEvidenceImported'=>$curatedFacts]);
+        $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment,'radar'=>$radar];
         $processedIds[]=(string)$profile['profile_id'];$totalFound+=$found;$totalVerified+=$verified;
     }catch(Throwable $e){
         error_log('PASS50 data collect '.$profile['profile_id'].': '.$e->getMessage());
         p50_de_finish_run($run['id'],'error',0,0,$e->getMessage());
         $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'error','error'=>'Collecte impossible pour ce profil.'];
+        $radarTotals['fiTraversed']++;
         $processedIds[]=(string)$profile['profile_id'];
     }
 }
 $remainingNeverCollected=(int)db()->query("SELECT COUNT(*) FROM p50_profile_registry r LEFT JOIN (SELECT DISTINCT profile_id FROM p50_collection_runs) x ON x.profile_id=r.profile_id WHERE r.alive=1 AND x.profile_id IS NULL")->fetchColumn();
 $metricSummary=p50_de_metric_summary($processedIds);
-json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);
+json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'radar'=>$radarTotals,'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);

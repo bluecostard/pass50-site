@@ -164,6 +164,36 @@ CREATE TABLE IF NOT EXISTS p50_activity_metric_history (
   INDEX idx_p50_metric_history_url_date (profile_id,url_hash,captured_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS p50_radar_collection_log (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  profile_id VARCHAR(100) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  official_url TEXT NULL,
+  collection_status VARCHAR(40) NOT NULL,
+  publications_detected SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  captures_recorded SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  error_message VARCHAR(500) NULL,
+  metadata LONGTEXT NULL,
+  collected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_p50_radar_profile_date(profile_id,collected_at),
+  INDEX idx_p50_radar_status_date(collection_status,collected_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS p50_radar_metric_captures (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  profile_id VARCHAR(100) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  content_key CHAR(64) CHARACTER SET ascii NOT NULL,
+  content_id VARCHAR(191) NULL,
+  canonical_url TEXT NOT NULL,
+  published_at DATETIME NULL,
+  metrics LONGTEXT NOT NULL,
+  metric_deltas LONGTEXT NOT NULL,
+  captured_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_p50_radar_capture_content(profile_id,platform,content_key,captured_at),
+  INDEX idx_p50_radar_capture_date(captured_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS p50_engine_settings (
   setting_key VARCHAR(100) PRIMARY KEY,
   setting_value LONGTEXT NOT NULL,
