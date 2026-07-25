@@ -389,12 +389,26 @@ function voteShareCleanup({keepCard=false}={}){
   if(!keepCard){VOTE_SHARE.shareId='';VOTE_SHARE.card=null;VOTE_SHARE.images.clear();}
 }
 function voteShareEscape(value){return safeAttr(String(value??''))}
+function voteShareMessage(card){
+  const candidates=card.candidates.slice(0,2);
+  const lines=["🔥 J'ai voté sur PASS50 !",'','Qui est le plus coulé des 2 ? 🤔','','Mon choix est fait… 😅','','⚔️ Duel du moment','',String(candidates[0]?.name||'')];
+  if(card.percentagesAvailable&&candidates.length===2&&candidates.every(candidate=>Number.isFinite(Number(candidate.percentage)))){
+    lines[lines.length-1]+=` • ${Number(candidates[0].percentage)} %`;
+  }
+  lines.push('','🆚','',String(candidates[1]?.name||''));
+  if(card.percentagesAvailable&&candidates.length===2&&candidates.every(candidate=>Number.isFinite(Number(candidate.percentage)))){
+    lines[lines.length-1]+=` • ${Number(candidates[1].percentage)} %`;
+  }
+  lines.push('','👇 Et toi, tu aurais voté pour qui ?','',card.campaignUrl);
+  return lines.join('\n');
+}
 function voteSharePanel(){
   const card=VOTE_SHARE.card;if(!card)return;
   const audio=Boolean(VOTE_SHARE.audioBlob),recording=Boolean(VOTE_SHARE.recorder&&VOTE_SHARE.recorder.state==='recording');
   const selected=card.candidates.find(candidate=>candidate.profileId===card.selectedProfileId),opponent=card.candidates.find(candidate=>candidate.profileId!==card.selectedProfileId);
   const result=card.percentagesAvailable?` · ${card.candidates.map(candidate=>`${voteShareEscape(candidate.name)} ${Number(candidate.percentage)} %`).join(' / ')}`:'';
-  $('#voteShareBody').innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1350" aria-label="Aperçu de la card du duel voté"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><h2 style="margin:7px 0">${voteShareEscape(selected?.name)} <span class="muted">VS</span> ${voteShareEscape(opponent?.name)}</h2><div>Mon vote : <strong style="color:var(--lime)">${voteShareEscape(selected?.name)}</strong>${result}</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(card.pass50Url)}</div>${card.snapshotSource==='current_fallback'?`<div class="share-note" style="margin-top:7px">${voteShareEscape(card.fallbackReason)}</div>`:''}</div><div class="vote-share-audio"><strong>Commentaire audio facultatif</strong><div class="share-note">Le micro ne démarre qu’après ton action. Durée maximale : 15 secondes. Aucun commentaire écrit n’est demandé.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s/15s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un commentaire audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer l’audio</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio><button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Confirmer et générer la vidéo</button>`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareGenerateImage">Image portrait</button><button class="btn" id="voteShareGenerateSquare">Image carrée</button><button class="btn" id="voteShareNative" ${VOTE_SHARE.mediaFile?'':'disabled'}>Partager le média</button><button class="btn" id="voteShareDownload" ${VOTE_SHARE.mediaFile?'':'disabled'}>Télécharger</button><button class="btn" id="voteShareCopy">Copier le lien</button><a class="btn" id="voteShareWhatsapp" href="https://wa.me/?text=${encodeURIComponent('J’ai voté sur PASS50 : '+card.campaignUrl)}" target="_blank" rel="noopener">WhatsApp</a></div><div class="vote-share-status" id="voteShareStatus">${VOTE_SHARE.mediaFile?`${voteShareEscape(VOTE_SHARE.mediaFile.name)} prêt à partager.`:'Choisis une image ou ajoute un commentaire audio.'}</div><div class="share-note">Le partage s’ouvre dans l’application choisie. PASS50 ne publie jamais automatiquement à ta place.</div></div></div>`;
+  const shareText=voteShareMessage(card);
+  $('#voteShareBody').innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1350" aria-label="Aperçu de la card du duel voté"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><h2 style="margin:7px 0">${voteShareEscape(selected?.name)} <span class="muted">VS</span> ${voteShareEscape(opponent?.name)}</h2><div>Mon vote : <strong style="color:var(--lime)">${voteShareEscape(selected?.name)}</strong>${result}</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(card.pass50Url)}</div>${card.snapshotSource==='current_fallback'?`<div class="share-note" style="margin-top:7px">${voteShareEscape(card.fallbackReason)}</div>`:''}</div><div class="vote-share-audio"><strong>Commentaire audio facultatif</strong><div class="share-note">Le micro ne démarre qu’après ton action. Durée maximale : 15 secondes. Aucun commentaire écrit n’est demandé.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s/15s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un commentaire audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer l’audio</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio><button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Confirmer et générer la vidéo</button>`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareGenerateImage">Image portrait</button><button class="btn" id="voteShareGenerateSquare">Image carrée</button><button class="btn" id="voteShareNative" ${VOTE_SHARE.mediaFile?'':'disabled'}>Partager le média</button><button class="btn" id="voteShareDownload" ${VOTE_SHARE.mediaFile?'':'disabled'}>Télécharger</button><button class="btn" id="voteShareCopy">Copier le lien</button><a class="btn" id="voteShareWhatsapp" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener">WhatsApp</a></div><div class="vote-share-status" id="voteShareStatus">${VOTE_SHARE.mediaFile?`${voteShareEscape(VOTE_SHARE.mediaFile.name)} prêt à partager.`:'Choisis une image ou ajoute un commentaire audio.'}</div><div class="share-note">Le partage s’ouvre dans l’application choisie. PASS50 ne publie jamais automatiquement à ta place.</div></div></div>`;
   drawVoteShareCard($('#voteShareCanvas'),card);
 }
 async function openVoteShare(profileId){
@@ -427,8 +441,6 @@ async function drawVoteShareCard(canvas,card,{vertical=false,progress=0,wave=0}=
   const vsX=w/2,vsY=py+photoH*.46;ctx.fillStyle='#080b08';ctx.beginPath();ctx.arc(vsX,vsY,vertical?58:48,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#b7ff00';ctx.lineWidth=5;ctx.stroke();ctx.fillStyle='#fff';ctx.font=`1000 ${vertical?39:32}px Arial`;ctx.textAlign='center';ctx.fillText('VS',vsX,vsY+13);ctx.textAlign='left';
   const dateY=py+photoH+(card.percentagesAvailable?145:105);ctx.fillStyle='#aab3a6';ctx.font=`700 ${vertical?31:26}px Arial`;ctx.fillText(`Vote du ${new Date(card.voteDate).toLocaleDateString('fr-FR')}`,55,dateY);
   if(vertical){ctx.strokeStyle='#b7ff00';ctx.lineWidth=7;ctx.beginPath();for(let x=70;x<w-70;x+=18){const amp=18+Math.abs(Math.sin(x*.031+progress*9))*wave*85;ctx.moveTo(x,h-390-amp);ctx.lineTo(x,h-390+amp);}ctx.stroke();}
-  const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(card.campaignUrl),qr=await shareImage(qrUrl),qy=h-220;
-  if(qr)ctx.drawImage(qr,w-245,qy,175,175);
   ctx.fillStyle='#fff';ctx.font='900 25px Arial';ctx.fillText('VOTE TOI AUSSI',70,h-142);ctx.fillStyle='#b7ff00';ctx.font='700 21px Arial';ctx.fillText(String(card.pass50Url).replace(/^https?:\/\//,''),70,h-101);
   ctx.fillStyle='#83907e';ctx.font='600 15px Arial';ctx.fillText(card.campaignUrl.slice(0,72),70,h-62);
 }
@@ -469,13 +481,13 @@ async function startVoteShareRecording(){
 function stopVoteShareRecording(){if(VOTE_SHARE.recorder?.state==='recording')VOTE_SHARE.recorder.stop()}
 async function nativeVoteShare(){
   const file=VOTE_SHARE.mediaFile;if(!file)return;
-  const selected=VOTE_SHARE.card.candidates.find(candidate=>candidate.profileId===VOTE_SHARE.card.selectedProfileId);
+  const shareText=voteShareMessage(VOTE_SHARE.card);
   voteShareAnalytics('native_share_triggered');
-  if(navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({title:'Mon vote PASS50',text:`J’ai voté pour ${selected?.name||'mon candidat'} sur PASS50.`,url:VOTE_SHARE.card.campaignUrl,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}}
+  if(navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}}
   downloadVoteShare();
 }
 function downloadVoteShare(){if(!VOTE_SHARE.mediaFile)return;const a=document.createElement('a');a.href=VOTE_SHARE.mediaUrl;a.download=VOTE_SHARE.mediaFile.name;a.click();voteShareAnalytics('download')}
-async function copyVoteShareLink(){try{await navigator.clipboard.writeText(VOTE_SHARE.card.campaignUrl);voteShareAnalytics('link_copied');toast('Lien copié')}catch{toast('Copie impossible')}}
+async function copyVoteShareLink(){try{await navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card));voteShareAnalytics('link_copied');toast('Message copié')}catch{toast('Copie impossible')}}
 function formatTrendScore(s){return `${Math.round(Number(s)||0)}/100`}
 function arrow(p){return p.delta>0?`<span class="motion-up">↑</span> +${p.delta}`:p.delta<0?`<span class="motion-down">↓</span> ${p.delta}`:'—';}
 function arrowClass(p){return p.delta>0?'up':p.delta<0?'down':'flat'}
