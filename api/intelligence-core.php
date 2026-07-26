@@ -216,8 +216,17 @@ function p50_intelligence_add_diagnostic(array &$diagnostics,array $analysis): v
     $diagnostics['profilesAnalyzed']++;
     if(($analysis['confidenceLevel']??'faible')==='faible')$diagnostics['profilesIgnored']++;
     $trusted=in_array($analysis['confidenceLevel']??'', ['moyenne','élevée'],true);
-    if($trusted&&($analysis['growthIndex']??0)>=65)$diagnostics['strongTrends']++;
-    if($trusted&&($analysis['buzzIndex']??0)>=70)$diagnostics['buzzDetected']++;
+    if(
+        $trusted
+        && !empty($analysis['recentData'])
+        && ($analysis['comparisonStatus']??'')==='comparable'
+        && ($analysis['growthIndex']??0)>=65
+    )$diagnostics['strongTrends']++;
+    if(
+        $trusted
+        && !empty($analysis['recentData'])
+        && ($analysis['buzzIndex']??0)>=70
+    )$diagnostics['buzzDetected']++;
     if($trusted&&($analysis['globalVariation']??0)<=-20)$diagnostics['declinesDetected']++;
 }
 
