@@ -10,6 +10,8 @@ DUEL_HISTORY = (ROOT / "api/duel-history-core.php").read_text(encoding="utf-8")
 COULES = (ROOT / "api/coules.php").read_text(encoding="utf-8")
 DATA_ENGINE = (ROOT / "api/data-engine-core.php").read_text(encoding="utf-8")
 SCHEMA = (ROOT / "schema.sql").read_text(encoding="utf-8")
+DUEL_PAGE = (ROOT / "duel.php").read_text(encoding="utf-8")
+HTACCESS = (ROOT / ".htaccess").read_text(encoding="utf-8")
 
 
 class ShareVoteAudioContractTests(unittest.TestCase):
@@ -29,7 +31,7 @@ class ShareVoteAudioContractTests(unittest.TestCase):
         self.assertIn("width=\"1080\" height=\"1350\"", INDEX)
         self.assertIn("canvas.toBlob", INDEX)
         self.assertIn("'image/png'", INDEX)
-        self.assertIn("generateVoteShareImage(false)", INDEX)
+        self.assertIn("const file=wantsVideo?await generateVoteShareVideo():await generateVoteShareImage()", INDEX)
 
     def test_04_microphone_permission_is_user_initiated(self):
         self.assertIn("navigator.mediaDevices.getUserMedia", INDEX)
@@ -39,28 +41,30 @@ class ShareVoteAudioContractTests(unittest.TestCase):
 
     def test_05_recording_is_limited_to_fifteen_seconds(self):
         self.assertIn("VOTE_SHARE.seconds>=15", INDEX)
-        self.assertIn("15 secondes", INDEX)
+        self.assertIn("/ 00:15", INDEX)
 
-    def test_06_audio_can_be_played_and_recorded_again(self):
-        self.assertIn("<audio controls", INDEX)
-        self.assertIn("Recommencer", INDEX)
-        self.assertIn("voteShareDeleteAudio", INDEX)
+    def test_06_audio_completion_has_one_share_action(self):
+        self.assertIn("✅ Audio enregistré", INDEX)
+        self.assertIn("🚀 PARTAGER", INDEX)
+        self.assertNotIn("<audio controls", INDEX)
+        self.assertNotIn("Recommencer", INDEX)
 
     def test_07_no_written_comment_field_exists(self):
         panel = re.search(r"function voteSharePanel\(\).*?\n}", INDEX, re.S).group(0)
         self.assertNotIn("<textarea", panel)
         self.assertNotRegex(panel, r"<input[^>]+type=[\"']text")
-        self.assertIn("Aucun commentaire écrit", panel)
+        self.assertIn("Le commentaire est facultatif", panel)
 
     def test_08_video_with_audio_prefers_mp4_and_has_fallback(self):
-        self.assertIn("canvas.width=1080;canvas.height=1920", INDEX)
+        self.assertIn("canvas.width=1080;canvas.height=1350", INDEX)
         self.assertIn("video/mp4;codecs=h264,aac", INDEX)
         self.assertIn("video/webm;codecs=vp9,opus", INDEX)
-        self.assertIn("Vidéo indisponible sur ce navigateur", INDEX)
+        self.assertIn("Vidéo avec audio indisponible sur ce navigateur", INDEX)
+        self.assertIn("Aucun partage audio n’a été effectué.", INDEX)
         self.assertIn("Math.min(18", INDEX)
 
     def test_09_native_share_includes_generated_file(self):
-        self.assertIn("navigator.canShare?.({files:[file]})", INDEX)
+        self.assertIn("navigator.canShare({files:[file]})", INDEX)
         self.assertIn("navigator.share({", INDEX)
         self.assertIn("files:[file]", INDEX)
 
@@ -68,13 +72,14 @@ class ShareVoteAudioContractTests(unittest.TestCase):
         self.assertIn("function downloadVoteShare()", INDEX)
         self.assertIn("a.download=VOTE_SHARE.mediaFile.name", INDEX)
 
-    def test_11_copy_link_fallback_exists(self):
-        self.assertIn("navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card))", INDEX)
+    def test_11_redundant_copy_action_is_removed_but_analytics_contract_remains(self):
+        self.assertNotIn("navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card))", INDEX)
+        self.assertNotIn("voteShareCopy", INDEX)
         self.assertIn("link_copied", API)
 
     def test_12_campaign_targets_selected_profile_without_qr(self):
-        for value in ("'profile'=>$selectedId", "'source'=>'vote_share'", "'medium'=>'social'"):
-            self.assertIn(value, API)
+        self.assertIn("$campaign=$base.'/d/'.$shareId", API)
+        self.assertNotIn("'profile'=>$selectedId", API)
         self.assertIn("lines.push('','👇 Et toi, tu aurais voté pour qui ?','',card.campaignUrl)", INDEX)
         self.assertNotIn("api.qrserver.com", INDEX)
         self.assertNotIn("qrUrl", INDEX)
@@ -162,7 +167,7 @@ class ShareVoteDuelHistoryTests(unittest.TestCase):
         self.assertIn("$snapshotSource='current_fallback'", API)
         self.assertIn("$percentagesAvailable=false", API)
         self.assertIn("Historique absent : profils actuels affichés sans résultat.", API)
-        self.assertIn("card.snapshotSource==='current_fallback'", INDEX)
+        self.assertIn("'percentage'=>null", DUEL_PAGE)
 
     def test_share_session_references_the_used_history(self):
         self.assertIn("history_id", API)
@@ -183,8 +188,7 @@ class ShareVoteMessageTests(unittest.TestCase):
     def setUpClass(cls):
         cls.message = re.search(r"function voteShareMessage\(card\)\{.*?\n}", INDEX, re.S).group(0)
         cls.panel = re.search(r"function voteSharePanel\(\)\{.*?\n}", INDEX, re.S).group(0)
-        cls.native = re.search(r"async function nativeVoteShare\(\)\{.*?\n}", INDEX, re.S).group(0)
-        cls.whatsapp = re.search(r"async function shareVoteWhatsapp\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.share = re.search(r"async function shareVoteNow\(\)\{.*?\n}", INDEX, re.S).group(0)
 
     def test_whatsapp_message_contains_exact_question(self):
         self.assertIn("Qui est le plus coulé des 2 ? 🤔", self.message)
@@ -223,13 +227,10 @@ class ShareVoteMessageTests(unittest.TestCase):
         self.assertIn("'🆚'", self.message)
         self.assertIn("String(candidates[1]?.name||'')", self.message)
 
-    def test_native_whatsapp_and_copy_use_identical_text(self):
-        self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.whatsapp)
-        self.assertIn("encodeURIComponent(shareText)", self.whatsapp)
-        self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.native)
-        self.assertIn("text:shareText", self.native)
-        self.assertIn("text:shareText", self.whatsapp)
-        self.assertIn("navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card))", INDEX)
+    def test_single_share_path_uses_one_text_for_native_and_fallback(self):
+        self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.share)
+        self.assertIn("text:shareText", self.share)
+        self.assertIn("encodeURIComponent(shareText)", self.share)
 
 
 class ShareCardLargeThumbnailTests(unittest.TestCase):
@@ -239,11 +240,11 @@ class ShareCardLargeThumbnailTests(unittest.TestCase):
         cls.draw = re.search(r"async function drawVoteShareCard\(.*?\n}", INDEX, re.S).group(0)
         cls.export = re.search(r"function canvasFile\(.*?\n}", INDEX, re.S).group(0)
         cls.generate = re.search(r"async function generateVoteShareImage\(.*?\n}", INDEX, re.S).group(0)
-        cls.whatsapp = re.search(r"async function shareVoteWhatsapp\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.share = re.search(r"async function shareVoteNow\(\)\{.*?\n}", INDEX, re.S).group(0)
 
     def test_real_portrait_canvas_is_1080_by_1350(self):
         self.assertIn("canvas.width = 1080", self.generate)
-        self.assertIn("canvas.height = square ? 1080 : 1350", self.generate)
+        self.assertIn("canvas.height = 1350", self.generate)
         self.assertIn('width="1080" height="1350"', INDEX)
 
     def test_both_photos_finish_loading_before_drawing_and_export(self):
@@ -287,11 +288,11 @@ class ShareCardLargeThumbnailTests(unittest.TestCase):
         self.assertIn("fallback=ctx.createLinearGradient", self.draw)
         self.assertIn("candidate.initials||'P50'", self.draw)
 
-    def test_whatsapp_shares_png_or_downloads_before_text_fallback(self):
-        self.assertIn("navigator.canShare({files:[file]})", self.whatsapp)
-        self.assertIn("files:[file]", self.whatsapp)
-        self.assertLess(self.whatsapp.index("downloadVoteShare()"), self.whatsapp.index("window.open("))
-        self.assertIn("https://wa.me/?text=${encodeURIComponent(shareText)}", self.whatsapp)
+    def test_single_share_shares_file_or_downloads_before_text_fallback(self):
+        self.assertIn("navigator.canShare({files:[file]})", self.share)
+        self.assertIn("files:[file]", self.share)
+        self.assertLess(self.share.index("downloadVoteShare()"), self.share.index("window.open("))
+        self.assertIn("https://wa.me/?text=${encodeURIComponent(shareText)}", self.share)
 
     def test_open_graph_metadata_is_complete_and_absolute(self):
         expected = (
@@ -306,6 +307,120 @@ class ShareCardLargeThumbnailTests(unittest.TestCase):
         for tag in expected:
             self.assertIn(tag, INDEX)
         self.assertTrue((ROOT / "assets/pass50-og.png").is_file())
+
+
+class ShareDuelRouteAndAudioTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.message = re.search(r"function voteShareMessage\(card\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.video = re.search(r"async function generateVoteShareVideo\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.share = re.search(r"async function shareVoteNow\(\)\{.*?\n}", INDEX, re.S).group(0)
+
+    def test_shared_link_targets_exact_duel_not_profile_page(self):
+        self.assertIn("$campaign=$base.'/d/'.$shareId", API)
+        self.assertIn("RewriteRule ^d/([a-f0-9]{64})/?$", HTACCESS)
+        self.assertNotIn("'profile'=>$selectedId", API)
+        self.assertIn("WHERE s.id=? LIMIT 1", DUEL_PAGE)
+
+    def test_public_duel_renders_frozen_candidates_result_and_choice(self):
+        self.assertIn("foreach(['a','b'] as $side)", DUEL_PAGE)
+        self.assertIn("'name'=>(string)$row['candidate_'.$side.'_name']", DUEL_PAGE)
+        self.assertIn("'percentage'=>$row['candidate_'.$side.'_percentage']", DUEL_PAGE)
+        self.assertIn("selected'=>$id===$selectedId", DUEL_PAGE)
+        self.assertIn("✓ MON VOTE", DUEL_PAGE)
+        self.assertIn(">JE VOTE</a>", DUEL_PAGE)
+        self.assertIn("p50_duel_vote_history h ON h.id=s.history_id", DUEL_PAGE)
+
+    def test_invalid_duel_identifier_falls_back_to_home(self):
+        self.assertIn("if(!preg_match('/^[a-f0-9]{64}$/',$shareId))", DUEL_PAGE)
+        self.assertGreaterEqual(DUEL_PAGE.count("header('Location: '.$base.'/',true,302)"), 3)
+        self.assertIn("RewriteRule ^d(?:/.*)?$ duel.php", HTACCESS)
+
+    def test_audio_generates_and_prioritizes_a_non_empty_video_file(self):
+        self.assertIn("const videoBlob=new Blob(chunks", self.video)
+        self.assertIn("if(videoBlob.size<=0)", self.video)
+        self.assertIn("new File([videoBlob],'mon-vote-pass50.webm',{type:videoBlob.type})", self.video)
+        self.assertIn("wantsVideo?await generateVoteShareVideo():await generateVoteShareImage()", self.share)
+
+    def test_without_audio_png_remains_the_shared_media(self):
+        self.assertIn("const wantsVideo=Boolean(VOTE_SHARE.audioBlob)", self.share)
+        self.assertIn("wantsVideo?await generateVoteShareVideo():await generateVoteShareImage()", self.share)
+        self.assertIn("setVoteShareMedia(file,'image')", INDEX)
+
+    def test_unsupported_video_downloads_without_false_audio_success(self):
+        self.assertIn("navigator.canShare({files:[file]})", self.share)
+        self.assertIn("downloadVoteShare()", self.share)
+        self.assertIn("La vidéo avec audio a été téléchargée. Ajoute-la ensuite dans WhatsApp.", self.share)
+        self.assertIn("Aucun partage audio n’a été effectué.", self.video)
+        self.assertNotIn("audio_shared", INDEX)
+
+    def test_duel_link_occurs_once_in_the_shared_message(self):
+        self.assertEqual(self.message.count("card.campaignUrl"), 1)
+        self.assertNotIn("url:VOTE_SHARE.card.campaignUrl", self.share)
+
+
+class ShareV3SimpleFlowTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.panel = re.search(r"function voteSharePanel\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.share = re.search(r"async function shareVoteNow\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.image = re.search(r"async function generateVoteShareImage\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.video = re.search(r"async function generateVoteShareVideo\(\)\{.*?\n}", INDEX, re.S).group(0)
+
+    def test_confirmed_cloud_vote_opens_simple_flow_automatically(self):
+        vote = re.search(r"async function voteCoule\(.*?\n}", INDEX, re.S).group(0)
+        self.assertLess(vote.index("await castCloudCoulesVote"), vote.index("await openVoteShare(profileId)"))
+        self.assertIn("✅ Vote enregistré !", self.panel)
+
+    def test_initial_choice_only_offers_audio_or_skip(self):
+        self.assertIn("🎤 Ajouter un commentaire", self.panel)
+        self.assertIn("Passer cette étape", self.panel)
+        self.assertIn("(Le commentaire est facultatif)", self.panel)
+
+    def test_only_one_final_share_button_remains(self):
+        self.assertIn("🚀 PARTAGER", self.panel)
+        for removed in (
+            "Partager le média", "WhatsApp</button>", "Image portrait",
+            "Image carrée", "Partager l’image", "Partager la vidéo",
+        ):
+            self.assertNotIn(removed, self.panel)
+
+    def test_audio_state_is_always_explicit(self):
+        self.assertIn("✅ Audio enregistré", self.panel)
+        self.assertIn("Aucun commentaire audio", self.panel)
+        self.assertIn("Enregistrement...", self.panel)
+        self.assertIn("/ 00:15", self.panel)
+
+    def test_share_automatically_selects_video_or_image(self):
+        self.assertIn("const wantsVideo=Boolean(VOTE_SHARE.audioBlob)", self.share)
+        self.assertIn("wantsVideo?await generateVoteShareVideo():await generateVoteShareImage()", self.share)
+
+    def test_real_progress_is_updated_during_generation(self):
+        self.assertIn("role=\"progressbar\"", self.panel)
+        self.assertIn("setVoteShareProgress(30,'Création de votre image...')", self.image)
+        self.assertIn("setVoteShareProgress(80,'Création de votre image...')", self.image)
+        self.assertIn("10+progress*80", self.video)
+
+    def test_video_ready_is_only_set_after_non_empty_blob_and_file(self):
+        ready = self.video.index("setVoteShareProgress(100,'✅ Vidéo prête')")
+        blob_check = self.video.index("if(videoBlob.size<=0)")
+        file_create = self.video.index("new File([videoBlob]")
+        self.assertLess(blob_check, file_create)
+        self.assertLess(file_create, ready)
+
+    def test_only_portrait_dimensions_are_generated(self):
+        self.assertIn("canvas.width = 1080", self.image)
+        self.assertIn("canvas.height = 1350", self.image)
+        self.assertIn("canvas.width=1080;canvas.height=1350", self.video)
+        self.assertNotIn("square", self.image)
+
+    def test_technical_choices_and_confirmations_are_removed(self):
+        for removed in (
+            "voteShareGenerateSquare", "voteShareGenerateImage",
+            "voteShareConfirmVideo", "voteShareNative",
+            "voteShareWhatsapp", "voteShareCopy", "voteShareDeleteAudio",
+        ):
+            self.assertNotIn(removed, INDEX)
 
 
 if __name__ == "__main__":
