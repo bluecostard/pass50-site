@@ -3,6 +3,7 @@ declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/data-engine-core.php';
 require __DIR__ . '/radar-core.php';
+require __DIR__ . '/intelligence-core.php';
 require_method('POST');
 $user=auth_user();
 require_role($user,'owner','admin');
@@ -25,6 +26,7 @@ $profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null,
 p50_radar_begin_batch(20,5,count($profiles));
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
 $radarTotals=['fiTraversed'=>0,'officialLinksAnalyzed'=>0,'recentPublications'=>0,'capturesRecorded'=>0,'activeMetrics'=>0,'unavailablePlatforms'=>0,'youtubeApi'=>p50_radar_youtube_status()];
+$intelligenceTotals=p50_intelligence_empty_diagnostics();
 foreach($profiles as $profile){
     p50_network_begin_profile();
     $run=p50_de_begin_run((string)$profile['profile_id'],'auto_enrichment_v22',$user['id'],['deep'=>$deep]);
@@ -35,6 +37,14 @@ foreach($profiles as $profile){
         // Les liens officiels sont importés avant Radar. YouTube est prioritaire
         // dans Radar afin que l'enrichissement générique ne consomme pas son budget.
         $radar=p50_radar_collect_profile($profile);
+        try{
+            $intelligence=p50_intelligence_run_profile((string)$profile['profile_id']);
+            p50_intelligence_add_diagnostic($intelligenceTotals,$intelligence);
+        }catch(Throwable $intelligenceError){
+            $intelligenceTotals['errors']++;
+            $intelligence=['status'=>'error'];
+            error_log('PASS50 Intelligence non bloquante '.$profile['profile_id'].': '.$intelligenceError->getMessage());
+        }
         p50_network_release_youtube_profile();
         $enrichment=p50_de_collect_enrichment($profile,$deep);
         $found=$imported+$importedFacts+$curatedFacts+(int)($enrichment['found']??0);
@@ -42,8 +52,8 @@ foreach($profiles as $profile){
         foreach(['officialLinksAnalyzed','recentPublications','capturesRecorded','activeMetrics','unavailablePlatforms'] as $counter)$radarTotals[$counter]+=(int)($radar[$counter]??0);
         $found+=(int)($radar['recentPublications']??0);
         $verified=p50_de_profile_verified_count((string)$profile['profile_id']);
-        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'radar'=>$radar,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts,'curatedEvidenceImported'=>$curatedFacts]);
-        $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment,'radar'=>$radar];
+        p50_de_finish_run($run['id'],'success',$found,$verified,null,['enrichment'=>$enrichment,'radar'=>$radar,'intelligence'=>$intelligence,'stateLinksImported'=>$imported,'stateFactsImported'=>$importedFacts,'curatedEvidenceImported'=>$curatedFacts]);
+        $results[]=['profileId'=>$profile['profile_id'],'name'=>$profile['public_name'],'status'=>'success','found'=>$found,'verified'=>$verified,'details'=>$enrichment,'radar'=>$radar,'intelligence'=>$intelligence];
         $processedIds[]=(string)$profile['profile_id'];$totalFound+=$found;$totalVerified+=$verified;
     }catch(Throwable $e){
         p50_network_release_youtube_profile();
@@ -57,4 +67,4 @@ foreach($profiles as $profile){
 $remainingNeverCollected=(int)db()->query("SELECT COUNT(*) FROM p50_profile_registry r LEFT JOIN (SELECT DISTINCT profile_id FROM p50_collection_runs) x ON x.profile_id=r.profile_id WHERE r.alive=1 AND x.profile_id IS NULL")->fetchColumn();
 $metricSummary=p50_de_metric_summary($processedIds);
 $radarTotals['youtubeApi']=p50_radar_youtube_status();
-json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'radar'=>$radarTotals,'network'=>p50_network_stats(),'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);
+json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'radar'=>$radarTotals,'intelligence'=>$intelligenceTotals,'network'=>p50_network_stats(),'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);
