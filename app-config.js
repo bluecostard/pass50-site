@@ -22,8 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
   legal.innerHTML = [
     '<a href="./conditions-utilisation.html" style="text-decoration:underline;text-underline-offset:3px">Conditions d’utilisation</a>',
     '<a href="./politique-confidentialite.html" style="text-decoration:underline;text-underline-offset:3px">Politique de confidentialité</a>',
-    '<a href="./informations-legales.html" style="text-decoration:underline;text-underline-offset:3px">Informations légales</a>',
-    '<a href="./apple-touch-icon.png" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px">Logo PASS50 en PNG</a>'
+    '<a href="./informations-legales.html" style="text-decoration:underline;text-underline-offset:3px">Informations légales</a>'
   ].join('');
   footer.appendChild(legal);
 });
