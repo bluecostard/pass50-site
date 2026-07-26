@@ -42,7 +42,7 @@ function p50_share_initials(string $name): string {
     return strtoupper(substr(implode('',array_map(static fn($part)=>substr($part,0,1),array_slice($parts[0]??[],0,2))),0,2));
 }
 
-function p50_share_duel_payload(string $pollKey,string $selectedId,string $voteDate,?array $history): array {
+function p50_share_duel_payload(string $shareId,string $pollKey,string $selectedId,string $voteDate,?array $history): array {
     global $config;
     if($history){
         $candidates=[];
@@ -61,7 +61,7 @@ function p50_share_duel_payload(string $pollKey,string $selectedId,string $voteD
         $percentagesAvailable=false;$snapshotSource='current_fallback';$stateRevision=$snapshot['state']['stateRevision']??null;
     }
     $base=rtrim((string)$config['app']['base_url'],'/');
-    $campaign=$base.'/?'.http_build_query(['profile'=>$selectedId,'source'=>'vote_share','medium'=>'social']);
+    $campaign=$base.'/d/'.$shareId;
     return [
         'profileId'=>$selectedId,'selectedProfileId'=>$selectedId,'candidates'=>$candidates,
         'percentagesAvailable'=>$percentagesAvailable,'voteDate'=>gmdate('c',strtotime($voteDate)),
@@ -85,7 +85,7 @@ if($action==='prepare'){
     $history=p50_duel_history_for_share((string)$user['id'],$poll,$profile);
     db()->prepare('INSERT INTO p50_vote_share_sessions(id,user_id,poll_key,profile_id,history_id,vote_updated_at,expires_at) VALUES(?,?,?,?,?,?,?)')
         ->execute([$id,$user['id'],$poll,$profile,$history['id']??null,$row['updated_at'],$expires]);
-    $payload=p50_share_duel_payload($poll,$profile,(string)$row['updated_at'],$history);
+    $payload=p50_share_duel_payload($id,$poll,$profile,(string)$row['updated_at'],$history);
     json_response(['ok'=>true,'shareId'=>$id,'expiresAt'=>gmdate('c',strtotime($expires)),'card'=>$payload]);
 }
 if($action==='analytics'){
