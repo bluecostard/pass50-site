@@ -69,13 +69,13 @@ class ShareVoteAudioContractTests(unittest.TestCase):
         self.assertIn("a.download=VOTE_SHARE.mediaFile.name", INDEX)
 
     def test_11_copy_link_fallback_exists(self):
-        self.assertIn("navigator.clipboard.writeText(VOTE_SHARE.card.campaignUrl)", INDEX)
+        self.assertIn("navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card))", INDEX)
         self.assertIn("link_copied", API)
 
     def test_12_campaign_targets_selected_profile_without_qr(self):
         for value in ("'profile'=>$selectedId", "'source'=>'vote_share'", "'medium'=>'social'"):
             self.assertIn(value, API)
-        self.assertIn("lines.push('','Vote toi aussi sur PASS50 :',card.campaignUrl)", INDEX)
+        self.assertIn("lines.push('','👇 Et toi, tu aurais voté pour qui ?','',card.campaignUrl)", INDEX)
         self.assertNotIn("api.qrserver.com", INDEX)
         self.assertNotIn("qrUrl", INDEX)
 
@@ -184,25 +184,27 @@ class ShareVoteMessageTests(unittest.TestCase):
         cls.message = re.search(r"function voteShareMessage\(card\)\{.*?\n}", INDEX, re.S).group(0)
         cls.panel = re.search(r"function voteSharePanel\(\)\{.*?\n}", INDEX, re.S).group(0)
         cls.native = re.search(r"async function nativeVoteShare\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.whatsapp = re.search(r"async function shareVoteWhatsapp\(\)\{.*?\n}", INDEX, re.S).group(0)
 
     def test_whatsapp_message_contains_exact_question(self):
-        self.assertIn("Qui est le plus coulé des 2 ?", self.message)
+        self.assertIn("Qui est le plus coulé des 2 ? 🤔", self.message)
 
-    def test_selected_candidate_is_displayed(self):
-        self.assertIn("candidate.profileId===card.selectedProfileId", self.message)
-        self.assertIn("✅ Mon choix : ${selected?.name||''}", self.message)
+    def test_message_does_not_reveal_selected_candidate(self):
+        self.assertNotIn("selectedProfileId", self.message)
+        self.assertNotIn("Mon choix :", self.message)
+        self.assertIn("Mon choix est fait… 😅", self.message)
 
     def test_both_frozen_percentages_are_displayed_when_available(self):
         self.assertIn("card.percentagesAvailable", self.message)
-        self.assertIn("${candidates[0].name} : ${Number(candidates[0].percentage)} %", self.message)
-        self.assertIn("${candidates[1].name} : ${Number(candidates[1].percentage)} %", self.message)
+        self.assertIn("Number(candidates[0].percentage)} %", self.message)
+        self.assertIn("Number(candidates[1].percentage)} %", self.message)
         self.assertIn("$history['candidate_a_percentage']", API)
         self.assertIn("$history['candidate_b_percentage']", API)
 
     def test_no_percentage_is_added_when_history_has_none(self):
         condition = self.message.index("if(card.percentagesAvailable")
         percentage_lines = self.message.index("candidates[0].percentage")
-        campaign = self.message.index("Vote toi aussi sur PASS50")
+        campaign = self.message.index("Et toi, tu aurais voté pour qui")
         self.assertLess(condition, percentage_lines)
         self.assertLess(percentage_lines, campaign)
         self.assertIn("$percentagesAvailable=false", API)
@@ -214,13 +216,96 @@ class ShareVoteMessageTests(unittest.TestCase):
 
     def test_campaign_link_is_present_once_in_message(self):
         self.assertEqual(self.message.count("card.campaignUrl"), 1)
-        self.assertIn("Vote toi aussi sur PASS50 :", self.message)
+        self.assertIn("👇 Et toi, tu aurais voté pour qui ?", self.message)
 
-    def test_native_share_and_whatsapp_use_identical_text(self):
-        self.assertIn("const shareText=voteShareMessage(card)", self.panel)
-        self.assertIn("encodeURIComponent(shareText)", self.panel)
+    def test_duel_names_and_separator_are_present(self):
+        self.assertIn("String(candidates[0]?.name||'')", self.message)
+        self.assertIn("'🆚'", self.message)
+        self.assertIn("String(candidates[1]?.name||'')", self.message)
+
+    def test_native_whatsapp_and_copy_use_identical_text(self):
+        self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.whatsapp)
+        self.assertIn("encodeURIComponent(shareText)", self.whatsapp)
         self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.native)
         self.assertIn("text:shareText", self.native)
+        self.assertIn("text:shareText", self.whatsapp)
+        self.assertIn("navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card))", INDEX)
+
+
+class ShareCardLargeThumbnailTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.loader = re.search(r"function shareImage\(url\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.draw = re.search(r"async function drawVoteShareCard\(.*?\n}", INDEX, re.S).group(0)
+        cls.export = re.search(r"function canvasFile\(.*?\n}", INDEX, re.S).group(0)
+        cls.generate = re.search(r"async function generateVoteShareImage\(.*?\n}", INDEX, re.S).group(0)
+        cls.whatsapp = re.search(r"async function shareVoteWhatsapp\(\)\{.*?\n}", INDEX, re.S).group(0)
+
+    def test_real_portrait_canvas_is_1080_by_1350(self):
+        self.assertIn("canvas.width = 1080", self.generate)
+        self.assertIn("canvas.height = square ? 1080 : 1350", self.generate)
+        self.assertIn('width="1080" height="1350"', INDEX)
+
+    def test_both_photos_finish_loading_before_drawing_and_export(self):
+        load = self.draw.index("await Promise.all")
+        context = self.draw.index("canvas.getContext")
+        self.assertLess(load, context)
+        self.assertIn("candidates.map(candidate=>shareImage(candidate.photoUrl))", self.draw)
+        self.assertIn("await drawVoteShareCard", self.generate)
+        self.assertLess(self.generate.index("await drawVoteShareCard"), self.generate.index("canvasFile"))
+
+    def test_loader_uses_anonymous_cors_decode_and_error_fallback(self):
+        self.assertLess(self.loader.index("image.crossOrigin='anonymous'"), self.loader.index("image.src=url"))
+        self.assertIn("await image.decode()", self.loader)
+        self.assertIn("image.onerror=()=>resolve(null)", self.loader)
+
+    def test_png_file_is_non_empty_and_has_expected_name_and_type(self):
+        self.assertIn("blob&&blob.size>0", self.export)
+        self.assertIn("new File([blob],name,{type:'image/png'})", self.export)
+        self.assertIn("'mon-vote-pass50.png'", self.generate)
+        self.assertIn("'image/png'", self.export)
+
+    def test_two_large_candidate_cards_dominate_portrait(self):
+        self.assertIn("candidates.slice(0,2)", self.draw)
+        self.assertIn("margin=24,gap=34", self.draw)
+        self.assertIn("h===1080?600:835", self.draw)
+        self.assertIn("isStory?50:42", self.draw)
+        self.assertIn("isStory?68:59", self.draw)
+
+    def test_card_keeps_vs_and_selected_vote_badge(self):
+        self.assertIn("'VS'", self.draw)
+        self.assertIn("✓ MON VOTE", self.draw)
+        self.assertIn("selected?'#b7ff00'", self.draw)
+
+    def test_no_qr_or_flat_black_empty_background(self):
+        self.assertNotIn("api.qrserver.com", INDEX)
+        self.assertNotIn("qrUrl", INDEX)
+        self.assertIn("ctx.createLinearGradient(0,0,w,h)", self.draw)
+        self.assertNotIn("ctx.fillStyle='#030503';ctx.fillRect(0,0,w,h)", self.draw)
+
+    def test_failed_photo_uses_initials_on_a_gradient(self):
+        self.assertIn("fallback=ctx.createLinearGradient", self.draw)
+        self.assertIn("candidate.initials||'P50'", self.draw)
+
+    def test_whatsapp_shares_png_or_downloads_before_text_fallback(self):
+        self.assertIn("navigator.canShare({files:[file]})", self.whatsapp)
+        self.assertIn("files:[file]", self.whatsapp)
+        self.assertLess(self.whatsapp.index("downloadVoteShare()"), self.whatsapp.index("window.open("))
+        self.assertIn("https://wa.me/?text=${encodeURIComponent(shareText)}", self.whatsapp)
+
+    def test_open_graph_metadata_is_complete_and_absolute(self):
+        expected = (
+            '<meta property="og:title" content="PASS50 — Qui est le plus coulé des 2 ?" />',
+            '<meta property="og:description" content="Découvre le duel et vote sur PASS50." />',
+            '<meta property="og:image" content="https://pass50.store/assets/pass50-og.png" />',
+            '<meta property="og:image:width" content="1200" />',
+            '<meta property="og:image:height" content="630" />',
+            '<meta property="og:type" content="website" />',
+            '<meta property="og:url" content="https://pass50.store/" />',
+        )
+        for tag in expected:
+            self.assertIn(tag, INDEX)
+        self.assertTrue((ROOT / "assets/pass50-og.png").is_file())
 
 
 if __name__ == "__main__":
