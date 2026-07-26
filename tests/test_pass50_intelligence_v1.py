@@ -199,6 +199,10 @@ class IntelligenceIntegrationTests(unittest.TestCase):
     def test_profiles_without_recent_data_are_excluded_from_trends_and_buzz(self):
         self.assertIn("$item['recentData']&&$item['comparisonStatus']==='comparable'&&$item['growthIndex']>=65", CORE)
         self.assertIn("$item['recentData']&&$item['buzzIndex']>=70", CORE)
+        diagnostics = CORE[CORE.index("function p50_intelligence_add_diagnostic"):CORE.index("function p50_intelligence_dashboard")]
+        self.assertIn("!empty($analysis['recentData'])", diagnostics)
+        self.assertIn("($analysis['comparisonStatus']??'')==='comparable'", diagnostics)
+        self.assertEqual(diagnostics.count("!empty($analysis['recentData'])"), 2)
 
     def test_capture_moments_are_hourly_distinct_and_not_row_count(self):
         self.assertIn("$captureMoments[$captured->format('Y-m-d H:00:00')]=true", CORE)
