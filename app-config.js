@@ -27,3 +27,13 @@ document.addEventListener('DOMContentLoaded', function () {
   ].join('');
   footer.appendChild(legal);
 });
+
+// Fonctionnalités des fiches influenceurs : like, partage, badge et partage des lives.
+(function () {
+  if (document.querySelector('script[data-pass50-fi-engagement]')) return;
+  var script = document.createElement('script');
+  script.src = './fi-engagement.js?v=1.0';
+  script.defer = true;
+  script.dataset.pass50FiEngagement = '1';
+  document.head.appendChild(script);
+})();
