@@ -9,13 +9,11 @@ let touchStartedAt=0;
 let navigating=false;
 
 const css=`
-#profileModal .modal-box{position:relative}
-.p50-fi-nav{position:absolute;top:50%;z-index:12;width:48px;height:48px;display:grid;place-items:center;border:1px solid rgba(183,255,0,.42);border-radius:50%;background:rgba(5,7,5,.9);color:#fff;font-size:28px;line-height:1;box-shadow:0 10px 30px rgba(0,0,0,.45);transform:translateY(-50%);transition:border-color .18s ease,color .18s ease,transform .18s ease,opacity .18s ease}
-.p50-fi-nav:hover{border-color:#b7ff00;color:#b7ff00;transform:translateY(-50%) scale(1.05)}
-.p50-fi-nav:disabled{opacity:.28;cursor:default}
-.p50-fi-nav.prev{left:-66px}.p50-fi-nav.next{right:-66px}
-#profileBody.p50-fi-switching{opacity:.35;transform:translateX(var(--p50-fi-shift,0));transition:opacity .12s ease,transform .12s ease}
-@media(max-width:900px) and (min-width:681px){.p50-fi-nav.prev{left:10px}.p50-fi-nav.next{right:10px}}
+.p50-fi-nav{position:absolute;top:50%;z-index:80;width:54px;height:54px;display:grid;place-items:center;border:1px solid rgba(183,255,0,.58);border-radius:50%;background:rgba(5,7,5,.94);color:#fff;font-size:34px;line-height:1;box-shadow:0 12px 36px rgba(0,0,0,.58);transform:translateY(-50%);transition:border-color .18s ease,color .18s ease,transform .18s ease,background .18s ease}
+.p50-fi-nav:hover,.p50-fi-nav:focus-visible{border-color:#b7ff00;color:#050705;background:#b7ff00;transform:translateY(-50%) scale(1.06);outline:none}
+.p50-fi-nav.prev{left:max(18px,calc(50vw - 580px))}.p50-fi-nav.next{right:max(18px,calc(50vw - 580px))}
+#profileBody.p50-fi-switching{opacity:.32;transform:translateX(var(--p50-fi-shift,0));transition:opacity .12s ease,transform .12s ease}
+@media(max-width:1180px) and (min-width:681px){.p50-fi-nav.prev{left:18px}.p50-fi-nav.next{right:18px}}
 @media(max-width:680px){.p50-fi-nav{display:none!important}#profileBody{touch-action:pan-y}}
 `;
 const style=document.createElement('style');
@@ -24,9 +22,7 @@ document.head.appendChild(style);
 
 function modalIsOpen(){
   const modal=document.getElementById('profileModal');
-  if(!modal)return false;
-  const display=getComputedStyle(modal).display;
-  return display!=='none'&&!modal.classList.contains('hidden');
+  return Boolean(modal&&modal.classList.contains('show'));
 }
 
 function profiles(){
@@ -70,16 +66,17 @@ function updateUrl(id){
   }catch{}
 }
 
-function dispatchProfileOpen(id){
+function openProfileDirectly(id){
+  if(typeof window.openProfile==='function'){
+    window.openProfile(id);
+    return true;
+  }
   const existing=document.querySelector(`[data-profile="${CSS.escape(id)}"]`);
-  if(existing){existing.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));return;}
-  const trigger=document.createElement('button');
-  trigger.type='button';
-  trigger.dataset.profile=id;
-  trigger.hidden=true;
-  document.body.appendChild(trigger);
-  trigger.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
-  trigger.remove();
+  if(existing){
+    existing.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
+    return true;
+  }
+  return false;
 }
 
 function navigate(direction){
@@ -88,35 +85,50 @@ function navigate(direction){
   const current=profileIdFromBody();
   const index=ids.indexOf(current);
   if(index<0||ids.length<2)return;
-  const targetIndex=(index+direction+ids.length)%ids.length;
-  const target=ids[targetIndex];
+  const target=ids[(index+direction+ids.length)%ids.length];
   if(!target||target===current)return;
+
   navigating=true;
   const body=document.getElementById('profileBody');
-  if(body){body.style.setProperty('--p50-fi-shift',direction>0?'-18px':'18px');body.classList.add('p50-fi-switching');}
+  if(body){
+    body.style.setProperty('--p50-fi-shift',direction>0?'-20px':'20px');
+    body.classList.add('p50-fi-switching');
+  }
+
   window.setTimeout(()=>{
     currentProfileId=target;
-    dispatchProfileOpen(target);
-    updateUrl(target);
+    const opened=openProfileDirectly(target);
+    if(opened)updateUrl(target);
     window.setTimeout(()=>{
       body?.classList.remove('p50-fi-switching');
       body?.style.removeProperty('--p50-fi-shift');
       navigating=false;
       syncNavigation();
-    },120);
+    },150);
   },90);
 }
 
 function ensureDesktopButtons(){
-  const box=document.querySelector('#profileModal .modal-box');
-  if(!box||box.querySelector('.p50-fi-nav'))return;
+  const modal=document.getElementById('profileModal');
+  if(!modal||modal.querySelector('.p50-fi-nav'))return;
+
   const prev=document.createElement('button');
-  prev.type='button';prev.className='p50-fi-nav prev';prev.setAttribute('aria-label','Fiche précédente');prev.textContent='‹';
+  prev.type='button';
+  prev.className='p50-fi-nav prev';
+  prev.setAttribute('aria-label','Fiche précédente');
+  prev.title='Fiche précédente';
+  prev.textContent='‹';
+
   const next=document.createElement('button');
-  next.type='button';next.className='p50-fi-nav next';next.setAttribute('aria-label','Fiche suivante');next.textContent='›';
+  next.type='button';
+  next.className='p50-fi-nav next';
+  next.setAttribute('aria-label','Fiche suivante');
+  next.title='Fiche suivante';
+  next.textContent='›';
+
   prev.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();navigate(-1)});
   next.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();navigate(1)});
-  box.append(prev,next);
+  modal.append(prev,next);
 }
 
 function syncNavigation(){
@@ -126,7 +138,9 @@ function syncNavigation(){
   ensureDesktopButtons();
 }
 
-function isEditable(target){return target instanceof HTMLElement&&Boolean(target.closest('input,textarea,select,[contenteditable="true"]'))}
+function isEditable(target){
+  return target instanceof HTMLElement&&Boolean(target.closest('input,textarea,select,[contenteditable="true"]'));
+}
 
 document.addEventListener('click',e=>{
   const trigger=e.target.closest('[data-profile]');
@@ -143,8 +157,11 @@ const modal=document.getElementById('profileModal');
 if(modal){
   modal.addEventListener('touchstart',e=>{
     if(innerWidth>MOBILE_MAX||e.touches.length!==1)return;
-    touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY;touchStartedAt=Date.now();
+    touchStartX=e.touches[0].clientX;
+    touchStartY=e.touches[0].clientY;
+    touchStartedAt=Date.now();
   },{passive:true});
+
   modal.addEventListener('touchend',e=>{
     if(innerWidth>MOBILE_MAX||!touchStartedAt||e.changedTouches.length!==1)return;
     const dx=e.changedTouches[0].clientX-touchStartX;
