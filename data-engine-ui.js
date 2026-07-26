@@ -1,16 +1,16 @@
 (function(){
   window.majPass50Running=Boolean(window.majPass50Running);
   const fallbackRenderAdminPane=renderAdminPane;
-  const DE={hub:null,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
+  const DE={hub:null,intelligence:null,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
 
   renderAdmin=function(){
-    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['update','MAJ PASS50'],['hub','Data Hub'],['quality','Contrôle qualité'],['ranking','Classement'],['data','Maintenance']];
+    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['update','MAJ PASS50'],['intelligence','PASS50 Intelligence'],['hub','Data Hub'],['quality','Contrôle qualité'],['ranking','Classement'],['data','Maintenance']];
     const menu=`<div class="admin-menu">${items.map(([id,label])=>`<button class="btn ${ui.adminTab===id?'primary':''}" data-admin-tab="${id}">${label}</button>`).join('')}</div>`;
     $('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;
     renderAdminPane();
   };
 
-  renderAdminPane=function(){if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
+  renderAdminPane=function(){if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function deThreshold(){return Number(DE.hub?.threshold||90);}
@@ -107,7 +107,7 @@
     DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set();DE.majStartedAt=new Date().toISOString();DE.majLastResult=null;
     let completedSuccessfully=false;
     DE.majStage='1/7 · Synchronisation des FI';DE.majMessage='Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
-    let totals={found:0,verified:0,historicalMetrics:0,fiTraversed:0,officialLinksAnalyzed:0,recentPublications:0,uniqueEvents:0,capturesRecorded:0,activeMetrics:0,unavailablePlatforms:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0,youtube:{configured:false,profilesWithLink:0,callsAttempted:0,callsSucceeded:0,videosRetrieved:0,errors403:0,errors429:0,budgetExceeded:0,invalidUrls:0,noRecentProfiles:0}};
+    let totals={found:0,verified:0,historicalMetrics:0,fiTraversed:0,officialLinksAnalyzed:0,recentPublications:0,uniqueEvents:0,capturesRecorded:0,activeMetrics:0,unavailablePlatforms:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0,intelligence:{profilesAnalyzed:0,profilesIgnored:0,strongTrends:0,buzzDetected:0,declinesDetected:0,errors:0},youtube:{configured:false,profilesWithLink:0,callsAttempted:0,callsSucceeded:0,videosRetrieved:0,errors403:0,errors429:0,budgetExceeded:0,invalidUrls:0,noRecentProfiles:0}};
     try{
       if(typeof window.PASS50_STEP12_STATUS==='object'&&Number(window.PASS50_STEP12_STATUS.present||0)<7&&typeof window.p50EnsureStep12Profiles==='function')window.p50EnsureStep12Profiles();
       const sync=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});
@@ -122,6 +122,8 @@
         const radar=data.radar||{};
         totals.batches++;totals.found+=Number(data.found||0);totals.verified+=Number(data.verified||0);totals.historicalMetrics+=Number(data.historicalMetrics||0);totals.fiTraversed+=Number(radar.fiTraversed||data.processed||0);totals.officialLinksAnalyzed+=Number(radar.officialLinksAnalyzed||0);totals.recentPublications+=Number(radar.recentPublications||0);totals.uniqueEvents+=Number(data.uniqueEvents||0);totals.capturesRecorded+=Number(radar.capturesRecorded||0);totals.activeMetrics+=Number(data.activeMetrics||0);totals.unavailablePlatforms+=Number(radar.unavailablePlatforms||0);totals.measurableProfiles+=Number(data.measurableProfiles||0);
         const youtube=radar.youtubeApi||{};
+        const intelligence=data.intelligence||{};
+        for(const counter of ['profilesAnalyzed','profilesIgnored','strongTrends','buzzDetected','declinesDetected','errors'])totals.intelligence[counter]+=Number(intelligence[counter]||0);
         totals.youtube.configured=totals.youtube.configured||Boolean(youtube.configured);
         for(const counter of ['profilesWithLink','callsAttempted','callsSucceeded','videosRetrieved','errors403','errors429','budgetExceeded','invalidUrls','noRecentProfiles'])totals.youtube[counter]+=Number(youtube[counter]||0);
         DE.hub=data.hub||DE.hub;
@@ -152,7 +154,7 @@
       await deLoadHub(true);
       const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
       const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
-      const counters=`${totals.fiTraversed} FI parcourue(s) · ${totals.officialLinksAnalyzed} lien(s) officiel(s) analysé(s) · ${totals.recentPublications} publication(s) récente(s) détectée(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.capturesRecorded} capture(s) métrique(s) enregistrée(s) · ${totals.activeMetrics} métrique(s) active(s) · ${totals.unavailablePlatforms} plateforme(s) indisponible(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s). ${deYoutubeMajSummary(totals.youtube,totals.capturesRecorded)}`;
+      const counters=`${totals.fiTraversed} FI parcourue(s) · ${totals.officialLinksAnalyzed} lien(s) officiel(s) analysé(s) · ${totals.recentPublications} publication(s) récente(s) détectée(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.capturesRecorded} capture(s) métrique(s) enregistrée(s) · ${totals.activeMetrics} métrique(s) active(s) · Intelligence : ${totals.intelligence.profilesAnalyzed} analysé(s), ${totals.intelligence.profilesIgnored} ignoré(s), ${totals.intelligence.strongTrends} tendance(s), ${totals.intelligence.buzzDetected} buzz, ${totals.intelligence.declinesDetected} recul(s), ${totals.intelligence.errors} erreur(s) non bloquante(s) · ${totals.unavailablePlatforms} plateforme(s) indisponible(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s). ${deYoutubeMajSummary(totals.youtube,totals.capturesRecorded)}`;
       DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=rankingChanged?'MAJ PASS50 terminée · classement actualisé':'MAJ PASS50 terminée';DE.majMessage=totals.activeMetrics===0?`Collecte terminée, mais aucune métrique récente n'est disponible pour recalculer les scores. ${counters}`:rankingChanged?`${counters} Classement actualisé.`:`Collecte terminée. Les profils ont été recalculés, mais aucun score ni rang n'a changé. ${counters}`;
       window.PASS50_MAJ_STATUS=result;
       completedSuccessfully=true;
@@ -167,6 +169,28 @@
       if(completedSuccessfully&&typeof scheduleCloudSync==='function')scheduleCloudSync();
       if(ui.adminTab==='update')deRenderMajPass50($('#adminPane'));
     }
+  }
+
+  function deRenderIntelligence(pane){
+    pane.innerHTML=`<div class="data-engine-shell"><div class="section-head"><div><div class="section-title">PASS50 Intelligence</div><div class="muted">Analyse déterministe des données Radar. Aucun résultat ne modifie le score officiel ni le classement public.</div></div><button class="btn" id="deReloadIntelligence">Actualiser</button></div><div id="deIntelligenceContent" class="de-loading">Chargement des analyses…</div></div>`;
+    deLoadIntelligence();
+  }
+  function deConfidence(level){return `<span class="p50i-confidence ${level==='élevée'?'high':level==='moyenne'?'medium':'low'}">${deEsc(level)}</span>`;}
+  function deIntelligenceCard(item){
+    const initials=String(item.name||'?').split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
+    const photo=item.photo?`<img src="${deEsc(item.photo)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:`<span>${deEsc(initials)}</span>`;
+    const start=new Date(item.periodStart),end=new Date(item.periodEnd),period=Number.isNaN(start.getTime())?'Dernières 24 heures':`${start.toLocaleString('fr-FR')} – ${end.toLocaleString('fr-FR')}`;
+    return `<article class="p50i-card"><div class="p50i-head"><div class="p50i-avatar">${photo}</div><div><strong>${deEsc(item.name)}</strong><div>${deConfidence(item.confidenceLevel)}</div></div></div><div class="p50i-indexes"><span><b>${Number(item.growthIndex)}</b> Growth</span><span><b>${Number(item.buzzIndex)}</b> Buzz</span></div><div class="p50i-signal">${deEsc(item.mainVariation)}</div><p>${deEsc(item.explanation)}</p><small>${deEsc(period)}</small></article>`;
+  }
+  function deIntelligenceSection(title,items,empty){
+    return `<section class="p50i-section"><div class="section-head"><div class="section-title">${deEsc(title)}</div><span class="muted">${items.length}/10 profil(s)</span></div>${items.length?`<div class="p50i-grid">${items.map(deIntelligenceCard).join('')}</div>`:`<div class="p50i-empty">${deEsc(empty)}</div>`}</section>`;
+  }
+  async function deLoadIntelligence(){
+    const el=$('#deIntelligenceContent');if(!el)return;
+    try{
+      DE.intelligence=await apiFetch('intelligence.php');
+      el.innerHTML=`<div class="media-hint"><strong>Période :</strong> ${deEsc(DE.intelligence.periodLabel||'Dernières 24 heures comparées à la période précédente')} · confiance fondée sur le nombre de captures, les métriques disponibles et leur récence.</div>${deIntelligenceSection('Tendances fortes',DE.intelligence.strongTrends||[],'Aucune tendance forte avec une confiance suffisante.')}${deIntelligenceSection('Buzz détectés',DE.intelligence.buzzDetected||[],'Aucun buzz fiable détecté.')}${deIntelligenceSection('Profils en recul',DE.intelligence.declines||[],'Aucun recul significatif avec une confiance suffisante.')}`;
+    }catch(err){el.innerHTML=`<div class="de-error">${deEsc(err.message||'PASS50 Intelligence indisponible')}</div>`;}
   }
 
   function deRenderHub(pane){
@@ -262,6 +286,7 @@
   document.addEventListener('click',async e=>{
     try{
       if(e.target.id==='deMajPass50')await deRunMajPass50();
+      if(e.target.id==='deReloadIntelligence')await deLoadIntelligence();
       if(e.target.id==='deStopMajPass50'){DE.majStopRequested=true;DE.majMessage='Arrêt demandé : le lot en cours se termine…';deDrawMajProgress();}
       if(e.target.id==='deSync')await deSync(e.target);
       if(e.target.id==='deCollectBatch')await deCollect(e.target);
