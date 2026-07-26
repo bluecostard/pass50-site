@@ -36,3 +36,12 @@ document.addEventListener('DOMContentLoaded', function () {
   script.dataset.pass50FiEngagement = '3.1';
   document.head.appendChild(script);
 })();
+
+// Nettoyage des formulations internes dans l'affichage public.
+(function () {
+  if (document.querySelector('script[data-pass50-public-copy]')) return;
+  var script = document.createElement('script');
+  script.src = './public-copy-fixes.js?v=1.0';
+  script.dataset.pass50PublicCopy = '1.0';
+  document.head.appendChild(script);
+})();
