@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-fi-navigation]')) return;
   var script = document.createElement('script');
-  script.src = './fi-navigation.js?v=1.0';
-  script.dataset.pass50FiNavigation = '1.0';
+  script.src = './fi-navigation.js?v=1.1';
+  script.dataset.pass50FiNavigation = '1.1';
   document.head.appendChild(script);
 })();
