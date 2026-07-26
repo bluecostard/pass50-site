@@ -45,3 +45,12 @@ document.addEventListener('DOMContentLoaded', function () {
   script.dataset.pass50PublicCopy = '1.0';
   document.head.appendChild(script);
 })();
+
+// Navigation continue entre les fiches influenceurs.
+(function () {
+  if (document.querySelector('script[data-pass50-fi-navigation]')) return;
+  var script = document.createElement('script');
+  script.src = './fi-navigation.js?v=1.0';
+  script.dataset.pass50FiNavigation = '1.0';
+  document.head.appendChild(script);
+})();
