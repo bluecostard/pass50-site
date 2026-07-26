@@ -36,14 +36,15 @@ function p50_intelligence_ensure_schema(): void {
     $done=true;
 }
 
-function p50_intelligence_change(float $recent,float $previous): float {
-    if($previous<=0.0)return $recent>0.0?200.0:0.0;
-    return max(-100.0,min(200.0,(($recent-$previous)/$previous)*100.0));
+function p50_intelligence_metric_comparison(float $recent,float $previous): array {
+    if($previous>0.0)return ['status'=>'comparable','variation'=>max(-100.0,min(200.0,(($recent-$previous)/$previous)*100.0))];
+    if($recent>0.0)return ['status'=>'new_activity','variation'=>null];
+    return ['status'=>'no_activity','variation'=>0.0];
 }
 
-function p50_intelligence_confidence(int $captureCount,int $metricCount,bool $recentData): string {
-    if($captureCount>=4&&$metricCount>=3&&$recentData)return 'élevée';
-    if($captureCount>=2&&$metricCount>=2)return 'moyenne';
+function p50_intelligence_confidence(int $distinctCaptureMoments,int $metricCount,bool $recentData,bool $onlyNewActivity=false): string {
+    if($distinctCaptureMoments>=4&&$metricCount>=3&&$recentData&&!$onlyNewActivity)return 'élevée';
+    if($distinctCaptureMoments>=2&&$metricCount>=2)return 'moyenne';
     return 'faible';
 }
 
@@ -51,16 +52,20 @@ function p50_intelligence_confidence(int $captureCount,int $metricCount,bool $re
  * Fonction pure et testable. Chaque observation contient recent, previous et
  * éventuellement baseline (moyenne habituelle ramenée à 24 heures).
  */
-function p50_intelligence_calculate(array $observations,int $captureCount,bool $recentData,array $context=[]): array {
-    $weightedChange=0.0;$availableWeight=0.0;$variations=[];$metricCount=0;
+function p50_intelligence_calculate(array $observations,int $distinctCaptureMoments,bool $recentData,array $context=[]): array {
+    $weightedChange=0.0;$availableWeight=0.0;$variations=[];$metricStatuses=[];$metricCount=0;$comparableCount=0;$newActivityCount=0;
     foreach(P50_INTELLIGENCE_WEIGHTS as $metric=>$weight){
         if(!isset($observations[$metric])||!array_key_exists('recent',$observations[$metric])||!array_key_exists('previous',$observations[$metric]))continue;
         $recent=(float)$observations[$metric]['recent'];$previous=(float)$observations[$metric]['previous'];
-        $variation=p50_intelligence_change($recent,$previous);
-        $variations[$metric]=$variation;$weightedChange+=$variation*$weight;$availableWeight+=$weight;$metricCount++;
+        $comparison=p50_intelligence_metric_comparison($recent,$previous);$status=$comparison['status'];$metricStatuses[$metric]=$status;
+        if($status==='comparable'){$variation=(float)$comparison['variation'];$variations[$metric]=$variation;$weightedChange+=$variation*$weight;$comparableCount++;}
+        elseif($status==='new_activity'){$variations[$metric]=null;$weightedChange+=30.0*$weight;$newActivityCount++;}
+        else $variations[$metric]=0.0;
+        $availableWeight+=$weight;$metricCount++;
     }
     $globalVariation=$availableWeight>0?$weightedChange/$availableWeight:0.0;
     $growth=(int)round(max(0.0,min(100.0,50.0+$globalVariation/2.0)));
+    $comparisonStatus=$comparableCount>0?'comparable':($newActivityCount>0?'new_activity':($metricCount===0?'insufficient_history':'no_activity'));
 
     $buzzWeights=['comments'=>40,'likes'=>25,'views'=>20];
     $buzzWeighted=0.0;$buzzWeight=0.0;$acceleratingSignals=0;
@@ -82,29 +87,36 @@ function p50_intelligence_calculate(array $observations,int $captureCount,bool $
     $enoughVolume=$recentInteractions>=100.0||$commentVolume>=10.0;
     if(!$enoughVolume||$acceleratingSignals<2)$buzz=min($buzz,69);
 
-    $confidence=p50_intelligence_confidence($captureCount,$metricCount,$recentData);
+    $confidence=p50_intelligence_confidence($distinctCaptureMoments,$metricCount,$recentData,$comparisonStatus==='new_activity');
     $labels=['views'=>'vues','likes'=>'likes','comments'=>'commentaires','publications'=>'publications','followers'=>'abonnés'];
     $mainMetric='';$mainVariation=0.0;
     foreach($variations as $metric=>$variation){
+        if($variation===null)continue;
         if($mainMetric===''||abs($variation)>abs($mainVariation)){$mainMetric=$metric;$mainVariation=$variation;}
     }
-    if($confidence==='faible')$explanation='Données insuffisantes pour une conclusion fiable.';
+    if($mainMetric===''&&$newActivityCount>0)foreach($metricStatuses as $metric=>$status)if($status==='new_activity'){$mainMetric=$metric;break;}
+    if($comparisonStatus==='new_activity')$explanation='Nouvelle activité détectée, historique insuffisant pour mesurer une croissance fiable.';
+    elseif($comparisonStatus==='insufficient_history')$explanation='Données insuffisantes pour établir une comparaison.';
+    elseif($confidence==='faible')$explanation='Données insuffisantes pour une conclusion fiable.';
     elseif($buzz>=70)$explanation='Accélération inhabituelle de plusieurs métriques sur les dernières 24 heures.';
     elseif($globalVariation<=-20)$explanation='Ralentissement de l’activité et de l’engagement.';
-    elseif($growth>=65)$explanation='Progression régulière sur plusieurs métriques.';
+    elseif($growth>=65)$explanation='Progression mesurable par rapport à la période précédente.';
     else $explanation='Activité globalement stable sur les dernières 24 heures.';
 
     return [
         'growthIndex'=>$growth,
         'buzzIndex'=>max(0,min(100,$buzz)),
         'confidenceLevel'=>$confidence,
+        'comparisonStatus'=>$comparisonStatus,
+        'recentData'=>$recentData,
         'globalVariation'=>round($globalVariation,1),
         'mainSignal'=>$mainMetric!==''?$mainMetric:'insufficient_data',
-        'mainVariation'=>$mainMetric!==''?round($mainVariation,1):null,
-        'mainVariationLabel'=>$mainMetric!==''?sprintf('%s %+.1f %%',$labels[$mainMetric]??$mainMetric,$mainVariation):'Données insuffisantes',
+        'mainVariation'=>$comparisonStatus==='new_activity'?null:($mainMetric!==''?round($mainVariation,1):null),
+        'mainVariationLabel'=>$comparisonStatus==='new_activity'?'Nouvelle activité':($mainMetric!==''?sprintf('%s %+.1f %%',$labels[$mainMetric]??$mainMetric,$mainVariation):'Données insuffisantes'),
         'metricCount'=>$metricCount,
-        'captureCount'=>$captureCount,
+        'distinctCaptureMoments'=>$distinctCaptureMoments,
         'variations'=>$variations,
+        'metricStatuses'=>$metricStatuses,
         'explanation'=>$explanation,
     ];
 }
@@ -124,20 +136,25 @@ function p50_intelligence_period(?DateTimeImmutable $now=null): array {
 function p50_intelligence_profile_observations(string $profileId,array $period): array {
     $stmt=db()->prepare('SELECT platform,content_key,metric_deltas,captured_at FROM p50_radar_metric_captures WHERE profile_id=? AND captured_at>=? AND captured_at<=? ORDER BY captured_at,id');
     $stmt->execute([$profileId,$period['baselineStart']->format('Y-m-d H:i:s'),$period['end']->format('Y-m-d H:i:s')]);
-    $rows=$stmt->fetchAll();$sums=['recent'=>[],'previous'=>[],'baseline'=>[]];$content=[];$platforms=[];$latest=null;
+    $rows=$stmt->fetchAll();$sums=['recent'=>[],'previous'=>[],'baseline'=>[]];$content=[];$platforms=[];$captureMoments=[];$recentData=false;
     foreach($rows as $row){
         $captured=new DateTimeImmutable((string)$row['captured_at'],new DateTimeZone('UTC'));
         $bucket=$captured>=$period['start']?'recent':($captured>=$period['previousStart']?'previous':'baseline');
         $deltas=decode_json_column($row['metric_deltas']??null,[]);
+        $rowUsable=false;
         foreach(['views','likes','comments','followers'] as $metric){
             if(!array_key_exists($metric,$deltas)||!is_numeric($deltas[$metric]))continue;
+            $rowUsable=true;
             $value=max(0,(float)$deltas[$metric]);$sums[$bucket][$metric]=($sums[$bucket][$metric]??0)+$value;
             if($bucket==='recent'&&in_array($metric,['views','likes','comments'],true)){
                 $key=(string)$row['content_key'];$content[$key]=($content[$key]??0)+$value;
                 if($value>0)$platforms[(string)$row['platform']]=true;
             }
         }
-        if($latest===null||$captured>$latest)$latest=$captured;
+        if($rowUsable){
+            $captureMoments[$captured->format('Y-m-d H:00:00')]=true;
+            if($bucket==='recent'&&$captured<=$period['end'])$recentData=true;
+        }
     }
     $eventStmt=db()->prepare("SELECT
         SUM(CASE WHEN COALESCE(published_at,collected_at)>=? THEN 1 ELSE 0 END) recent_count,
@@ -169,8 +186,8 @@ function p50_intelligence_profile_observations(string $profileId,array $period):
     $total=array_sum($content);$concentration=$total>0?max($content)/$total:0.0;
     return [
         'observations'=>$observations,
-        'captureCount'=>count($rows),
-        'recentData'=>$latest!==null&&$latest>=$period['previousStart'],
+        'distinctCaptureMoments'=>count($captureMoments),
+        'recentData'=>$recentData,
         'context'=>['interactionConcentration'=>$concentration,'activePlatforms'=>count($platforms)],
     ];
 }
@@ -178,11 +195,11 @@ function p50_intelligence_profile_observations(string $profileId,array $period):
 function p50_intelligence_run_profile(string $profileId,?DateTimeImmutable $now=null): array {
     p50_intelligence_ensure_schema();$period=p50_intelligence_period($now);
     $input=p50_intelligence_profile_observations($profileId,$period);
-    $analysis=p50_intelligence_calculate($input['observations'],$input['captureCount'],$input['recentData'],$input['context']);
+    $analysis=p50_intelligence_calculate($input['observations'],$input['distinctCaptureMoments'],$input['recentData'],$input['context']);
     $metrics=['observations'=>$input['observations'],'context'=>$input['context']]+$analysis;
     db()->prepare("INSERT INTO p50_intelligence_snapshots(profile_id,growth_index,buzz_index,confidence_level,main_signal,metrics_json,period_start,period_end,created_at)
-        VALUES(?,?,?,?,?,?,?,?,NOW())
-        ON DUPLICATE KEY UPDATE growth_index=VALUES(growth_index),buzz_index=VALUES(buzz_index),confidence_level=VALUES(confidence_level),main_signal=VALUES(main_signal),metrics_json=VALUES(metrics_json),created_at=NOW()")
+        VALUES(?,?,?,?,?,?,?,?,UTC_TIMESTAMP())
+        ON DUPLICATE KEY UPDATE growth_index=VALUES(growth_index),buzz_index=VALUES(buzz_index),confidence_level=VALUES(confidence_level),main_signal=VALUES(main_signal),metrics_json=VALUES(metrics_json),created_at=UTC_TIMESTAMP()")
         ->execute([$profileId,$analysis['growthIndex'],$analysis['buzzIndex'],$analysis['confidenceLevel'],$analysis['mainSignal'],json_encode($metrics,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$period['start']->format('Y-m-d H:i:s'),$period['end']->format('Y-m-d H:i:s')]);
     return $analysis+[
         'profileId'=>$profileId,
@@ -221,14 +238,15 @@ function p50_intelligence_dashboard(): array {
             'profileId'=>(string)$row['profile_id'],'name'=>(string)$row['public_name'],'photo'=>$photos[$row['profile_id']]??'',
             'growthIndex'=>(int)$row['growth_index'],'buzzIndex'=>(int)$row['buzz_index'],'confidenceLevel'=>(string)$row['confidence_level'],
             'globalVariation'=>(float)($metrics['globalVariation']??0),'mainVariation'=>(string)($metrics['mainVariationLabel']??'Données insuffisantes'),
+            'comparisonStatus'=>(string)($metrics['comparisonStatus']??'insufficient_history'),'recentData'=>(bool)($metrics['recentData']??false),
             'mainSignal'=>(string)$row['main_signal'],'explanation'=>(string)($metrics['explanation']??'Données insuffisantes pour une conclusion fiable.'),
             'periodStart'=>gmdate('c',strtotime((string)$row['period_start'])),'periodEnd'=>gmdate('c',strtotime((string)$row['period_end'])),
         ];
     }
     $trusted=static fn(array $item): bool=>in_array($item['confidenceLevel'],['moyenne','élevée'],true);
-    $trends=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['growthIndex']>=65));
-    $buzz=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['buzzIndex']>=70));
-    $declines=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['globalVariation']<=-20));
+    $trends=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['recentData']&&$item['comparisonStatus']==='comparable'&&$item['growthIndex']>=65));
+    $buzz=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['recentData']&&$item['buzzIndex']>=70));
+    $declines=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['comparisonStatus']==='comparable'&&$item['globalVariation']<=-20));
     usort($trends,static fn($a,$b)=>$b['growthIndex']<=>$a['growthIndex']);
     usort($buzz,static fn($a,$b)=>$b['buzzIndex']<=>$a['buzzIndex']);
     usort($declines,static fn($a,$b)=>$a['globalVariation']<=>$b['globalVariation']);
