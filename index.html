@@ -13,6 +13,13 @@
   <link rel="stylesheet" href="./v9-tools.css?v=22.2" />
   <link rel="canonical" href="https://pass50.store/" />
   <meta name="description" content="PASS50 — Qui dit quoi, qui va où ? Le classement du buzz et des influenceurs ivoiriens." />
+  <meta property="og:title" content="PASS50 — Qui est le plus coulé des 2 ?" />
+  <meta property="og:description" content="Découvre le duel et vote sur PASS50." />
+  <meta property="og:image" content="https://pass50.store/assets/pass50-og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://pass50.store/" />
   <title>PASS50 — Qui dit quoi, qui va où ?</title>
   <style>
     :root{
@@ -82,7 +89,7 @@
     @keyframes leaderShine{0%,72%{transform:translateX(-65%)}88%,100%{transform:translateX(65%)}}
     .vote-percent[data-target]{transition:opacity .2s}
     .vote-share-trigger{margin-top:10px;width:100%;border-color:var(--lime);color:#071000;background:var(--lime);font-weight:1000}
-    .vote-share-shell{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(280px,1.1fr);gap:18px}.vote-share-preview{background:#030503;border:1px solid rgba(183,255,0,.32);border-radius:22px;padding:12px;display:grid;place-items:center}.vote-share-preview canvas{width:100%;max-height:62vh;object-fit:contain;border-radius:15px;background:#050705}.vote-share-panel{display:flex;flex-direction:column;gap:12px}.vote-share-facts{border:1px solid var(--line);border-radius:16px;padding:13px;background:#0a0d0a}.vote-share-audio{border:1px solid rgba(183,255,0,.28);border-radius:17px;padding:14px;background:#080b08}.vote-share-audio audio{width:100%;margin-top:10px}.vote-share-actions{display:flex;gap:8px;flex-wrap:wrap}.vote-share-status{min-height:18px;color:var(--muted);font-size:12px}.recording-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);margin-right:6px;animation:livePulse 1s infinite}.share-note{font-size:11px;color:var(--muted);line-height:1.45}
+    .vote-share-shell{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(280px,1.1fr);gap:18px}.vote-share-preview{background:linear-gradient(145deg,#172019,#0a0f0b 58%,#19240f);border:1px solid rgba(183,255,0,.46);border-radius:22px;padding:8px;display:grid;place-items:center}.vote-share-preview canvas{width:100%;max-height:62vh;object-fit:contain;border-radius:15px;background:linear-gradient(145deg,#172019,#0a0f0b 58%,#19240f)}.vote-share-panel{display:flex;flex-direction:column;gap:12px}.vote-share-facts{border:1px solid var(--line);border-radius:16px;padding:13px;background:#0a0d0a}.vote-share-audio{border:1px solid rgba(183,255,0,.28);border-radius:17px;padding:14px;background:#080b08}.vote-share-audio audio{width:100%;margin-top:10px}.vote-share-actions{display:flex;gap:8px;flex-wrap:wrap}.vote-share-status{min-height:18px;color:var(--muted);font-size:12px}.recording-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);margin-right:6px;animation:livePulse 1s infinite}.share-note{font-size:11px;color:var(--muted);line-height:1.45}
     .record-toast{position:fixed;top:92px;left:50%;z-index:90;transform:translate(-50%,-20px);opacity:0;padding:12px 18px;border:1px solid #e8cf4b;border-radius:999px;background:rgba(13,17,13,.96);color:#fff2a8;font-weight:950;box-shadow:0 16px 42px rgba(0,0,0,.45);pointer-events:none}
     .record-toast.show{animation:recordToast 2s ease forwards}
     @keyframes recordToast{0%{opacity:0;transform:translate(-50%,-20px)}15%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-12px)}}
@@ -390,13 +397,16 @@ function voteShareCleanup({keepCard=false}={}){
 }
 function voteShareEscape(value){return safeAttr(String(value??''))}
 function voteShareMessage(card){
-  const selected=card.candidates.find(candidate=>candidate.profileId===card.selectedProfileId);
-  const lines=['🔥 J’ai voté sur PASS50 !','','Qui est le plus coulé des 2 ?','',`✅ Mon choix : ${selected?.name||''}`];
   const candidates=card.candidates.slice(0,2);
+  const lines=["🔥 J'ai voté sur PASS50 !",'','Qui est le plus coulé des 2 ? 🤔','','Mon choix est fait… 😅','','⚔️ Duel du moment','',String(candidates[0]?.name||'')];
   if(card.percentagesAvailable&&candidates.length===2&&candidates.every(candidate=>Number.isFinite(Number(candidate.percentage)))){
-    lines.push('',`${candidates[0].name} : ${Number(candidates[0].percentage)} %`,`${candidates[1].name} : ${Number(candidates[1].percentage)} %`);
+    lines[lines.length-1]+=` • ${Number(candidates[0].percentage)} %`;
   }
-  lines.push('','Vote toi aussi sur PASS50 :',card.campaignUrl);
+  lines.push('','🆚','',String(candidates[1]?.name||''));
+  if(card.percentagesAvailable&&candidates.length===2&&candidates.every(candidate=>Number.isFinite(Number(candidate.percentage)))){
+    lines[lines.length-1]+=` • ${Number(candidates[1].percentage)} %`;
+  }
+  lines.push('','👇 Et toi, tu aurais voté pour qui ?','',card.campaignUrl);
   return lines.join('\n');
 }
 function voteSharePanel(){
@@ -405,7 +415,7 @@ function voteSharePanel(){
   const selected=card.candidates.find(candidate=>candidate.profileId===card.selectedProfileId),opponent=card.candidates.find(candidate=>candidate.profileId!==card.selectedProfileId);
   const result=card.percentagesAvailable?` · ${card.candidates.map(candidate=>`${voteShareEscape(candidate.name)} ${Number(candidate.percentage)} %`).join(' / ')}`:'';
   const shareText=voteShareMessage(card);
-  $('#voteShareBody').innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1350" aria-label="Aperçu de la card du duel voté"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><h2 style="margin:7px 0">${voteShareEscape(selected?.name)} <span class="muted">VS</span> ${voteShareEscape(opponent?.name)}</h2><div>Mon vote : <strong style="color:var(--lime)">${voteShareEscape(selected?.name)}</strong>${result}</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(card.pass50Url)}</div>${card.snapshotSource==='current_fallback'?`<div class="share-note" style="margin-top:7px">${voteShareEscape(card.fallbackReason)}</div>`:''}</div><div class="vote-share-audio"><strong>Commentaire audio facultatif</strong><div class="share-note">Le micro ne démarre qu’après ton action. Durée maximale : 15 secondes. Aucun commentaire écrit n’est demandé.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s/15s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un commentaire audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer l’audio</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio><button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Confirmer et générer la vidéo</button>`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareGenerateImage">Image portrait</button><button class="btn" id="voteShareGenerateSquare">Image carrée</button><button class="btn" id="voteShareNative" ${VOTE_SHARE.mediaFile?'':'disabled'}>Partager le média</button><button class="btn" id="voteShareDownload" ${VOTE_SHARE.mediaFile?'':'disabled'}>Télécharger</button><button class="btn" id="voteShareCopy">Copier le lien</button><a class="btn" id="voteShareWhatsapp" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener">WhatsApp</a></div><div class="vote-share-status" id="voteShareStatus">${VOTE_SHARE.mediaFile?`${voteShareEscape(VOTE_SHARE.mediaFile.name)} prêt à partager.`:'Choisis une image ou ajoute un commentaire audio.'}</div><div class="share-note">Le partage s’ouvre dans l’application choisie. PASS50 ne publie jamais automatiquement à ta place.</div></div></div>`;
+  $('#voteShareBody').innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1350" aria-label="Aperçu de la card du duel voté"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><h2 style="margin:7px 0">${voteShareEscape(selected?.name)} <span class="muted">VS</span> ${voteShareEscape(opponent?.name)}</h2><div>Mon vote : <strong style="color:var(--lime)">${voteShareEscape(selected?.name)}</strong>${result}</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(card.pass50Url)}</div>${card.snapshotSource==='current_fallback'?`<div class="share-note" style="margin-top:7px">${voteShareEscape(card.fallbackReason)}</div>`:''}</div><div class="vote-share-audio"><strong>Commentaire audio facultatif</strong><div class="share-note">Le micro ne démarre qu’après ton action. Durée maximale : 15 secondes. Aucun commentaire écrit n’est demandé.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s/15s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un commentaire audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer l’audio</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio><button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Confirmer et générer la vidéo</button>`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareGenerateImage">Image portrait</button><button class="btn" id="voteShareGenerateSquare">Image carrée</button><button class="btn" id="voteShareNative" ${VOTE_SHARE.mediaFile?'':'disabled'}>Partager le média</button><button class="btn" id="voteShareDownload" ${VOTE_SHARE.mediaFile?'':'disabled'}>Télécharger</button><button class="btn" id="voteShareCopy">Copier le lien</button><button class="btn" id="voteShareWhatsapp">WhatsApp</button></div><div class="vote-share-status" id="voteShareStatus">${VOTE_SHARE.mediaFile?`${voteShareEscape(VOTE_SHARE.mediaFile.name)} prêt à partager.`:'Choisis une image ou ajoute un commentaire audio.'}</div><div class="share-note">Le partage s’ouvre dans l’application choisie. PASS50 ne publie jamais automatiquement à ta place.</div></div></div>`;
   drawVoteShareCard($('#voteShareCanvas'),card);
 }
 async function openVoteShare(profileId){
@@ -417,35 +427,52 @@ async function openVoteShare(profileId){
   }catch(err){toast(err.message||'Ce vote ne peut pas être partagé');}
 }
 function roundRectPath(ctx,x,y,w,h,r){const q=Math.min(r,w/2,h/2);ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,h,q):(ctx.rect(x,y,w,h));}
-function shareImage(url){if(!url)return Promise.resolve(null);if(VOTE_SHARE.images.has(url))return VOTE_SHARE.images.get(url);const pending=new Promise(resolve=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=url;});VOTE_SHARE.images.set(url,pending);return pending;}
+function shareImage(url){
+  if(!url)return Promise.resolve(null);
+  if(VOTE_SHARE.images.has(url))return VOTE_SHARE.images.get(url);
+  const pending=new Promise(resolve=>{
+    const image=new Image();
+    image.crossOrigin='anonymous';
+    image.onload=async()=>{try{if(typeof image.decode==='function')await image.decode();resolve(image)}catch{resolve(null)}};
+    image.onerror=()=>resolve(null);
+    image.src=url;
+  });
+  VOTE_SHARE.images.set(url,pending);
+  return pending;
+}
 async function drawVoteShareCard(canvas,card,{vertical=false,progress=0,wave=0}={}){
-  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;ctx.fillStyle='#030503';ctx.fillRect(0,0,w,h);
-  const glow=ctx.createRadialGradient(w*.18,h*.12,0,w*.18,h*.12,w*.75);glow.addColorStop(0,'rgba(183,255,0,.25)');glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
-  ctx.fillStyle='#b7ff00';ctx.font=`1000 ${vertical?74:62}px Arial`;ctx.fillText('PASS50',55,105);ctx.fillStyle='#e9f0e5';ctx.font=`900 ${vertical?42:34}px Arial`;ctx.fillText('MON VOTE · LE DUEL',55,165);
-  const candidates=card.candidates.slice(0,2),photos=await Promise.all(candidates.map(candidate=>shareImage(candidate.photoUrl)));
-  const gap=70,panelW=(w-110-gap)/2,py=vertical?270:225,photoH=Math.min(vertical?880:620,h-620);
+  const candidates=card.candidates.slice(0,2);
+  const photos=await Promise.all(candidates.map(candidate=>shareImage(candidate.photoUrl)));
+  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,isStory=vertical&&h>=1800;
+  const base=ctx.createLinearGradient(0,0,w,h);base.addColorStop(0,'#1c291e');base.addColorStop(.48,'#071009');base.addColorStop(1,'#25340e');ctx.fillStyle=base;ctx.fillRect(0,0,w,h);
+  const glow=ctx.createRadialGradient(w*.16,h*.08,0,w*.16,h*.08,w*.8);glow.addColorStop(0,'rgba(183,255,0,.34)');glow.addColorStop(1,'rgba(183,255,0,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='rgba(183,255,0,.055)';ctx.lineWidth=2;for(let y=0;y<h;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y+90);ctx.stroke();}
+  ctx.fillStyle='#b7ff00';ctx.font=`1000 ${isStory?72:58}px Arial`;ctx.fillText('PASS50',24,isStory?100:72);ctx.fillStyle='#e9f0e5';ctx.font=`900 ${isStory?39:31}px Arial`;ctx.fillText('MON VOTE · LE DUEL',24,isStory?154:120);
+  const margin=24,gap=34,panelW=(w-margin*2-gap)/2,py=isStory?230:(h===1080?145:155),photoH=isStory?1160:(h===1080?600:835);
   candidates.forEach((candidate,index)=>{
-    const x=55+index*(panelW+gap),photo=photos[index],selected=candidate.profileId===card.selectedProfileId;
-    roundRectPath(ctx,x,py,panelW,photoH,38);ctx.save();ctx.clip();
+    const x=margin+index*(panelW+gap),photo=photos[index],selected=candidate.profileId===card.selectedProfileId;
+    roundRectPath(ctx,x,py,panelW,photoH,30);ctx.save();ctx.clip();
     if(photo){const scale=Math.max(panelW/photo.width,photoH/photo.height),dw=photo.width*scale,dh=photo.height*scale;ctx.drawImage(photo,x+(panelW-dw)/2,py+(photoH-dh)/2,dw,dh);}
-    else{ctx.fillStyle='#111811';ctx.fillRect(x,py,panelW,photoH);ctx.fillStyle=selected?'#b7ff00':'#d8ded5';ctx.font=`1000 ${vertical?118:94}px Arial`;ctx.textAlign='center';ctx.fillText(candidate.initials||'P50',x+panelW/2,py+photoH/2+35);ctx.textAlign='left';}
-    ctx.restore();ctx.strokeStyle=selected?'#b7ff00':'#566052';ctx.lineWidth=selected?12:4;roundRectPath(ctx,x,py,panelW,photoH,38);ctx.stroke();
-    if(selected){ctx.fillStyle='#b7ff00';roundRectPath(ctx,x+18,py+18,vertical?210:175,58,22);ctx.fill();ctx.fillStyle='#071000';ctx.font=`1000 ${vertical?27:23}px Arial`;ctx.fillText('✓ MON VOTE',x+34,py+56);}
-    const nameY=py+photoH+55;ctx.fillStyle=selected?'#b7ff00':'#fff';ctx.font=`1000 ${vertical?43:35}px Arial`;ctx.textAlign='center';ctx.fillText(String(candidate.name).toUpperCase().slice(0,17),x+panelW/2,nameY);
-    if(card.percentagesAvailable&&Number.isFinite(Number(candidate.percentage))){ctx.fillStyle='#fff';ctx.font=`1000 ${vertical?58:48}px Arial`;ctx.fillText(`${Number(candidate.percentage)} %`,x+panelW/2,nameY+62);}
+    else{const fallback=ctx.createLinearGradient(x,py,x+panelW,py+photoH);fallback.addColorStop(0,selected?'#344a18':'#253126');fallback.addColorStop(1,'#0c140d');ctx.fillStyle=fallback;ctx.fillRect(x,py,panelW,photoH);ctx.fillStyle=selected?'#b7ff00':'#edf4e9';ctx.font=`1000 ${isStory?150:122}px Arial`;ctx.textAlign='center';ctx.fillText(candidate.initials||'P50',x+panelW/2,py+photoH/2+42);ctx.textAlign='left';}
+    ctx.restore();ctx.strokeStyle=selected?'#b7ff00':'#7d8a7a';ctx.lineWidth=selected?12:5;roundRectPath(ctx,x,py,panelW,photoH,30);ctx.stroke();
+    if(selected){ctx.fillStyle='#b7ff00';roundRectPath(ctx,x+16,py+16,isStory?218:190,62,20);ctx.fill();ctx.fillStyle='#071000';ctx.font=`1000 ${isStory?28:25}px Arial`;ctx.fillText('✓ MON VOTE',x+31,py+57);}
+    const nameY=py+photoH+(isStory?64:58);ctx.fillStyle=selected?'#b7ff00':'#fff';ctx.font=`1000 ${isStory?50:42}px Arial`;ctx.textAlign='center';ctx.fillText(String(candidate.name).toUpperCase().slice(0,17),x+panelW/2,nameY);
+    if(card.percentagesAvailable&&Number.isFinite(Number(candidate.percentage))){ctx.fillStyle='#fff';ctx.font=`1000 ${isStory?68:59}px Arial`;ctx.fillText(`${Number(candidate.percentage)} %`,x+panelW/2,nameY+(isStory?78:68));}
     ctx.textAlign='left';
   });
-  const vsX=w/2,vsY=py+photoH*.46;ctx.fillStyle='#080b08';ctx.beginPath();ctx.arc(vsX,vsY,vertical?58:48,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#b7ff00';ctx.lineWidth=5;ctx.stroke();ctx.fillStyle='#fff';ctx.font=`1000 ${vertical?39:32}px Arial`;ctx.textAlign='center';ctx.fillText('VS',vsX,vsY+13);ctx.textAlign='left';
-  const dateY=py+photoH+(card.percentagesAvailable?145:105);ctx.fillStyle='#aab3a6';ctx.font=`700 ${vertical?31:26}px Arial`;ctx.fillText(`Vote du ${new Date(card.voteDate).toLocaleDateString('fr-FR')}`,55,dateY);
+  const vsX=w/2,vsY=py+photoH*.48;ctx.fillStyle='#101710';ctx.beginPath();ctx.arc(vsX,vsY,isStory?61:54,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#b7ff00';ctx.lineWidth=6;ctx.stroke();ctx.fillStyle='#fff';ctx.font=`1000 ${isStory?41:37}px Arial`;ctx.textAlign='center';ctx.fillText('VS',vsX,vsY+14);ctx.textAlign='left';
+  const dateY=py+photoH+(card.percentagesAvailable?(isStory?190:156):(isStory?115:92));ctx.fillStyle='#c3cdc0';ctx.font=`700 ${isStory?30:25}px Arial`;ctx.fillText(`Vote du ${new Date(card.voteDate).toLocaleDateString('fr-FR')}`,24,dateY);
   if(vertical){ctx.strokeStyle='#b7ff00';ctx.lineWidth=7;ctx.beginPath();for(let x=70;x<w-70;x+=18){const amp=18+Math.abs(Math.sin(x*.031+progress*9))*wave*85;ctx.moveTo(x,h-390-amp);ctx.lineTo(x,h-390+amp);}ctx.stroke();}
-  ctx.fillStyle='#fff';ctx.font='900 25px Arial';ctx.fillText('VOTE TOI AUSSI',70,h-142);ctx.fillStyle='#b7ff00';ctx.font='700 21px Arial';ctx.fillText(String(card.pass50Url).replace(/^https?:\/\//,''),70,h-101);
-  ctx.fillStyle='#83907e';ctx.font='600 15px Arial';ctx.fillText(card.campaignUrl.slice(0,72),70,h-62);
+  ctx.fillStyle='#fff';ctx.font=`900 ${isStory?30:25}px Arial`;ctx.fillText('VOTE TOI AUSSI',24,h-92);ctx.fillStyle='#b7ff00';ctx.font=`700 ${isStory?25:21}px Arial`;ctx.fillText(String(card.pass50Url).replace(/^https?:\/\//,''),24,h-52);
 }
-function canvasFile(canvas,name,type='image/png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(new File([blob],name,{type})):reject(new Error('Génération image impossible')),type,.94))}
+function canvasFile(canvas,name='mon-vote-pass50.png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob&&blob.size>0?resolve(new File([blob],name,{type:'image/png'})):reject(new Error('Génération image impossible')),'image/png'))}
 async function generateVoteShareImage(square=false){
-  const canvas=$('#voteShareCanvas');canvas.width=1080;canvas.height=square?1080:1350;await drawVoteShareCard(canvas,VOTE_SHARE.card);
-  const file=await canvasFile(canvas,`pass50-vote-${VOTE_SHARE.card.profileId}-${square?'square':'portrait'}.png`);
-  setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();
+  const canvas=$('#voteShareCanvas');
+  canvas.width = 1080;
+  canvas.height = square ? 1080 : 1350;
+  await drawVoteShareCard(canvas,VOTE_SHARE.card);
+  const file=await canvasFile(canvas,square?'mon-vote-pass50-carre.png':'mon-vote-pass50.png');
+  setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();return file;
 }
 function supportedVoteVideoType(){
   if(!window.MediaRecorder)return '';
@@ -483,8 +510,18 @@ async function nativeVoteShare(){
   if(navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}}
   downloadVoteShare();
 }
+async function shareVoteWhatsapp(){
+  const shareText=voteShareMessage(VOTE_SHARE.card);
+  let file=VOTE_SHARE.mediaFile;
+  if(!file||file.type!=='image/png')file=await generateVoteShareImage(false);
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}
+  }
+  downloadVoteShare();
+  window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`,'_blank','noopener');
+}
 function downloadVoteShare(){if(!VOTE_SHARE.mediaFile)return;const a=document.createElement('a');a.href=VOTE_SHARE.mediaUrl;a.download=VOTE_SHARE.mediaFile.name;a.click();voteShareAnalytics('download')}
-async function copyVoteShareLink(){try{await navigator.clipboard.writeText(VOTE_SHARE.card.campaignUrl);voteShareAnalytics('link_copied');toast('Lien copié')}catch{toast('Copie impossible')}}
+async function copyVoteShareLink(){try{await navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card));voteShareAnalytics('link_copied');toast('Message copié')}catch{toast('Copie impossible')}}
 function formatTrendScore(s){return `${Math.round(Number(s)||0)}/100`}
 function arrow(p){return p.delta>0?`<span class="motion-up">↑</span> +${p.delta}`:p.delta<0?`<span class="motion-down">↓</span> ${p.delta}`:'—';}
 function arrowClass(p){return p.delta>0?'up':p.delta<0?'down':'flat'}
@@ -687,7 +724,7 @@ document.addEventListener('click',async e=>{
   if(e.target.matches('.fav'))toggleFavorite(e.target.dataset.id);if(e.target.matches('.follow'))toggleFollow(e.target.dataset.id);if(e.target.matches('.coule-vote'))voteCoule(e.target.dataset.id);if(e.target.matches('[data-share-vote]'))openVoteShare(e.target.dataset.shareVote);
   if(e.target.id==='voteShareRecord')startVoteShareRecording();if(e.target.id==='voteShareStop')stopVoteShareRecording();if(e.target.id==='voteShareDeleteAudio'){voteShareCleanup({keepCard:true});voteSharePanel();}
   if(e.target.id==='voteShareGenerateImage')generateVoteShareImage(false);if(e.target.id==='voteShareGenerateSquare')generateVoteShareImage(true);if(e.target.id==='voteShareConfirmVideo')generateVoteShareVideo();
-  if(e.target.id==='voteShareNative')nativeVoteShare();if(e.target.id==='voteShareDownload')downloadVoteShare();if(e.target.id==='voteShareCopy')copyVoteShareLink();if(e.target.id==='voteShareWhatsapp')voteShareAnalytics('platform_selected','whatsapp');
+  if(e.target.id==='voteShareNative')nativeVoteShare();if(e.target.id==='voteShareDownload')downloadVoteShare();if(e.target.id==='voteShareCopy')copyVoteShareLink();if(e.target.id==='voteShareWhatsapp'){voteShareAnalytics('platform_selected','whatsapp');shareVoteWhatsapp();}
   if(e.target.matches('[data-close]'))close(e.target.dataset.close);
   if(e.target.matches('[data-auth-tab]'))openAuth(e.target.dataset.authTab);
   if(e.target.matches('[data-scroll]'))document.getElementById(e.target.dataset.scroll)?.scrollIntoView({behavior:'smooth'});
