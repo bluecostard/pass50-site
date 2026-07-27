@@ -313,14 +313,14 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function normalizeLiveStreams(){
   if(!Array.isArray(db.liveStreams))db.liveStreams=[];
   const now=Date.now();
+  const seen=new Set();
   db.liveStreams=db.liveStreams.filter(x=>{
     if(!x||x.status!=='live'||!x.profileId||!/^https?:\/\//i.test(String(x.url||'')))return false;
     const end=x.endsAt?new Date(x.endsAt).getTime():0;
-    const rawStart=x.startedAt||x.detectedAt||x.createdAt||x.updatedAt||'';
-    const start=rawStart?new Date(rawStart).getTime():0;
     if(Number.isFinite(end)&&end>0&&end<=now)return false;
-    if(!Number.isFinite(start)||start<=0)return false;
-    if(start>now+300000||now-start>8*3600000)return false;
+    const key=[x.profileId,x.platform||'',String(x.url).replace(/\/+$/,'')].map(v=>String(v).trim().toLowerCase()).join('|');
+    if(seen.has(key))return false;
+    seen.add(key);
     return true;
   });
   db.profiles.forEach(p=>{
@@ -335,7 +335,7 @@ function currentUser(){return db.users.find(u=>u.id===session.userId)||null}
 function userPrefs(){const u=currentUser();if(!u)return null;u.favorites=u.favorites||[];u.following=u.following||[];u.followAlerts=u.followAlerts||{};u.notificationMode=u.notificationMode||'daily';u.soundEnabled=Boolean(u.soundEnabled);return u}
 function score(p){return Number(p.scores[ui.period]||0)}
 function regionEligible(p){return ui.region==='ALL'||p.region===ui.region||p.region==='BOTH'}
-function activeLives(){normalizeLiveStreams();return db.liveStreams.filter(x=>x.status==='live').sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt));}
+function activeLives(){normalizeLiveStreams();const time=x=>{const value=x.startedAt||x.lastSeenAt||x.detectedAt||x.createdAt||x.updatedAt,parsed=value?new Date(value).getTime():0;return Number.isFinite(parsed)?parsed:0};return db.liveStreams.filter(x=>x.status==='live').sort((a,b)=>time(b)-time(a));}
 function renderLiveHeader(){const lives=activeLives(),count=$('#liveCount');if(count)count.textContent=lives.length?`(${lives.length})`:'';}
 function liveAvatarHtml(p,live){
   if(p)return avatarHtml(p,'live-avatar');
