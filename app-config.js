@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-official-links-persistence]')) return;
   var script = document.createElement('script');
-  script.src = './official-links-persistence-v3.js?v=3.1';
-  script.dataset.pass50OfficialLinksPersistence = '3.1';
+  script.src = './official-links-persistence-v3.js?v=3.2';
+  script.dataset.pass50OfficialLinksPersistence = '3.2';
   document.head.appendChild(script);
 })();
