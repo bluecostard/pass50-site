@@ -1,0 +1,29 @@
+name: Validate official links persistence
+
+on:
+  push:
+    branches:
+      - fix/official-links-durable-persistence
+  pull_request:
+    paths:
+      - 'api/official-links-bulk.php'
+      - 'api/social-links.php'
+      - 'official-links-persistence-v3.js'
+      - 'app-config.js'
+      - 'sw.js'
+      - 'tests/test_official_links_persistence_v3.py'
+      - '.github/workflows/validate-official-links.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la syntaxe PHP
+        run: |
+          php -l api/official-links-bulk.php
+          php -l api/social-links.php
+      - name: Vérifier la syntaxe JavaScript
+        run: node --check official-links-persistence-v3.js
+      - name: Exécuter les tests de non-régression
+        run: python3 -m unittest tests/test_official_links_persistence_v3.py
