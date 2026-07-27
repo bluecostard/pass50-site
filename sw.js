@@ -1,4 +1,4 @@
-const CACHE='pass50-v28-ennemi-djandjou';
+const CACHE='pass50-v29-tiktok-live-radar';
 const ASSETS=[
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS=[
   './fi-navigation-v3.js?v=1.0',
   './fi-engagement-v3.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0',
+  './live-radar-v2.js?v=1.0',
   './public-copy-fixes.js?v=1.0',
   './v9-tools.css?v=22.4',
   './v9-tools.js?v=15.0',
