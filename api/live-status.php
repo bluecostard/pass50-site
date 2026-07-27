@@ -7,11 +7,12 @@ require_method('GET');
 set_time_limit(55);
 
 /**
- * PASS50 Radar LIVE V1
- * - automatique et gratuit sur les chaînes YouTube officielles vérifiées ;
- * - rotation par petits lots pour ne pas surcharger l'hébergement ;
+ * PASS50 Radar LIVE V2
+ * - détection automatique des directs YouTube et TikTok ;
+ * - rotation indépendante par plateforme ;
+ * - contrôle forcé depuis le bouton d'administration ;
  * - fusion avec les lives manuels du state public ;
- * - retrait automatique lorsqu'une chaîne contrôlée n'est plus en direct.
+ * - retrait automatique des directs terminés.
  */
 
 function p50_live_ensure_schema(): void {
@@ -108,47 +109,149 @@ function p50_live_scan_youtube(array $source): ?array {
     ];
 }
 
+function p50_live_tiktok_identity(string $url): array {
+    $parts=parse_url(trim($url));
+    if(!$parts||empty($parts['host'])||!str_contains(strtolower((string)$parts['host']),'tiktok.com'))return ['handle'=>'','profileUrl'=>'','liveUrl'=>''];
+    $path=(string)($parts['path']??'');
+    if(!preg_match('#/@([A-Za-z0-9._-]+)#',$path,$m))return ['handle'=>'','profileUrl'=>'','liveUrl'=>''];
+    $handle=$m[1];
+    $profile='https://www.tiktok.com/@'.$handle;
+    return ['handle'=>$handle,'profileUrl'=>$profile,'liveUrl'=>$profile.'/live'];
+}
+
+function p50_live_fetch_tiktok(string $url,int $timeout=5,string $accept='text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.7'): array {
+    if(!p50_public_http_url($url))return ['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'contentType'=>'','error'=>'URL distante refusée'];
+    $ch=curl_init($url);
+    curl_setopt_array($ch,[
+        CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,
+        CURLOPT_TIMEOUT=>$timeout,CURLOPT_CONNECTTIMEOUT=>min(3,$timeout),CURLOPT_ENCODING=>'',
+        CURLOPT_USERAGENT=>'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+        CURLOPT_HTTPHEADER=>[
+            'Accept: '.$accept,
+            'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7',
+            'Cache-Control: no-cache','Pragma: no-cache','DNT: 1',
+        ],
+        CURLOPT_HEADER=>false,
+    ]);
+    $body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+    $finalUrl=(string)curl_getinfo($ch,CURLINFO_EFFECTIVE_URL);$contentType=strtolower((string)curl_getinfo($ch,CURLINFO_CONTENT_TYPE));
+    $error=curl_error($ch);curl_close($ch);
+    return ['ok'=>is_string($body)&&$status>=200&&$status<400,'status'=>$status,'body'=>is_string($body)?$body:'','finalUrl'=>$finalUrl?:$url,'contentType'=>$contentType,'error'=>$error];
+}
+
+function p50_live_tiktok_room_id(string $body): string {
+    foreach([
+        '/"roomId"\s*:\s*"?([1-9]\d{5,})"?/i',
+        '/"room_id"\s*:\s*"?([1-9]\d{5,})"?/i',
+        '/"liveRoomId"\s*:\s*"?([1-9]\d{5,})"?/i',
+        '/"webcastRoomId"\s*:\s*"?([1-9]\d{5,})"?/i',
+    ] as $pattern)if(preg_match($pattern,$body,$m))return (string)$m[1];
+    return '';
+}
+
+function p50_live_tiktok_viewers(string $body): ?int {
+    foreach([
+        '/"user_count"\s*:\s*"?(\d+)"?/i',
+        '/"viewerCount"\s*:\s*"?(\d+)"?/i',
+        '/"liveRoomUserCount"\s*:\s*"?(\d+)"?/i',
+        '/"roomUserCount"\s*:\s*"?(\d+)"?/i',
+    ] as $pattern)if(preg_match($pattern,$body,$m))return (int)$m[1];
+    return null;
+}
+
+function p50_live_scan_tiktok(array $source): ?array {
+    $identity=p50_live_tiktok_identity((string)$source['url']);
+    if($identity['handle']==='')return null;
+
+    $apiUrl='https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.rawurlencode($identity['handle']);
+    $api=p50_live_fetch_tiktok($apiUrl,5,'application/json,text/plain,*/*');
+    $roomId=$api['ok']?p50_live_tiktok_room_id($api['body']):'';
+    $body=$api['body'];$checkedUrl=$apiUrl;$finalUrl=$api['finalUrl'];
+
+    if($roomId===''){
+        $page=p50_live_fetch_tiktok($identity['liveUrl'],5);
+        if(!$page['ok']||$page['body']==='')return null;
+        $body=$page['body'];$checkedUrl=$identity['liveUrl'];$finalUrl=$page['finalUrl'];
+        $roomId=p50_live_tiktok_room_id($body);
+        $strongLive=(bool)preg_match('/"(?:isLive|isLiveStreaming)"\s*:\s*true/i',$body)
+            ||(bool)preg_match('/"(?:liveStatus|live_status)"\s*:\s*[12](?:\D|$)/i',$body)
+            ||(bool)preg_match('/"LiveRoom"/i',$body);
+        $finalPath=(string)(parse_url((string)$finalUrl,PHP_URL_PATH)??'');
+        if($roomId===''||(!$strongLive&&!preg_match('#/@[A-Za-z0-9._-]+/live/?$#i',$finalPath)))return null;
+    }
+
+    $meta=p50_page_metadata($body,(string)($finalUrl?:$identity['liveUrl']));
+    $title=trim((string)($meta['title']??''));
+    $title=preg_replace('/\s*\|\s*TikTok\s*$/iu','',$title)??$title;
+    if($title===''||preg_match('/^(TikTok|Make Your Day)$/iu',$title))$title=trim((string)($source['public_name']??''));
+    if($title==='')$title='Direct TikTok en cours';
+    elseif(!preg_match('/\b(direct|live)\b/iu',$title))$title.=' est en direct';
+
+    return [
+        'profileId'=>(string)$source['profile_id'],'platform'=>'TikTok','title'=>$title,
+        'url'=>$identity['liveUrl'],'thumbnail'=>(string)($meta['image']??''),
+        'confidence'=>max(90,(int)($source['confidence']??90)),'startedAt'=>null,
+        'viewers'=>p50_live_tiktok_viewers($body),
+        'metadata'=>[
+            'profileUrl'=>$identity['profileUrl'],'handle'=>'@'.$identity['handle'],
+            'roomId'=>$roomId,'checkedUrl'=>$checkedUrl,
+        ],
+    ];
+}
+
 function p50_live_sources(): array {
     $threshold=p50_de_threshold();
-    $stmt=db()->prepare("SELECT r.profile_id,r.public_name,r.handle,s.normalized_url url,s.confidence
+    $stmt=db()->prepare("SELECT r.profile_id,r.public_name,r.handle,s.platform,s.normalized_url url,s.confidence
         FROM p50_profile_registry r
         JOIN p50_social_links s ON s.profile_id=r.profile_id
-        WHERE r.alive=1 AND s.platform='YouTube' AND s.status='verified' AND s.confidence>=?
-        ORDER BY r.public_name");
+        WHERE r.alive=1 AND s.platform IN ('YouTube','TikTok') AND s.status='verified' AND s.confidence>=?
+        ORDER BY s.platform,r.public_name");
     $stmt->execute([$threshold]);
     $rows=$stmt->fetchAll();
     $seen=[];$out=[];
-    foreach($rows as $row){$id=(string)$row['profile_id'];if(isset($seen[$id]))continue;$seen[$id]=true;$out[]=$row;}
+    foreach($rows as $row){
+        $platform=(string)$row['platform'];$id=(string)$row['profile_id'];$key=$platform.'|'.$id;
+        if(isset($seen[$key]))continue;$seen[$key]=true;$out[]=$row;
+    }
 
     // Secours : liens publics déjà publiés dans le state, même si la table moteur
     // n'a pas encore été resynchronisée après une mise à jour GitHub.
     $state=p50_de_load_public_state();
     foreach((array)($state['profiles']??[]) as $profile){
-        if(!is_array($profile)||empty($profile['id'])||isset($seen[(string)$profile['id']])||array_key_exists('alive',$profile)&&empty($profile['alive']))continue;
-        $url=trim((string)(($profile['links']??[])['YouTube']??''));
-        if($url===''||p50_platform($url)!=='YouTube'||preg_match('#/(results|search)(?:/|\?)#i',$url))continue;
-        $seen[(string)$profile['id']]=true;
-        $out[]=['profile_id'=>(string)$profile['id'],'public_name'=>(string)($profile['name']??$profile['id']),'handle'=>(string)($profile['handle']??''),'url'=>$url,'confidence'=>90];
+        if(!is_array($profile)||empty($profile['id'])||array_key_exists('alive',$profile)&&empty($profile['alive']))continue;
+        foreach(['YouTube','TikTok'] as $platform){
+            $id=(string)$profile['id'];$key=$platform.'|'.$id;
+            if(isset($seen[$key]))continue;
+            $url=trim((string)(($profile['links']??[])[$platform]??''));
+            if($url===''||p50_platform($url)!==$platform)continue;
+            if($platform==='YouTube'&&preg_match('#/(results|search)(?:/|\?)#i',$url))continue;
+            if($platform==='TikTok'&&p50_live_tiktok_identity($url)['handle']==='')continue;
+            $check=(string)(($profile['linkChecks']??[])[$platform]['status']??'');
+            $confidence=in_array($check,['owner_verified','manual_verified','ok'],true)?95:90;
+            $seen[$key]=true;
+            $out[]=['profile_id'=>$id,'public_name'=>(string)($profile['name']??$id),'handle'=>(string)($profile['handle']??''),'platform'=>$platform,'url'=>$url,'confidence'=>$confidence];
+        }
     }
-    usort($out,static fn($a,$b)=>strnatcasecmp((string)$a['public_name'],(string)$b['public_name']));
+    usort($out,static fn($a,$b)=>strcmp((string)$a['platform'],(string)$b['platform'])?:strnatcasecmp((string)$a['public_name'],(string)$b['public_name']));
     return $out;
 }
 
 function p50_live_store(array $live): void {
-    $key=hash('sha256','YouTube|'.strtolower(rtrim((string)$live['url'],'/')));
+    $platform=(string)$live['platform'];
+    $key=hash('sha256',$platform.'|'.strtolower(rtrim((string)$live['url'],'/')));
     $safeTitle=function_exists('mb_substr')?mb_substr((string)$live['title'],0,255,'UTF-8'):substr((string)$live['title'],0,255);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata)
         VALUES(?,?,?,?,?,?,'live','automatic',?,?,?,NOW(),NULL,?)
-        ON DUPLICATE KEY UPDATE profile_id=VALUES(profile_id),title=VALUES(title),thumbnail_url=VALUES(thumbnail_url),status='live',confidence=VALUES(confidence),viewers=VALUES(viewers),started_at=COALESCE(started_at,VALUES(started_at)),last_seen_at=NOW(),ended_at=NULL,metadata=VALUES(metadata)");
+        ON DUPLICATE KEY UPDATE profile_id=VALUES(profile_id),platform=VALUES(platform),title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='live',confidence=VALUES(confidence),viewers=VALUES(viewers),started_at=COALESCE(started_at,VALUES(started_at)),last_seen_at=NOW(),ended_at=NULL,metadata=VALUES(metadata)");
     $stmt->execute([
-        $key,(string)$live['profileId'],'YouTube',$safeTitle,(string)$live['url'],(string)$live['thumbnail'],
+        $key,(string)$live['profileId'],$platform,$safeTitle,(string)$live['url'],(string)$live['thumbnail'],
         (int)$live['confidence'],$live['viewers'],$live['startedAt'],json_encode($live['metadata'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
     ]);
 }
 
-function p50_live_mark_youtube_ended(string $profileId): void {
-    $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform='YouTube' AND source='automatic' AND status='live'");
-    $stmt->execute([$profileId]);
+function p50_live_mark_ended(string $profileId,string $platform): void {
+    $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live'");
+    $stmt->execute([$profileId,$platform]);
 }
 
 function p50_live_active_rows(int $staleMinutes): array {
@@ -171,68 +274,70 @@ function p50_live_manual_from_state(): array {
     $state=p50_de_load_public_state();$now=time();$out=[];
     foreach((array)($state['liveStreams']??[]) as $live){
         if(!is_array($live)||($live['status']??'')!=='live'||empty($live['profileId'])||empty($live['url']))continue;
-
-        $endTs=0;
-        $ends=trim((string)($live['endsAt']??''));
-        if($ends!==''){
-            $parsed=strtotime($ends);
-            if($parsed!==false)$endTs=$parsed;
-        }
+        $endTs=0;$ends=trim((string)($live['endsAt']??''));
+        if($ends!==''){$parsed=strtotime($ends);if($parsed!==false)$endTs=$parsed;}
         if($endTs>0&&$endTs<=$now)continue;
-
         $startTs=0;
         foreach(['startedAt','detectedAt','createdAt','updatedAt'] as $key){
-            $value=trim((string)($live[$key]??''));
-            if($value==='')continue;
-            $parsed=strtotime($value);
-            if($parsed!==false){$startTs=$parsed;break;}
+            $value=trim((string)($live[$key]??''));if($value==='')continue;
+            $parsed=strtotime($value);if($parsed!==false){$startTs=$parsed;break;}
         }
-
-        // Un ancien LIVE sans aucune date est un enregistrement orphelin :
-        // il ne doit jamais être réaffiché indéfiniment.
         if($startTs<=0&&$endTs<=0)continue;
-
-        // Protection supplémentaire des anciens enregistrements incomplets.
-        // Les nouveaux LIVE manuels ont toujours endsAt.
         if($endTs<=0&&$startTs>0&&($now-$startTs)>8*3600)continue;
-
         $live['id']=(string)($live['id']??('manual_'.substr(hash('sha256',(string)$live['url']),0,16)));
         $live['source']='manual';$out[]=$live;
     }
     return $out;
 }
 
+function p50_live_scan_platform(array $source): ?array {
+    $platform=(string)($source['platform']??'');
+    if($platform==='TikTok')return p50_live_scan_tiktok($source);
+    if($platform==='YouTube')return p50_live_scan_youtube($source);
+    return null;
+}
+
 p50_live_ensure_schema();
 p50_de_sync_registry_from_state();
 
 global $config;
-$batch=max(1,min(12,(int)($config['data_engine']['live_batch_size']??6)));
+$force=isset($_GET['force'])&&in_array(strtolower((string)$_GET['force']),['1','true','yes'],true);
 $refresh=max(30,min(300,(int)($config['data_engine']['live_refresh_seconds']??50)));
 $stale=max(20,min(60,(int)($config['data_engine']['live_stale_minutes']??25)));
-$sources=p50_live_sources();$total=count($sources);$scanned=0;$found=0;$scanPerformed=false;
+$sources=p50_live_sources();
+$platformSources=['YouTube'=>[],'TikTok'=>[]];
+foreach($sources as $source){$platform=(string)($source['platform']??'');if(isset($platformSources[$platform]))$platformSources[$platform][]=$source;}
+
 $lastScan=(string)p50_de_get_setting('live_radar_last_scan_at','');
 $lastTs=$lastScan!==''?(strtotime($lastScan)?:0):0;
-$canScan=(time()-$lastTs)>=$refresh;
+$canScan=$force||(time()-$lastTs)>=$refresh;
+$scanPerformed=false;$scanned=0;$found=0;$stats=[];
+$limits=$force?['YouTube'=>3,'TikTok'=>7]:['YouTube'=>2,'TikTok'=>4];
 
 $lockAcquired=false;
-if($canScan){
-    try{$lockAcquired=(int)db()->query("SELECT GET_LOCK('pass50_live_radar',0)")->fetchColumn()===1;}catch(Throwable){}
-}
+if($canScan){try{$lockAcquired=(int)db()->query("SELECT GET_LOCK('pass50_live_radar',0)")->fetchColumn()===1;}catch(Throwable){}}
 
-if($canScan&&$lockAcquired&&$total>0){
+if($canScan&&$lockAcquired){
     $scanPerformed=true;
-    $cursor=max(0,(int)p50_de_get_setting('live_radar_cursor',0));
-    if($cursor>=$total)$cursor=0;
-    for($i=0;$i<$batch&&$i<$total;$i++){
-        $source=$sources[($cursor+$i)%$total];$scanned++;
-        try{$live=p50_live_scan_youtube($source);}catch(Throwable){$live=null;}
-        if($live){p50_live_store($live);$found++;}else p50_live_mark_youtube_ended((string)$source['profile_id']);
+    foreach($platformSources as $platform=>$items){
+        $total=count($items);$platformScanned=0;$platformFound=0;
+        $cursorKey='live_radar_cursor_'.strtolower($platform);
+        $cursor=max(0,(int)p50_de_get_setting($cursorKey,0));
+        if($total>0&&$cursor>=$total)$cursor=0;
+        $limit=min((int)$limits[$platform],$total);
+        for($i=0;$i<$limit;$i++){
+            $source=$items[($cursor+$i)%$total];$platformScanned++;$scanned++;
+            try{$live=p50_live_scan_platform($source);}catch(Throwable){$live=null;}
+            if($live){p50_live_store($live);$platformFound++;$found++;}
+            else p50_live_mark_ended((string)$source['profile_id'],$platform);
+        }
+        if($total>0)p50_de_set_setting($cursorKey,($cursor+$platformScanned)%$total);
+        $stats[$platform]=['known'=>$total,'scanned'=>$platformScanned,'found'=>$platformFound,'batchSize'=>$limits[$platform]];
     }
-    $cursor=($cursor+$scanned)%max(1,$total);
-    $lastScan=gmdate(DATE_ATOM);
-    p50_de_set_setting('live_radar_cursor',$cursor);
-    p50_de_set_setting('live_radar_last_scan_at',$lastScan);
+    $lastScan=gmdate(DATE_ATOM);p50_de_set_setting('live_radar_last_scan_at',$lastScan);
     try{db()->query("SELECT RELEASE_LOCK('pass50_live_radar')");}catch(Throwable){}
+}else{
+    foreach($platformSources as $platform=>$items)$stats[$platform]=['known'=>count($items),'scanned'=>0,'found'=>0,'batchSize'=>$limits[$platform]];
 }
 
 $streams=array_merge(p50_live_active_rows($stale),p50_live_manual_from_state());
@@ -243,8 +348,9 @@ usort($dedup,static fn($a,$b)=>strcmp((string)($b['startedAt']??''),(string)($a[
 json_response([
     'ok'=>true,'liveStreams'=>$dedup,
     'radar'=>[
-        'version'=>1,'mode'=>'YouTube automatique + autres réseaux hybrides','lastScanAt'=>$lastScan?:null,
-        'scanPerformed'=>$scanPerformed,'profilesScanned'=>$scanned,'livesFoundThisPass'=>$found,
-        'youtubeProfilesKnown'=>$total,'batchSize'=>$batch,'refreshSeconds'=>$refresh,'staleMinutes'=>$stale,
+        'version'=>2,'mode'=>'YouTube + TikTok automatiques, autres réseaux hybrides','lastScanAt'=>$lastScan?:null,
+        'scanPerformed'=>$scanPerformed,'forced'=>$force,'profilesScanned'=>$scanned,'livesFoundThisPass'=>$found,
+        'youtubeProfilesKnown'=>(int)($stats['YouTube']['known']??0),'tiktokProfilesKnown'=>(int)($stats['TikTok']['known']??0),
+        'platforms'=>$stats,'refreshSeconds'=>$refresh,'staleMinutes'=>$stale,
     ],
 ]);
