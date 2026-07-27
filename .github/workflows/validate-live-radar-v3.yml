@@ -1,0 +1,24 @@
+name: Validate Live Radar V3
+
+on:
+  pull_request:
+    paths:
+      - 'api/live-status-v3.php'
+      - 'live-radar-v3.js'
+      - 'app-config.js'
+      - 'sw.js'
+      - 'tests/test_live_radar_v3.py'
+      - '.github/workflows/validate-live-radar-v3.yml'
+      - '.github/workflows/live-radar-sweep.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la syntaxe PHP
+        run: php -l api/live-status-v3.php
+      - name: Vérifier la syntaxe JavaScript
+        run: node --check live-radar-v3.js
+      - name: Exécuter les tests du Radar LIVE
+        run: python3 -m unittest tests/test_live_radar_v3.py
