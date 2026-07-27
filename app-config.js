@@ -39,8 +39,17 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-fi-engagement]')) return;
   var script = document.createElement('script');
-  script.src = './fi-engagement-v3.js?v=1.0';
-  script.dataset.pass50FiEngagement = '3.0';
+  script.src = './fi-engagement-v3.js?v=1.1';
+  script.dataset.pass50FiEngagement = '3.1';
+  document.head.appendChild(script);
+})();
+
+// Mise en page responsive de la fenêtre « En direct maintenant ».
+(function () {
+  if (document.querySelector('script[data-pass50-live-modal-layout]')) return;
+  var script = document.createElement('script');
+  script.src = './live-modal-layout-v1.js?v=1.0';
+  script.dataset.pass50LiveModalLayout = '1.0';
   document.head.appendChild(script);
 })();
 
