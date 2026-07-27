@@ -17,6 +17,7 @@ set_time_limit(55);
 
 const P50_LIVE_PLATFORMS = ['TikTok','YouTube','Instagram','Facebook'];
 const P50_LIVE_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];
+const P50_LIVE_V3_TUNED = 1;
 
 function p50_live_v3_ensure_schema(): void {
     p50_de_ensure_schema();
@@ -202,6 +203,8 @@ function p50_live_v3_probe_requests(array $source): array {
         $handle=rawurlencode($identity['handle']);
         return [
             'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],
+            'api_basic'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],
+            'mobile_live'=>['url'=>'https://m.tiktok.com/@'.$handle.'/live','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
             'live'=>['url'=>$identity['liveUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
             'embed'=>['url'=>'https://www.tiktok.com/embed/live/@'.$handle.'?autoplay=0&muted=1&controls=1&embed_domain=pass50.store','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
             'profile'=>['url'=>$identity['profileUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
@@ -217,6 +220,7 @@ function p50_live_v3_probe_requests(array $source): array {
         return [
             'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
             'videos'=>['url'=>rtrim($identity['profileUrl'],'/').'/videos/','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'mobile'=>['url'=>str_replace('www.facebook.com','m.facebook.com',$identity['profileUrl']),'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
         ];
     }
     return [];
@@ -225,7 +229,7 @@ function p50_live_v3_probe_requests(array $source): array {
 function p50_live_v3_parallel_fetch(array $jobs,int $timeout=6): array {
     if(!$jobs)return [];
     $multi=curl_multi_init();$handles=[];$results=[];
-    if(defined('CURLMOPT_MAX_TOTAL_CONNECTIONS'))@curl_multi_setopt($multi,CURLMOPT_MAX_TOTAL_CONNECTIONS,10);
+    if(defined('CURLMOPT_MAX_TOTAL_CONNECTIONS'))@curl_multi_setopt($multi,CURLMOPT_MAX_TOTAL_CONNECTIONS,16);
     foreach($jobs as $jobId=>$job){
         $url=(string)$job['url'];
         if(!p50_public_http_url($url)){$results[$jobId]=['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'error'=>'invalid_url','timeMs'=>0];continue;}
@@ -397,24 +401,28 @@ function p50_live_v3_scan_batch(array $sources): array {
 }
 
 function p50_live_v3_store(array $live): void {
-    $platform=(string)$live['platform'];$key=hash('sha256',$platform.'|'.strtolower(rtrim((string)$live['url'],'/')));
+    $platform=(string)$live['platform'];$profileId=(string)$live['profileId'];$key=hash('sha256',$platform.'|'.strtolower(rtrim((string)$live['url'],'/')));
+    $endOthers=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live' AND stream_key<>?");
+    $endOthers->execute([$profileId,$platform,$key]);
     $title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata)
         VALUES(?,?,?,?,?,?,'live','automatic',?,?,?,NOW(),NULL,?)
         ON DUPLICATE KEY UPDATE profile_id=VALUES(profile_id),platform=VALUES(platform),title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='live',confidence=VALUES(confidence),viewers=VALUES(viewers),started_at=COALESCE(started_at,VALUES(started_at)),last_seen_at=NOW(),ended_at=NULL,metadata=VALUES(metadata)");
-    $stmt->execute([$key,(string)$live['profileId'],$platform,$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($live['metadata']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+    $stmt->execute([$key,$profileId,$platform,$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($live['metadata']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
 }
 
 function p50_live_v3_health_update(array $source,array $result): array {
     $state=(string)($result['state']??'unknown');$profileId=(string)$source['profile_id'];$platform=(string)$source['platform'];$url=(string)$source['url'];
-    $stmt=db()->prepare('SELECT consecutive_offline,consecutive_unknown FROM p50_live_source_health WHERE profile_id=? AND platform=? LIMIT 1');$stmt->execute([$profileId,$platform]);$previous=$stmt->fetch()?:[];
-    $offline=$state==='offline'?((int)($previous['consecutive_offline']??0)+1):0;
-    $unknown=$state==='unknown'?((int)($previous['consecutive_unknown']??0)+1):0;
+    $urlHash=hash('sha256',strtolower(rtrim($url,'/')));
+    $stmt=db()->prepare('SELECT url_hash,consecutive_offline,consecutive_unknown FROM p50_live_source_health WHERE profile_id=? AND platform=? LIMIT 1');$stmt->execute([$profileId,$platform]);$previous=$stmt->fetch()?:[];
+    $sameUrl=(string)($previous['url_hash']??'')===$urlHash;
+    $offline=$state==='offline'?($sameUrl?(int)($previous['consecutive_offline']??0):0)+1:0;
+    $unknown=$state==='unknown'?($sameUrl?(int)($previous['consecutive_unknown']??0):0)+1:0;
     $metadata=['confidence'=>(int)($result['confidence']??0),'probes'=>$result['probes']??[]];
     $upsert=db()->prepare("INSERT INTO p50_live_source_health(profile_id,platform,url_hash,official_url,last_state,consecutive_offline,consecutive_unknown,last_checked_at,last_live_at,response_ms,last_error,metadata)
         VALUES(?,?,?,?,?,?,?,NOW(),IF(?='live',NOW(),NULL),?,?,?)
         ON DUPLICATE KEY UPDATE url_hash=VALUES(url_hash),official_url=VALUES(official_url),last_state=VALUES(last_state),consecutive_offline=VALUES(consecutive_offline),consecutive_unknown=VALUES(consecutive_unknown),last_checked_at=NOW(),last_live_at=IF(VALUES(last_state)='live',NOW(),last_live_at),response_ms=VALUES(response_ms),last_error=VALUES(last_error),metadata=VALUES(metadata)");
-    $upsert->execute([$profileId,$platform,hash('sha256',strtolower(rtrim($url,'/'))),$url,$state,$offline,$unknown,$state,(int)($result['responseMs']??0),substr((string)($result['error']??''),0,255),json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+    $upsert->execute([$profileId,$platform,$urlHash,$url,$state,$offline,$unknown,$state,(int)($result['responseMs']??0),substr((string)($result['error']??''),0,255),json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
     return ['offline'=>$offline,'unknown'=>$unknown];
 }
 
@@ -479,8 +487,8 @@ $profileFilter=trim((string)($_GET['profileId']??''));if($profileFilter!=='')$so
 $sourceMap=[];foreach($sources as $source)$sourceMap[(string)$source['source_key']]=$source;
 
 $mode=strtolower((string)($_GET['mode']??'quick'));if(!in_array($mode,['quick','full','profile','status'],true))$mode='quick';
-$force=p50_live_v3_bool_query('force')||in_array($mode,['full','profile'],true);$batch=max(1,min(10,(int)($_GET['batch']??6)));
-$refresh=45;$stale=35;$lastScan=(string)p50_de_get_setting('live_radar_last_scan_at','');$lastTs=$lastScan!==''?(strtotime($lastScan)?:0):0;$canScan=$mode!=='status'&&($force||(time()-$lastTs)>=$refresh);
+$force=p50_live_v3_bool_query('force')||in_array($mode,['full','profile'],true);$batch=max(1,min(12,(int)($_GET['batch']??8)));
+$refresh=45;$stale=90;$lastScan=(string)p50_de_get_setting('live_radar_last_scan_at','');$lastTs=$lastScan!==''?(strtotime($lastScan)?:0):0;$canScan=$mode!=='status'&&($force||(time()-$lastTs)>=$refresh);
 $cycleId=null;$cycleComplete=true;$cycleScanned=0;$cycleFound=0;$cycleTotal=count($sources);$selected=[];$manifest=null;
 
 if($mode==='full'){
@@ -516,7 +524,7 @@ if($canScan&&$selected&&$lock){
     }
     $lastScan=gmdate(DATE_ATOM);p50_de_set_setting('live_radar_last_scan_at',$lastScan);
     if($mode==='full'&&is_array($manifest)){
-        $manifest['cursor']=min($cycleTotal,(int)$manifest['cursor']+count($selected));
+        $manifest['cursor']=min($cycleTotal,(int)$manifest['cursor']+count($keys));
         $manifest['scanned']=(int)$manifest['scanned']+count($selected);$manifest['found']=(int)$manifest['found']+$foundThisPass;
         $manifest['complete']=(int)$manifest['cursor']>=$cycleTotal;$manifest['updatedAt']=gmdate(DATE_ATOM);
         $cycleScanned=(int)$manifest['scanned'];$cycleFound=(int)$manifest['found'];$cycleComplete=(bool)$manifest['complete'];
