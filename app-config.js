@@ -72,3 +72,12 @@ document.addEventListener('DOMContentLoaded', function () {
   script.dataset.pass50LiveRadarV2 = '1.0';
   document.head.appendChild(script);
 })();
+
+// Sauvegarde transactionnelle et restauration automatique des liens officiels.
+(function () {
+  if (document.querySelector('script[data-pass50-official-links-persistence]')) return;
+  var script = document.createElement('script');
+  script.src = './official-links-persistence-v3.js?v=3.0';
+  script.dataset.pass50OfficialLinksPersistence = '3.0';
+  document.head.appendChild(script);
+})();
