@@ -64,11 +64,11 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
-// Radar LIVE V2 : YouTube + TikTok automatiques.
+// Radar LIVE V3 : balayage complet des liens officiels vérifiés.
 (function () {
-  if (document.querySelector('script[data-pass50-live-radar-v2]')) return;
+  if (document.querySelector('script[data-pass50-live-radar]')) return;
   var script = document.createElement('script');
-  script.src = './live-radar-v2.js?v=1.0';
-  script.dataset.pass50LiveRadarV2 = '1.0';
+  script.src = './live-radar-v3.js?v=1.0';
+  script.dataset.pass50LiveRadar = '3.0';
   document.head.appendChild(script);
 })();
