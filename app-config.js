@@ -54,3 +54,12 @@ document.addEventListener('DOMContentLoaded', function () {
   script.dataset.pass50FiNavigation = '3.0';
   document.head.appendChild(script);
 })();
+
+// Profil recensé : Ennemi des Djandjou.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-ennemi-djandjou]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-ennemi-des-djandjou.js?v=1.0';
+  script.dataset.pass50ProfileEnnemiDjandjou = '1.0';
+  document.head.appendChild(script);
+})();
