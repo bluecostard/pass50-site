@@ -1,7 +1,11 @@
-const CACHE='pass50-v23-step12-maj1';
+const CACHE='pass50-v27-fi-navigation-v3';
 const ASSETS=[
   './',
   './index.html',
+  './app-config.js',
+  './fi-navigation-v3.js?v=1.0',
+  './fi-engagement-v3.js?v=1.0',
+  './public-copy-fixes.js?v=1.0',
   './v9-tools.css?v=22.4',
   './v9-tools.js?v=15.0',
   './pass50_nouveaux_candidats_90_v19.json?v=22.6',
@@ -19,26 +23,22 @@ const ASSETS=[
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE).then(cache=>cache.addAll(ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
 });
 
 self.addEventListener('activate',event=>{
   event.waitUntil(Promise.all([
     self.clients.claim(),
-    caches.keys().then(keys=>Promise.all(
-      keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))
-    ))
+    caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
   ]));
 });
 
 self.addEventListener('fetch',event=>{
-  if(event.request.method!=='GET') return;
+  if(event.request.method!=='GET')return;
 
   if(event.request.mode==='navigate'){
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request,{cache:'no-store'})
         .then(response=>{
           const copy=response.clone();
           caches.open(CACHE).then(cache=>cache.put('./index.html',copy));
@@ -49,8 +49,10 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
+  const url=new URL(event.request.url);
+  const forceFresh=['.js','.css','.html'].some(extension=>url.pathname.endsWith(extension));
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request,forceFresh?{cache:'no-store'}:undefined)
       .then(response=>{
         const copy=response.clone();
         caches.open(CACHE).then(cache=>cache.put(event.request,copy));
