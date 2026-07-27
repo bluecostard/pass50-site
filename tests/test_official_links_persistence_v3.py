@@ -35,6 +35,7 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
 
     def test_integrity_sync_restores_previous_work(self):
         self.assertIn("action:'integrity_sync'", CLIENT)
+        self.assertIn("checkedAt", CLIENT)
         self.assertIn("p50_social_link_evidence", ENDPOINT)
         self.assertIn("p50_social_link_audit", ENDPOINT)
         self.assertIn("restoredCount", ENDPOINT)
@@ -47,11 +48,11 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
     def test_old_parallel_backups_are_disabled(self):
         self.assertIn("pass50_v227_confirmed_links_backup", CONFIG)
         self.assertIn("pass50_v226_nolimit_links_seeded", CONFIG)
-        self.assertIn("official-links-persistence-v3.js?v=3.0", CONFIG)
+        self.assertIn("official-links-persistence-v3.js?v=3.1", CONFIG)
 
     def test_cache_is_renewed(self):
-        self.assertIn("pass50-v31-official-links-persistence-v3", SW)
-        self.assertIn("official-links-persistence-v3.js?v=3.0", SW)
+        self.assertIn("pass50-v32-official-links-persistence-v31", SW)
+        self.assertIn("official-links-persistence-v3.js?v=3.1", SW)
 
 
 if __name__ == "__main__":
