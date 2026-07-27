@@ -5,7 +5,7 @@ const API=(window.PASS50_API?.baseUrl||'./api')+'/fi-engagement.php';
 let requestedProfileId='';
 let scheduled=false;
 
-const css=`.p50-fi-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}.p50-fi-action{flex:1;min-width:120px;border:1px solid #293129;background:#0a0d0a;color:#f6f8f4;border-radius:999px;padding:9px 13px;font-weight:900}.p50-fi-action:hover,.p50-fi-action.on{border-color:#b7ff00;color:#b7ff00}.p50-verified{display:inline-flex;align-items:center;gap:5px;margin-left:7px;padding:3px 7px;border:1px solid rgba(183,255,0,.45);border-radius:999px;color:#b7ff00;background:rgba(183,255,0,.08);font-size:10px;font-weight:950;vertical-align:middle;cursor:help}.p50-home-like{flex:1!important;min-width:0!important}.p50-home-like.on{border-color:#b7ff00!important;color:#b7ff00!important}.p50-admin-metrics{margin:16px 0;padding:14px;border:1px solid #293129;border-radius:16px;background:#0b0e0b}.p50-admin-metrics table{width:100%;border-collapse:collapse}.p50-admin-metrics th,.p50-admin-metrics td{text-align:left;padding:8px;border-bottom:1px solid #293129;font-size:12px}`;
+const css=`.p50-fi-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}.p50-fi-action{flex:1;min-width:120px;border:1px solid #293129;background:#0a0d0a;color:#f6f8f4;border-radius:999px;padding:9px 13px;font-weight:900}.p50-fi-action:hover,.p50-fi-action.on{border-color:#b7ff00;color:#b7ff00}.p50-verified{display:inline-flex;align-items:center;gap:5px;margin-left:7px;padding:3px 7px;border:1px solid rgba(183,255,0,.45);border-radius:999px;color:#b7ff00;background:rgba(183,255,0,.08);font-size:10px;font-weight:950;vertical-align:middle;cursor:help}.p50-home-like{flex:1!important;min-width:0!important}.p50-home-like.on{border-color:#b7ff00!important;color:#b7ff00!important}.p50-admin-metrics{margin:16px 0;padding:14px;border:1px solid #293129;border-radius:16px;background:#0b0e0b}.p50-admin-metrics-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}.p50-admin-metrics-summary{margin-top:5px;color:#aeb8aa;font-size:12px}.p50-admin-metrics-search{width:min(290px,100%);padding:10px 12px;border:1px solid #293129;border-radius:12px;background:#0f130f;color:#fff}.p50-admin-metrics-table-wrap{max-height:430px;overflow:auto;margin-top:12px;border:1px solid #202820;border-radius:12px}.p50-admin-metrics table{width:100%;border-collapse:collapse}.p50-admin-metrics thead{position:sticky;top:0;z-index:1;background:#0b0e0b}.p50-admin-metrics th,.p50-admin-metrics td{text-align:left;padding:8px;border-bottom:1px solid #293129;font-size:12px}.p50-admin-metrics td:first-child strong{display:block}.p50-admin-metrics td:first-child small{display:block;margin-top:2px;color:#8f9a8c}.p50-admin-metrics tr.p50-metric-zero{color:#8f9a8c}.p50-admin-metrics-footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:9px;color:#8f9a8c;font-size:11px}`;
 const style=document.createElement('style');
 style.textContent=css;
 document.head.appendChild(style);
@@ -14,6 +14,8 @@ function pById(id){try{return db.profiles.find(x=>x.id===id)}catch{return null}}
 function liked(id){return localStorage.getItem('pass50.like.'+id)==='1'}
 function isVerified(p){return p?.verifiedPass50!==false}
 function verifiedBadge(){return '<span class="p50-verified" tabindex="0" title="Les liens et informations de cette fiche ont été vérifiés par PASS50." aria-label="Vérifié PASS50. Les liens et informations de cette fiche ont été vérifiés par PASS50.">✓ Vérifié PASS50</span>'}
+function esc(value=''){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
+function engagementSearchKey(value=''){return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
 
 function getProfileId(){
   const body=document.getElementById('profileBody');
@@ -128,6 +130,36 @@ function enhanceLiveModal(){
   });
 }
 
+function completeEngagementRows(serverProfiles=[]){
+  const metricsById=new Map((serverProfiles||[]).map(item=>[String(item.profileId||''),item]));
+  let localProfiles=[];
+  let rankedProfiles=[];
+  try{localProfiles=Array.isArray(db.profiles)?db.profiles:[]}catch{}
+  try{rankedProfiles=typeof ranking==='function'?ranking():[]}catch{}
+  const rankById=new Map(rankedProfiles.map((item,index)=>[String(item.id),index]));
+  const seen=new Set();
+  const rows=localProfiles.map(profileItem=>{
+    const id=String(profileItem.id||'');
+    const metrics=metricsById.get(id)||{};
+    const likes=Number(metrics.likes||0),profileShares=Number(metrics.profileShares||0),liveShares=Number(metrics.liveShares||0);
+    seen.add(id);
+    return {
+      profileId:id,
+      name:String(profileItem.name||profileItem.handle||id||'Profil'),
+      handle:String(profileItem.handle||''),
+      likes,profileShares,liveShares,total:likes+profileShares+liveShares,
+      order:rankById.has(id)?rankById.get(id):999999,
+    };
+  });
+  (serverProfiles||[]).forEach(metrics=>{
+    const id=String(metrics.profileId||'');
+    if(!id||seen.has(id))return;
+    const likes=Number(metrics.likes||0),profileShares=Number(metrics.profileShares||0),liveShares=Number(metrics.liveShares||0);
+    rows.push({profileId:id,name:String(metrics.name||id),handle:'',likes,profileShares,liveShares,total:likes+profileShares+liveShares,order:999999});
+  });
+  return rows.sort((a,b)=>b.total-a.total||a.order-b.order||a.name.localeCompare(b.name,'fr'));
+}
+
 async function adminMetrics(){
   const pane=document.getElementById('adminPane');
   if(!pane||pane.querySelector('.p50-admin-metrics')||pane.dataset.p50MetricsLoading==='1')return;
@@ -140,11 +172,28 @@ async function adminMetrics(){
     const response=await fetch(API,{headers:token?{Authorization:'Bearer '+token}:{}});
     if(!response.ok)return;
     const data=await response.json();
-    const rows=(data.profiles||[]).slice(0,50).map(item=>`<tr><td>${item.name||item.profileId}</td><td>${item.likes}</td><td>${item.profileShares}</td><td>${item.liveShares}</td></tr>`).join('');
+    const allRows=completeEngagementRows(data.profiles||[]);
+    const activeCount=allRows.filter(item=>item.total>0).length;
+    const totalLikes=allRows.reduce((sum,item)=>sum+item.likes,0);
+    const totalProfileShares=allRows.reduce((sum,item)=>sum+item.profileShares,0);
+    const totalLiveShares=allRows.reduce((sum,item)=>sum+item.liveShares,0);
+    const rows=allRows.map(item=>`<tr class="${item.total===0?'p50-metric-zero':''}" data-engagement-row data-search="${esc(engagementSearchKey([item.name,item.handle,item.profileId].join(' ')))}"><td><strong>${esc(item.name)}</strong>${item.handle?`<small>${esc(item.handle)}</small>`:''}</td><td>${item.likes}</td><td>${item.profileShares}</td><td>${item.liveShares}</td></tr>`).join('');
     const box=document.createElement('section');
     box.className='p50-admin-metrics';
-    box.innerHTML=`<strong>Engagement des fiches</strong><div class="muted" style="margin:5px 0 10px">Compteurs internes, invisibles au public.</div><table><thead><tr><th>Influenceur</th><th>Likes</th><th>Partages FI</th><th>Partages live</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Aucune interaction</td></tr>'}</tbody></table>`;
+    box.innerHTML=`<div class="p50-admin-metrics-head"><div><strong>Engagement des fiches</strong><div class="p50-admin-metrics-summary"><strong>${activeCount}</strong> fiche${activeCount>1?'s':''} avec activité sur <strong>${allRows.length}</strong> recensée${allRows.length>1?'s':''} · les autres apparaissent avec zéro.</div></div><input id="p50EngagementSearch" class="p50-admin-metrics-search" type="search" autocomplete="off" placeholder="Rechercher une fiche…"></div><div class="p50-admin-metrics-table-wrap"><table><thead><tr><th>Influenceur</th><th>Likes</th><th>Partages FI</th><th>Partages live</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Aucune fiche disponible</td></tr>'}</tbody></table></div><div class="p50-admin-metrics-footer"><span id="p50EngagementVisibleCount">${allRows.length} fiche${allRows.length>1?'s':''} affichée${allRows.length>1?'s':''}</span><span>${totalLikes} like${totalLikes>1?'s':''} · ${totalProfileShares} partage${totalProfileShares>1?'s':''} FI · ${totalLiveShares} partage${totalLiveShares>1?'s':''} live</span></div>`;
     pane.prepend(box);
+    const search=box.querySelector('#p50EngagementSearch');
+    search?.addEventListener('input',()=>{
+      const query=engagementSearchKey(search.value.trim());
+      let visible=0;
+      box.querySelectorAll('[data-engagement-row]').forEach(row=>{
+        const match=!query||String(row.dataset.search||'').includes(query);
+        row.hidden=!match;
+        if(match)visible++;
+      });
+      const count=box.querySelector('#p50EngagementVisibleCount');
+      if(count)count.textContent=`${visible} fiche${visible>1?'s':''} affichée${visible>1?'s':''}`;
+    });
   }catch{}finally{delete pane.dataset.p50MetricsLoading;}
 }
 
