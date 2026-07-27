@@ -1,0 +1,29 @@
+name: Sync Live Radar V3 branch
+
+on:
+  push:
+    branches:
+      - feat/live-radar-v3-performance
+
+permissions:
+  contents: write
+
+jobs:
+  sync-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feat/live-radar-v3-performance
+      - name: Intégrer les dernières corrections de main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "La branche contient déjà main."
+            exit 0
+          fi
+          git merge --no-edit -X ours origin/main
+          git push origin HEAD:feat/live-radar-v3-performance
