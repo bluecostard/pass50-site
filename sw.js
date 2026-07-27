@@ -1,10 +1,10 @@
-const CACHE='pass50-v37-official-links-stable';
+const CACHE='pass50-v38-engagement-all-profiles';
 const ASSETS=[
   './',
   './index.html',
   './app-config.js',
   './fi-navigation-v3.js?v=1.0',
-  './fi-engagement-v3.js?v=1.1',
+  './fi-engagement-v3.js?v=1.2',
   './live-modal-layout-v1.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0',
   './profile-kawaii-nanami.js?v=1.0',
