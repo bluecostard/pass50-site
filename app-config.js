@@ -3,6 +3,13 @@ window.PASS50_API = {
   baseUrl: './api'
 };
 
+// Les anciennes sauvegardes lançaient plusieurs écritures concurrentes et pouvaient
+// réécrire l'état avec une version incomplète. Le module transactionnel V3 les remplace.
+try {
+  localStorage.setItem('pass50_v227_confirmed_links_backup', '1');
+  localStorage.setItem('pass50_v226_nolimit_links_seeded', '1');
+} catch (_) {}
+
 // Liens légaux publics visibles dans le pied de page du site.
 document.addEventListener('DOMContentLoaded', function () {
   var footer = document.querySelector('.footer');
