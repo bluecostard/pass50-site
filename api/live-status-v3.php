@@ -401,14 +401,17 @@ function p50_live_v3_scan_batch(array $sources): array {
 }
 
 function p50_live_v3_store(array $live): void {
-    $platform=(string)$live['platform'];$profileId=(string)$live['profileId'];$key=hash('sha256',$platform.'|'.strtolower(rtrim((string)$live['url'],'/')));
+    $platform=(string)$live['platform'];$profileId=(string)$live['profileId'];$url=(string)$live['url'];
+    // Certaines plateformes renvoient une URL de LIVE générique ou canonique
+    // commune à plusieurs profils. Le profil doit donc faire partie de la clé.
+    $key=hash('sha256',strtolower($profileId.'|'.$platform.'|'.rtrim($url,'/')));
     $endOthers=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live' AND stream_key<>?");
     $endOthers->execute([$profileId,$platform,$key]);
     $title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata)
         VALUES(?,?,?,?,?,?,'live','automatic',?,?,?,NOW(),NULL,?)
         ON DUPLICATE KEY UPDATE profile_id=VALUES(profile_id),platform=VALUES(platform),title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='live',confidence=VALUES(confidence),viewers=VALUES(viewers),started_at=COALESCE(started_at,VALUES(started_at)),last_seen_at=NOW(),ended_at=NULL,metadata=VALUES(metadata)");
-    $stmt->execute([$key,$profileId,$platform,$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($live['metadata']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+    $stmt->execute([$key,$profileId,$platform,$safeTitle,$url,(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($live['metadata']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
 }
 
 function p50_live_v3_health_update(array $source,array $result): array {
@@ -439,7 +442,7 @@ function p50_live_v3_active_rows(int $staleMinutes): array {
         'id'=>'auto_'.substr((string)$row['stream_key'],0,18),'profileId'=>(string)$row['profile_id'],'platform'=>(string)$row['platform'],
         'title'=>(string)$row['title'],'url'=>(string)$row['url'],'thumbnail'=>(string)($row['thumbnail_url']??''),'status'=>'live','source'=>'automatic',
         'confidence'=>(int)$row['confidence'],'viewers'=>$row['viewers']!==null?(int)$row['viewers']:null,
-        'startedAt'=>p50_live_v3_iso($row['started_at']??null)??p50_live_v3_iso($row['last_seen_at']??null),'endsAt'=>null,
+        'startedAt'=>p50_live_v3_iso($row['started_at']??null),'lastSeenAt'=>p50_live_v3_iso($row['last_seen_at']??null),'endsAt'=>null,
     ];
     return $out;
 }
@@ -449,8 +452,6 @@ function p50_live_v3_manual_streams(array $state): array {
     foreach((array)($state['liveStreams']??[]) as $live){
         if(!is_array($live)||($live['status']??'')!=='live'||empty($live['profileId'])||empty($live['url']))continue;
         $end=strtotime((string)($live['endsAt']??''));if($end!==false&&$end>0&&$end<=$now)continue;
-        $start=0;foreach(['startedAt','detectedAt','createdAt','updatedAt'] as $key){$ts=strtotime((string)($live[$key]??''));if($ts!==false&&$ts>0){$start=$ts;break;}}
-        if($start<=0&&($end===false||$end<=0))continue;if(($end===false||$end<=0)&&$start>0&&($now-$start)>8*3600)continue;
         $live['id']=(string)($live['id']??('manual_'.substr(hash('sha256',(string)$live['url']),0,16)));$live['source']='manual';$out[]=$live;
     }
     return $out;
@@ -459,10 +460,14 @@ function p50_live_v3_manual_streams(array $state): array {
 function p50_live_v3_dedup(array $automatic,array $manual): array {
     $out=[];$seen=[];
     foreach(array_merge($automatic,$manual) as $stream){
-        $key=strtolower((string)($stream['platform']??'').'|'.(string)($stream['profileId']??''));
-        if($key==='|'||isset($seen[$key]))continue;$seen[$key]=true;$out[]=$stream;
+        $key=strtolower(
+            trim((string)($stream['profileId']??'')).'|'.
+            trim((string)($stream['platform']??'')).'|'.
+            rtrim(trim((string)($stream['url']??'')),'/')
+        );
+        if($key==='||'||isset($seen[$key]))continue;$seen[$key]=true;$out[]=$stream;
     }
-    usort($out,static fn($a,$b)=>strcmp((string)($b['startedAt']??''),(string)($a['startedAt']??'')));return $out;
+    usort($out,static fn($a,$b)=>strcmp((string)($b['startedAt']??$b['lastSeenAt']??''),(string)($a['startedAt']??$a['lastSeenAt']??'')));return $out;
 }
 
 function p50_live_v3_cycle_id(): string {
