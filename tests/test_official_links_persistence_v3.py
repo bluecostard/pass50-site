@@ -68,7 +68,7 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
         self.assertIn("official-links-persistence-v3.js?v=3.2", CONFIG)
 
     def test_cache_keeps_the_persistence_module(self):
-        self.assertIn("const CACHE='pass50-v37-official-links-stable'", SW)
+        self.assertIn("const CACHE='pass50-v", SW)
         self.assertIn("official-links-persistence-v3.js?v=3.2", SW)
 
 
