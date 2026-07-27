@@ -1,4 +1,4 @@
-const CACHE='pass50-v35-live-modal-mobile';
+const CACHE='pass50-v36-official-links-stable';
 const ASSETS=[
   './',
   './index.html',
@@ -9,7 +9,7 @@ const ASSETS=[
   './profile-ennemi-des-djandjou.js?v=1.0',
   './profile-kawaii-nanami.js?v=1.0',
   './live-radar-v3.js?v=1.1',
-  './official-links-persistence-v3.js?v=3.1',
+  './official-links-persistence-v3.js?v=3.2',
   './public-copy-fixes.js?v=1.0',
   './v9-tools.css?v=22.4',
   './v9-tools.js?v=15.0',
