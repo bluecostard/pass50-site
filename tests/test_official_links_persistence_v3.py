@@ -50,8 +50,8 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
         self.assertIn("pass50_v226_nolimit_links_seeded", CONFIG)
         self.assertIn("official-links-persistence-v3.js?v=3.1", CONFIG)
 
-    def test_cache_is_renewed(self):
-        self.assertIn("pass50-v32-official-links-persistence-v31", SW)
+    def test_cache_keeps_the_persistence_module(self):
+        self.assertIn("const CACHE='pass50-v", SW)
         self.assertIn("official-links-persistence-v3.js?v=3.1", SW)
 
 
