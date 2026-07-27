@@ -3,6 +3,13 @@ window.PASS50_API = {
   baseUrl: './api'
 };
 
+// Les anciennes sauvegardes lançaient plusieurs écritures concurrentes et pouvaient
+// réécrire l'état avec une version incomplète. Le module transactionnel V3 les remplace.
+try {
+  localStorage.setItem('pass50_v227_confirmed_links_backup', '1');
+  localStorage.setItem('pass50_v226_nolimit_links_seeded', '1');
+} catch (_) {}
+
 // Liens légaux publics visibles dans le pied de page du site.
 document.addEventListener('DOMContentLoaded', function () {
   var footer = document.querySelector('.footer');
@@ -64,11 +71,20 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
-// Radar LIVE V3 : balayage complet des liens officiels vérifiés.
+// Radar LIVE V3 : balayage complet de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
   var script = document.createElement('script');
-  script.src = './live-radar-v3.js?v=1.0';
-  script.dataset.pass50LiveRadar = '3.0';
+  script.src = './live-radar-v3.js?v=1.1';
+  script.dataset.pass50LiveRadar = '3.1';
+  document.head.appendChild(script);
+})();
+
+// Sauvegarde transactionnelle et restauration automatique des liens officiels.
+(function () {
+  if (document.querySelector('script[data-pass50-official-links-persistence]')) return;
+  var script = document.createElement('script');
+  script.src = './official-links-persistence-v3.js?v=3.1';
+  script.dataset.pass50OfficialLinksPersistence = '3.1';
   document.head.appendChild(script);
 })();
