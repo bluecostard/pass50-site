@@ -15,9 +15,14 @@ if($_SERVER['REQUEST_METHOD']==='GET'){
     $stmt=db()->prepare('SELECT DISTINCT platform FROM p50_social_link_evidence WHERE profile_id=?');
     $stmt->execute([$profileId]);
     foreach($stmt->fetchAll(PDO::FETCH_COLUMN) as $existingPlatform)p50_de_rebuild_social_link($profileId,(string)$existingPlatform);
-    p50_de_publish_profile($profileId,$user['id']);
+    // Une simple lecture ne doit jamais réécrire app_state ni modifier sa révision.
+    // Cela évite qu'une ouverture de fiche écrase une sauvegarde administrative en cours.
+    $state=p50_de_load_public_state();
     $history=!empty($_GET['history'])?p50_de_social_history($profileId,max(1,min(500,(int)($_GET['limit']??100)))):[];
-    json_response(['ok'=>true,'profile'=>$profiles[0],'links'=>p50_de_social_links($profileId,false),'history'=>$history,'threshold'=>p50_de_threshold()]);
+    json_response([
+        'ok'=>true,'profile'=>$profiles[0],'links'=>p50_de_social_links($profileId,false),
+        'history'=>$history,'threshold'=>p50_de_threshold(),'stateRevision'=>(int)($state['stateRevision']??0),
+    ]);
 }
 require_method('POST');
 $in=json_input();
@@ -66,17 +71,16 @@ if($confirmed){
 $sourceType=$confirmed?($user['role']==='owner'?'manual_owner':'manual_admin'):'manual_candidate';
 $weight=$confirmed?($user['role']==='owner'?100:98):75;
 if($confirmed&&!empty($in['replaceExisting'])){
-    // Un remplacement validé doit devenir la seule preuve manuelle active pour
-    // cette plateforme. Sinon l'ancien et le nouveau lien obtiennent le même
-    // score et la fiche passe artificiellement en conflit.
-    $types=$user['role']==='owner'?['manual_owner','manual_admin']:['manual_admin'];
+    $types=['manual_owner','manual_admin'];
     $placeholders=implode(',',array_fill(0,count($types),'?'));
     $stmt=db()->prepare("DELETE FROM p50_social_link_evidence WHERE profile_id=? AND platform=? AND source_type IN ($placeholders)");
     $stmt->execute(array_merge([$profileId,$platform],$types));
 }
 p50_de_add_social_evidence($profileId,$platform,$validation['normalizedUrl'],$sourceType,$user['display_name']??$user['email'],'',$weight,$validation);
 p50_de_log_social_action($profileId,$platform,$confirmed?'confirm':'save',$previousUrl,$validation['normalizedUrl'],$user,['confirmed'=>$confirmed,'validationStatus'=>$validation['status']??'']);
-// Même une simple sauvegarde doit être conservée dans l'état public afin qu'un
-// futur chargement cloud ne fasse pas disparaître le travail de l'administrateur.
 p50_de_publish_profile($profileId,$user['id']);
-json_response(['ok'=>true,'confirmed'=>$confirmed,'validation'=>$validation,'links'=>p50_de_social_links($profileId,false),'history'=>p50_de_social_history($profileId,20)]);
+$state=p50_de_load_public_state();
+json_response([
+    'ok'=>true,'confirmed'=>$confirmed,'validation'=>$validation,'links'=>p50_de_social_links($profileId,false),
+    'history'=>p50_de_social_history($profileId,20),'stateRevision'=>(int)($state['stateRevision']??0),
+]);
