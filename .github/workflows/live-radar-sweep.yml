@@ -1,0 +1,51 @@
+name: PASS50 Live Radar Sweep
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Balayer tous les liens officiels
+        env:
+          ENDPOINT: https://pass50.store/api/live-status-v3.php
+        run: |
+          set -euo pipefail
+          cycle="github_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
+          complete="false"
+          for attempt in $(seq 1 100); do
+            response="$(curl --fail --silent --show-error --location --max-time 30 --retry 2 --retry-delay 2 "${ENDPOINT}?mode=full&force=1&batch=10&cycle=${cycle}&t=$(date +%s)")"
+            printf '%s' "$response" > /tmp/live-radar.json
+            readarray -t values < <(python3 - <<'PY'
+          import json
+          with open('/tmp/live-radar.json', encoding='utf-8') as stream:
+              data=json.load(stream)
+          radar=data.get('radar') or {}
+          print('true' if radar.get('cycleComplete') else 'false')
+          print('true' if radar.get('busy') else 'false')
+          print(int(radar.get('cycleScanned') or 0))
+          print(int(radar.get('cycleTotal') or 0))
+          print(int(radar.get('livesFoundInCycle') or 0))
+          PY
+            )
+            complete="${values[0]}"
+            busy="${values[1]}"
+            echo "Radar PASS50 : ${values[2]}/${values[3]} sources · ${values[4]} live(s)"
+            if [[ "$complete" == "true" ]]; then
+              exit 0
+            fi
+            if [[ "$busy" == "true" ]]; then
+              sleep 3
+            else
+              sleep 1
+            fi
+          done
+          echo "Le balayage complet n'a pas terminé dans la limite prévue."
+          exit 1
