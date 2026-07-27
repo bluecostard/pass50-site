@@ -65,7 +65,11 @@ function enhanceProfile(forcedId=''){
   const alreadyCorrect=body.dataset.p50EngagementProfile===id&&existingActions?.dataset.profileId===id&&Boolean(existingBadge)===verified;
   if(alreadyCorrect){
     const like=existingActions.querySelector('.p50-like');
-    if(like){like.classList.toggle('on',liked(id));like.setAttribute('aria-pressed',liked(id)?'true':'false');}
+    if(like){
+      const active=liked(id);
+      like.classList.toggle('on',active);
+      like.setAttribute('aria-pressed',active?'true':'false');
+    }
     return;
   }
 
@@ -99,11 +103,12 @@ function enhanceHomeLikes(){
       const follow=actions.querySelector('.follow');
       if(follow)actions.insertBefore(button,follow);else actions.appendChild(button);
     }
+    const active=liked(id);
     button.dataset.id=id;
-    button.classList.toggle('on',liked(id));
+    button.classList.toggle('on',active);
     button.setAttribute('aria-label',`J’aime ${pById(id)?.name||'ce profil'}`);
-    button.setAttribute('aria-pressed',liked(id)?'true':'false');
-    button.textContent='♥ J’aime';
+    button.setAttribute('aria-pressed',active?'true':'false');
+    if(button.textContent!=='♥ J’aime')button.textContent='♥ J’aime';
   });
 }
 
@@ -125,10 +130,11 @@ function enhanceLiveModal(){
 
 async function adminMetrics(){
   const pane=document.getElementById('adminPane');
-  if(!pane||pane.querySelector('.p50-admin-metrics'))return;
+  if(!pane||pane.querySelector('.p50-admin-metrics')||pane.dataset.p50MetricsLoading==='1')return;
   let user;
   try{user=currentUser()}catch{}
   if(!user||!['owner','admin'].includes(user.role))return;
+  pane.dataset.p50MetricsLoading='1';
   try{
     const token=localStorage.getItem('pass50_api_token')||'';
     const response=await fetch(API,{headers:token?{Authorization:'Bearer '+token}:{}});
@@ -139,7 +145,7 @@ async function adminMetrics(){
     box.className='p50-admin-metrics';
     box.innerHTML=`<strong>Engagement des fiches</strong><div class="muted" style="margin:5px 0 10px">Compteurs internes, invisibles au public.</div><table><thead><tr><th>Influenceur</th><th>Likes</th><th>Partages FI</th><th>Partages live</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Aucune interaction</td></tr>'}</tbody></table>`;
     pane.prepend(box);
-  }catch{}
+  }catch{}finally{delete pane.dataset.p50MetricsLoading;}
 }
 
 function adminVerifiedToggle(){
