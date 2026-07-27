@@ -16,199 +16,65 @@ jobs:
         with:
           fetch-depth: 0
           ref: feat/live-radar-v3-performance
-      - name: Renforcer les sondes et les cycles du radar
+      - name: Renforcer la rotation et les sondes du radar
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           path = Path('api/live-status-v3.php')
           text = path.read_text(encoding='utf-8')
-          if 'P50_LIVE_V3_TUNED' in text:
-              print('Radar déjà renforcé.')
-          else:
-              text = text.replace(
+
+          replacements = [
+              (
                   "const P50_LIVE_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];",
-                  "const P50_LIVE_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];\nconst P50_LIVE_V3_TUNED = 1;"
-              )
+                  "const P50_LIVE_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];\nconst P50_LIVE_V3_TUNED = 1;",
+              ),
+              ("CURLMOPT_MAX_TOTAL_CONNECTIONS,10", "CURLMOPT_MAX_TOTAL_CONNECTIONS,16"),
+              (
+                  "$force=p50_live_v3_bool_query('force')||in_array($mode,['full','profile'],true);$batch=max(1,min(10,(int)($_GET['batch']??6)));",
+                  "$force=p50_live_v3_bool_query('force')||in_array($mode,['full','profile'],true);$batch=max(1,min(12,(int)($_GET['batch']??8)));",
+              ),
+              ("$refresh=45;$stale=35;", "$refresh=45;$stale=90;"),
+              (
+                  "$manifest['cursor']=min($cycleTotal,(int)$manifest['cursor']+count($selected));",
+                  "$manifest['cursor']=min($cycleTotal,(int)$manifest['cursor']+count($keys));",
+              ),
+              (
+                  "'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],",
+                  "'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],\n            'api_basic'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],\n            'mobile_live'=>['url'=>'https://m.tiktok.com/@'.$handle.'/live','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],",
+              ),
+              (
+                  "'videos'=>['url'=>rtrim($identity['profileUrl'],'/').'/videos/','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],",
+                  "'videos'=>['url'=>rtrim($identity['profileUrl'],'/').'/videos/','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],\n            'mobile'=>['url'=>str_replace('www.facebook.com','m.facebook.com',$identity['profileUrl']),'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],",
+              ),
+          ]
 
-              def replace_between(source, start, end, replacement):
-                  pattern = re.escape(start) + r'.*?(?=' + re.escape(end) + r')'
-                  updated, count = re.subn(pattern, replacement + '\n\n', source, count=1, flags=re.S)
-                  if count != 1:
-                      raise SystemExit(f'Bloc introuvable: {start}')
-                  return updated
+          if 'P50_LIVE_V3_TUNED' not in text:
+              for old, new in replacements:
+                  if old not in text:
+                      raise SystemExit(f'Motif introuvable: {old[:90]}')
+                  text = text.replace(old, new, 1)
 
-              identity = r'''function p50_live_v3_identity(string $platform,string $url): array {
-              $parts=parse_url(trim($url));$path=(string)($parts['path']??'');
-              if($platform==='TikTok'&&preg_match('#/@([A-Za-z0-9._-]+)#',$path,$m)){
-                  $handle=$m[1];$profile='https://www.tiktok.com/@'.$handle;
-                  return ['handle'=>$handle,'profileUrl'=>$profile,'liveUrl'=>$profile.'/live','mobileLiveUrl'=>'https://m.tiktok.com/@'.$handle.'/live'];
-              }
-              if($platform==='Instagram'&&preg_match('#^/([A-Za-z0-9._-]+)/?#',$path,$m)){
-                  $handle=$m[1];$profile='https://www.instagram.com/'.$handle.'/';
-                  return ['handle'=>$handle,'profileUrl'=>$profile,'liveUrl'=>$profile.'live/'];
-              }
-              if($platform==='Facebook'){
-                  $clean=trim($path,'/');$profile='https://www.facebook.com/'.$clean;
-                  if(strtolower($clean)==='profile.php'){
-                      parse_str((string)($parts['query']??''),$query);
-                      if(!empty($query['id'])&&ctype_digit((string)$query['id']))$profile.='?id='.(string)$query['id'];
-                  }
-                  $live=str_contains($profile,'?')?$profile.'&sk=live_videos':rtrim($profile,'/').'/live_videos/';
-                  return ['handle'=>'','profileUrl'=>$profile,'liveUrl'=>$live,'mobileUrl'=>str_replace('www.facebook.com','m.facebook.com',$profile)];
-              }
-              return ['handle'=>'','profileUrl'=>$url,'liveUrl'=>$url];
-          }'''
-              text = replace_between(text, 'function p50_live_v3_identity', 'function p50_live_v3_youtube_base', identity)
-
-              probes = r'''function p50_live_v3_probe_requests(array $source): array {
-              $platform=(string)$source['platform'];$url=(string)$source['url'];$identity=p50_live_v3_identity($platform,$url);
-              if($platform==='YouTube'){
-                  $live=p50_live_v3_youtube_base($url);
-                  if($live==='')return [];
-                  $channel=preg_replace('#/live(?:/)?$#i','',$live)??$url;
-                  return [
-                      'live'=>['url'=>$live,'accept'=>'text/html,*/*;q=0.7'],
-                      'streams'=>['url'=>rtrim($channel,'/').'/streams','accept'=>'text/html,*/*;q=0.7'],
-                  ];
-              }
-              if($platform==='TikTok'&&$identity['handle']!==''){
-                  $handle=rawurlencode($identity['handle']);
-                  return [
-                      'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],
-                      'api_web'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],
-                      'live'=>['url'=>$identity['liveUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-                      'mobile_live'=>['url'=>$identity['mobileLiveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','userAgent'=>'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Version/17.5 Mobile/15E148 Safari/604.1'],
-                      'embed'=>['url'=>'https://www.tiktok.com/embed/live/@'.$handle.'?autoplay=0&muted=1&controls=1&embed_domain=pass50.store','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-                      'profile'=>['url'=>$identity['profileUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-                  ];
-              }
-              if($platform==='Instagram'&&$identity['handle']!==''){
-                  return [
-                      'api'=>[
-                          'url'=>'https://www.instagram.com/api/v1/users/web_profile_info/?username='.rawurlencode($identity['handle']),
-                          'accept'=>'application/json,text/plain,*/*','headers'=>['X-IG-App-ID: 936619743392459','X-ASBD-ID: 129477'],
-                      ],
-                      'profile'=>['url'=>$identity['profileUrl'].'?hl=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-                      'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-                  ];
-              }
-              if($platform==='Facebook'){
-                  return [
-                      'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-                      'videos'=>['url'=>rtrim($identity['profileUrl'],'/').'/videos/','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-                      'mobile'=>['url'=>$identity['mobileUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','userAgent'=>'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/150.0.0.0 Mobile Safari/537.36'],
-                  ];
-              }
-              return [];
-          }'''
-              text = replace_between(text, 'function p50_live_v3_probe_requests', 'function p50_live_v3_parallel_fetch', probes)
-
-              old_ua = "CURLOPT_USERAGENT=>'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36',"
-              new_ua = "CURLOPT_USERAGENT=>(string)($job['userAgent']??'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'),"
-              if old_ua not in text: raise SystemExit('User-Agent CURL introuvable')
-              text = text.replace(old_ua,new_ua,1)
-              old_headers = """CURLOPT_HTTPHEADER=>[
-                          'Accept: '.(string)($job['accept']??'text/html,*/*;q=0.7'),
-                          'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7','Cache-Control: no-cache','Pragma: no-cache','DNT: 1',
-                          'Referer: https://www.google.com/',
-                      ],"""
-              new_headers = """CURLOPT_HTTPHEADER=>array_merge([
-                          'Accept: '.(string)($job['accept']??'text/html,*/*;q=0.7'),
-                          'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7','Cache-Control: no-cache','Pragma: no-cache','DNT: 1',
-                          'Referer: https://www.google.com/',
-                      ],(array)($job['headers']??[])),"""
-              if old_headers not in text: raise SystemExit('Bloc headers CURL introuvable')
-              text = text.replace(old_headers,new_headers,1)
-              text = text.replace("CURLMOPT_MAX_TOTAL_CONNECTIONS,10", "CURLMOPT_MAX_TOTAL_CONNECTIONS,16", 1)
-
-              youtube = r'''function p50_live_v3_parse_youtube(array $source,array $responses): array {
-              $successful=[];$errors=[];$maxMs=0;
-              foreach($responses as $label=>$response){
-                  $maxMs=max($maxMs,(int)($response['timeMs']??0));
-                  if(!empty($response['ok'])&&!empty($response['body']))$successful[$label]=$response;
-                  else $errors[]=$label.':'.((string)($response['error']??'')?:('http_'.($response['status']??0)));
-              }
-              if(!$successful)return ['state'=>'unknown','error'=>implode(';',$errors),'confidence'=>0,'responseMs'=>$maxMs];
-              $selected=null;$html='';
-              foreach($successful as $response){
-                  $candidate=(string)$response['body'];
-                  $isLive=(bool)preg_match('/"isLiveNow"\s*:\s*true/i',$candidate)
-                      ||(bool)preg_match('/itemprop=["\']isLiveBroadcast["\'][^>]+content=["\']True["\']/i',$candidate)
-                      ||((bool)preg_match('/"isLiveContent"\s*:\s*true/i',$candidate)&&(bool)preg_match('/"playabilityStatus"\s*:\s*\{[^}]*"status"\s*:\s*"OK"/is',$candidate));
-                  if($isLive){$selected=$response;$html=$candidate;break;}
-              }
-              if(!$selected)return ['state'=>'offline','error'=>'','confidence'=>96,'responseMs'=>$maxMs];
-              $base=(string)($selected['finalUrl']??$source['url']);$meta=p50_page_metadata($html,$base);$videoId=p50_live_v3_video_id((string)($meta['canonical']?:$base),$html);
-              $url=$videoId!==''?'https://www.youtube.com/watch?v='.$videoId:(string)($meta['canonical']?:$base);
-              $title=trim((string)($meta['title']??''));$title=preg_replace('/\s*-\s*YouTube\s*$/iu','',$title)??$title;if($title==='')$title='Direct YouTube en cours';
-              $started=null;if(preg_match('/"startTimestamp"\s*:\s*"([^"]+)"/',$html,$m)){try{$started=(new DateTimeImmutable(p50_live_v3_unescape($m[1])))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');}catch(Throwable){}}
-              $thumb=(string)($meta['image']??'');if($thumb===''&&$videoId!=='')$thumb='https://i.ytimg.com/vi/'.rawurlencode($videoId).'/hqdefault.jpg';
-              return ['state'=>'live','confidence'=>99,'responseMs'=>$maxMs,'live'=>[
-                  'profileId'=>(string)$source['profile_id'],'platform'=>'YouTube','title'=>$title,'url'=>$url,'thumbnail'=>$thumb,
-                  'confidence'=>99,'startedAt'=>$started,'viewers'=>p50_live_v3_viewers($html),
-                  'metadata'=>['channelUrl'=>(string)$source['url'],'videoId'=>$videoId,'probe'=>'channel_live_or_streams'],
-              ]];
-          }'''
-              text = replace_between(text, 'function p50_live_v3_parse_youtube', 'function p50_live_v3_parse_tiktok', youtube)
-
-              text = text.replace(
-                  "foreach(['live','embed','profile','api'] as $label)",
-                  "foreach(['live','mobile_live','embed','profile','api_web','api'] as $label)",1
-              )
-              text = text.replace(
-                  "|| (bool)preg_match('/x-tiktok-player.{0,800}(?:onPlayerReady|liveRoom|roomId)/is',$combined);",
-                  "|| (bool)preg_match('/x-tiktok-player.{0,1200}(?:onPlayerReady|liveRoom|roomId|room_id)/is',$combined)\n        || (bool)preg_match('/(?:data-room-id|roomId)=?[\"\']?([1-9]\\d{5,})/i',$combined);",
-                  1
-              )
-
-              text = text.replace(
-                  "$live=(bool)preg_match('/\"(?:is_live_broadcast|isLiveBroadcast|is_live|isLive)\"\\s*:\\s*true/i',$combined)\n        ||(bool)preg_match('/\"broadcast_status\"\\s*:\\s*\"(?:active|live)\"/i',$combined);",
-                  "$live=(bool)preg_match('/\"(?:is_live_broadcast|isLiveBroadcast|is_live|isLive)\"\\s*:\\s*true/i',$combined)\n        ||(bool)preg_match('/\"broadcast_status\"\\s*:\\s*\"(?:active|live)\"/i',$combined)\n        ||(bool)preg_match('/\"(?:live_broadcast_id|broadcast_id)\"\\s*:\\s*\"?[1-9]\\d{5,}\"?/i',$combined);",
-                  1
-              )
-              text = text.replace(
-                  "$live=(bool)preg_match('/\"(?:is_live_streaming|isLiveStreaming|is_live)\"\\s*:\\s*true/i',$combined)\n        ||(bool)preg_match('/\"broadcast_status\"\\s*:\\s*\"LIVE\"/i',$combined)",
-                  "$live=(bool)preg_match('/\"(?:is_live_streaming|isLiveStreaming|is_live|is_live_video)\"\\s*:\\s*true/i',$combined)\n        ||(bool)preg_match('/\"(?:broadcast_status|live_video_status)\"\\s*:\\s*\"LIVE\"/i',$combined)",
-                  1
-              )
-
-              old_store = """function p50_live_v3_store(array $live): void {
-              $platform=(string)$live['platform'];$key=hash('sha256',$platform.'|'.strtolower(rtrim((string)$live['url'],'/')));"""
-              new_store = """function p50_live_v3_store(array $live): void {
-              $platform=(string)$live['platform'];$profileId=(string)$live['profileId'];$key=hash('sha256',$platform.'|'.strtolower(rtrim((string)$live['url'],'/')));
-              $endOthers=db()->prepare(\"UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live' AND stream_key<>?\");
-              $endOthers->execute([$profileId,$platform,$key]);"""
-              if old_store not in text: raise SystemExit('Bloc store introuvable')
-              text = text.replace(old_store,new_store,1)
-              text = text.replace("$stmt->execute([$key,(string)$live['profileId'],$platform", "$stmt->execute([$key,$profileId,$platform",1)
+              old_store = "function p50_live_v3_store(array $live): void {\n    $platform=(string)$live['platform'];$key=hash('sha256',$platform.'|'.strtolower(rtrim((string)$live['url'],'/')));"
+              new_store = "function p50_live_v3_store(array $live): void {\n    $platform=(string)$live['platform'];$profileId=(string)$live['profileId'];$key=hash('sha256',$platform.'|'.strtolower(rtrim((string)$live['url'],'/')));\n    $endOthers=db()->prepare(\"UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live' AND stream_key<>?\");\n    $endOthers->execute([$profileId,$platform,$key]);"
+              if old_store not in text:
+                  raise SystemExit('Bloc de stockage introuvable')
+              text = text.replace(old_store, new_store, 1)
+              text = text.replace("$stmt->execute([$key,(string)$live['profileId'],$platform", "$stmt->execute([$key,$profileId,$platform", 1)
 
               old_health = "$stmt=db()->prepare('SELECT consecutive_offline,consecutive_unknown FROM p50_live_source_health WHERE profile_id=? AND platform=? LIMIT 1');$stmt->execute([$profileId,$platform]);$previous=$stmt->fetch()?:[];\n    $offline=$state==='offline'?((int)($previous['consecutive_offline']??0)+1):0;\n    $unknown=$state==='unknown'?((int)($previous['consecutive_unknown']??0)+1):0;"
               new_health = "$urlHash=hash('sha256',strtolower(rtrim($url,'/')));\n    $stmt=db()->prepare('SELECT url_hash,consecutive_offline,consecutive_unknown FROM p50_live_source_health WHERE profile_id=? AND platform=? LIMIT 1');$stmt->execute([$profileId,$platform]);$previous=$stmt->fetch()?:[];\n    $sameUrl=(string)($previous['url_hash']??'')===$urlHash;\n    $offline=$state==='offline'?($sameUrl?(int)($previous['consecutive_offline']??0):0)+1:0;\n    $unknown=$state==='unknown'?($sameUrl?(int)($previous['consecutive_unknown']??0):0)+1:0;"
-              if old_health not in text: raise SystemExit('Bloc health introuvable')
-              text = text.replace(old_health,new_health,1)
-              text = text.replace("hash('sha256',strtolower(rtrim($url,'/'))),$url,$state", "$urlHash,$url,$state",1)
+              if old_health not in text:
+                  raise SystemExit('Bloc de santé introuvable')
+              text = text.replace(old_health, new_health, 1)
+              text = text.replace("hash('sha256',strtolower(rtrim($url,'/'))),$url,$state", "$urlHash,$url,$state", 1)
 
-              text = text.replace("$force=p50_live_v3_bool_query('force')||in_array($mode,['full','profile'],true);$batch=max(1,min(10,(int)($_GET['batch']??6)));", "$force=p50_live_v3_bool_query('force')||in_array($mode,['full','profile'],true);$batch=max(1,min(12,(int)($_GET['batch']??8)));",1)
-              text = text.replace("$refresh=45;$stale=35;", "$refresh=45;$stale=90;",1)
-              text = text.replace("$cycleId=null;$cycleComplete=true;$cycleScanned=0;$cycleFound=0;$cycleTotal=count($sources);", "$cycleId=null;$cycleComplete=true;$cycleScanned=0;$cycleProcessed=0;$cycleFound=0;$cycleTotal=count($sources);",1)
-              text = text.replace("$cycleScanned=(int)$manifest['scanned'];$cycleFound=(int)$manifest['found'];$cycleComplete=$cursor>=$cycleTotal;", "$cycleScanned=(int)$manifest['scanned'];$cycleProcessed=$cursor;$cycleFound=(int)$manifest['found'];$cycleComplete=$cursor>=$cycleTotal;",1)
-              text = text.replace("$manifest['cursor']=min($cycleTotal,(int)$manifest['cursor']+count($selected));", "$manifest['cursor']=min($cycleTotal,(int)$manifest['cursor']+count($keys));",1)
-              text = text.replace("$cycleScanned=(int)$manifest['scanned'];$cycleFound=(int)$manifest['found'];$cycleComplete=(bool)$manifest['complete'];", "$cycleScanned=(int)$manifest['scanned'];$cycleProcessed=(int)$manifest['cursor'];$cycleFound=(int)$manifest['found'];$cycleComplete=(bool)$manifest['complete'];",1)
-              text = text.replace("$coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;", "$coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleProcessed:count($selected))*100/$cycleTotal):100;",1)
-              text = text.replace("'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,", "'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,'cycleProcessed'=>$cycleProcessed,",1)
-
-              path.write_text(text,encoding='utf-8')
+              path.write_text(text, encoding='utf-8')
           PY
           php -l api/live-status-v3.php
           git rm .github/workflows/tune-live-radar-v3.yml
-          if git diff --quiet; then
-            echo "Aucune modification."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add api/live-status-v3.php
-          git commit -m "feat: renforcer les sondes et la rotation du Radar LIVE V3"
+          git commit -m "feat: renforcer la rotation et les sondes du Radar LIVE V3"
           git push origin HEAD:feat/live-radar-v3-performance
