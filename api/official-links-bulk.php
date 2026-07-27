@@ -13,7 +13,6 @@ p50_de_sync_registry_from_state();
 $input=json_input();
 $action=(string)($input['action']??'save_profile');
 $allowedPlatforms=['Instagram','TikTok','Facebook','YouTube','Snapchat','X','LinkedIn','Web'];
-$officialStatuses=['verified','owner_verified','manual_verified','ok'];
 
 function p50_links_local_validation(string $platform,string $url): array {
     $normalized=p50_de_normalize_social_url($platform,$url);
@@ -37,6 +36,9 @@ function p50_links_apply_to_state(array &$state,string $profileId,string $platfo
     $profile['links']=is_array($profile['links']??null)?$profile['links']:[];
     $profile['linkChecks']=is_array($profile['linkChecks']??null)?$profile['linkChecks']:[];
     $profile['platforms']=array_values(array_unique(array_merge((array)($profile['platforms']??[]),[$platform])));
+    $oldUrl=(string)($profile['links'][$platform]??'');
+    $oldCheck=(array)($profile['linkChecks'][$platform]??[]);
+    if($oldUrl===$url&&(string)($oldCheck['status']??'')===$status&&!empty($oldCheck['persistedServerSide']))return false;
     $profile['links'][$platform]=$url;
     $profile['linkChecks'][$platform]=[
         'status'=>$status,
@@ -47,18 +49,35 @@ function p50_links_apply_to_state(array &$state,string $profileId,string $platfo
     return true;
 }
 
-function p50_links_merge_verified_db(array &$state,string $profileId): int {
-    $count=0;
+function p50_links_current_record(string $profileId,string $platform): ?array {
+    $stmt=db()->prepare('SELECT normalized_url,status,source_types,confidence FROM p50_social_links WHERE profile_id=? AND platform=? LIMIT 1');
+    $stmt->execute([$profileId,$platform]);
+    $row=$stmt->fetch();
+    if(!$row)return null;
+    $row['sourceTypes']=decode_json_column($row['source_types']??null,[]);
+    unset($row['source_types']);
+    return $row;
+}
+
+function p50_links_merge_verified_db(array &$state,string $profileId): bool {
+    $changed=false;
+    $index=p50_links_state_profile_index($state,$profileId);
+    if($index<0)return false;
     foreach(p50_de_social_links($profileId,true) as $link){
+        $platform=(string)$link['platform'];$url=(string)$link['url'];
+        $currentUrl=(string)($state['profiles'][$index]['links'][$platform]??'');
+        $currentStatus=(string)($state['profiles'][$index]['linkChecks'][$platform]['status']??'');
+        // Une nouvelle saisie encore en attente doit rester visible dans l'administration.
+        if($currentStatus==='pending'&&$currentUrl!==''&&$currentUrl!==$url)continue;
         $sourceTypes=(array)($link['sourceTypes']??[]);
         $owner=in_array('manual_owner',$sourceTypes,true);
         $status=$owner?'owner_verified':'manual_verified';
-        if(p50_links_apply_to_state(
-            $state,$profileId,(string)$link['platform'],(string)$link['url'],$status,
+        $changed=p50_links_apply_to_state(
+            $state,$profileId,$platform,$url,$status,
             $owner?'Compte officiel enregistré durablement par le propriétaire PASS50':'Compte officiel enregistré durablement par un administrateur PASS50'
-        ))$count++;
+        )||$changed;
     }
-    return $count;
+    return $changed;
 }
 
 function p50_links_store_one(array &$state,array $user,string $profileId,string $platform,string $url,bool $confirmed,string $actionType='bulk_save'): array {
@@ -66,14 +85,25 @@ function p50_links_store_one(array &$state,array $user,string $profileId,string 
     if(!$validation['ok'])return ['ok'=>false,'profileId'=>$profileId,'platform'=>$platform,'url'=>$url,'error'=>$validation['message']];
 
     $normalized=(string)$validation['normalizedUrl'];
-    $previous=p50_de_current_social_url($profileId,$platform);
+    $current=p50_links_current_record($profileId,$platform);
+    $currentTypes=(array)($current['sourceTypes']??[]);
+    $currentOwner=in_array('manual_owner',$currentTypes,true);
+    $currentAdmin=in_array('manual_admin',$currentTypes,true);
+    $alreadyConfirmed=$current&&$current['normalized_url']===$normalized&&$current['status']==='verified'&&($currentOwner||$currentAdmin);
+    $publicStatus=$confirmed?($user['role']==='owner'?'owner_verified':'manual_verified'):($alreadyConfirmed?($currentOwner?'owner_verified':'manual_verified'):'pending');
+    $message=$publicStatus==='pending'
+        ?'Lien enregistré durablement sur le serveur, en attente de confirmation officielle'
+        :($publicStatus==='owner_verified'?'Compte officiel confirmé et enregistré durablement par le propriétaire PASS50':'Compte officiel confirmé et enregistré durablement par un administrateur PASS50');
+    $stateChanged=p50_links_apply_to_state($state,$profileId,$platform,$normalized,$publicStatus,$message);
+
+    if($alreadyConfirmed)return [
+        'ok'=>true,'profileId'=>$profileId,'platform'=>$platform,'url'=>$normalized,
+        'status'=>$publicStatus,'confirmed'=>true,'changed'=>$stateChanged,'unchangedServerRecord'=>true,
+    ];
+
+    $previous=(string)($current['normalized_url']??'');
     $sourceType=$confirmed?($user['role']==='owner'?'manual_owner':'manual_admin'):'manual_candidate';
     $sourceWeight=$confirmed?($user['role']==='owner'?100:98):78;
-    $publicStatus=$confirmed?($user['role']==='owner'?'owner_verified':'manual_verified'):'pending';
-    $message=$confirmed
-        ?($user['role']==='owner'?'Compte officiel confirmé et enregistré durablement par le propriétaire PASS50':'Compte officiel confirmé et enregistré durablement par un administrateur PASS50')
-        :'Lien enregistré durablement sur le serveur, en attente de confirmation officielle';
-
     $types=$confirmed?['manual_owner','manual_admin']:['manual_candidate'];
     $placeholders=implode(',',array_fill(0,count($types),'?'));
     $delete=db()->prepare("DELETE FROM p50_social_link_evidence WHERE profile_id=? AND platform=? AND source_type IN ($placeholders)");
@@ -90,8 +120,10 @@ function p50_links_store_one(array &$state,array $user,string $profileId,string 
     p50_de_log_social_action($profileId,$platform,$actionType,$previous,$normalized,$user,[
         'confirmed'=>$confirmed,'transactional'=>true,'persistenceVersion'=>3,
     ]);
-    p50_links_apply_to_state($state,$profileId,$platform,$normalized,$publicStatus,$message);
-    return ['ok'=>true,'profileId'=>$profileId,'platform'=>$platform,'url'=>$normalized,'status'=>$publicStatus,'confirmed'=>$confirmed];
+    return [
+        'ok'=>true,'profileId'=>$profileId,'platform'=>$platform,'url'=>$normalized,
+        'status'=>$publicStatus,'confirmed'=>$confirmed,'changed'=>true,
+    ];
 }
 
 function p50_links_candidate_set(array $state,array $browserProfiles): array {
@@ -140,7 +172,8 @@ function p50_links_candidate_set(array $state,array $browserProfiles): array {
         if(!is_array($profile)||empty($profile['id']))continue;
         $profileId=(string)$profile['id'];
         foreach((array)($profile['links']??[]) as $platform=>$url){
-            $url=trim((string)$url;if($url==='')continue;
+            $url=trim((string)$url);
+            if($url==='')continue;
             $status=(string)(($profile['linkChecks']??[])[$platform]['status']??'');
             $confirmed=in_array($status,['verified','owner_verified','manual_verified','ok'],true);
             $put($candidates,$profileId,(string)$platform,$url,$confirmed,10,'','state');
@@ -152,7 +185,7 @@ function p50_links_candidate_set(array $state,array $browserProfiles): array {
 if(!in_array($action,['save_profile','integrity_sync'],true))json_response(['error'=>'Action inconnue.'],422);
 
 $pdo=db();
-$results=[];$errors=[];$touched=[];$restored=0;
+$results=[];$errors=[];$touched=[];$restored=0;$stateChanged=false;
 $pdo->beginTransaction();
 try{
     $state=p50_de_load_public_state_for_update();
@@ -163,11 +196,15 @@ try{
         if($profileId===''||p50_links_state_profile_index($state,$profileId)<0)throw new RuntimeException('Profil introuvable.');
         $confirmed=!empty($input['confirmedOfficial']);
         foreach((array)($input['links']??[]) as $platform=>$url){
-            $platform=(string)$platform;$url=trim((string)$url;
+            $platform=(string)$platform;
+            $url=trim((string)$url);
             if($url==='')continue; // Un champ vide ne supprime plus jamais une donnée existante.
             if(!in_array($platform,$allowedPlatforms,true)){$errors[]=['profileId'=>$profileId,'platform'=>$platform,'error'=>'Plateforme non prise en charge'];continue;}
             $result=p50_links_store_one($state,$user,$profileId,$platform,$url,$confirmed,'bulk_save');
-            if($result['ok']){$results[]=$result;$touched[$profileId]=true;}else $errors[]=$result;
+            if($result['ok']){
+                $results[]=$result;$touched[$profileId]=true;
+                $stateChanged=!empty($result['changed'])||$stateChanged;
+            }else $errors[]=$result;
         }
         if(!$results&&$errors)throw new RuntimeException((string)($errors[0]['error']??'Aucun lien valide.'));
     }else{
@@ -176,17 +213,22 @@ try{
             $profileId=(string)$candidate['profileId'];$platform=(string)$candidate['platform'];$url=(string)$candidate['url'];
             if(p50_links_state_profile_index($state,$profileId)<0||!in_array($platform,$allowedPlatforms,true))continue;
             $result=p50_links_store_one($state,$user,$profileId,$platform,$url,(bool)$candidate['confirmed'],'integrity_restore');
-            if($result['ok']){$result['source']=$candidate['source'];$results[]=$result;$touched[$profileId]=true;$restored++;}else $errors[]=$result;
+            if($result['ok']){
+                $result['source']=$candidate['source'];$results[]=$result;$touched[$profileId]=true;
+                if(!empty($result['changed'])){$restored++;$stateChanged=true;}
+            }else $errors[]=$result;
         }
     }
 
-    foreach(array_keys($touched) as $profileId)p50_links_merge_verified_db($state,$profileId);
-    $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
-    $state['officialLinksPersistence']=[
-        'version'=>3,'updatedAt'=>gmdate(DATE_ATOM),'updatedBy'=>(string)$user['id'],
-        'action'=>$action,'profilesUpdated'=>count($touched),'linksProcessed'=>count($results),
-    ];
-    p50_de_save_public_state($state,(string)$user['id'],false);
+    foreach(array_keys($touched) as $profileId)$stateChanged=p50_links_merge_verified_db($state,$profileId)||$stateChanged;
+    if($stateChanged){
+        $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
+        $state['officialLinksPersistence']=[
+            'version'=>3,'updatedAt'=>gmdate(DATE_ATOM),'updatedBy'=>(string)$user['id'],
+            'action'=>$action,'profilesUpdated'=>count($touched),'linksProcessed'=>count($results),
+        ];
+        p50_de_save_public_state($state,(string)$user['id'],false);
+    }
     $pdo->commit();
 
     $updates=[];
@@ -199,7 +241,7 @@ try{
         ];
     }
     json_response([
-        'ok'=>true,'action'=>$action,'stateRevision'=>(int)$state['stateRevision'],
+        'ok'=>true,'action'=>$action,'stateRevision'=>(int)($state['stateRevision']??0),
         'profilesUpdated'=>count($touched),'linksProcessed'=>count($results),'restoredCount'=>$restored,
         'results'=>$results,'errors'=>$errors,'updates'=>$updates,
     ]);
