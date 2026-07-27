@@ -63,3 +63,12 @@ document.addEventListener('DOMContentLoaded', function () {
   script.dataset.pass50ProfileEnnemiDjandjou = '1.0';
   document.head.appendChild(script);
 })();
+
+// Radar LIVE V2 : YouTube + TikTok automatiques.
+(function () {
+  if (document.querySelector('script[data-pass50-live-radar-v2]')) return;
+  var script = document.createElement('script');
+  script.src = './live-radar-v2.js?v=1.0';
+  script.dataset.pass50LiveRadarV2 = '1.0';
+  document.head.appendChild(script);
+})();
