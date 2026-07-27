@@ -2,8 +2,9 @@
 'use strict';
 
 const ENDPOINT='./api/live-status-v3.php';
-const QUICK_INTERVAL=60_000;
-let running=false;
+const QUICK_INTERVAL=45_000;
+const FULL_CYCLE_KEY='pass50_live_radar_v3_cycle';
+let runningMode='';
 let lastData=null;
 let autoTimer=null;
 
@@ -15,11 +16,13 @@ function applyRadarData(data){
   if(!data?.ok)return;
   lastData=data;
   window.PASS50_LIVE_RADAR=data.radar||{};
+  window.PASS50_LIVE_RADAR_LAST_DATA=data;
   if(Array.isArray(data.liveStreams)){
     db.liveStreams=data.liveStreams;
     if(typeof normalizeLiveStreams==='function')normalizeLiveStreams();
     try{localStorage.setItem(APP_KEY,JSON.stringify(db));}catch{}
     if(typeof render==='function')render();
+    if(document.getElementById('liveModal')?.classList.contains('show')&&typeof openLives==='function')openLives();
   }
   requestAnimationFrame(renderStatus);
 }
@@ -28,9 +31,16 @@ function platformText(platforms={}){
   return ['TikTok','YouTube','Instagram','Facebook']
     .map(name=>{
       const item=platforms[name]||{};
-      return `${name} ${Number(item.known||0)}`;
+      const known=Number(item.known||0),scanned=Number(item.scanned||0),found=Number(item.found||0);
+      return `${name} ${known}${scanned?` · ${scanned} testés`:''}${found?` · ${found} LIVE`:''}`;
     })
-    .join(' · ');
+    .join('<br>');
+}
+
+function healthText(health={}){
+  const totals={live:0,offline:0,unknown:0,never_checked:0};
+  Object.values(health||{}).forEach(item=>Object.keys(totals).forEach(key=>totals[key]+=Number(item?.[key]||0)));
+  return `${totals.live} en direct · ${totals.offline} hors ligne · ${totals.unknown} bloqués/inconnus · ${totals.never_checked} jamais contrôlés`;
 }
 
 function ensureStatusBox(){
@@ -40,7 +50,7 @@ function ensureStatusBox(){
   if(!button)return null;
   box=document.createElement('div');
   box.id='liveRadarV3Status';
-  box.style.cssText='margin:10px 0 14px;padding:12px 14px;border:1px solid #293129;border-radius:14px;background:#0b0e0b;font-size:12px;line-height:1.55;color:#dce3d9';
+  box.style.cssText='margin:10px 0 14px;padding:13px 14px;border:1px solid #293129;border-radius:14px;background:#0b0e0b;font-size:12px;line-height:1.55;color:#dce3d9';
   button.closest('.admin-toolbar,.tool-actions,div')?.insertAdjacentElement('afterend',box);
   return box;
 }
@@ -53,9 +63,14 @@ function renderStatus(){
   const scanned=Number(radar.cycleScanned||0);
   const coverage=Number(radar.coveragePercent||0);
   const completed=radar.lastFullSweep?.completedAt||'';
+  const diagnostics=Array.isArray(radar.diagnostics)?radar.diagnostics:[];
+  const detected=diagnostics.filter(item=>item.state==='live').map(item=>item.name).filter(Boolean);
   box.innerHTML=`<strong style="color:#b7ff00">RADAR LIVE V3</strong> · ${liveCount()} direct${liveCount()>1?'s':''} actif${liveCount()>1?'s':''}<br>`+
-    `${total} lien${total>1?'s':''} officiel${total>1?'s':''} surveillé${total>1?'s':''} · ${platformText(radar.platforms)}<br>`+
-    `${scanned>0?`Dernier balayage : ${scanned}/${Number(radar.cycleTotal||total)} · ${coverage}%`:'Surveillance rapide active toutes les 60 secondes'}`+
+    `${total} lien${total>1?'s':''} officiel${total>1?'s':''} surveillé${total>1?'s':''}<br>`+
+    `<span style="color:#aeb8aa">${platformText(radar.platforms)}</span><br>`+
+    `${scanned>0?`Dernier balayage : ${scanned}/${Number(radar.cycleTotal||total)} · ${coverage}%`:'Surveillance rapide active toutes les 45 secondes'}<br>`+
+    `${healthText(radar.health)}`+
+    `${detected.length?`<br><strong style="color:#b7ff00">Détecté : ${detected.join(', ')}</strong>`:''}`+
     `${completed?`<br>Balayage complet terminé : ${new Date(completed).toLocaleString('fr-FR')}`:''}`;
 }
 
@@ -76,17 +91,34 @@ async function fetchRadar(params){
 }
 
 async function runQuick(){
-  if(running||document.hidden)return null;
-  running=true;
-  try{return await fetchRadar({mode:'quick',batch:'6'});}
+  if(runningMode||document.hidden)return null;
+  runningMode='quick';
+  try{return await fetchRadar({mode:'quick',batch:'8'});}
   catch(error){console.warn('Radar LIVE rapide',error);return null;}
-  finally{running=false;}
+  finally{runningMode='';}
+}
+
+function readCycle(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(FULL_CYCLE_KEY)||'null');
+    if(saved?.id&&Date.now()-Number(saved.at||0)<14*60_000)return saved.id;
+  }catch{}
+  return '';
+}
+
+function saveCycle(id){
+  try{localStorage.setItem(FULL_CYCLE_KEY,JSON.stringify({id,at:Date.now()}))}catch{}
+}
+
+function clearCycle(){
+  try{localStorage.removeItem(FULL_CYCLE_KEY)}catch{}
 }
 
 async function runFullSweep(){
-  if(running)return null;
-  running=true;
-  const cycle=`web_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+  if(runningMode)return null;
+  runningMode='full';
+  const cycle=readCycle()||`web_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+  saveCycle(cycle);
   let data=null;
   let calls=0;
   let busyRetries=0;
@@ -94,13 +126,13 @@ async function runFullSweep(){
 
   try{
     do{
-      data=await fetchRadar({mode:'full',force:'1',cycle,batch:'6'});
+      data=await fetchRadar({mode:'full',force:'1',cycle,batch:'8'});
       const radar=data.radar||{};
       if(radar.busy){
         busyRetries++;
-        if(busyRetries>8)throw new Error('Le radar est déjà occupé');
+        if(busyRetries>12)throw new Error('Le radar est déjà occupé');
         setButton('RADAR LIVE · ATTENTE DU SERVEUR…');
-        await new Promise(resolve=>setTimeout(resolve,700));
+        await new Promise(resolve=>setTimeout(resolve,800));
         continue;
       }
       busyRetries=0;
@@ -108,11 +140,12 @@ async function runFullSweep(){
       setButton(`RADAR LIVE · ${scanned}/${total} · ${found} LIVE${found>1?'S':''}`);
       calls++;
       if(radar.cycleComplete)break;
-      await new Promise(resolve=>setTimeout(resolve,180));
-    }while(calls<80);
+      await new Promise(resolve=>setTimeout(resolve,220));
+    }while(calls<160);
 
     const radar=data?.radar||{};
     if(!radar.cycleComplete)throw new Error('Balayage interrompu avant la fin');
+    clearCycle();
     const total=Number(radar.cycleTotal||0),found=Number(radar.livesFoundInCycle||0);
     if(typeof toast==='function')toast(`Radar LIVE : ${total} liens officiels contrôlés · ${found} direct${found>1?'s':''} détecté${found>1?'s':''}`);
     return data;
@@ -120,22 +153,18 @@ async function runFullSweep(){
     if(typeof toast==='function')toast(error?.message||'Radar LIVE indisponible');
     return null;
   }finally{
-    running=false;
+    runningMode='';
     setButton('🔴 LANCER LE RADAR COMPLET',false);
     renderStatus();
   }
 }
 
 async function verifyProfile(profileId){
-  if(!profileId||running)return null;
-  running=true;
-  try{
-    const data=await fetchRadar({mode:'profile',force:'1',profileId:String(profileId),batch:'4'});
-    return data;
-  }catch(error){
-    console.warn('Vérification LIVE ciblée',error);
-    return null;
-  }finally{running=false;renderStatus();}
+  if(!profileId||runningMode)return null;
+  runningMode='profile';
+  try{return await fetchRadar({mode:'profile',force:'1',profileId:String(profileId),batch:'8'});}
+  catch(error){console.warn('Vérification LIVE ciblée',error);return null;}
+  finally{runningMode='';renderStatus();}
 }
 
 function bind(){
@@ -148,18 +177,27 @@ function bind(){
 }
 
 document.addEventListener('click',event=>{
-  const button=event.target.closest?.('#liveRadarRefresh');
-  if(!button)return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  runFullSweep();
+  const radarButton=event.target.closest?.('#liveRadarRefresh');
+  if(radarButton){
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    runFullSweep();
+    return;
+  }
+  if(event.target.closest?.('#liveBtn'))setTimeout(runQuick,0);
 },true);
+
+document.addEventListener('p50:official-links-saved',event=>{
+  const id=String(event.detail?.profileId||'');
+  if(id)setTimeout(()=>verifyProfile(id),300);
+});
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)runQuick();});
 document.addEventListener('DOMContentLoaded',()=>{
   bind();
-  setTimeout(runQuick,4_000);
+  setTimeout(runQuick,3_000);
   autoTimer=setInterval(runQuick,QUICK_INTERVAL);
+  try{refreshLiveStatus=runQuick}catch{}
 });
 
 const observer=new MutationObserver(()=>requestAnimationFrame(bind));
