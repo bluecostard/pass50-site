@@ -1,11 +1,12 @@
 (function(){
 'use strict';
 
-const VERSION='3.0';
+const VERSION='3.1';
 const INTEGRITY_KEY='pass50_official_links_integrity_v3';
 let installed=false;
 let integrityRunning=false;
 let installTimer=null;
+let integrityTimer=null;
 
 function profileById(id){
   try{return profile(id)||db.profiles.find(item=>item.id===id)}catch{return null}
@@ -59,7 +60,7 @@ function keepDraft(profileItem,links,confirmed){
     profileItem.platforms=[...new Set([...profileItem.platforms,platform])];
     profileItem.linkChecks[platform]={
       status:confirmed?'owner_verified':'pending',
-      checkedAt:confirmed?checkedAt:null,
+      checkedAt,
       message:confirmed?'Enregistrement officiel en cours sur le serveur PASS50':'Lien conservé en brouillon avant enregistrement serveur',
     };
   });
@@ -124,7 +125,7 @@ async function durableSaveLinks(id,card,options={}){
     return data;
   }catch(error){
     Object.keys(links).forEach(platform=>{
-      profileItem.linkChecks[platform]={status:'pending',checkedAt:null,message:'Brouillon conservé dans ce navigateur. Enregistrement serveur à relancer.'};
+      profileItem.linkChecks[platform]={status:'pending',checkedAt:new Date().toISOString(),message:'Brouillon conservé dans ce navigateur. Enregistrement serveur à relancer.'};
     });
     persistLocal();
     if(typeof render==='function')render();
@@ -179,7 +180,8 @@ function browserIntegrityPayload(){
     const links={};
     Object.entries(profileItem.links||{}).forEach(([platform,url])=>{
       if(!directLink(platform,url))return;
-      links[platform]={url,status:String(profileItem.linkChecks?.[platform]?.status||'pending')};
+      const check=profileItem.linkChecks?.[platform]||{};
+      links[platform]={url,status:String(check.status||'pending'),checkedAt:String(check.checkedAt||'')};
     });
     if(Object.keys(links).length)profiles.push({profileId:profileItem.id,links});
   });
@@ -222,6 +224,11 @@ async function runIntegritySync(){
   }
 }
 
+function scheduleIntegritySync(delay=350){
+  clearTimeout(integrityTimer);
+  integrityTimer=setTimeout(runIntegritySync,delay);
+}
+
 function addPersistenceNotice(){
   const root=document.querySelector('.links-v2');
   if(!root||root.querySelector('[data-links-persistence-v3]'))return;
@@ -247,19 +254,19 @@ function install(){
   p50v9CheckLinks=durableCheckLinks;
   installed=true;
   addPersistenceNotice();
-  runIntegritySync();
+  scheduleIntegritySync(0);
   return true;
 }
 
 installTimer=setInterval(()=>{
   if(install()){
     clearInterval(installTimer);
-    setTimeout(runIntegritySync,1200);
+    scheduleIntegritySync(1200);
   }
 },250);
 setTimeout(()=>{if(installTimer)clearInterval(installTimer)},30000);
 
-document.addEventListener('DOMContentLoaded',()=>{install();setTimeout(runIntegritySync,1800)});
-const observer=new MutationObserver(()=>requestAnimationFrame(()=>{install();addPersistenceNotice();if(window.__pass50CloudReady)runIntegritySync();}));
+document.addEventListener('DOMContentLoaded',()=>{install();scheduleIntegritySync(1800)});
+const observer=new MutationObserver(()=>requestAnimationFrame(()=>{install();addPersistenceNotice();if(window.__pass50CloudReady)scheduleIntegritySync();}));
 observer.observe(document.documentElement,{subtree:true,childList:true});
 })();
