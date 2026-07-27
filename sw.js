@@ -1,10 +1,11 @@
-const CACHE='pass50-v34-kawaii-nanami';
+const CACHE='pass50-v35-live-modal-mobile';
 const ASSETS=[
   './',
   './index.html',
   './app-config.js',
   './fi-navigation-v3.js?v=1.0',
-  './fi-engagement-v3.js?v=1.0',
+  './fi-engagement-v3.js?v=1.1',
+  './live-modal-layout-v1.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0',
   './profile-kawaii-nanami.js?v=1.0',
   './live-radar-v3.js?v=1.1',
