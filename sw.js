@@ -1,4 +1,4 @@
-const CACHE='pass50-v31-official-links-persistence-v3';
+const CACHE='pass50-v32-official-links-persistence-v31';
 const ASSETS=[
   './',
   './index.html',
@@ -7,7 +7,7 @@ const ASSETS=[
   './fi-engagement-v3.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0',
   './live-radar-v2.js?v=1.0',
-  './official-links-persistence-v3.js?v=3.0',
+  './official-links-persistence-v3.js?v=3.1',
   './public-copy-fixes.js?v=1.0',
   './v9-tools.css?v=22.4',
   './v9-tools.js?v=15.0',
