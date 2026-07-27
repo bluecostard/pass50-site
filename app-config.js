@@ -89,6 +89,24 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Mélanie TMS.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-melanie-tms]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-melanie-tms.js?v=1.0';
+  script.dataset.pass50ProfileMelanieTms = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Ivorian Kid.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-ivorian-kid]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-ivorian-kid.js?v=1.0';
+  script.dataset.pass50ProfileIvorianKid = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Radar LIVE V3 : balayage complet de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
