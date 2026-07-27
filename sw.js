@@ -7,6 +7,7 @@ const ASSETS=[
   './fi-engagement-v3.js?v=1.1',
   './live-modal-layout-v1.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0',
+  './profile-kawaii-nanami.js?v=1.0',
   './live-radar-v3.js?v=1.1',
   './official-links-persistence-v3.js?v=3.1',
   './public-copy-fixes.js?v=1.0',
