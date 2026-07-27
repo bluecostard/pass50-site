@@ -1,4 +1,4 @@
-const CACHE='pass50-v36-melanie-tms-ivorian-kid';
+const CACHE='pass50-v37-official-links-stable';
 const ASSETS=[
   './',
   './index.html',
@@ -11,7 +11,7 @@ const ASSETS=[
   './profile-melanie-tms.js?v=1.0',
   './profile-ivorian-kid.js?v=1.0',
   './live-radar-v3.js?v=1.1',
-  './official-links-persistence-v3.js?v=3.1',
+  './official-links-persistence-v3.js?v=3.2',
   './public-copy-fixes.js?v=1.0',
   './v9-tools.css?v=22.4',
   './v9-tools.js?v=15.0',

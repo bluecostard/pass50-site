@@ -40,6 +40,23 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
         self.assertIn("p50_social_link_audit", ENDPOINT)
         self.assertIn("restoredCount", ENDPOINT)
 
+    def test_integrity_signature_ignores_volatile_status_dates(self):
+        self.assertIn("integritySignaturePayload", CLIENT)
+        self.assertIn("confirmed:confirmedStatus(link?.status)", CLIENT)
+        signature_block = CLIENT.split("function integritySignaturePayload", 1)[1].split("function currentIntegritySignature", 1)[0]
+        self.assertNotIn("checkedAt", signature_block)
+
+    def test_links_panel_mutations_do_not_restart_integrity_sync(self):
+        observer_block = CLIENT.split("const observer=new MutationObserver", 1)[1]
+        self.assertIn("mutationAddsLinksPanel", observer_block)
+        self.assertIn("requestAnimationFrame(addPersistenceNotice)", observer_block)
+        self.assertNotIn("scheduleIntegritySync", observer_block)
+
+    def test_public_state_reload_only_happens_after_real_restoration(self):
+        integrity_block = CLIENT.split("async function runIntegritySync", 1)[1].split("function scheduleIntegritySync", 1)[0]
+        self.assertIn("if(restoredCount>0)", integrity_block)
+        self.assertNotIn("socialHydrated.clear", integrity_block)
+
     def test_reading_links_no_longer_mutates_public_state(self):
         get_block, post_block = SOCIAL.split("require_method('POST');", 1)
         self.assertNotIn("p50_de_publish_profile", get_block)
@@ -48,11 +65,11 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
     def test_old_parallel_backups_are_disabled(self):
         self.assertIn("pass50_v227_confirmed_links_backup", CONFIG)
         self.assertIn("pass50_v226_nolimit_links_seeded", CONFIG)
-        self.assertIn("official-links-persistence-v3.js?v=3.1", CONFIG)
+        self.assertIn("official-links-persistence-v3.js?v=3.2", CONFIG)
 
     def test_cache_keeps_the_persistence_module(self):
-        self.assertIn("const CACHE='pass50-v", SW)
-        self.assertIn("official-links-persistence-v3.js?v=3.1", SW)
+        self.assertIn("const CACHE='pass50-v37-official-links-stable'", SW)
+        self.assertIn("official-links-persistence-v3.js?v=3.2", SW)
 
 
 if __name__ == "__main__":

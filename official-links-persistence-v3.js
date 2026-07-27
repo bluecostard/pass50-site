@@ -1,12 +1,13 @@
 (function(){
 'use strict';
 
-const VERSION='3.1';
+const VERSION='3.2';
 const INTEGRITY_KEY='pass50_official_links_integrity_v3';
 let installed=false;
 let integrityRunning=false;
 let installTimer=null;
 let integrityTimer=null;
+let readinessTimer=null;
 
 function profileById(id){
   try{return profile(id)||db.profiles.find(item=>item.id===id)}catch{return null}
@@ -91,6 +92,51 @@ function setButtons(card,working,label){
   if(target)target.textContent=working?label:(target.dataset.originalLabel||'Enregistrer');
 }
 
+function simpleHash(value){
+  let hash=2166136261;
+  for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619);}
+  return (hash>>>0).toString(16);
+}
+
+function browserIntegrityPayload(){
+  const profiles=[];
+  (db.profiles||[]).forEach(profileItem=>{
+    const links={};
+    Object.entries(profileItem.links||{}).forEach(([platform,url])=>{
+      if(!directLink(platform,url))return;
+      const check=profileItem.linkChecks?.[platform]||{};
+      links[platform]={url,status:String(check.status||'pending'),checkedAt:String(check.checkedAt||'')};
+    });
+    if(Object.keys(links).length)profiles.push({profileId:profileItem.id,links});
+  });
+  profiles.sort((a,b)=>String(a.profileId).localeCompare(String(b.profileId)));
+  return profiles;
+}
+
+function confirmedStatus(status=''){
+  return ['verified','owner_verified','manual_verified','ok'].includes(String(status));
+}
+
+function integritySignaturePayload(profiles){
+  return profiles.map(item=>{
+    const links={};
+    Object.entries(item.links||{})
+      .sort(([a],[b])=>String(a).localeCompare(String(b)))
+      .forEach(([platform,link])=>{
+        links[platform]={url:String(link?.url||''),confirmed:confirmedStatus(link?.status)};
+      });
+    return {profileId:String(item.profileId||''),links};
+  });
+}
+
+function currentIntegritySignature(){
+  return simpleHash(JSON.stringify(integritySignaturePayload(browserIntegrityPayload())));
+}
+
+function rememberIntegritySignature(restoredCount=0){
+  try{localStorage.setItem(INTEGRITY_KEY,JSON.stringify({signature:currentIntegritySignature(),at:Date.now(),restored:Number(restoredCount||0)}))}catch{}
+}
+
 async function durableSaveLinks(id,card,options={}){
   const profileItem=profileById(id);
   if(!profileItem||!card)return null;
@@ -118,6 +164,7 @@ async function durableSaveLinks(id,card,options={}){
     setCloudRevision(data.stateRevision);
     applyServerUpdate(profileItem,data.updates?.[id],confirmed);
     persistLocal();
+    rememberIntegritySignature();
     try{PASS50_V9.socialHydrated.delete(id)}catch{}
     if(typeof render==='function')render();
     if(typeof p50v9RenderLinks==='function'&&typeof ui==='object'&&ui.adminTab==='links')p50v9RenderLinks();
@@ -168,27 +215,6 @@ async function durableCheckLinks(id,card){
   }
 }
 
-function simpleHash(value){
-  let hash=2166136261;
-  for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619);}
-  return (hash>>>0).toString(16);
-}
-
-function browserIntegrityPayload(){
-  const profiles=[];
-  (db.profiles||[]).forEach(profileItem=>{
-    const links={};
-    Object.entries(profileItem.links||{}).forEach(([platform,url])=>{
-      if(!directLink(platform,url))return;
-      const check=profileItem.linkChecks?.[platform]||{};
-      links[platform]={url,status:String(check.status||'pending'),checkedAt:String(check.checkedAt||'')};
-    });
-    if(Object.keys(links).length)profiles.push({profileId:profileItem.id,links});
-  });
-  profiles.sort((a,b)=>String(a.profileId).localeCompare(String(b.profileId)));
-  return profiles;
-}
-
 async function runIntegritySync(){
   if(integrityRunning||!window.__pass50CloudReady)return;
   let user=null;
@@ -196,7 +222,7 @@ async function runIntegritySync(){
   if(!user||!['owner','admin'].includes(user.role))return;
 
   const profiles=browserIntegrityPayload();
-  const signature=simpleHash(JSON.stringify(profiles));
+  const signature=simpleHash(JSON.stringify(integritySignaturePayload(profiles)));
   let previous={};
   try{previous=JSON.parse(localStorage.getItem(INTEGRITY_KEY)||'{}')}catch{}
   const lastAt=Number(previous.at||0);
@@ -209,13 +235,15 @@ async function runIntegritySync(){
       method:'POST',body:{action:'integrity_sync',profiles,clientVersion:VERSION}
     });
     setCloudRevision(data.stateRevision);
-    if(typeof loadCloudState==='function')await loadCloudState();
-    try{PASS50_V9.socialHydrated.clear()}catch{}
-    persistLocal();
-    localStorage.setItem(INTEGRITY_KEY,JSON.stringify({signature:simpleHash(JSON.stringify(browserIntegrityPayload())),at:Date.now(),restored:Number(data.restoredCount||0)}));
-    if(typeof render==='function')render();
-    if(typeof p50v9RenderLinks==='function'&&typeof ui==='object'&&ui.adminTab==='links')p50v9RenderLinks();
-    if(Number(data.restoredCount||0)>0&&typeof toast==='function')toast(`✓ ${data.restoredCount} lien(s) officiel(s) restauré(s) automatiquement`);
+    const restoredCount=Number(data.restoredCount||0);
+    if(restoredCount>0){
+      if(typeof loadCloudState==='function')await loadCloudState();
+      persistLocal();
+      if(typeof render==='function')render();
+      if(typeof p50v9RenderLinks==='function'&&typeof ui==='object'&&ui.adminTab==='links')p50v9RenderLinks();
+      if(typeof toast==='function')toast(`✓ ${restoredCount} lien(s) officiel(s) restauré(s) automatiquement`);
+    }
+    rememberIntegritySignature(restoredCount);
   }catch(error){
     console.error('Restauration automatique des liens officiels',error);
   }finally{
@@ -229,6 +257,23 @@ function scheduleIntegritySync(delay=350){
   integrityTimer=setTimeout(runIntegritySync,delay);
 }
 
+function waitForCloudIntegrity(){
+  if(window.__pass50CloudReady){scheduleIntegritySync(200);return;}
+  if(readinessTimer)return;
+  let attempts=0;
+  readinessTimer=setInterval(()=>{
+    attempts++;
+    if(window.__pass50CloudReady){
+      clearInterval(readinessTimer);
+      readinessTimer=null;
+      scheduleIntegritySync(200);
+    }else if(attempts>=80){
+      clearInterval(readinessTimer);
+      readinessTimer=null;
+    }
+  },500);
+}
+
 function addPersistenceNotice(){
   const root=document.querySelector('.links-v2');
   if(!root||root.querySelector('[data-links-persistence-v3]'))return;
@@ -237,6 +282,12 @@ function addPersistenceNotice(){
   notice.style.cssText='margin:10px 0;padding:10px 12px;border:1px solid rgba(183,255,0,.45);border-radius:12px;background:rgba(183,255,0,.07);color:#dfffb0;font-size:12px;font-weight:800';
   notice.textContent='✓ Sauvegarde serveur transactionnelle active · un champ vide ne supprime plus un ancien lien.';
   root.prepend(notice);
+}
+
+function mutationAddsLinksPanel(records){
+  return records.some(record=>[...record.addedNodes].some(node=>
+    node?.nodeType===1&&(node.matches?.('.links-v2')||node.querySelector?.('.links-v2'))
+  ));
 }
 
 function install(){
@@ -254,19 +305,19 @@ function install(){
   p50v9CheckLinks=durableCheckLinks;
   installed=true;
   addPersistenceNotice();
-  scheduleIntegritySync(0);
+  waitForCloudIntegrity();
   return true;
 }
 
 installTimer=setInterval(()=>{
-  if(install()){
-    clearInterval(installTimer);
-    scheduleIntegritySync(1200);
-  }
+  if(install())clearInterval(installTimer);
 },250);
 setTimeout(()=>{if(installTimer)clearInterval(installTimer)},30000);
 
-document.addEventListener('DOMContentLoaded',()=>{install();scheduleIntegritySync(1800)});
-const observer=new MutationObserver(()=>requestAnimationFrame(()=>{install();addPersistenceNotice();if(window.__pass50CloudReady)scheduleIntegritySync();}));
+document.addEventListener('DOMContentLoaded',()=>{install();waitForCloudIntegrity()});
+const observer=new MutationObserver(records=>{
+  if(!mutationAddsLinksPanel(records))return;
+  requestAnimationFrame(addPersistenceNotice);
+});
 observer.observe(document.documentElement,{subtree:true,childList:true});
 })();
