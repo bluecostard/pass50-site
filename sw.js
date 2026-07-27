@@ -1,4 +1,4 @@
-const CACHE='pass50-v29-tiktok-live-radar';
+const CACHE='pass50-v31-official-links-persistence-v3';
 const ASSETS=[
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS=[
   './fi-engagement-v3.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0',
   './live-radar-v2.js?v=1.0',
+  './official-links-persistence-v3.js?v=3.0',
   './public-copy-fixes.js?v=1.0',
   './v9-tools.css?v=22.4',
   './v9-tools.js?v=15.0',
@@ -52,7 +53,7 @@ self.addEventListener('fetch',event=>{
   }
 
   const url=new URL(event.request.url);
-  const forceFresh=['.js','.css','.html'].some(extension=>url.pathname.endsWith(extension));
+  const forceFresh=['.js','.css','.html','.php'].some(extension=>url.pathname.endsWith(extension));
   event.respondWith(
     fetch(event.request,forceFresh?{cache:'no-store'}:undefined)
       .then(response=>{
