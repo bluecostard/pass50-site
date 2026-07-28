@@ -13,7 +13,7 @@ if (!$connection) {
 }
 
 $expiresAt = (string)$connection['access_expires_at'];
-$expiresTs = strtotime($expiresAt);
+$expiresTs = p50yo_utc_timestamp($expiresAt);
 json_response([
     'ok' => true,
     'connected' => $connection['status'] === 'active' || $connection['status'] === 'reauthorization_required',
@@ -26,7 +26,7 @@ json_response([
     ],
     'scopes' => preg_split('/\s+/', trim((string)$connection['scopes'])) ?: [],
     'accessExpiresAt' => $expiresAt !== '' ? $expiresAt . 'Z' : null,
-    'accessTokenExpired' => $expiresTs === false || $expiresTs <= time(),
+    'accessTokenExpired' => $expiresTs === null || $expiresTs <= time(),
     'canRefresh' => !empty($connection['refresh_token_encrypted']),
     'connectedAt' => (string)$connection['connected_at'] . 'Z',
     'lastRefreshedAt' => $connection['last_refreshed_at'] ? (string)$connection['last_refreshed_at'] . 'Z' : null,
