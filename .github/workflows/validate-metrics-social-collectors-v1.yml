@@ -52,7 +52,7 @@ jobs:
         run: |
           python3 -m unittest tests.test_metrics_social_collectors_v1
           python3 -m unittest tests.test_metrics_collectors_youtube_x_v1
-          python3 -m unittest tests.test_metrics_schema_v1 tests.test_metrics_observability_v1
+          python3 -m unittest tests.test_metrics_schema_v1 tests.test_metrics_schema_activation tests.test_metrics_observability_v1
           python3 -m unittest tests.test_live_radar_v3 tests.test_pass50_radar_v1 tests.test_pass50_intelligence_v1
       - name: Intégration MariaDB PR4
         env:

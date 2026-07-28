@@ -96,4 +96,11 @@ class SocialCollectorsV1Tests(unittest.TestCase):
         for field in ("usableCaptures","quarantinedCaptures","authorizationRequired","unavailableProfiles"):
             self.assertIn(field,COMMON)
 
+    def test_schema_activation_from_pr43_remains_available(self):
+        self.assertIn("INSTALLER LE SCHÉMA CANONIQUE",UI)
+        self.assertIn("apiFetch('metrics-migrate.php'",UI)
+        self.assertIn("canonical.migrationStatus==='applied'",UI)
+        self.assertIn("Installe d’abord le schéma canonique.",UI)
+        self.assertRegex(UI,r'class="btn de-collect-metrics"[^>]+schemaApplied')
+
 if __name__=="__main__": unittest.main()
