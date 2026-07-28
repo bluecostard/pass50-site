@@ -44,7 +44,8 @@ mr_must($byId['C']['score']!==null&&!in_array('no_measurable_content',$byId['C']
 mr_must(!$byId['D']['classable']&&in_array('no_measurable_content',$byId['D']['exclusionReasons'],true),'D reste sans contenu mesurable');
 $eRaw=(string)p50_metrics_value($pdo,"SELECT raw_features_json FROM p50_metric_ranking_current WHERE period_key='24H' AND profile_id='E'");
 mr_must(str_contains($eRaw,'"publishedInsideWindowFallback":true'),'E utilise le fallback de publication');
-mr_must(!$byId['F']['classable']&&$byId['F']['score']===null,'F quarantainé ne contribue jamais');
+$fRaw=(string)p50_metrics_value($pdo,"SELECT raw_features_json FROM p50_metric_ranking_current WHERE period_key='24H' AND profile_id='F'");
+mr_must(!$byId['F']['classable']&&in_array('no_measurable_content',$byId['F']['exclusionReasons'],true)&&!str_contains($fRaw,'999999'),'Les valeurs quarantined de F ne contribuent jamais');
 mr_must(!$byId['G']['classable']&&$byId['G']['rank']===null&&$byId['G']['score']!==null,'G a un score expérimental sans rang');
 
 p50_metrics_record_capture($pdo,['accountId'=>$b['accountId'],'contentId'=>$b['contentId'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$now->format('c'),'views'=>5000,'likes'=>500,'comments'=>500,'shares'=>500,'saves'=>500,'confidence'=>99,'provenance'=>['fixture'=>'ranking']]);
