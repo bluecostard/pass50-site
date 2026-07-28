@@ -287,6 +287,7 @@ function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
     }
 
     $pipeline=p50_obs_pipeline_state($pdo);
+    $canonical=p50_metrics_schema_status($pdo);
     $freshness['pipeline_publication']=$pipeline['age'];
     $lastCron=p50_obs_scalar($pdo,"SELECT MAX(started_at) FROM p50_collection_runs WHERE collector LIKE 'cron_%'");
     $browserDependent=true;
@@ -331,7 +332,16 @@ function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
             'lastAtomicPublicationAt'=>$pipeline['publishedAt'],
             'lastAtomicPublicationAge'=>$pipeline['age'],
         ],
-        'automation'=>$automation,'staticRankingReasons'=>$staticReasons,
+        'automation'=>$automation,'canonicalSchema'=>[
+            'schemaVersion'=>$canonical['schemaVersion'],'migrationStatus'=>$canonical['migrationStatus'],
+            'accounts'=>$canonical['volumes']['p50_metric_accounts']??null,
+            'contents'=>$canonical['volumes']['p50_metric_contents']??null,
+            'captures'=>$canonical['volumes']['p50_metric_captures']??null,
+            'jobs'=>$canonical['volumes']['p50_metric_jobs']??null,
+            'runs'=>$canonical['volumes']['p50_metric_runs']??null,
+            'quarantinedCaptures'=>($canonical['tables']['p50_metric_captures']??false)?(int)p50_obs_scalar($pdo,"SELECT COUNT(*) FROM p50_metric_captures WHERE quality_status='quarantined'"):null,
+            'lastBackfillAt'=>$canonical['lastBackfillAt'],'tables'=>$canonical['tables'],
+        ],'staticRankingReasons'=>$staticReasons,
         'limits'=>['eventRows'=>10000,'captureSeries'=>10000,'collectors'=>30,'recentErrors'=>20],
     ];
 }

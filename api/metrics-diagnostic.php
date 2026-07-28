@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/data-engine-core.php';
+require __DIR__.'/metrics-schema-core.php';
 require __DIR__.'/metrics-observability-core.php';
 
 require_method('GET');
