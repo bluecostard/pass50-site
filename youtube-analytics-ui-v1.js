@@ -7,6 +7,7 @@
   const DAYS = 28;
   let summary = null;
   let channel = null;
+  let connected = false;
   let loading = false;
   let initialized = false;
   let scheduled = false;
@@ -92,6 +93,10 @@
     const section = document.getElementById(SECTION_ID);
     if (!section) return;
     let panel = document.getElementById(PANEL_ID);
+    if (!connected) {
+      panel?.remove();
+      return;
+    }
     if (!panel) {
       panel = document.createElement('div');
       panel.id = PANEL_ID;
@@ -129,7 +134,8 @@
     render();
     try {
       const status = await request('youtube-oauth-status.php');
-      if (!status.connected) return;
+      connected = Boolean(status.connected);
+      if (!connected) return;
       channel = status.channel || null;
       const data = await request(`youtube-analytics-summary.php?days=${DAYS}`);
       summary = data.summary || null;
@@ -189,6 +195,7 @@
     if (userBody) new MutationObserver(scheduleEnsure).observe(userBody, { childList: true, subtree: true });
     window.addEventListener('message', (event) => {
       if (event.origin === window.location.origin && event.data?.source === 'PASS50_YOUTUBE_OAUTH' && event.data.status === 'connected') {
+        connected = true;
         initialized = false;
         scheduleEnsure();
       }
