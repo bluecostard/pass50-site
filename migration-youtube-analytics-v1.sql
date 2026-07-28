@@ -1,0 +1,26 @@
+-- PASS50 YouTube Analytics OAuth V1
+CREATE TABLE IF NOT EXISTS p50_youtube_analytics_snapshots (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  snapshot_key CHAR(64) CHARACTER SET ascii NOT NULL,
+  user_id CHAR(36) NOT NULL,
+  channel_id VARCHAR(191) NOT NULL,
+  period_days SMALLINT UNSIGNED NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  has_data TINYINT(1) NOT NULL DEFAULT 0,
+  views BIGINT UNSIGNED NULL,
+  estimated_minutes_watched DECIMAL(20,4) NULL,
+  average_view_duration DECIMAL(20,4) NULL,
+  average_view_percentage DECIMAL(10,4) NULL,
+  likes BIGINT UNSIGNED NULL,
+  comments BIGINT UNSIGNED NULL,
+  shares BIGINT UNSIGNED NULL,
+  subscribers_gained BIGINT UNSIGNED NULL,
+  subscribers_lost BIGINT UNSIGNED NULL,
+  raw_payload_hash CHAR(64) CHARACTER SET ascii NOT NULL,
+  fetched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_p50_youtube_analytics_snapshot(snapshot_key),
+  INDEX idx_p50_youtube_analytics_user_time(user_id,fetched_at),
+  INDEX idx_p50_youtube_analytics_channel_period(channel_id,period_days,end_date),
+  CONSTRAINT fk_p50_youtube_analytics_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
