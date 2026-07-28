@@ -9,7 +9,8 @@ function mr_must(bool $condition,string $message): void {if(!$condition)throw ne
 foreach(['p50_metric_ranking_snapshots','p50_metric_ranking_current','p50_metric_ranking_runs','p50_metric_captures','p50_metric_contents','p50_metric_jobs','p50_metric_runs','p50_metric_accounts','p50_metric_schema_migrations','p50_profile_registry','app_state'] as $table)$pdo->exec("DROP TABLE IF EXISTS `$table`");
 $pdo->exec("CREATE TABLE p50_profile_registry(profile_id VARCHAR(100) PRIMARY KEY,public_name VARCHAR(190) NOT NULL,handle VARCHAR(190) NOT NULL DEFAULT '',region VARCHAR(32) NOT NULL DEFAULT 'CI',category VARCHAR(100) NOT NULL DEFAULT '',alive TINYINT NOT NULL DEFAULT 1,eligible TINYINT NOT NULL DEFAULT 1) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 $pdo->exec("CREATE TABLE app_state(id INT PRIMARY KEY,state_json LONGTEXT NOT NULL,version INT NOT NULL)");
-$pdo->exec("INSERT INTO app_state VALUES(1,'{\"rankingExperimentalSentinel\":true}',731)");
+$pdo->exec("INSERT INTO app_state VALUES(1,'{\"rankingExperimentalSentinel\":true,\"publicScores\":{\"A\":88},\"publicRanks\":{\"A\":1}}',731)");
+$appStateBefore=$pdo->query("SELECT state_json,version FROM app_state WHERE id=1")->fetch();
 foreach([
   ['A','Profil A',1],['B','Profil B',1],['C','Profil C zéro mesuré',1],['D','Profil D absent',1],
   ['E','Profil E fallback',1],['F','Profil F quarantaine',1],['G','Profil G non éligible',0],['H','Profil H hors période',1],
@@ -68,9 +69,30 @@ $second=p50_mr_calculate($pdo,['24H'],'integration_fixture_second');
 $rows2=p50_mr_read($pdo,'24H',100)['rows'];$byId2=[];foreach($rows2 as $row)$byId2[$row['profileId']]=$row;
 mr_must($byId2['B']['rank']<$byId2['A']['rank'],'B dépasse A après la nouvelle capture');
 mr_must($byId2['B']['previousRank']!==null&&$byId2['B']['rankDelta']>0,'B possède une évolution positive');
-mr_must((string)p50_metrics_value($pdo,"SELECT state_json FROM app_state WHERE id=1")==='{"rankingExperimentalSentinel":true}'&&(int)p50_metrics_value($pdo,"SELECT version FROM app_state WHERE id=1")===731,'app_state reste strictement inchangé');
+
+$successBefore=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION]);
+$dueNow=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+$skipped=p50_mr_calculate_if_due($pdo,$dueNow,90,'integration-immediate-ranking');
+mr_must(($skipped['ok']??false)===true&&($skipped['skipped']??false)===true&&($skipped['reason']??'')==='recent_success','Un succès récent ignore le cycle automatique');
+$successAfterSkip=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION]);
+mr_must($successAfterSkip===$successBefore,'Le skip ne crée aucune nouvelle exécution success');
+
+$agedAt=$dueNow->modify('-121 minutes')->format('Y-m-d H:i:s');
+$pdo->prepare("UPDATE p50_metric_ranking_runs SET finished_at=? WHERE algorithm_version=? AND status='success'")->execute([$agedAt,P50_MR_ALGORITHM_VERSION]);
+$scheduled=p50_mr_calculate_if_due($pdo,$dueNow,90,'integration-aged-ranking');
+mr_must(($scheduled['ok']??false)===true&&($scheduled['skipped']??true)===false,'Un succès ancien déclenche un nouveau calcul');
+$scheduledRun=$pdo->prepare("SELECT trigger_type,metadata_json FROM p50_metric_ranking_runs WHERE run_uuid=?");
+$scheduledRun->execute([$scheduled['runUuid']]);$scheduledRow=$scheduledRun->fetch();$scheduledMetadata=json_decode((string)$scheduledRow['metadata_json'],true);
+mr_must((string)$scheduledRow['trigger_type']==='cron_2h','Le cycle automatique utilise trigger_type cron_2h');
+mr_must(($scheduledMetadata['scheduled']??false)===true,'La métadonnée scheduled est vraie');
+mr_must(($scheduledMetadata['cadence']??'')==='2h','La métadonnée cadence vaut 2h');
+mr_must(($scheduledMetadata['dispatchId']??'')==='integration-aged-ranking','Le dispatchId automatique est conservé');
+mr_must(($scheduledMetadata['readOnlyCanonicalInputs']??false)===true&&($scheduledMetadata['publicPublication']??true)===false,'Les garanties expérimentales restent enregistrées');
+
+$appStateAfter=$pdo->query("SELECT state_json,version FROM app_state WHERE id=1")->fetch();
+mr_must($appStateAfter===$appStateBefore,'app_state, les scores publics et les rangs publics restent strictement inchangés');
 $serialized=json_encode([$rows2,$pdo->query("SELECT components_json,raw_features_json FROM p50_metric_ranking_current")->fetchAll()],JSON_UNESCAPED_SLASHES);
 foreach(['payload','source_reference','lock_token','idempotency_key','Bearer ','token=','https://'] as $secret)mr_must(!str_contains($serialized,$secret),'Donnée sensible absente : '.$secret);
 mr_must(!str_contains($serialized,'"id":'),'Aucun identifiant de capture dans les composants ou caractéristiques');
 
-echo json_encode(['ok'=>true,'first'=>$first,'second'=>$second,'ranks'=>array_map(fn($row)=>[$row['profileId'],$row['rank'],$row['previousRank'],$row['rankDelta']],$rows2)],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'first'=>$first,'second'=>$second,'skipped'=>$skipped,'scheduled'=>$scheduled,'ranks'=>array_map(fn($row)=>[$row['profileId'],$row['rank'],$row['previousRank'],$row['rankDelta']],$rows2)],JSON_UNESCAPED_SLASHES).PHP_EOL;
