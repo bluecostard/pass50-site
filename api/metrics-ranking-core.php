@@ -95,11 +95,13 @@ function p50_mr_safe_error(Throwable $error): string {
 
 function p50_mr_percentiles(array $values): array {
     $numeric=[];foreach($values as $key=>$value)if(is_int($value)||is_float($value))$numeric[(string)$key]=(float)$value;
-    if(count($numeric)===0)return [];
-    if(count($numeric)===1)return [array_key_first($numeric)=>50.0];
-    $distinct=array_values(array_unique(array_values($numeric),SORT_REGULAR));sort($distinct,SORT_NUMERIC);
-    if(count($distinct)===2){
-        $low=$distinct[0];$out=[];foreach($numeric as $key=>$value)$out[$key]=$value===$low?25.0:75.0;return $out;
+    $count=count($numeric);
+    if($count===0)return [];
+    if($count===1)return [array_key_first($numeric)=>50.0];
+    if($count===2){
+        $keys=array_keys($numeric);$first=$numeric[$keys[0]];$second=$numeric[$keys[1]];
+        if($first===$second)return [$keys[0]=>50.0,$keys[1]=>50.0];
+        return $first<$second?[$keys[0]=>25.0,$keys[1]=>75.0]:[$keys[0]=>75.0,$keys[1]=>25.0];
     }
     $sorted=array_values($numeric);sort($sorted,SORT_NUMERIC);$n=count($sorted);$out=[];
     foreach($numeric as $key=>$value){
@@ -114,22 +116,29 @@ function p50_mr_metric_delta(array $captures,string $metric,DateTimeImmutable $s
     foreach($captures as $capture){
         if(!array_key_exists($metric,$capture)||$capture[$metric]===null||!is_numeric($capture[$metric]))continue;
         $at=new DateTimeImmutable((string)$capture['observed_at'],new DateTimeZone('UTC'));
-        if($at>$end)continue;$usable[]=['at'=>$at,'value'=>(float)$capture[$metric],'confidence'=>(float)$capture['confidence']];
+        if($at>$end)continue;$usable[]=['id'=>(int)$capture['id'],'at'=>$at,'observed_at'=>(string)$capture['observed_at'],'value'=>(float)$capture[$metric],'confidence'=>(float)$capture['confidence']];
     }
     usort($usable,fn($a,$b)=>$a['at']<=>$b['at']);
     if(!$usable)return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>false];
-    $last=end($usable);$reference=null;
-    foreach($usable as $item)if($item['at']<=$start)$reference=$item;
+    $reference=null;$last=null;
+    foreach($usable as $item){
+        if($item['at']<=$start)$reference=$item;
+        elseif($item['at']<=$end)$last=$item;
+    }
+    if($last===null)return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>false];
     $fallback=false;
     if($reference===null){
-        if($publishedAt!==null&&$publishedAt>=$start&&$publishedAt<=$end){$reference=['value'=>0.0,'confidence'=>$last['confidence'],'at'=>$publishedAt];$fallback=true;}
+        if($publishedAt!==null&&$publishedAt>=$start&&$publishedAt<=$end&&$last['at']>$publishedAt){$fallback=true;}
         else return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>false];
     }
-    if($last['value']<$reference['value'])return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>$fallback,'counterDecreased'=>true];
+    if(!$fallback&&$reference['id']===$last['id'])return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>false];
+    $referenceValue=$fallback?0.0:$reference['value'];
+    if($last['value']<$referenceValue)return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>$fallback,'counterDecreased'=>true];
+    $used=[$last['id']=>['id'=>$last['id'],'confidence'=>$last['confidence'],'observed_at'=>$last['observed_at']]];
+    if(!$fallback)$used[$reference['id']]=['id'=>$reference['id'],'confidence'=>$reference['confidence'],'observed_at'=>$reference['observed_at']];
     return [
-        'available'=>true,'value'=>max(0.0,$last['value']-$reference['value']),
-        'publishedInsideWindowFallback'=>$fallback,'confidence'=>($last['confidence']+$reference['confidence'])/2,
-        'latestAt'=>$last['at']->format('Y-m-d H:i:s'),'captureCount'=>$fallback?1:2,
+        'available'=>true,'value'=>max(0.0,$last['value']-$referenceValue),
+        'publishedInsideWindowFallback'=>$fallback,'captures'=>array_values($used),
     ];
 }
 
@@ -163,10 +172,12 @@ function p50_mr_is_official_account(array $account): bool {
 
 function p50_mr_platform_raw(array $account,array $contents,array $captures,DateTimeImmutable $start,DateTimeImmutable $end): array {
     $accountCaptures=array_values(array_filter($captures,fn($c)=>(int)$c['account_id']===(int)$account['id']&&$c['content_id']===null));
-    $latestFollower=null;foreach($accountCaptures as $capture)if($capture['followers']!==null&&is_numeric($capture['followers'])&&new DateTimeImmutable($capture['observed_at'],new DateTimeZone('UTC'))<=$end)$latestFollower=$capture;
+    $latestFollower=null;foreach($accountCaptures as $capture)if($capture['followers']!==null&&is_numeric($capture['followers'])&&new DateTimeImmutable($capture['observed_at'],new DateTimeZone('UTC'))<=$end&&($latestFollower===null||(string)$capture['observed_at']>(string)$latestFollower['observed_at']))$latestFollower=$capture;
     $features=['audience'=>$latestFollower?log1p((float)$latestFollower['followers']):null,'reach'=>null,'engagementVolume'=>null,'engagementRate'=>null,'velocity'=>null,'acceleration'=>null,'live'=>null];
     $availability=array_fill_keys(array_keys($features),false);if($latestFollower)$availability['audience']=true;
-    $viewSum=0.0;$interaction=0.0;$velocity=0.0;$viewAvailable=false;$interactionAvailable=false;$contentCount=0;$captureCount=0;$confidenceValues=[];$latestAt=null;$fallback=false;
+    $viewSum=0.0;$interaction=0.0;$velocity=0.0;$viewAvailable=false;$interactionAvailable=false;$contentCount=0;$usedCaptures=[];$fallback=false;
+    $remember=function(array $capture)use(&$usedCaptures): void {$usedCaptures[(int)$capture['id']]=['confidence'=>(float)$capture['confidence'],'observed_at'=>(string)$capture['observed_at']];};
+    $rememberDelta=function(array $delta)use($remember): void {foreach($delta['captures']??[] as $capture)$remember($capture);};
     foreach($contents as $content){
         if((int)$content['account_id']!==(int)$account['id'])continue;
         $series=array_values(array_filter($captures,fn($c)=>(int)($c['content_id']??0)===(int)$content['id']));
@@ -174,7 +185,7 @@ function p50_mr_platform_raw(array $account,array $contents,array $captures,Date
         $deltas=[];foreach(['views','likes','comments','shares','saves'] as $metric)$deltas[$metric]=p50_mr_metric_delta($series,$metric,$start,$end,$published);
         $measured=array_filter($deltas,fn($delta)=>$delta['available']);
         if(!$measured)continue;$contentCount++;
-        foreach($measured as $delta){$captureCount+=(int)($delta['captureCount']??0);$confidenceValues[]=(float)($delta['confidence']??0);$fallback=$fallback||($delta['publishedInsideWindowFallback']??false);if(isset($delta['latestAt'])&&($latestAt===null||$delta['latestAt']>$latestAt))$latestAt=$delta['latestAt'];}
+        foreach($measured as $delta){$rememberDelta($delta);$fallback=$fallback||($delta['publishedInsideWindowFallback']??false);}
         if($deltas['views']['available']){
             $views=(float)$deltas['views']['value'];$viewSum+=$views;$viewAvailable=true;
             $activeStart=$published&&$published>$start?$published:$start;$hours=max(1.0,($end->getTimestamp()-$activeStart->getTimestamp())/3600);$velocity+=$views/$hours;
@@ -187,18 +198,20 @@ function p50_mr_platform_raw(array $account,array $contents,array $captures,Date
     if($interactionAvailable){$features['engagementVolume']=log1p($interaction);$availability['engagementVolume']=true;}
     if($viewAvailable&&$interactionAvailable){$features['engagementRate']=min(1.0,$interaction/max($viewSum,1));$availability['engagementRate']=true;}
     $middle=$start->modify('+'.intdiv($end->getTimestamp()-$start->getTimestamp(),2).' seconds');
-    $oldReach=0.0;$newReach=0.0;$oldMeasured=false;$newMeasured=false;
+    $oldReach=0.0;$newReach=0.0;$oldMeasured=false;$newMeasured=false;$accelerationCaptures=[];
     foreach($contents as $content){
         if((int)$content['account_id']!==(int)$account['id'])continue;$series=array_values(array_filter($captures,fn($c)=>(int)($c['content_id']??0)===(int)$content['id']));
         $published=$content['published_at']?new DateTimeImmutable($content['published_at'],new DateTimeZone('UTC')):null;
         $old=p50_mr_metric_delta($series,'views',$start,$middle,$published);$new=p50_mr_metric_delta($series,'views',$middle,$end,$published);
-        if($old['available']){$oldReach+=(float)$old['value'];$oldMeasured=true;}if($new['available']){$newReach+=(float)$new['value'];$newMeasured=true;}
+        if($old['available']){$oldReach+=(float)$old['value'];$oldMeasured=true;$accelerationCaptures[]=$old;}if($new['available']){$newReach+=(float)$new['value'];$newMeasured=true;$accelerationCaptures[]=$new;}
     }
-    if($oldMeasured&&$newMeasured){$features['acceleration']=log((1+$newReach)/(1+$oldReach));$availability['acceleration']=true;}
-    $liveMax=null;foreach($accountCaptures as $capture){$at=new DateTimeImmutable($capture['observed_at'],new DateTimeZone('UTC'));if($at<$start||$at>$end||$capture['live_viewers']===null||!is_numeric($capture['live_viewers']))continue;$liveMax=max($liveMax??0,(float)$capture['live_viewers']);$confidenceValues[]=(float)$capture['confidence'];$captureCount++;$latestAt=max($latestAt??'',(string)$capture['observed_at']);}
+    if($oldMeasured&&$newMeasured){$features['acceleration']=log((1+$newReach)/(1+$oldReach));$availability['acceleration']=true;foreach($accelerationCaptures as $delta)$rememberDelta($delta);}
+    $liveMax=null;$liveCapture=null;foreach($accountCaptures as $capture){$at=new DateTimeImmutable($capture['observed_at'],new DateTimeZone('UTC'));if($at<$start||$at>$end||$capture['live_viewers']===null||!is_numeric($capture['live_viewers']))continue;$value=(float)$capture['live_viewers'];if($liveMax===null||$value>$liveMax||($value===$liveMax&&(string)$capture['observed_at']>(string)$liveCapture['observed_at'])){$liveMax=$value;$liveCapture=$capture;}}
     if($liveMax!==null){$features['live']=log1p($liveMax);$availability['live']=true;}
-    if($latestFollower){$confidenceValues[]=(float)$latestFollower['confidence'];$captureCount++;$latestAt=max($latestAt??'',(string)$latestFollower['observed_at']);}
-    return ['features'=>$features,'availability'=>$availability,'reachRaw'=>$viewAvailable?$viewSum:null,'contentCount'=>$contentCount,'captureCount'=>$captureCount,'latestCaptureAt'=>$latestAt,'quality'=>$confidenceValues?array_sum($confidenceValues)/count($confidenceValues):0,'publishedInsideWindowFallback'=>$fallback];
+    if($liveCapture)$remember($liveCapture);if($latestFollower)$remember($latestFollower);
+    $captureCount=count($usedCaptures);$quality=$captureCount?array_sum(array_column($usedCaptures,'confidence'))/$captureCount:0;$latestAt=null;
+    foreach($usedCaptures as $capture)if($latestAt===null||$capture['observed_at']>$latestAt)$latestAt=$capture['observed_at'];
+    return ['features'=>$features,'availability'=>$availability,'reachRaw'=>$viewAvailable?$viewSum:null,'contentCount'=>$contentCount,'captureCount'=>$captureCount,'latestCaptureAt'=>$latestAt,'quality'=>$quality,'publishedInsideWindowFallback'=>$fallback];
 }
 
 function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeImmutable $now,array $previousRanks): array {
@@ -282,9 +295,14 @@ function p50_mr_read(PDO $pdo,string $period,int $limit): array {
     $periods=p50_mr_periods();if(!isset($periods[$period]))$period='2H';$limit=max(1,min(200,$limit));$schema=p50_mr_schema_status($pdo);
     if($schema['status']!=='applied')return ['algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'migrationStatus'=>$schema,'latestRun'=>null,'selectedPeriod'=>$period,'summary'=>['classable'=>0,'excluded'=>0,'averageConfidence'=>0,'averageCoverage'=>0],'rows'=>[],'exclusionSummary'=>[]];
     $latest=$pdo->prepare("SELECT run_uuid,algorithm_version,trigger_type,status,periods_json,profiles_considered,classable_count,scores_written,error_message,started_at,finished_at FROM p50_metric_ranking_runs ORDER BY id DESC LIMIT 1");$latest->execute();$latestRun=$latest->fetch()?:null;
+    $aggregate=$pdo->prepare("SELECT COUNT(*) total_count,COALESCE(SUM(classable),0) classable_count,COALESCE(AVG(confidence),0) average_confidence,COALESCE(AVG(coverage),0) average_coverage FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key=?");
+    $aggregate->execute([P50_MR_ALGORITHM_VERSION,$period]);$totals=$aggregate->fetch()?:['total_count'=>0,'classable_count'=>0,'average_confidence'=>0,'average_coverage'=>0];
+    $reasonStmt=$pdo->prepare("SELECT exclusion_reasons_json FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key=?");
+    $reasonStmt->execute([P50_MR_ALGORITHM_VERSION,$period]);$exclusions=[];
+    foreach($reasonStmt->fetchAll(PDO::FETCH_COLUMN) as $reasonJson)foreach(json_decode((string)$reasonJson,true)?:[] as $reason)$exclusions[$reason]=($exclusions[$reason]??0)+1;
     $stmt=$pdo->prepare("SELECT c.*,r.public_name,r.handle,r.region,r.category FROM p50_metric_ranking_current c JOIN p50_profile_registry r ON r.profile_id=c.profile_id WHERE c.algorithm_version=? AND c.period_key=? ORDER BY c.classable DESC,c.rank_position IS NULL,c.rank_position,c.score DESC,c.profile_id LIMIT ?");
-    $stmt->bindValue(1,P50_MR_ALGORITHM_VERSION);$stmt->bindValue(2,$period);$stmt->bindValue(3,$limit,PDO::PARAM_INT);$stmt->execute();$rows=[];$exclusions=[];
-    foreach($stmt->fetchAll() as $row){$reasons=json_decode($row['exclusion_reasons_json'],true)?:[];foreach($reasons as $reason)$exclusions[$reason]=($exclusions[$reason]??0)+1;$rows[]=['profileId'=>$row['profile_id'],'name'=>$row['public_name'],'handle'=>$row['handle'],'region'=>$row['region'],'category'=>$row['category'],'rank'=>$row['rank_position']===null?null:(int)$row['rank_position'],'previousRank'=>$row['previous_rank']===null?null:(int)$row['previous_rank'],'rankDelta'=>$row['rank_delta']===null?null:(int)$row['rank_delta'],'score'=>$row['score']===null?null:(float)$row['score'],'baseScore'=>$row['base_score']===null?null:(float)$row['base_score'],'confidence'=>(float)$row['confidence'],'coverage'=>(float)$row['coverage'],'classable'=>(bool)$row['classable'],'editorialEligible'=>(bool)$row['editorial_eligible'],'platformCount'=>(int)$row['platform_count'],'contentCount'=>(int)$row['content_count'],'captureCount'=>(int)$row['capture_count'],'latestCaptureAt'=>$row['latest_capture_at'],'components'=>json_decode($row['components_json'],true)?:[],'exclusionReasons'=>$reasons];}
-    $count=count($rows);$classable=count(array_filter($rows,fn($row)=>$row['classable']));
-    return ['algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'migrationStatus'=>$schema,'latestRun'=>$latestRun,'selectedPeriod'=>$period,'summary'=>['classable'=>$classable,'excluded'=>$count-$classable,'averageConfidence'=>$count?array_sum(array_column($rows,'confidence'))/$count:0,'averageCoverage'=>$count?array_sum(array_column($rows,'coverage'))/$count:0],'rows'=>$rows,'exclusionSummary'=>$exclusions];
+    $stmt->bindValue(1,P50_MR_ALGORITHM_VERSION);$stmt->bindValue(2,$period);$stmt->bindValue(3,$limit,PDO::PARAM_INT);$stmt->execute();$rows=[];
+    foreach($stmt->fetchAll() as $row){$reasons=json_decode($row['exclusion_reasons_json'],true)?:[];$rows[]=['profileId'=>$row['profile_id'],'name'=>$row['public_name'],'handle'=>$row['handle'],'region'=>$row['region'],'category'=>$row['category'],'rank'=>$row['rank_position']===null?null:(int)$row['rank_position'],'previousRank'=>$row['previous_rank']===null?null:(int)$row['previous_rank'],'rankDelta'=>$row['rank_delta']===null?null:(int)$row['rank_delta'],'score'=>$row['score']===null?null:(float)$row['score'],'baseScore'=>$row['base_score']===null?null:(float)$row['base_score'],'confidence'=>(float)$row['confidence'],'coverage'=>(float)$row['coverage'],'classable'=>(bool)$row['classable'],'editorialEligible'=>(bool)$row['editorial_eligible'],'platformCount'=>(int)$row['platform_count'],'contentCount'=>(int)$row['content_count'],'captureCount'=>(int)$row['capture_count'],'latestCaptureAt'=>$row['latest_capture_at'],'components'=>json_decode($row['components_json'],true)?:[],'exclusionReasons'=>$reasons];}
+    $total=(int)$totals['total_count'];$classable=(int)$totals['classable_count'];
+    return ['algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'migrationStatus'=>$schema,'latestRun'=>$latestRun,'selectedPeriod'=>$period,'summary'=>['classable'=>$classable,'excluded'=>$total-$classable,'averageConfidence'=>(float)$totals['average_confidence'],'averageCoverage'=>(float)$totals['average_coverage']],'rows'=>$rows,'exclusionSummary'=>$exclusions];
 }

@@ -1,4 +1,3 @@
-import ast
 import re
 import unittest
 from pathlib import Path
@@ -26,10 +25,16 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
     def test_delta_preserves_absent_zero_and_publication_fallback(self):
         delta = self._function("p50_mr_metric_delta")
         self.assertIn("'available'=>false,'value'=>null", delta)
-        self.assertIn("max(0.0,$last['value']-$reference['value'])", delta)
-        self.assertIn("$last['value']<$reference['value']", delta)
+        self.assertIn("elseif($item['at']<=$end)$last=$item", delta)
+        self.assertIn("if($last===null)return", delta)
+        self.assertIn("$item['at']<=$start", delta)
+        self.assertIn("$reference['id']===$last['id']", delta)
+        self.assertIn("max(0.0,$last['value']-$referenceValue)", delta)
+        self.assertIn("$last['value']<$referenceValue", delta)
         self.assertIn("$publishedAt>=$start&&$publishedAt<=$end", delta)
+        self.assertIn("$last['at']>$publishedAt", delta)
         self.assertIn("'publishedInsideWindowFallback'=>$fallback", delta)
+        self.assertIn("'captures'=>array_values($used)", delta)
 
     def test_only_usable_confident_captures_are_loaded_in_batches(self):
         load = self._function("p50_mr_load")
@@ -41,13 +46,28 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
 
     def test_platform_percentiles_and_acceleration(self):
         percentiles = self._function("p50_mr_percentiles")
-        self.assertIn("25.0:75.0", percentiles.replace("$value===$low?", ""))
+        self.assertIn("if($count===2)", percentiles)
+        self.assertIn("if($first===$second)return", percentiles)
+        self.assertIn("25.0", percentiles)
+        self.assertIn("75.0", percentiles)
         self.assertIn("50.0", percentiles)
         self.assertIn("/($n-1)*100", percentiles)
         raw = self._function("p50_mr_platform_raw")
         self.assertIn("log((1+$newReach)/(1+$oldReach))", raw)
         self.assertIn("$oldMeasured&&$newMeasured", raw)
         self.assertIn("log1p($velocity)", raw)
+
+    def test_unique_capture_accounting_stays_internal(self):
+        raw = self._function("p50_mr_platform_raw")
+        self.assertIn("$usedCaptures[(int)$capture['id']]", raw)
+        self.assertIn("$captureCount=count($usedCaptures)", raw)
+        self.assertIn("array_sum(array_column($usedCaptures,'confidence'))/$captureCount", raw)
+        self.assertIn("$rememberDelta($delta)", raw)
+        self.assertIn("if($liveCapture)$remember($liveCapture)", raw)
+        self.assertIn("if($latestFollower)$remember($latestFollower)", raw)
+        serialized = self._function("p50_mr_period_rows")
+        self.assertNotIn("usedCaptures", serialized)
+        self.assertNotIn("captureIds", CORE)
 
     def test_confidence_thresholds_exclusions_and_rank_delta(self):
         period = self._function("p50_mr_period_rows")
@@ -107,9 +127,25 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertLess(UI.index("['rankinglab','Classement expérimental']"), UI.index("['ranking','Classement']"))
         self.assertIn("CLASSEMENT MÉTRIQUE EXPÉRIMENTAL", UI)
         self.assertIn("Ce calcul n’a aucun effet sur le classement public.", UI)
-        self.assertIn("dePublicRank", UI)
+        public_rank = UI[UI.index("function dePublicRank"):UI.index("function deDrawRankingLab")]
+        self.assertIn("function dePublicRank(profileId,period)", public_rank)
+        self.assertIn("profile.scores?.[period]", public_rank)
+        self.assertIn("b.scores[period]", public_rank)
+        self.assertNotIn("ranking()", public_rank)
+        self.assertNotIn("ui.period", public_rank)
+        self.assertNotIn("ui.period=", public_rank)
+        self.assertIn("dePublicRank(row.profileId,DE.rankingLabPeriod)", UI)
         block = UI[UI.index("function deDrawRankingLab"):UI.index("async function deCalculateRankingLab")]
         self.assertNotIn(">Publier<", block)
+
+    def test_read_aggregates_all_profiles_before_limiting_rows(self):
+        read = self._function("p50_mr_read")
+        self.assertIn("SELECT COUNT(*) total_count", read)
+        self.assertIn("AVG(confidence)", read)
+        self.assertIn("AVG(coverage)", read)
+        self.assertIn("SELECT exclusion_reasons_json", read)
+        self.assertLess(read.index("SELECT COUNT(*) total_count"), read.index("LIMIT ?"))
+        self.assertIn("$limit=max(1,min(200,$limit))", read)
 
     def test_cache_and_workflow_versions(self):
         self.assertIn("data-engine-ui.js?v=17.0", TOOLS)
