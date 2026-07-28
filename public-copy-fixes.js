@@ -25,4 +25,12 @@
     script.dataset.pass50YoutubeOauthUi='1.0';
     document.head.appendChild(script);
   }
+
+  // Correctif de clic et retour d’erreur visible pour la connexion OAuth YouTube.
+  if(!document.querySelector('script[data-pass50-youtube-click-hotfix]')){
+    const script=document.createElement('script');
+    script.src='./youtube-oauth-click-hotfix-v1.js?v=1.0';
+    script.dataset.pass50YoutubeClickHotfix='1.0';
+    document.head.appendChild(script);
+  }
 })();
