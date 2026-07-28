@@ -341,6 +341,9 @@ function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
             'runs'=>$canonical['volumes']['p50_metric_runs']??null,
             'quarantinedCaptures'=>($canonical['tables']['p50_metric_captures']??false)?(int)p50_obs_scalar($pdo,"SELECT COUNT(*) FROM p50_metric_captures WHERE quality_status='quarantined'"):null,
             'lastBackfillAt'=>$canonical['lastBackfillAt'],'tables'=>$canonical['tables'],
+        ],'collectors'=>($canonical['tables']['p50_metric_runs']??false)?p50_metrics_collectors_status($pdo):[
+            'youtube'=>['configured'=>p50_mc_config('YouTube')!=='','accounts'=>null,'contents'=>null,'captures'=>null,'latestCaptureAt'=>null,'captures24h'=>null,'lastRun'=>null,'lastStatus'=>'schema_not_installed','lastError'=>null,'rateLimitedCount'=>0,'unavailableProfiles'=>0],
+            'x'=>['configured'=>p50_mc_config('X')!=='','accounts'=>null,'contents'=>null,'captures'=>null,'latestCaptureAt'=>null,'captures24h'=>null,'lastRun'=>null,'lastStatus'=>'schema_not_installed','lastError'=>null,'rateLimitedCount'=>0,'unavailableProfiles'=>0],
         ],'staticRankingReasons'=>$staticReasons,
         'limits'=>['eventRows'=>10000,'captureSeries'=>10000,'collectors'=>30,'recentErrors'=>20],
     ];

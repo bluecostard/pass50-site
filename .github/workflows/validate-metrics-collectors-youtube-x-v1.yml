@@ -1,0 +1,52 @@
+name: Validate Metrics Collectors YouTube X V1
+
+on:
+  pull_request:
+    paths:
+      - 'api/metrics-collectors-core.php'
+      - 'api/metrics-canonical-collect.php'
+      - 'api/metrics-diagnostic.php'
+      - 'api/metrics-observability-core.php'
+      - 'data-engine-ui.js'
+      - 'tests/test_metrics_collectors_youtube_x_v1.py'
+      - 'tests/metrics_collectors_integration.php'
+      - '.github/workflows/validate-metrics-collectors-youtube-x-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier les syntaxes
+        run: |
+          php -l api/metrics-collectors-core.php
+          php -l api/metrics-canonical-collect.php
+          php -l api/metrics-diagnostic.php
+          php -l tests/metrics_collectors_integration.php
+          node --check data-engine-ui.js
+      - name: Tests ciblés et existants
+        run: |
+          python3 -m unittest tests.test_metrics_collectors_youtube_x_v1
+          python3 -m unittest tests.test_metrics_schema_v1 tests.test_metrics_observability_v1
+          python3 -m unittest tests.test_live_radar_v3 tests.test_pass50_radar_v1 tests.test_pass50_intelligence_v1
+      - name: Intégration MariaDB
+        env:
+          P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+          P50_TEST_DB_USER: root
+          P50_TEST_DB_PASSWORD: root
+        run: php tests/metrics_collectors_integration.php
+      - name: Vérifier le diff
+        run: git diff --check
