@@ -18,9 +18,13 @@ function p50_mc_config(string $platform): string {
         :trim((string)($config['metrics']['x_bearer_token']??(defined('PASS50_X_BEARER_TOKEN')?PASS50_X_BEARER_TOKEN:(getenv('PASS50_X_BEARER_TOKEN')?:''))));
 }
 
-function p50_mc_http(string $url,array $headers=[]): array {
+function p50_mc_http(string $url,array $headers=[],string $method='GET',?array $jsonBody=null): array {
     $ch=curl_init($url);if($ch===false)throw new RuntimeException('HTTP indisponible.');
-    curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>4,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>20,CURLOPT_USERAGENT=>'PASS50-Metrics-Collectors/'.P50_METRICS_COLLECTOR_VERSION,CURLOPT_HTTPHEADER=>$headers]);
+    $method=strtoupper($method);if(!in_array($method,['GET','POST'],true))throw new InvalidArgumentException('Méthode HTTP non autorisée.');
+    if($jsonBody!==null){$headers[]='Content-Type: application/json';$headers[]='Accept: application/json';}
+    $options=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>4,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>20,CURLOPT_USERAGENT=>'PASS50-Metrics-Collectors/'.P50_METRICS_COLLECTOR_VERSION,CURLOPT_HTTPHEADER=>array_values(array_unique($headers)),CURLOPT_CUSTOMREQUEST=>$method];
+    if($jsonBody!==null)$options[CURLOPT_POSTFIELDS]=p50_metrics_json($jsonBody);
+    curl_setopt_array($ch,$options);
     $body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$effective=(string)curl_getinfo($ch,CURLINFO_EFFECTIVE_URL);$error=curl_error($ch);curl_close($ch);
     return ['status'=>$status,'body'=>$body===false?'':(string)$body,'url'=>$effective?:$url,'error'=>$error];
 }
@@ -33,6 +37,7 @@ function p50_mc_json(array $response): array {
 function p50_mc_int(array $source,string $key): int|string|null {
     if(!array_key_exists($key,$source))return null;
     $value=$source[$key];
+    if($value===null)return null;
     if(is_int($value))return $value;
     if(is_string($value)&&preg_match('/^\d+$/',$value))return $value;
     return is_scalar($value)?'invalid:'.gettype($value):'invalid:type';
@@ -77,8 +82,9 @@ function p50_mc_capture(PDO $pdo,array &$result,array $input): void {
     $result['quarantined']+=(int)$capture['quarantined'];
 }
 
-function p50_mc_request(callable $fetch,string $url,array $headers,array &$result): array {
-    $result['requestsAttempted']++;$response=$fetch($url,$headers);
+function p50_mc_request(callable $fetch,string $url,array $headers,array &$result,string $method='GET',?array $jsonBody=null): array {
+    if($jsonBody!==null){$headers[]='Content-Type: application/json';$headers[]='Accept: application/json';}
+    $result['requestsAttempted']++;$response=$fetch($url,array_values(array_unique($headers)),strtoupper($method),$jsonBody);
     $status=(int)($response['status']??0);
     if($status>=200&&$status<300)$result['requestsSucceeded']++;
     if($status===429)$result['rateLimited']=true;

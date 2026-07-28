@@ -7,23 +7,55 @@ function p50_mc_instagram_type(array $media): string {
     return match($type){'IMAGE'=>'photo','CAROUSEL_ALBUM'=>'carousel','VIDEO'=>'video',default=>'post'};
 }
 
+function p50_mc_instagram_media(PDO $pdo,array $official,array $account,array $media,array $insights,string $mode,string $observedAt,string $runUuid,array &$result,int $httpStatus,string $rawHash): void {
+    $type=p50_mc_instagram_type($media);if($type==='story'&&empty($media['story_authorized'])){$result['unavailableMetrics']++;return;}
+    $item=['id'=>$media['id']??'','url'=>$media['permalink']??'','type'=>$type,'title'=>$media['caption']??'','publishedAt'=>$media['timestamp']??null,'status'=>$media['status']??'active'];
+    p50_msc_store_content($pdo,$official,$account,'Instagram',$item,'instagram_graph_api','media+insights',$mode,$observedAt,$runUuid,$result,
+      ['views'=>p50_mc_int($insights,'views'),'likes'=>p50_mc_int($media,'like_count'),'comments'=>p50_mc_int($media,'comments_count'),'shares'=>p50_mc_int($insights,'shares'),'saves'=>p50_mc_int($insights,'saved')],
+      ['reach'=>p50_mc_int($insights,'reach'),'plays'=>p50_mc_int($insights,'plays'),'totalInteractions'=>p50_mc_int($insights,'total_interactions'),'profileActivity'=>p50_mc_int($insights,'profile_activity'),'accountsEngaged'=>p50_mc_int($insights,'accounts_engaged')],$httpStatus,$rawHash);
+}
+
 function p50_mc_instagram(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {
     $username=p50_msc_username('Instagram',$official['normalized_url']);if($username==='')throw new InvalidArgumentException('Lien Instagram officiel non reconnu.');
     $credentials=p50_mc_credentials('Instagram',(string)$official['profile_id']);if(!p50_msc_access_or_status($credentials,$result))return;
-    $url='https://graph.facebook.com/v22.0/instagram_business_discovery?'.http_build_query(['username'=>$username,'limit'=>$limit]);
-    $response=p50_mc_request($fetch,$url,['Authorization: Bearer '.$credentials['secret']],$result);
-    if(!p50_msc_response($response,'Instagram business_discovery',$result))return;$data=(array)(p50_mc_json($response)['data']??[]);
-    if(($data['account_type']??'BUSINESS')==='PERSONAL'){$result['status']='unsupported_account_type';return;}
-    if(!$data){$result['status']='unavailable_or_blocked';return;}
-    $rawHash=hash('sha256',(string)$response['body']);$httpStatus=(int)$response['status'];
-    $account=p50_msc_store_account($pdo,$official,'Instagram',['id'=>$data['id']??null,'username'=>$data['username']??$username,'followers'=>$data['followers_count']??null],'instagram_graph_api','business_discovery',$credentials['mode'],$observedAt,$runUuid,$result,[
-      'following'=>p50_mc_int($data,'follows_count'),'mediaCount'=>p50_mc_int($data,'media_count')
-    ],$httpStatus,$rawHash);
-    foreach(array_slice((array)($data['media']??[]),0,$limit) as $media){
-        $type=p50_mc_instagram_type($media);if($type==='story'&&empty($media['story_authorized'])){$result['unavailableMetrics']++;continue;}
-        $insights=(array)($media['insights']??[]);$item=['id'=>$media['id']??'','url'=>$media['permalink']??'','type'=>$type,'title'=>$media['caption']??'','publishedAt'=>$media['timestamp']??null,'status'=>$media['status']??'active'];
-        p50_msc_store_content($pdo,$official,$account,'Instagram',$item,'instagram_graph_api','media',$credentials['mode'],$observedAt,$runUuid,$result,
-          ['views'=>p50_mc_int($insights,'views'),'likes'=>p50_mc_int($media,'like_count'),'comments'=>p50_mc_int($media,'comments_count'),'shares'=>p50_mc_int($insights,'shares'),'saves'=>p50_mc_int($insights,'saved')],
-          ['reach'=>p50_mc_int($insights,'reach'),'plays'=>p50_mc_int($insights,'plays'),'totalInteractions'=>p50_mc_int($insights,'total_interactions'),'profileActivity'=>p50_mc_int($insights,'profile_activity'),'accountsEngaged'=>p50_mc_int($insights,'accounts_engaged')],$httpStatus,$rawHash);
+    $headers=['Authorization: Bearer '.$credentials['secret']];$accountId=(string)$credentials['accountId'];$discoveryId=(string)$credentials['discoveryAccountId'];
+    $fields='id,username,account_type,followers_count,follows_count,media_count';
+    $prefetchedMedia=[];
+    if($credentials['mode']==='business_discovery'){
+        if($discoveryId===''){$result['status']='configuration_missing';return;}
+        $mediaFields='id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count';
+        $discovery='business_discovery.username('.$username.'){'.$fields.',media.limit('.min(100,$limit).'){'.$mediaFields.'}}';
+        $response=p50_mc_request($fetch,p50_msc_query_url('https://graph.facebook.com/v22.0/'.rawurlencode($discoveryId),['fields'=>$discovery]),$headers,$result);
+        if(!p50_msc_response($response,'Instagram business_discovery',$result))return;
+        $root=p50_mc_json($response);$data=(array)($root['business_discovery']??[]);
+        $prefetchedMedia=(array)($data['media']['data']??[]);
+    }else{
+        if($accountId===''){$result['status']='configuration_missing';return;}
+        $response=p50_mc_request($fetch,p50_msc_query_url('https://graph.facebook.com/v22.0/'.rawurlencode($accountId),['fields'=>$fields]),$headers,$result);
+        if(!p50_msc_response($response,'Instagram account',$result))return;$data=p50_mc_json($response);
     }
+    if(!$data){$result['status']='unavailable_or_blocked';return;}
+    if(isset($data['account_type'])&&!in_array(strtoupper((string)$data['account_type']),['BUSINESS','MEDIA_CREATOR','CREATOR'],true)){$result['status']='unsupported_account_type';return;}
+    $account=p50_msc_store_account($pdo,$official,'Instagram',['id'=>$data['id']??$accountId,'username'=>$data['username']??$username,'followers'=>$data['followers_count']??null],
+      'instagram_graph_api',$credentials['mode']==='business_discovery'?'business_discovery':'account',$credentials['mode'],$observedAt,$runUuid,$result,
+      ['following'=>p50_mc_int($data,'follows_count'),'mediaCount'=>p50_mc_int($data,'media_count')],(int)$response['status'],hash('sha256',(string)$response['body']));
+    if($credentials['mode']==='business_discovery'){
+        foreach(array_slice($prefetchedMedia,0,$limit) as $media)p50_mc_instagram_media($pdo,$official,$account,(array)$media,[],$credentials['mode'],$observedAt,$runUuid,$result,(int)$response['status'],hash('sha256',(string)$response['body']));
+        return;
+    }
+    $after=null;$collected=0;$mediaFields='id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count';
+    do{
+        $query=['fields'=>$mediaFields,'limit'=>min(100,$limit-$collected)];if($after!==null)$query['after']=$after;
+        $mediaResponse=p50_mc_request($fetch,p50_msc_query_url('https://graph.facebook.com/v22.0/'.rawurlencode($accountId).'/media',$query),$headers,$result);
+        if(!p50_msc_response($mediaResponse,'Instagram media',$result,true))return;$mediaPayload=p50_mc_json($mediaResponse);
+        foreach((array)($mediaPayload['data']??[]) as $media){
+            if($collected++>=$limit)break;$media=(array)$media;$insights=[];
+            $metrics='views,plays,reach,shares,saved,total_interactions,profile_activity,accounts_engaged';
+            $insightResponse=p50_mc_request($fetch,p50_msc_query_url('https://graph.facebook.com/v22.0/'.rawurlencode((string)$media['id']).'/insights',['metric'=>$metrics]),$headers,$result);
+            if((int)$insightResponse['status']>=200&&(int)$insightResponse['status']<300)$insights=p50_msc_graph_insights(p50_mc_json($insightResponse));
+            else{$result['errors'][]='Instagram media insights unavailable';$result['status']='partial';}
+            p50_mc_instagram_media($pdo,$official,$account,$media,$insights,$credentials['mode'],$observedAt,$runUuid,$result,(int)$mediaResponse['status'],hash('sha256',(string)$mediaResponse['body'].'|'.(string)$insightResponse['body']));
+        }
+        $next=$mediaPayload['paging']['cursors']['after']??null;$hasMore=is_string($next)&&$next!==''&&$next!==$after;$after=$hasMore?$next:null;
+    }while($hasMore&&$collected<$limit);
 }

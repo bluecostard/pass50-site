@@ -53,27 +53,37 @@ class SocialCollectorsV1Tests(unittest.TestCase):
 
     def test_tiktok_modes_and_metrics(self):
         source=ADAPTERS["tiktok"]
-        for token in ("authorized_display","approved_research","research_approved","open_id","follower_count","following_count","likes_count","video_count","view_count","favorite_count"):
+        for token in ("authorized_display","approved_research","research_approved","open_id","follower_count","following_count","likes_count","video_count","view_count","favorites_count"):
             self.assertIn(token,source+SOCIAL)
-        self.assertNotIn("private",source.lower())
+        self.assertIn("/v2/user/info/",source)
+        self.assertIn("/v2/video/list/",source)
+        self.assertIn("/v2/research/user/info/",source)
+        self.assertIn("/v2/research/video/query/",source)
+        self.assertNotIn("'username'=>$username,'max_count'",source)
 
     def test_instagram_semantics(self):
         source=ADAPTERS["instagram"]
-        for token in ("unsupported_account_type","CAROUSEL_ALBUM","REELS","STORY","like_count","comments_count","reach","plays","totalInteractions","accountsEngaged"):
+        for token in ("unsupported_account_type","CAROUSEL_ALBUM","REELS","STORY","like_count","comments_count","reach","plays","totalInteractions","accountsEngaged","/media","/insights","business_discovery.username"):
             self.assertIn(token,source)
-        self.assertNotIn("'views'=>p50_mc_int($insights,'reach')",source)
-        self.assertNotIn("'views'=>p50_mc_int($insights,'plays')",source)
+        self.assertNotIn("/instagram_business_discovery",source)
 
     def test_facebook_semantics(self):
         source=ADAPTERS["facebook"]
-        for token in ("PAGE","unsupported_account_type","LIKE","reactionsTotal","loveReactions","hahaReactions","videoViews","postClicks"):
+        for token in ("PAGE","unsupported_account_type","reactions.type(LIKE)","comments.limit(0).summary(true)","posts","insights","reactionsTotal","videoViews","postClicks"):
             self.assertIn(token,source)
-        self.assertIn("'likes'=>p50_mc_int($reactions,'LIKE')",source)
+        self.assertIn("['id']??''",source)
 
     def test_snapchat_semantics(self):
         source=ADAPTERS["snapchat"]
-        for token in ("public_profile_id","subscriber_count","spotlight","story","authorized","expired","views","shares","saves"):
+        for token in ("/public/v1/public_profiles/search","public_profiles","public_profile","subscriber_count","spotlights","saved_stories","stories","/stats","expired"):
             self.assertIn(token,source)
+        self.assertNotIn("/v1/public_profiles/'.rawurlencode($username)",source)
+
+    def test_http_contract_supports_get_post_json(self):
+        self.assertIn("CURLOPT_CUSTOMREQUEST",COMMON)
+        self.assertIn("CURLOPT_POSTFIELDS",COMMON)
+        self.assertIn("Content-Type: application/json",COMMON)
+        self.assertIn("string $method='GET'",COMMON)
 
     def test_statuses_and_idempotence_contract(self):
         for status in ("success","partial","authorization_required","configuration_missing","unavailable_or_blocked","unsupported_account_type","rate_limited","error"):

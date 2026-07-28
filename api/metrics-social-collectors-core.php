@@ -23,7 +23,11 @@ function p50_mc_credentials(string $platform,string $profileId): array {
     $prefix=strtolower($platform);$secret=$read($prefix.'_access_token','PASS50_'.strtoupper($prefix).'_ACCESS_TOKEN');
     $mode=(string)($perProfile['mode']??$metrics[$prefix.'_mode']??'official_api');
     $configured=(bool)($perProfile['enabled']??$metrics[$prefix.'_enabled']??($secret!==''));
-    return ['configured'=>$configured,'authorized'=>$secret!=='','mode'=>$mode,'authorizationRequired'=>$configured&&$secret==='','secret'=>$secret];
+    return ['configured'=>$configured,'authorized'=>$secret!=='','mode'=>$mode,'authorizationRequired'=>$configured&&$secret==='','secret'=>$secret,
+      'accountId'=>$read($prefix.'_account_id','PASS50_'.strtoupper($prefix).'_ACCOUNT_ID'),
+      'pageId'=>$read('facebook_page_id','PASS50_FACEBOOK_PAGE_ID'),
+      'discoveryAccountId'=>$read('instagram_discovery_account_id','PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID'),
+      'storiesAuthorized'=>(bool)($perProfile['stories_authorized']??$metrics[$prefix.'_stories_authorized']??false)];
 }
 
 function p50_mc_public_access(string $platform,string $profileId): array {
@@ -70,6 +74,39 @@ function p50_msc_time($value): ?string {
     if($value===null||$value==='')return null;
     if(is_int($value)||(is_string($value)&&preg_match('/^\d{10}$/',$value)))return gmdate('c',(int)$value);
     return (string)$value;
+}
+
+function p50_msc_query_url(string $base,array $query): string {
+    return $base.(str_contains($base,'?')?'&':'?').http_build_query($query);
+}
+
+function p50_msc_graph_insights(array $payload): array {
+    $metrics=[];
+    foreach((array)($payload['data']??[]) as $item){
+        $name=(string)($item['name']??'');$values=(array)($item['values']??[]);
+        $value=$item['value']??($values[0]['value']??null);
+        if($name!==''&&$value!==null)$metrics[$name]=$value;
+    }
+    return $metrics;
+}
+
+function p50_msc_snap_assets(array $payload,string $key): array {
+    if(isset($payload[$key])&&is_array($payload[$key]))return array_is_list($payload[$key])?$payload[$key]:(array)($payload[$key]['data']??[]);
+    if(isset($payload['data'][$key])&&is_array($payload['data'][$key]))return array_is_list($payload['data'][$key])?$payload['data'][$key]:(array)($payload['data'][$key]['data']??[]);
+    return [];
+}
+
+function p50_msc_snap_stats(array $payload): array {
+    $out=[];
+    foreach((array)($payload['assets']??[]) as $asset)foreach((array)($asset['timeseries']??[]) as $series){
+        foreach((array)($series['stats']??$series) as $name=>$value){
+            if(is_array($value)){
+                $metric=(string)($value['metric']??$value['name']??$value['field']??'');$metricValue=$value['value']??null;
+                if($metric!==''&&is_scalar($metricValue))$out[strtoupper($metric)]=$metricValue;
+            }elseif(is_string($name)&&is_scalar($value))$out[strtoupper($name)]=$value;
+        }
+    }
+    return $out;
 }
 
 function p50_msc_store_account(PDO $pdo,array $official,string $platform,array $data,string $source,string $endpoint,string $mode,string $observedAt,string $runUuid,array &$result,array $future=[],int $httpStatus=200,?string $rawPayloadHash=null): array {
