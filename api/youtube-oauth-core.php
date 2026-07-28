@@ -22,15 +22,21 @@ function p50yo_ensure_schema(): void {
     }
 }
 
+function p50yo_config_value(array $oauth, string $key, string $environmentName): string {
+    $configured = trim((string)($oauth[$key] ?? ''));
+    if ($configured !== '') return $configured;
+    return trim((string)(getenv($environmentName) ?: ''));
+}
+
 function p50yo_config(): array {
     global $config;
     $oauth = is_array($config['google_oauth'] ?? null) ? $config['google_oauth'] : [];
 
     $values = [
-        'client_id' => trim((string)($oauth['client_id'] ?? getenv('GOOGLE_CLIENT_ID') ?: '')),
-        'client_secret' => trim((string)($oauth['client_secret'] ?? getenv('GOOGLE_CLIENT_SECRET') ?: '')),
-        'redirect_uri' => trim((string)($oauth['redirect_uri'] ?? getenv('GOOGLE_REDIRECT_URI') ?: '')),
-        'token_encryption_key' => trim((string)($oauth['token_encryption_key'] ?? getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '')),
+        'client_id' => p50yo_config_value($oauth, 'client_id', 'GOOGLE_CLIENT_ID'),
+        'client_secret' => p50yo_config_value($oauth, 'client_secret', 'GOOGLE_CLIENT_SECRET'),
+        'redirect_uri' => p50yo_config_value($oauth, 'redirect_uri', 'GOOGLE_REDIRECT_URI'),
+        'token_encryption_key' => p50yo_config_value($oauth, 'token_encryption_key', 'PASS50_TOKEN_ENCRYPTION_KEY'),
     ];
 
     if ($values['client_id'] === '' || $values['client_secret'] === '' || $values['redirect_uri'] === '') {
@@ -113,6 +119,7 @@ function p50yo_http(string $url, string $method = 'GET', array $headers = [], ?a
     $options = [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
         CURLOPT_CONNECTTIMEOUT => 8,
         CURLOPT_TIMEOUT => 25,
         CURLOPT_USERAGENT => 'PASS50-YouTube-OAuth/1.0',
@@ -139,9 +146,21 @@ function p50yo_http(string $url, string $method = 'GET', array $headers = [], ?a
 }
 
 function p50yo_google_error(array $response, string $fallback): RuntimeException {
-    $data = $response['json'] ?? [];
-    $message = trim((string)($data['error_description'] ?? $data['error']['message'] ?? $data['error'] ?? ''));
+    $data = is_array($response['json'] ?? null) ? $response['json'] : [];
+    $message = trim((string)($data['error_description'] ?? ''));
+    $error = $data['error'] ?? null;
+    if ($message === '' && is_array($error)) $message = trim((string)($error['message'] ?? ''));
+    if ($message === '' && is_string($error)) $message = trim($error);
     return new RuntimeException($message !== '' ? $fallback . ' : ' . $message : $fallback . ' (HTTP ' . (int)($response['status'] ?? 0) . ').');
+}
+
+function p50yo_utc_timestamp(?string $value): ?int {
+    if ($value === null || trim($value) === '') return null;
+    try {
+        return (new DateTimeImmutable($value, new DateTimeZone('UTC')))->getTimestamp();
+    } catch (Throwable) {
+        return null;
+    }
 }
 
 function p50yo_connection_for_user(string $userId): ?array {
@@ -156,8 +175,8 @@ function p50yo_refresh_access_token(string $userId): string {
     if (!$connection) throw new RuntimeException('Aucune chaîne YouTube connectée.');
 
     $currentToken = p50yo_decrypt((string)$connection['access_token_encrypted']);
-    $expiresAt = strtotime((string)$connection['access_expires_at']);
-    if ($currentToken !== '' && $expiresAt !== false && $expiresAt > time() + 90) return $currentToken;
+    $expiresAt = p50yo_utc_timestamp((string)$connection['access_expires_at']);
+    if ($currentToken !== '' && $expiresAt !== null && $expiresAt > time() + 90) return $currentToken;
 
     $refreshToken = p50yo_decrypt((string)($connection['refresh_token_encrypted'] ?? ''));
     if ($refreshToken === '') {
@@ -190,7 +209,7 @@ function p50yo_refresh_access_token(string $userId): string {
     $expiresIn = max(60, (int)($response['json']['expires_in'] ?? 3600));
     $expires = gmdate('Y-m-d H:i:s', time() + $expiresIn);
 
-    db()->prepare("UPDATE p50_youtube_oauth_connections SET access_token_encrypted=?,access_expires_at=?,token_type=?,status='active',last_error=NULL,last_refreshed_at=NOW() WHERE user_id=?")
+    db()->prepare("UPDATE p50_youtube_oauth_connections SET access_token_encrypted=?,access_expires_at=?,token_type=?,status='active',last_error=NULL,last_refreshed_at=UTC_TIMESTAMP() WHERE user_id=?")
         ->execute([
             p50yo_encrypt($newToken),
             $expires,
@@ -206,7 +225,8 @@ function p50yo_redirect_result(string $status, string $code = ''): never {
     if (!filter_var($base, FILTER_VALIDATE_URL)) $base = '/';
     $query = ['youtube_oauth' => $status];
     if ($code !== '') $query['code'] = $code;
-    $target = $base . '/?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    $target = $base === '/' ? '/?' . $queryString : $base . '/?' . $queryString;
     $originParts = parse_url($base);
     $origin = isset($originParts['scheme'], $originParts['host'])
         ? $originParts['scheme'] . '://' . $originParts['host'] . (isset($originParts['port']) ? ':' . $originParts['port'] : '')
