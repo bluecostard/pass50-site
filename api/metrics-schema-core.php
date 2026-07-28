@@ -339,7 +339,7 @@ function p50_metrics_record_capture(PDO $pdo,array $input): array {
     }else $contentId=null;
     $metricInput=$input;foreach(['followers','views','likes','comments','shares','saves','live_viewers'] as $metric)if(!array_key_exists($metric,$metricInput)&&array_key_exists($metric,(array)($input['metrics']??[])))$metricInput[$metric]=$input['metrics'][$metric];
     [$values,$errors]=p50_metrics_metric_values($metricInput);$quality=$errors?'quarantined':(string)($input['qualityStatus']??'usable');
-    $usable=$errors?0:count(array_filter($values,static fn($value): bool=>$value!==null));
+    $usable=$quality==='quarantined'?0:count(array_filter($values,static fn($value): bool=>$value!==null));
     $observed=p50_metrics_timestamp($input['observedAt']??gmdate('c'));$source=(string)($input['sourceType']??'unknown');
     $signature=['canonical'=>$values,'future'=>(array)($input['metrics']??[]),'quality'=>$quality,'errors'=>$errors];
     $key=p50_metrics_capture_key($accountId,$contentId,(string)$account['platform'],$source,$observed,$signature);
