@@ -1,4 +1,4 @@
-// Succède à pass50-v42-ranking-experimental sans modifier ses ressources.
+// Conserve les nouveaux profils recensés et ajoute l’historique de calibration.
 const CACHE='pass50-v44-ranking-calibration';
 const ASSETS=[
   './',
@@ -14,6 +14,11 @@ const ASSETS=[
   './profile-obre-marie-pascale.js?v=1.0',
   './profile-oustaz-diane.js?v=1.0',
   './profile-ismael-aka.js?v=1.0',
+  './profile-general-camille-makosso.js?v=1.0',
+  './profile-lolo-beaute.js?v=1.0',
+  './profile-kim-makosso.js?v=1.0',
+  './profile-dez-cocrane225.js?v=1.0',
+  './profile-atoule.js?v=1.0',
   './live-radar-v3.js?v=1.2',
   './official-links-persistence-v3.js?v=3.2',
   './public-copy-fixes.js?v=1.0',

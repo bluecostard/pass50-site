@@ -134,6 +134,51 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Général Camille Makosso.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-general-camille-makosso]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-general-camille-makosso.js?v=1.0';
+  script.dataset.pass50ProfileGeneralCamilleMakosso = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Lolo Beauté.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-lolo-beaute]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-lolo-beaute.js?v=1.0';
+  script.dataset.pass50ProfileLoloBeaute = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Kim Makosso.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-kim-makosso]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-kim-makosso.js?v=1.0';
+  script.dataset.pass50ProfileKimMakosso = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Dez Cocrane 225.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-dez-cocrane225]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-dez-cocrane225.js?v=1.0';
+  script.dataset.pass50ProfileDezCocrane225 = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Atoulé.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-atoule]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-atoule.js?v=1.0';
+  script.dataset.pass50ProfileAtoule = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Radar LIVE V3 : balayage complet de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
