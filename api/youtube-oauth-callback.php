@@ -4,11 +4,16 @@ require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/youtube-oauth-core.php';
 require __DIR__ . '/youtube-oauth-state-v2.php';
 
+set_time_limit(35);
+
 $state = trim((string)($_GET['state'] ?? ''));
-$userId = '';
+$nonce = trim((string)($_COOKIE[P50YO_NONCE_COOKIE] ?? ''));
+$sessionTokenHash = '';
 try {
-    $userId = p50yo_verify_state($state);
+    $sessionTokenHash = p50yo_verify_state($state, $nonce);
+    p50yo_clear_nonce_cookie();
 } catch (Throwable $e) {
+    p50yo_clear_nonce_cookie();
     error_log('YouTube OAuth state: ' . $e->getMessage());
     p50yo_redirect_result('error', 'invalid_state');
 }
@@ -22,6 +27,23 @@ $code = trim((string)($_GET['code'] ?? ''));
 if ($code === '') p50yo_redirect_result('error', 'missing_code');
 
 try {
+    // La session PASS50 n’est résolue qu’après le retour de Google. Ainsi,
+    // aucune requête MySQL ne peut bloquer l’ouverture de l’écran de consentement.
+    try { db()->exec('SET SESSION lock_wait_timeout=5'); } catch (Throwable) {}
+    try { db()->exec('SET SESSION max_statement_time=5'); } catch (Throwable) {}
+    $sessionStmt = db()->prepare(
+        'SELECT u.id,u.email FROM sessions s '
+        . 'JOIN users u ON u.id=s.user_id '
+        . 'WHERE s.token_hash=? AND s.expires_at>UTC_TIMESTAMP() '
+        . 'AND u.deleted_at IS NULL LIMIT 1'
+    );
+    $sessionStmt->execute([$sessionTokenHash]);
+    $sessionUser = $sessionStmt->fetch();
+    if (!is_array($sessionUser) || trim((string)($sessionUser['id'] ?? '')) === '') {
+        p50yo_redirect_result('error', 'pass50_session_expired');
+    }
+    $userId = (string)$sessionUser['id'];
+
     $oauth = p50yo_config();
     $tokenResponse = p50yo_http(
         'https://oauth2.googleapis.com/token',
@@ -68,13 +90,7 @@ try {
         throw new RuntimeException('Ce compte Google ne possède aucune chaîne YouTube accessible.');
     }
 
-    // La base n’est sollicitée qu’après le consentement Google.
-    try { db()->exec('SET SESSION lock_wait_timeout=5'); } catch (Throwable) {}
     p50yo_ensure_schema();
-
-    $userCheck = db()->prepare('SELECT id FROM users WHERE id=? AND deleted_at IS NULL LIMIT 1');
-    $userCheck->execute([$userId]);
-    if (!$userCheck->fetch()) throw new RuntimeException('Le compte PASS50 associé n’existe plus.');
 
     $existing = p50yo_connection_for_user($userId);
     $newRefreshToken = trim((string)($tokens['refresh_token'] ?? ''));

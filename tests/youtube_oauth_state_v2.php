@@ -25,24 +25,29 @@ function yo_signed_state(array $payload): string {
     return $encoded.'.'.$signature;
 }
 
-$userId='12345678-1234-4abc-8def-1234567890ab';
-$state=p50yo_create_state($userId);
-yo_must(p50yo_verify_state($state)===$userId,'L’état signé restitue le bon utilisateur.');
+$sessionHash=str_repeat('a',64);
+$nonce='fixture-browser-nonce';
+$state=p50yo_create_state($sessionHash,$nonce);
+yo_must(p50yo_verify_state($state,$nonce)===$sessionHash,'L’état signé restitue le bon hash de session.');
+
+$wrongBrowserRejected=false;
+try{p50yo_verify_state($state,'autre-navigateur');}catch(Throwable){$wrongBrowserRejected=true;}
+yo_must($wrongBrowserRejected,'Un autre navigateur est refusé.');
 
 $tampered=substr($state,0,-1).(str_ends_with($state,'A')?'B':'A');
 $tamperRejected=false;
-try{p50yo_verify_state($tampered);}catch(Throwable){$tamperRejected=true;}
+try{p50yo_verify_state($tampered,$nonce);}catch(Throwable){$tamperRejected=true;}
 yo_must($tamperRejected,'Un état altéré est refusé.');
 
 $now=time();
-$expired=yo_signed_state(['v'=>2,'uid'=>$userId,'iat'=>$now-800,'exp'=>$now-1,'nonce'=>'fixture']);
+$expired=yo_signed_state(['v'=>3,'sid'=>$sessionHash,'nh'=>hash('sha256',$nonce),'iat'=>$now-800,'exp'=>$now-1,'jti'=>'fixture']);
 $expiredRejected=false;
-try{p50yo_verify_state($expired);}catch(Throwable){$expiredRejected=true;}
+try{p50yo_verify_state($expired,$nonce);}catch(Throwable){$expiredRejected=true;}
 yo_must($expiredRejected,'Un état expiré est refusé.');
 
-$future=yo_signed_state(['v'=>2,'uid'=>$userId,'iat'=>$now+120,'exp'=>$now+600,'nonce'=>'fixture']);
+$future=yo_signed_state(['v'=>3,'sid'=>$sessionHash,'nh'=>hash('sha256',$nonce),'iat'=>$now+120,'exp'=>$now+600,'jti'=>'fixture']);
 $futureRejected=false;
-try{p50yo_verify_state($future);}catch(Throwable){$futureRejected=true;}
+try{p50yo_verify_state($future,$nonce);}catch(Throwable){$futureRejected=true;}
 yo_must($futureRejected,'Un état émis trop loin dans le futur est refusé.');
 
-echo json_encode(['ok'=>true,'tests'=>4],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'tests'=>5],JSON_UNESCAPED_SLASHES).PHP_EOL;
