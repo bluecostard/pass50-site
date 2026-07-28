@@ -25,6 +25,15 @@ return [
         'sender_email' => 'contact@votre-domaine.fr',
         'sender_name' => 'PASS50',
     ],
+    'google_oauth' => [
+        // Ne jamais écrire ces secrets dans GitHub. Renseignez-les uniquement dans api/config.php sur IONOS
+        // ou comme variables d’environnement du serveur.
+        'client_id' => getenv('GOOGLE_CLIENT_ID') ?: '',
+        'client_secret' => getenv('GOOGLE_CLIENT_SECRET') ?: '',
+        'redirect_uri' => getenv('GOOGLE_REDIRECT_URI') ?: 'https://www.pass50.store/api/youtube-oauth-callback.php',
+        // Clé de 32 octets encodée en base64, utilisée pour chiffrer les jetons OAuth en base.
+        'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
+    ],
     'data_engine' => [
         // PASS50 publie uniquement les données à 90 % ou plus.
         'confidence_threshold' => 90,
