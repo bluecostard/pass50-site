@@ -1,0 +1,10 @@
+# Secrets et configuration propres au serveur
+/api/config.php
+/api/*.local.php
+.env
+.env.*
+
+# Fichiers temporaires
+*.log
+*.tmp
+.DS_Store
