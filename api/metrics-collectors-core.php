@@ -8,7 +8,7 @@ const P50_METRICS_COLLECTOR_PROFILES_MAX=10;
 const P50_METRICS_COLLECTOR_CONTENTS_MAX=10;
 
 function p50_mc_platform(string $value): string {
-    return match(strtolower(trim($value))){'youtube'=>'YouTube','x','twitter'=>'X',default=>''};
+    return match(strtolower(trim($value))){'youtube'=>'YouTube','x','twitter'=>'X','tiktok'=>'TikTok','instagram'=>'Instagram','facebook'=>'Facebook','snapchat'=>'Snapchat',default=>''};
 }
 
 function p50_mc_config(string $platform): string {
@@ -18,9 +18,13 @@ function p50_mc_config(string $platform): string {
         :trim((string)($config['metrics']['x_bearer_token']??(defined('PASS50_X_BEARER_TOKEN')?PASS50_X_BEARER_TOKEN:(getenv('PASS50_X_BEARER_TOKEN')?:''))));
 }
 
-function p50_mc_http(string $url,array $headers=[]): array {
+function p50_mc_http(string $url,array $headers=[],string $method='GET',?array $jsonBody=null): array {
     $ch=curl_init($url);if($ch===false)throw new RuntimeException('HTTP indisponible.');
-    curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>4,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>20,CURLOPT_USERAGENT=>'PASS50-Metrics-Collectors/'.P50_METRICS_COLLECTOR_VERSION,CURLOPT_HTTPHEADER=>$headers]);
+    $method=strtoupper($method);if(!in_array($method,['GET','POST'],true))throw new InvalidArgumentException('Méthode HTTP non autorisée.');
+    if($jsonBody!==null){$headers[]='Content-Type: application/json';$headers[]='Accept: application/json';}
+    $options=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>4,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>20,CURLOPT_USERAGENT=>'PASS50-Metrics-Collectors/'.P50_METRICS_COLLECTOR_VERSION,CURLOPT_HTTPHEADER=>array_values(array_unique($headers)),CURLOPT_CUSTOMREQUEST=>$method];
+    if($jsonBody!==null)$options[CURLOPT_POSTFIELDS]=p50_metrics_json($jsonBody);
+    curl_setopt_array($ch,$options);
     $body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$effective=(string)curl_getinfo($ch,CURLINFO_EFFECTIVE_URL);$error=curl_error($ch);curl_close($ch);
     return ['status'=>$status,'body'=>$body===false?'':(string)$body,'url'=>$effective?:$url,'error'=>$error];
 }
@@ -33,6 +37,7 @@ function p50_mc_json(array $response): array {
 function p50_mc_int(array $source,string $key): int|string|null {
     if(!array_key_exists($key,$source))return null;
     $value=$source[$key];
+    if($value===null)return null;
     if(is_int($value))return $value;
     if(is_string($value)&&preg_match('/^\d+$/',$value))return $value;
     return is_scalar($value)?'invalid:'.gettype($value):'invalid:type';
@@ -55,7 +60,7 @@ function p50_mc_official(PDO $pdo,string $profileId,string $platform): array {
 }
 
 function p50_mc_provenance(string $platform,string $sourceType,string $endpoint,array $official,string $fetchedAt,int $httpStatus,string $runUuid,string $mode): array {
-    return ['collectorVersion'=>P50_METRICS_COLLECTOR_VERSION,'platform'=>$platform,'sourceType'=>$sourceType,'endpoint'=>$endpoint,'officialLink'=>$official['normalized_url'],'profileId'=>$official['profile_id'],'fetchedAt'=>$fetchedAt,'httpStatus'=>$httpStatus,'accessMode'=>$mode,'runUuid'=>$runUuid];
+    return ['collectorVersion'=>P50_METRICS_COLLECTOR_VERSION,'platform'=>$platform,'sourceType'=>$sourceType,'endpoint'=>$endpoint,'endpointName'=>$endpoint,'officialLink'=>$official['normalized_url'],'profileId'=>$official['profile_id'],'fetchedAt'=>$fetchedAt,'httpStatus'=>$httpStatus,'accessMode'=>$mode,'runUuid'=>$runUuid];
 }
 
 function p50_mc_result(string $platform,string $profileId,string $startedAt,string $runUuid): array {
@@ -66,7 +71,10 @@ function p50_mc_capture(PDO $pdo,array &$result,array $input): void {
     if(isset($input['contentId'])&&array_key_exists('views',$input)&&is_numeric($input['views'])){
         $stmt=$pdo->prepare("SELECT views FROM p50_metric_captures WHERE account_id=? AND content_id=? AND quality_status='usable' AND views IS NOT NULL ORDER BY observed_at DESC,id DESC LIMIT 1");
         $stmt->execute([(int)$input['accountId'],(int)$input['contentId']]);$previous=$stmt->fetchColumn();
-        if($previous!==false&&(int)$input['views']<(int)$previous)$input['views']='decrease:'.(string)$input['views'];
+        if($previous!==false&&(int)$input['views']<(int)$previous){
+            $observed=(int)$input['views'];$input['views']='decrease:'.(string)$observed;
+            $input['metadata']=array_replace((array)($input['metadata']??[]),['metricAnomaly'=>['previousValue'=>(int)$previous,'observedValue'=>$observed,'metricName'=>'views','reason'=>'cumulative_counter_decrease','collectorDecision'=>'quarantined']]);
+        }
     }
     $capture=p50_metrics_record_capture($pdo,$input);
     $result['capturesRecorded']+=(int)$capture['created'];
@@ -74,8 +82,9 @@ function p50_mc_capture(PDO $pdo,array &$result,array $input): void {
     $result['quarantined']+=(int)$capture['quarantined'];
 }
 
-function p50_mc_request(callable $fetch,string $url,array $headers,array &$result): array {
-    $result['requestsAttempted']++;$response=$fetch($url,$headers);
+function p50_mc_request(callable $fetch,string $url,array $headers,array &$result,string $method='GET',?array $jsonBody=null): array {
+    if($jsonBody!==null){$headers[]='Content-Type: application/json';$headers[]='Accept: application/json';}
+    $result['requestsAttempted']++;$response=$fetch($url,array_values(array_unique($headers)),strtoupper($method),$jsonBody);
     $status=(int)($response['status']??0);
     if($status>=200&&$status<300)$result['requestsSucceeded']++;
     if($status===429)$result['rateLimited']=true;
@@ -209,6 +218,8 @@ function p50_mc_x(PDO $pdo,array $official,int $limit,string $observedAt,string 
     }
 }
 
+require_once __DIR__.'/metrics-social-collectors-core.php';
+
 function p50_metrics_collect_profile(PDO $pdo,string $profileId,string $platform,int $contentLimit=5,?callable $fetch=null,?string $observedAt=null): array {
     $platform=p50_mc_platform($platform);if($platform==='')throw new InvalidArgumentException('Plateforme non prise en charge.');
     $contentLimit=max(1,min(P50_METRICS_COLLECTOR_CONTENTS_MAX,$contentLimit));$observedAt=p50_metrics_timestamp($observedAt??gmdate('c'));$fetch=$fetch??'p50_mc_http';
@@ -217,7 +228,7 @@ function p50_metrics_collect_profile(PDO $pdo,string $profileId,string $platform
     $result=p50_mc_result($platform,$profileId,$observedAt,$run['runUuid']);
     try{
         $official=p50_mc_official($pdo,$profileId,$platform);
-        if($platform==='YouTube')p50_mc_youtube($pdo,$official,$contentLimit,$observedAt,$run['runUuid'],$fetch,$result);else p50_mc_x($pdo,$official,$contentLimit,$observedAt,$run['runUuid'],$fetch,$result);
+        p50_mc_dispatch($platform)($pdo,$official,$contentLimit,$observedAt,$run['runUuid'],$fetch,$result);
         if($result['status']==='running')$result['status']=empty($result['errors'])?'success':'partial';
     }catch(Throwable $error){$result['errors'][]=p50_metrics_safe_error($error->getMessage());$result['status']=$result['accountFound']?'partial':'error';}
     $result['finishedAt']=gmdate('Y-m-d H:i:s');
@@ -246,23 +257,27 @@ function p50_mc_summary(array $details): array {
 }
 
 function p50_metrics_collectors_status(PDO $pdo): array {
-    $configured=['youtube'=>p50_mc_config('YouTube')!=='','x'=>p50_mc_config('X')!==''];
+    $access=[];foreach(['YouTube','X','TikTok','Instagram','Facebook','Snapchat'] as $platform)$access[strtolower($platform)]=p50_mc_public_access($platform,'');
+    $empty=static fn(array $item): array=>$item+['accounts'=>null,'contents'=>null,'captures'=>null,'usableCaptures'=>null,'quarantinedCaptures'=>null,'latestCaptureAt'=>null,'captures24h'=>null,'lastRun'=>null,'lastStatus'=>'schema_not_installed','lastError'=>null,'rateLimitedCount'=>0,'unavailableProfiles'=>0];
     if(!p50_metrics_table_exists($pdo,'p50_metric_runs'))return [
-      'youtube'=>['configured'=>$configured['youtube'],'accounts'=>null,'contents'=>null,'captures'=>null,'latestCaptureAt'=>null,'captures24h'=>null,'lastRun'=>null,'lastStatus'=>'schema_not_installed','lastError'=>null,'rateLimitedCount'=>0,'unavailableProfiles'=>0],
-      'x'=>['configured'=>$configured['x'],'accounts'=>null,'contents'=>null,'captures'=>null,'latestCaptureAt'=>null,'captures24h'=>null,'lastRun'=>null,'lastStatus'=>'schema_not_installed','lastError'=>null,'rateLimitedCount'=>0,'unavailableProfiles'=>0],
+      'youtube'=>$empty($access['youtube']),'x'=>$empty($access['x']),'tiktok'=>$empty($access['tiktok']),
+      'instagram'=>$empty($access['instagram']),'facebook'=>$empty($access['facebook']),'snapchat'=>$empty($access['snapchat']),
     ];
-    $out=[];foreach(['YouTube'=>'youtube_v1','X'=>'x_v1'] as $platform=>$collector){
+    $out=[];foreach(['YouTube'=>'youtube_v1','X'=>'x_v1','TikTok'=>'tiktok_v1','Instagram'=>'instagram_v1','Facebook'=>'facebook_v1','Snapchat'=>'snapchat_v1'] as $platform=>$collector){
         $stmt=$pdo->prepare("SELECT run_uuid,status,error_message,started_at,finished_at,metadata_json FROM p50_metric_runs WHERE collector=? ORDER BY started_at DESC LIMIT 1");$stmt->execute([$collector]);$last=$stmt->fetch()?:null;$metadata=$last?json_decode((string)$last['metadata_json'],true):[];
         $out[strtolower($platform)]=[
-          'configured'=>$configured[strtolower($platform)],
+          'configured'=>$access[strtolower($platform)]['configured'],'authorized'=>$access[strtolower($platform)]['authorized'],
+          'mode'=>$access[strtolower($platform)]['mode'],'authorizationRequired'=>$access[strtolower($platform)]['authorizationRequired'],
           'accounts'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_accounts WHERE platform=?",[$platform]),
           'contents'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_contents WHERE platform=?",[$platform]),
           'captures'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_captures WHERE platform=?",[$platform]),
+          'usableCaptures'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_captures WHERE platform=? AND quality_status='usable'",[$platform]),
+          'quarantinedCaptures'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_captures WHERE platform=? AND quality_status='quarantined'",[$platform]),
           'latestCaptureAt'=>p50_metrics_value($pdo,"SELECT MAX(captured_at) FROM p50_metric_captures WHERE platform=?",[$platform])?:null,
           'captures24h'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_captures WHERE platform=? AND captured_at>=UTC_TIMESTAMP()-INTERVAL 24 HOUR",[$platform]),
           'lastRun'=>$last,'lastStatus'=>$last['status']??null,'lastError'=>$last['error_message']??null,
           'rateLimitedCount'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_runs WHERE collector=? AND metadata_json LIKE '%\"rateLimited\":true%' ",[$collector]),
-          'unavailableProfiles'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_runs WHERE collector=? AND status='unavailable_or_blocked'",[$collector]),
+          'unavailableProfiles'=>(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_runs WHERE collector=? AND status IN ('unavailable_or_blocked','authorization_required','configuration_missing','unsupported_account_type')",[$collector]),
         ];
     }return $out;
 }
