@@ -265,6 +265,75 @@ class LiveRadarV3Tests(unittest.TestCase):
         self.assertFalse(fresh("Instagram", 27 * 60))
         self.assertTrue(fresh("YouTube", 9 * 60))
 
+    def test_live_admin_rejects_epoch_and_uses_confirmation(self):
+        date_helper = re.search(r"function p50LiveDateMs\(.*?\n}", INDEX, re.S).group(0)
+        confirmed = re.search(r"function p50LiveConfirmedLabel\(.*?\n}", INDEX, re.S).group(0)
+        admin = re.search(r"function renderLiveAdmin\(.*?\n}", INDEX, re.S).group(0)
+        self.assertIn("Date.UTC(2020,0,1)", date_helper)
+        self.assertIn("if(!value)return null", date_helper)
+        self.assertIn("lastConfirmedAt||live?.lastSeenAt", confirmed)
+        self.assertIn("p50LiveAdminTiming(l)", admin)
+        self.assertNotIn("new Date(l.startedAt)", admin)
+        self.assertNotIn("01/01/1970", INDEX)
+
+    def test_live_admin_timing_is_strict_for_automatic_and_manual(self):
+        timing = re.search(r"function p50LiveAdminTiming\(.*?\n}", INDEX, re.S).group(0)
+        self.assertIn("Dernière confirmation", timing)
+        self.assertIn("p50LiveConfirmedLabel(live)", timing)
+        self.assertIn("startedAt===null?'':", timing)
+        self.assertIn("Horaire non renseigné", timing)
+        self.assertIn("if(startedAt!==null)", timing)
+        self.assertIn("if(endsAt!==null)", timing)
+
+    def test_date_policy_rejects_null_and_1970(self):
+        minimum = 1577836800000  # 2020-01-01 UTC
+
+        def valid(milliseconds):
+            return milliseconds if milliseconds is not None and milliseconds >= minimum else None
+
+        self.assertIsNone(valid(None))
+        self.assertIsNone(valid(0))
+        self.assertIsNone(valid(1000))
+        self.assertEqual(valid(minimum), minimum)
+
+    def test_ended_closes_live_and_unconfirmed_without_losing_history(self):
+        ended = re.search(r"function p50_live_v3_mark_ended\(.*?\n}", API, re.S).group(0)
+        store = re.search(r"function p50_live_v3_store\(.*?\n}", API, re.S).group(0)
+        active = re.search(r"function p50_live_v3_active_rows\(.*?\n}", API, re.S).group(0)
+        for source in (ended, store):
+            self.assertIn("status IN ('live','unconfirmed')", source)
+        self.assertIn("ended_at=COALESCE(ended_at,NOW())", ended)
+        self.assertIn("stream_key<>?", store)
+        self.assertIn("status IN ('live','unconfirmed')", active)
+        self.assertIn("INTERVAL 24 HOUR", active)
+
+    def test_health_categories_are_mutually_exclusive(self):
+        summary = re.search(r"function p50_live_v3_health_summary\(.*?\n}", API, re.S).group(0)
+        self.assertIn("public_state", summary)
+        self.assertIn("THEN 'unconfirmed' ELSE h.last_state", summary)
+        self.assertIn("current_live.status='live'", summary)
+        self.assertNotIn("$summary[$p]['unconfirmed']=", summary)
+        for state in ("live", "offline", "unknown", "unconfirmed", "never_checked"):
+            self.assertIn(f"'{state}'=>0", summary)
+
+    def test_revalidation_preopens_and_reuses_the_pending_window(self):
+        verify = re.search(r"async function verifyWatchLink\(.*?\n}", CLIENT, re.S).group(0)
+        self.assertIn("window.open('about:blank','_blank')", verify)
+        self.assertIn("pendingWindow.opener=null", verify)
+        self.assertLess(verify.index("window.open('about:blank'"), verify.index("await verifyProfile"))
+        self.assertIn("pendingWindow.location.replace(confirmedUrl)", verify)
+        self.assertIn("pendingWindow.close()", verify)
+        self.assertIn("const confirmedUrl=String(confirmed.url||'')", verify)
+        self.assertNotIn("confirmed.url||link.href", verify)
+
+    def test_busy_radar_does_not_report_a_false_end(self):
+        wait = re.search(r"async function waitForRadarIdle\(.*?\n}", CLIENT, re.S).group(0)
+        verify = re.search(r"async function verifyWatchLink\(.*?\n}", CLIENT, re.S).group(0)
+        self.assertIn("while(runningMode", wait)
+        self.assertIn("await waitForRadarIdle()", verify)
+        self.assertIn("Vérification du direct en cours", verify)
+        self.assertLess(verify.index("await waitForRadarIdle()"), verify.index("await verifyProfile"))
+
 
 if __name__ == "__main__":
     unittest.main()

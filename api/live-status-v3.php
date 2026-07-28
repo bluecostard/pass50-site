@@ -415,7 +415,7 @@ function p50_live_v3_store(array $live): void {
     // Certaines plateformes renvoient une URL de LIVE générique ou canonique
     // commune à plusieurs profils. Le profil doit donc faire partie de la clé.
     $key=hash('sha256',strtolower($profileId.'|'.$platform.'|'.rtrim($url,'/')));
-    $endOthers=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live' AND stream_key<>?");
+    $endOthers=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed') AND stream_key<>?");
     $endOthers->execute([$profileId,$platform,$key]);
     $title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata)
@@ -440,7 +440,7 @@ function p50_live_v3_health_update(array $source,array $result): array {
 }
 
 function p50_live_v3_mark_ended(string $profileId,string $platform): void {
-    $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live'");
+    $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed')");
     $stmt->execute([$profileId,$platform]);
 }
 
@@ -450,7 +450,7 @@ function p50_live_v3_mark_unconfirmed(string $profileId,string $platform,string 
 }
 
 function p50_live_v3_active_rows(int $staleMinutes): array {
-    db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE source='automatic' AND status='live' AND last_seen_at<DATE_SUB(NOW(),INTERVAL 24 HOUR)");
+    db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()) WHERE source='automatic' AND status IN ('live','unconfirmed') AND last_seen_at<DATE_SUB(NOW(),INTERVAL 24 HOUR)");
     db()->exec("UPDATE p50_live_streams SET status='unconfirmed',metadata=JSON_SET(COALESCE(metadata,'{}'),'$.withdrawalReason','stale_confirmation') WHERE source='automatic' AND status='live' AND ((platform IN ('TikTok','Instagram','Facebook') AND last_seen_at<DATE_SUB(NOW(),INTERVAL 3 MINUTE)) OR (platform='YouTube' AND last_seen_at<DATE_SUB(NOW(),INTERVAL 10 MINUTE)))");
     $stmt=db()->query("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms,h.metadata health_metadata
         FROM p50_live_streams s JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform
@@ -501,10 +501,16 @@ function p50_live_v3_cycle_key(string $cycleId): string {return 'live_radar_v3_c
 function p50_live_v3_health_summary(): array {
     $summary=[];foreach(P50_LIVE_PLATFORMS as $platform)$summary[$platform]=['live'=>0,'offline'=>0,'unknown'=>0,'unconfirmed'=>0,'never_checked'=>0];
     try{
-        $stmt=db()->query('SELECT platform,last_state,COUNT(*) total FROM p50_live_source_health GROUP BY platform,last_state');
-        foreach($stmt->fetchAll() as $row){$p=(string)$row['platform'];$s=(string)$row['last_state'];if(isset($summary[$p]))$summary[$p][$s]=(int)$row['total'];}
-        $hidden=db()->query("SELECT platform,COUNT(*) total FROM p50_live_streams WHERE source='automatic' AND status='unconfirmed' GROUP BY platform");
-        foreach($hidden->fetchAll() as $row)if(isset($summary[(string)$row['platform']]))$summary[(string)$row['platform']]['unconfirmed']=(int)$row['total'];
+        $stmt=db()->query("SELECT h.platform,
+            CASE WHEN EXISTS(
+                SELECT 1 FROM p50_live_streams s
+                WHERE s.profile_id=h.profile_id AND s.platform=h.platform AND s.source='automatic' AND s.status='unconfirmed'
+            ) AND NOT EXISTS(
+                SELECT 1 FROM p50_live_streams current_live
+                WHERE current_live.profile_id=h.profile_id AND current_live.platform=h.platform AND current_live.source='automatic' AND current_live.status='live'
+            ) THEN 'unconfirmed' ELSE h.last_state END public_state
+            FROM p50_live_source_health h");
+        foreach($stmt->fetchAll() as $row){$p=(string)$row['platform'];$s=(string)$row['public_state'];if(isset($summary[$p][$s]))$summary[$p][$s]++;}
     }catch(Throwable){}
     return $summary;
 }

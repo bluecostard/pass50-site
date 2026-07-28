@@ -715,12 +715,32 @@ function dataHubRows(rows){return rows.map(({p,c})=>`<tr data-hub-name="${safeAt
 function editHubProfile(id){const p=profile(id),q=ensureQuality(p);$('#adminPane').innerHTML=`<form class="form" id="hubForm" data-id="${p.id}"><div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button><div class="section-title" style="margin-top:10px">${p.name}</div><div class="muted">Seuil public : 90 % minimum</div></div></div><div class="two">${['identity|Identité','photo|Photo','birth|Date de naissance','nationality|Nationalité','social|Réseaux officiels','score|Trend Score','live|LIVE'].map(x=>{const [k,l]=x.split('|');return `<div class="field"><label>${l}</label><input type="number" min="0" max="100" name="${k}" value="${q[k]||0}"><small>${q[k]>=90?'Sera affiché':'Ne sera pas affiché'}</small></div>`}).join('')}</div><div class="field"><label>Note de contrôle</label><input name="qualityNote" value="${safeAttr(p.qualityNote||'')}" placeholder="Source ou motif de validation"></div><button class="btn primary" type="submit">ENREGISTRER LE CONTRÔLE</button></form>`}
 function refreshHubDiagnostic(){db.profiles.forEach(p=>{ensureQuality(p);p.lastCollectedAt=new Date().toISOString();p.quality.photo=p.photoStatus==='validated'?Math.max(90,p.quality.photo):0;p.quality.birth=p.ageStatus==='confirmed'?Math.max(90,p.quality.birth):0;const links=Object.values(p.links||{}).filter(u=>u&&!/results\?|search\/top|\/search\?/.test(u));if(!links.length)p.quality.social=0;});save();renderAdminPane();toast('Diagnostic Data Hub actualisé')}
 
+function p50LiveDateMs(value){
+  if(!value)return null;
+  const milliseconds=new Date(value).getTime();
+  if(!Number.isFinite(milliseconds)||milliseconds<Date.UTC(2020,0,1))return null;
+  return milliseconds;
+}
+function p50LiveConfirmedLabel(live){
+  const milliseconds=p50LiveDateMs(live?.lastConfirmedAt||live?.lastSeenAt);
+  if(milliseconds===null)return 'Confirmation indisponible';
+  const minutes=Math.max(0,Math.floor((Date.now()-milliseconds)/60000));
+  return minutes<1?'Confirmé à l’instant':`Confirmé il y a ${minutes} min`;
+}
+function p50LiveAdminTiming(live){
+  const startedAt=p50LiveDateMs(live?.startedAt),endsAt=p50LiveDateMs(live?.endsAt);
+  if(live?.source==='automatic')return `<div class="muted">Dernière confirmation : ${safeAttr(p50LiveConfirmedLabel(live))}</div>${startedAt===null?'':`<div class="muted">Début : ${new Date(startedAt).toLocaleString('fr-FR')}</div>`}`;
+  const values=[];
+  if(startedAt!==null)values.push(`Début : ${new Date(startedAt).toLocaleString('fr-FR')}`);
+  if(endsAt!==null)values.push(`Fin prévue : ${new Date(endsAt).toLocaleString('fr-FR')}`);
+  return `<div class="muted">${values.length?values.join(' · '):'Horaire non renseigné'}</div>`;
+}
 function renderLiveAdmin(pane){
-  const lives=activeLives(),radar=window.PASS50_LIVE_RADAR||{},last=radar.lastScanAt?new Date(radar.lastScanAt).toLocaleString('fr-FR'):'pas encore exécuté';
+  const lives=activeLives(),radar=window.PASS50_LIVE_RADAR||{},lastMs=p50LiveDateMs(radar.lastScanAt),last=lastMs===null?'pas encore exécuté':new Date(lastMs).toLocaleString('fr-FR');
   pane.innerHTML=`<div class="media-hint"><strong>Radar LIVE :</strong> YouTube est vérifié automatiquement par rotation. Les autres plateformes restent en mode hybride : détection lorsqu’un signal public fiable existe, ou ajout manuel de secours. Les directs terminés sont retirés automatiquement.</div>
   <div class="admin-toolbar"><button class="btn primary" id="liveRadarRefresh">🔴 LANCER LE RADAR MAINTENANT</button><span class="muted">Dernier passage : ${last}${radar.youtubeProfilesKnown!==undefined?` · ${radar.youtubeProfilesKnown} chaîne(s) YouTube connue(s)`:''}</span></div>
   <form id="liveForm" class="form"><div class="two"><div class="field"><label>Influenceur</label><select name="profileId">${db.profiles.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select></div><div class="field"><label>Plateforme</label><select name="platform"><option>YouTube</option><option>TikTok</option><option>Instagram</option><option>Facebook</option><option>TV</option></select></div></div><div class="field"><label>Lien direct du live</label><input name="url" type="url" placeholder="https://..." required></div><div class="two"><div class="field"><label>Titre</label><input name="title" placeholder="Direct en cours"></div><div class="field"><label>Durée prévue</label><select name="duration"><option value="60">1 heure</option><option value="120" selected>2 heures</option><option value="240">4 heures</option><option value="480">8 heures</option></select></div></div><button class="btn primary" type="submit">ACTIVER LE LIVE MANUEL</button></form>
-  <h3 style="margin-top:22px">Directs actifs (${lives.length})</h3>${lives.length?lives.map(l=>{const p=profile(l.profileId),source=l.source==='automatic'?'AUTO':'MANUEL';return `<div class="signal"><div><strong>${p?.name||l.profileId}</strong><div><span class="live-pulse"></span>${l.platform} · ${l.title||'Direct en cours'} <span class="badge live-badge">${source}</span></div><div class="muted">Début : ${new Date(l.startedAt).toLocaleString('fr-FR')}${l.endsAt?` · Fin prévue : ${new Date(l.endsAt).toLocaleString('fr-FR')}`:''}</div></div><div class="signal-actions"><a class="btn small" href="${safeAttr(l.url)}" target="_blank">Ouvrir</a>${l.source==='manual'?`<button class="btn small danger live-stop" data-id="${l.id}">ARRÊTER</button>`:''}</div></div>`}).join(''):'<div class="live-empty">Aucun direct actif.</div>'}`;
+  <h3 style="margin-top:22px">Directs actifs (${lives.length})</h3>${lives.length?lives.map(l=>{const p=profile(l.profileId),source=l.source==='automatic'?'AUTO':'MANUEL';return `<div class="signal"><div><strong>${p?.name||l.profileId}</strong><div><span class="live-pulse"></span>${l.platform} · ${l.title||'Direct en cours'} <span class="badge live-badge">${source}</span></div>${p50LiveAdminTiming(l)}</div><div class="signal-actions"><a class="btn small" href="${safeAttr(l.url)}" target="_blank">Ouvrir</a>${l.source==='manual'?`<button class="btn small danger live-stop" data-id="${l.id}">ARRÊTER</button>`:''}</div></div>`}).join(''):'<div class="live-empty">Aucun direct actif.</div>'}`;
 }
 function startLive(fd){const minutes=Math.max(15,Number(fd.get('duration')||120));db.liveStreams.push({id:'live_'+Date.now(),profileId:String(fd.get('profileId')),platform:String(fd.get('platform')),url:String(fd.get('url')),title:String(fd.get('title')||'Direct en cours'),status:'live',source:'manual',startedAt:new Date().toISOString(),endsAt:new Date(Date.now()+minutes*60000).toISOString()});save();render();renderAdminPane();toast('LIVE activé')}
 function stopLive(id){const l=db.liveStreams.find(x=>x.id===id);if(l)l.status='ended';save();render();renderAdminPane();toast('LIVE arrêté')}
