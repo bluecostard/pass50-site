@@ -47,6 +47,10 @@ class MetricsObservabilitySecurityTests(unittest.TestCase):
 
     def test_error_details_are_limited_and_redacted(self):
         self.assertIn("ORDER BY started_at DESC LIMIT 20", CORE)
+        self.assertIn("WHERE status='failed'", CORE)
+        self.assertIn("function p50_obs_recent_metric_failures(PDO $pdo, int $limit=20)", CORE)
+        self.assertIn("p50_obs_recent_metric_failures($pdo,20)", CORE)
+        self.assertIn("$metricsOrchestrator['failedJobs']=$failedJobs", CORE)
         self.assertIn("Bearer [redacted]", CORE)
         self.assertIn("[email]", CORE)
         self.assertIn("[url]", CORE)
@@ -162,6 +166,8 @@ class MetricsObservabilityAdminTests(unittest.TestCase):
             "Couverture par plateforme",
             "Dernières erreurs",
             "Pourquoi le classement reste statique",
+            "Tâches échouées de l’orchestrateur",
+            "Erreur sécurisée",
         ):
             self.assertIn(label, UI)
 
