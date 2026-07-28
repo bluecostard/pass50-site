@@ -1,12 +1,11 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
-require __DIR__ . '/youtube-analytics-core.php';
+require __DIR__ . '/youtube-oauth-core.php';
 
 require_method('POST');
 $user = auth_user();
 p50yo_ensure_schema();
-p50ya_ensure_schema();
 $userId = (string)$user['id'];
 $connection = p50yo_connection_for_user($userId);
 
@@ -35,9 +34,14 @@ if ($connection) {
 $db = db();
 $db->beginTransaction();
 try {
-    $analyticsDelete = $db->prepare('DELETE FROM p50_youtube_analytics_snapshots WHERE user_id=?');
-    $analyticsDelete->execute([$userId]);
-    $analyticsDeleted = $analyticsDelete->rowCount();
+    $tableCheck = $db->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='p50_youtube_analytics_snapshots'");
+    $tableCheck->execute();
+    $analyticsDeleted = 0;
+    if ((int)$tableCheck->fetchColumn() === 1) {
+        $analyticsDelete = $db->prepare('DELETE FROM p50_youtube_analytics_snapshots WHERE user_id=?');
+        $analyticsDelete->execute([$userId]);
+        $analyticsDeleted = $analyticsDelete->rowCount();
+    }
     $db->prepare('DELETE FROM p50_youtube_oauth_connections WHERE user_id=?')->execute([$userId]);
     $db->prepare('DELETE FROM p50_youtube_oauth_states WHERE user_id=?')->execute([$userId]);
     $db->commit();
@@ -50,6 +54,6 @@ json_response([
     'ok' => true,
     'connected' => false,
     'revokedAtGoogle' => $revokedAtGoogle,
-    'privateAnalyticsDeleted' => (int)($analyticsDeleted ?? 0),
+    'privateAnalyticsDeleted' => (int)$analyticsDeleted,
     'warning' => $warning,
 ]);
