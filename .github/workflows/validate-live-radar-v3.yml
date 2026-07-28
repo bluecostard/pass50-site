@@ -40,6 +40,8 @@ jobs:
       P50_TEST_DB_PASSWORD: root
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Vérifier la syntaxe PHP
         run: |
           php -l api/live-radar-v4-core.php
