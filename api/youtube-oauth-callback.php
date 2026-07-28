@@ -2,29 +2,13 @@
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/youtube-oauth-core.php';
-
-p50yo_ensure_schema();
+require __DIR__ . '/youtube-oauth-state-v2.php';
 
 $state = trim((string)($_GET['state'] ?? ''));
-if ($state === '' || strlen($state) > 512) p50yo_redirect_result('error', 'missing_state');
-
-$stateHash = hash('sha256', $state);
-$db = db();
 $userId = '';
-
 try {
-    $db->beginTransaction();
-    $stmt = $db->prepare('SELECT user_id,expires_at,consumed_at FROM p50_youtube_oauth_states WHERE state_hash=? FOR UPDATE');
-    $stmt->execute([$stateHash]);
-    $oauthState = $stmt->fetch();
-    if (!$oauthState || $oauthState['consumed_at'] !== null || (p50yo_utc_timestamp((string)$oauthState['expires_at']) ?? 0) < time()) {
-        throw new RuntimeException('État OAuth invalide ou expiré.');
-    }
-    $userId = (string)$oauthState['user_id'];
-    $db->prepare('UPDATE p50_youtube_oauth_states SET consumed_at=UTC_TIMESTAMP() WHERE state_hash=?')->execute([$stateHash]);
-    $db->commit();
+    $userId = p50yo_verify_state($state);
 } catch (Throwable $e) {
-    if ($db->inTransaction()) $db->rollBack();
     error_log('YouTube OAuth state: ' . $e->getMessage());
     p50yo_redirect_result('error', 'invalid_state');
 }
@@ -84,6 +68,14 @@ try {
         throw new RuntimeException('Ce compte Google ne possède aucune chaîne YouTube accessible.');
     }
 
+    // La base n’est sollicitée qu’après le consentement Google.
+    try { db()->exec('SET SESSION lock_wait_timeout=5'); } catch (Throwable) {}
+    p50yo_ensure_schema();
+
+    $userCheck = db()->prepare('SELECT id FROM users WHERE id=? AND deleted_at IS NULL LIMIT 1');
+    $userCheck->execute([$userId]);
+    if (!$userCheck->fetch()) throw new RuntimeException('Le compte PASS50 associé n’existe plus.');
+
     $existing = p50yo_connection_for_user($userId);
     $newRefreshToken = trim((string)($tokens['refresh_token'] ?? ''));
     $sameExistingChannel = $existing && hash_equals((string)$existing['channel_id'], (string)$channel['id']);
@@ -121,7 +113,6 @@ try {
         $accessExpiresAt,
     ]);
 
-    db()->prepare('DELETE FROM p50_youtube_oauth_states WHERE user_id=? OR expires_at<UTC_TIMESTAMP()')->execute([$userId]);
     p50yo_redirect_result('connected');
 } catch (Throwable $e) {
     error_log('YouTube OAuth callback: ' . $e->getMessage());
