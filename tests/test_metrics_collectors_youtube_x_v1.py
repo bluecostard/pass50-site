@@ -76,7 +76,7 @@ class MetricsCollectorsContractTests(unittest.TestCase):
         self.assertIn("'collectors'=>",OBS)
         for token in ("configured","latestCaptureAt","captures24h","rateLimitedCount","unavailableProfiles"):
             self.assertIn(token,CORE)
-        self.assertIn("COLLECTE YOUTUBE & X",UI)
+        self.assertIn("COLLECTE DES MÉTRIQUES SOCIALES",UI)
         self.assertIn("Collecte expérimentale : les données ne modifient pas encore le classement public.",UI)
         self.assertIn("metrics-canonical-collect.php",UI)
 

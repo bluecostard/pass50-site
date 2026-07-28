@@ -304,7 +304,7 @@ function p50_metrics_upsert_content(PDO $pdo,array $input): array {
     $url=p50_metrics_normalize_url($input['canonicalUrl']??'');$platformId=trim((string)($input['platformContentId']??''));$platformId=$platformId===''?null:$platformId;
     if($platformId===null&&!p50_metrics_is_content_url((string)$a['platform'],$url))throw new InvalidArgumentException('Une page de profil ne peut pas être enregistrée comme contenu.');
     $key=p50_metrics_content_key((string)$a['account_key'],(string)$a['platform'],$platformId,$url);$now=p50_metrics_timestamp($input['observedAt']??gmdate('c'));
-    $type=(string)($input['contentType']??'unknown');if(!in_array($type,['video','post','reel','short','live','unknown'],true))$type='unknown';
+    $type=(string)($input['contentType']??'unknown');if(!in_array($type,['video','post','reel','short','live','story','spotlight','photo','carousel','unknown'],true))$type='unknown';
     $published=!empty($input['publishedAt'])?p50_metrics_timestamp($input['publishedAt']):null;
     $stmt=$pdo->prepare("INSERT INTO p50_metric_contents(content_key,account_id,profile_id,platform,platform_content_id,content_type,canonical_url,url_hash,title,published_at,status,confidence,source_type,provenance_json,metadata_json,first_seen_at,last_seen_at)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
