@@ -34,17 +34,25 @@ jobs:
           php -l api/youtube-oauth-callback.php
           php -l api/youtube-oauth-status.php
           php -l api/youtube-oauth-disconnect.php
+          php -l api/youtube-analytics-core.php
+          php -l api/youtube-analytics-summary.php
           php -l tests/youtube_oauth_state_v2.php
           php -l tests/youtube_oauth_migration_integration.php
+          php -l tests/youtube_analytics_core.php
+          php -l tests/youtube_analytics_migration_integration.php
       - name: Browser syntax
         run: |
           node --check youtube-oauth-ui-v1.js
           node --check youtube-oauth-click-hotfix-v2.js
-      - name: OAuth reliability tests
+          node --check youtube-analytics-ui-v1.js
+      - name: OAuth and Analytics reliability tests
         run: |
           python3 -m unittest tests.test_youtube_oauth_start_reliability
           php tests/youtube_oauth_state_v2.php
-      - name: MariaDB migration
-        run: php tests/youtube_oauth_migration_integration.php
+          php tests/youtube_analytics_core.php
+      - name: MariaDB migrations
+        run: |
+          php tests/youtube_oauth_migration_integration.php
+          php tests/youtube_analytics_migration_integration.php
       - name: Diff check
         run: git diff --check origin/${{ github.base_ref }}...HEAD
