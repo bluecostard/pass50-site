@@ -40,29 +40,30 @@ function p50_obs_safe_error(?string $message): string {
 }
 
 function p50_obs_recent_metric_failures(PDO $pdo, int $limit=20): array {
-    $limit=max(1,min(100,$limit));
+    if(!p50_metrics_table_exists($pdo,'p50_metric_jobs'))return [];
+    $limit=max(1,min(50,$limit));
     $rows=$pdo->query(
-        "SELECT job_uuid,collector,platform,scope_type,scope_id,priority,attempts,max_attempts,
-        JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.cadence')) cadence,last_error,created_at,updated_at
+        "SELECT collector,platform,scope_id,attempts,max_attempts,
+        JSON_UNQUOTE(JSON_EXTRACT(payload_json,'$.cadence')) cadence,last_error,updated_at
         FROM p50_metric_jobs
         WHERE status='failed'
         ORDER BY updated_at DESC LIMIT ".$limit
     )->fetchAll();
     $failures=[];
-    foreach($rows as $row)$failures[]=[
-        'jobUuid'=>(string)$row['job_uuid'],
-        'collector'=>(string)$row['collector'],
-        'platform'=>$row['platform']!==null?(string)$row['platform']:null,
-        'scopeType'=>(string)$row['scope_type'],
-        'scopeId'=>$row['scope_id']!==null?(string)$row['scope_id']:null,
-        'cadence'=>$row['cadence']!==null?(string)$row['cadence']:null,
-        'priority'=>(int)$row['priority'],
-        'attempts'=>(int)$row['attempts'],
-        'maxAttempts'=>(int)$row['max_attempts'],
-        'message'=>p50_obs_safe_error($row['last_error']??''),
-        'createdAt'=>p50_obs_age($row['created_at'])['at']??null,
-        'failedAt'=>p50_obs_age($row['updated_at'])['at']??null,
-    ];
+    foreach($rows as $row){
+        $cadence=strtolower(trim((string)($row['cadence']??'')));
+        $message=p50_obs_safe_error($row['last_error']??'');
+        $failures[]=[
+            'updatedAt'=>p50_obs_age($row['updated_at'])['at']??null,
+            'collector'=>(string)$row['collector'],
+            'platform'=>$row['platform']!==null?(string)$row['platform']:null,
+            'profileId'=>$row['scope_id']!==null?(string)$row['scope_id']:null,
+            'cadence'=>in_array($cadence,['p0','p1','p2'],true)?$cadence:'',
+            'attempts'=>(int)$row['attempts'],
+            'maxAttempts'=>(int)$row['max_attempts'],
+            'message'=>$message!==''?$message:'Échec sans détail',
+        ];
+    }
     return $failures;
 }
 
@@ -316,8 +317,7 @@ function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
     $pipeline=p50_obs_pipeline_state($pdo);
     $canonical=p50_metrics_schema_status($pdo);
     $metricsOrchestrator=p50_mo_status($pdo);
-    $failedJobs=($canonical['tables']['p50_metric_jobs']??false)===true?p50_obs_recent_metric_failures($pdo,20):[];
-    $metricsOrchestrator['failedJobs']=$failedJobs;
+    $metricsOrchestrator['recentFailedJobs']=p50_obs_recent_metric_failures($pdo,20);
     $freshness['pipeline_publication']=$pipeline['age'];
     $lastCron=p50_obs_scalar($pdo,"SELECT MAX(started_at) FROM p50_collection_runs WHERE collector LIKE 'cron_%'");
     $automaticCollectionObserved=(bool)$metricsOrchestrator['automationObservedRecently'];
