@@ -498,20 +498,45 @@ function p50_live_v3_cycle_id(): string {
 
 function p50_live_v3_cycle_key(string $cycleId): string {return 'live_radar_v3_cycle_'.substr(hash('sha256',$cycleId),0,24);}
 
-function p50_live_v3_health_summary(): array {
+function p50_live_v3_health_summary(array $sources,array $activeAutomatic): array {
     $summary=[];foreach(P50_LIVE_PLATFORMS as $platform)$summary[$platform]=['live'=>0,'offline'=>0,'unknown'=>0,'unconfirmed'=>0,'never_checked'=>0];
+    $official=[];$health=[];$currentStreams=[];$active=[];
+    foreach($sources as $source){
+        $profileId=trim((string)($source['profile_id']??''));
+        $platform=(string)($source['platform']??'');
+        if($profileId===''||!isset($summary[$platform]))continue;
+        $official[strtolower($platform).'|'.$profileId]=['platform'=>$platform,'profileId'=>$profileId];
+    }
+    foreach($activeAutomatic as $stream){
+        if(($stream['source']??'automatic')!=='automatic')continue;
+        $profileId=trim((string)($stream['profileId']??''));
+        $platform=(string)($stream['platform']??'');
+        $key=strtolower($platform).'|'.$profileId;
+        if(isset($official[$key]))$active[$key]=true;
+    }
     try{
-        $stmt=db()->query("SELECT h.platform,
-            CASE WHEN EXISTS(
-                SELECT 1 FROM p50_live_streams s
-                WHERE s.profile_id=h.profile_id AND s.platform=h.platform AND s.source='automatic' AND s.status='unconfirmed'
-            ) AND NOT EXISTS(
-                SELECT 1 FROM p50_live_streams current_live
-                WHERE current_live.profile_id=h.profile_id AND current_live.platform=h.platform AND current_live.source='automatic' AND current_live.status='live'
-            ) THEN 'unconfirmed' ELSE h.last_state END public_state
-            FROM p50_live_source_health h");
-        foreach($stmt->fetchAll() as $row){$p=(string)$row['platform'];$s=(string)$row['public_state'];if(isset($summary[$p][$s]))$summary[$p][$s]++;}
+        $healthRows=db()->query("SELECT profile_id,platform,last_state FROM p50_live_source_health")->fetchAll();
+        foreach($healthRows as $row){
+            $key=strtolower((string)$row['platform']).'|'.trim((string)$row['profile_id']);
+            if(isset($official[$key]))$health[$key]=(string)$row['last_state'];
+        }
+        $streamRows=db()->query("SELECT profile_id,platform,status,last_seen_at,stream_key
+            FROM p50_live_streams WHERE source='automatic'
+            ORDER BY profile_id,platform,last_seen_at DESC,stream_key DESC")->fetchAll();
+        foreach($streamRows as $row){
+            $key=strtolower((string)$row['platform']).'|'.trim((string)$row['profile_id']);
+            if(isset($official[$key])&&!isset($currentStreams[$key]))$currentStreams[$key]=(string)$row['status'];
+        }
     }catch(Throwable){}
+    foreach($official as $key=>$source){
+        $state=$health[$key]??null;
+        if(isset($active[$key]))$category='live';
+        elseif(($currentStreams[$key]??'')==='unconfirmed'||$state==='live'||$state==='unconfirmed')$category='unconfirmed';
+        elseif($state==='offline')$category='offline';
+        elseif($state==='unknown')$category='unknown';
+        else $category='never_checked';
+        $summary[$source['platform']][$category]++;
+    }
     return $summary;
 }
 
@@ -572,7 +597,13 @@ if($canScan&&$selected&&$lock){
     try{db()->query("SELECT RELEASE_LOCK('pass50_live_radar_v3')");}catch(Throwable){}
 }
 
-$automatic=p50_live_v3_active_rows($stale);$manual=p50_live_v3_manual_streams($state);$streams=p50_live_v3_dedup($automatic,$manual);
+$officialLiveKeys=[];foreach($sources as $source)$officialLiveKeys[strtolower((string)$source['platform']).'|'.trim((string)$source['profile_id'])]=true;
+$automatic=array_values(array_filter(
+    p50_live_v3_active_rows($stale),
+    static fn($stream)=>isset($officialLiveKeys[strtolower((string)($stream['platform']??'')).'|'.trim((string)($stream['profileId']??''))])
+));
+$manual=p50_live_v3_manual_streams($state);$streams=p50_live_v3_dedup($automatic,$manual);
+$healthSummary=p50_live_v3_health_summary($sources,$automatic);
 $coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;
 $lastFull=p50_de_get_setting('live_radar_v3_last_full_sweep',null);
 
@@ -582,7 +613,8 @@ json_response([
         'version'=>3,'mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,
         'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,
         'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'livesFoundInCycle'=>$cycleFound,'coveragePercent'=>$coverage,
-        'officialSourcesKnown'=>count($sources),'platforms'=>$platformStats,'health'=>p50_live_v3_health_summary(),'lastFullSweep'=>$lastFull,
+        'officialSourcesKnown'=>count($sources),'activeAutomaticConfirmed'=>count($automatic),
+        'platforms'=>$platformStats,'health'=>$healthSummary,'lastFullSweep'=>$lastFull,
         'refreshSeconds'=>$refresh,'staleMinutes'=>$stale,'diagnostics'=>$diagnostics,
     ],
 ]);
