@@ -17,7 +17,7 @@ foreach([
 
 p50_metrics_ensure_schema($pdo);
 $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
-function mr_at(DateTimeImmutable $now,int $hours): string {return $now->modify(($hours>=0?'+':'').$hours.' hours')->format('c');}
+function mr_at(DateTimeImmutable $now,int $hours): string {return $now->modify(($hours>=0?'+':'').$hours.' hours')->format('Y-m-d H:i:s');}
 function mr_fixture(PDO $pdo,DateTimeImmutable $now,string $profile,int $startViews,int $endViews,int $startInteractions,int $endInteractions,bool $publishedInside=false,bool $quarantined=false): array {
     $account=p50_metrics_upsert_account($pdo,['profileId'=>$profile,'platform'=>'YouTube','platformAccountId'=>'UC'.$profile,'canonicalUrl'=>'https://youtube.com/@fixture'.$profile,'status'=>'active','confidence'=>95,'sourceType'=>'manual_owner','observedAt'=>mr_at($now,-30),'provenance'=>['fixture'=>'ranking']]);
     $published=$publishedInside?mr_at($now,-5):mr_at($now,-48);
