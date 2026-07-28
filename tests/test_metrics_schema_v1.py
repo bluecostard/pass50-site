@@ -43,7 +43,9 @@ class MetricsSchemaContractTests(unittest.TestCase):
         self.assertIn("'duplicate'=>!$created",CORE)
 
     def test_null_zero_validation_and_immutability(self):
-        self.assertIn("'__NULL__'",CORE)
+        self.assertIn("function p50_metrics_signature_value",CORE)
+        self.assertIn("['type'=>'null']",CORE)
+        self.assertIn("gettype($value)",CORE)
         self.assertIn("is_int($value)",CORE)
         self.assertIn(":negative",CORE)
         self.assertIn("'quarantined'",CORE)

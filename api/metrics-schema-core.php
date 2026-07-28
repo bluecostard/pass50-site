@@ -50,10 +50,19 @@ function p50_metrics_timestamp(string|DateTimeInterface $value): string {
     return gmdate('Y-m-d H:i:s',$timestamp);
 }
 
+function p50_metrics_signature_value(mixed $value): array {
+    if(is_array($value)){
+        $normalized=[];
+        foreach($value as $key=>$item)$normalized[(string)$key]=p50_metrics_signature_value($item);
+        ksort($normalized,SORT_STRING);
+        return ['type'=>'array','value'=>$normalized];
+    }
+    if($value===null)return ['type'=>'null'];
+    return ['type'=>gettype($value),'value'=>$value];
+}
+
 function p50_metrics_capture_key(int|string $accountId,int|string|null $contentId,string $platform,string $sourceType,string|DateTimeInterface $observedAt,array $metrics): string {
-    ksort($metrics);
-    $signature=[];
-    foreach($metrics as $key=>$value)$signature[$key]=$value===null?'__NULL__':(string)$value;
+    $signature=p50_metrics_signature_value($metrics);
     return hash('sha256',implode('|',[(string)$accountId,(string)($contentId??''),strtolower(trim($platform)),strtolower(trim($sourceType)),p50_metrics_timestamp($observedAt),p50_metrics_json($signature)]));
 }
 
