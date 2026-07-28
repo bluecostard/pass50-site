@@ -137,13 +137,13 @@ render();
   if(!document.querySelector('link[data-pass50-data-engine]')){
     const css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='./data-engine-ui.css?v=24.0';
+    css.href='./data-engine-ui.css?v=25.0';
     css.dataset.pass50DataEngine='1';
     document.head.appendChild(css);
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=24.0';
+    js.src='./data-engine-ui.js?v=16.0';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
