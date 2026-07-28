@@ -40,10 +40,10 @@ mr_fixture($pdo,$now,'G',100,900,10,90);
 $h=mr_fixture($pdo,$now,'H',100,100,10,10);
 $pdo->prepare("DELETE FROM p50_metric_captures WHERE content_id=? AND observed_at>?")->execute([$h['contentId'],mr_at($now,-24)]);
 
-mr_must(array_values(p50_mr_percentiles([10,20]))===[25.0,75.0],'Percentiles de deux profils distincts');
-mr_must(array_values(p50_mr_percentiles([10,10]))===[50.0,50.0],'Percentiles de deux profils égaux');
-mr_must(array_values(p50_mr_percentiles([10,10,20]))===[25.0,25.0,100.0],'Percentiles de trois profils avec égalité basse');
-mr_must(array_values(p50_mr_percentiles([10,20,20]))===[0.0,75.0,75.0],'Percentiles de trois profils avec égalité haute');
+mr_must(array_values(p50_mr_percentiles([10,20]))==[25.0,75.0],'Percentiles de deux profils distincts');
+mr_must(array_values(p50_mr_percentiles([10,10]))==[50.0,50.0],'Percentiles de deux profils égaux');
+mr_must(array_values(p50_mr_percentiles([10,10,20]))==[25.0,25.0,100.0],'Percentiles de trois profils avec égalité basse');
+mr_must(array_values(p50_mr_percentiles([10,20,20]))==[0.0,75.0,75.0],'Percentiles de trois profils avec égalité haute');
 
 $first=p50_mr_calculate($pdo,['24H'],'integration_fixture');
 $rows=p50_mr_read($pdo,'24H',100)['rows'];$byId=[];foreach($rows as $row)$byId[$row['profileId']]=$row;
