@@ -22,7 +22,7 @@ class LiveRadarV4Tests(unittest.TestCase):
     def test_tiktok_accepts_api_or_two_independent_html_probes(self):
         parser = re.search(r'function p50_live_v4_parse_tiktok\(.*?\n}', PARSERS, re.S).group(0)
         self.assertIn("$strongApi||$votes>=2?'live':'probable'", parser)
-        self.assertIn("'api','api_basic'", SOURCE)
+        self.assertIn("'api','api_basic'", PARSERS)
         self.assertIn("'live','mobile_live','embed'", parser)
         self.assertIn('tiktok_blocked_or_challenged', parser)
         self.assertIn('roomVotes', parser)
