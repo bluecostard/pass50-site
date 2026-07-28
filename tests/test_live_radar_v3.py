@@ -91,7 +91,7 @@ class LiveRadarV3Tests(unittest.TestCase):
         self.assertIn("pass50LiveRadar = '3.2'", CONFIG)
         self.assertNotIn("live-radar-v2.js", CONFIG)
         self.assertIn("live-radar-v3.js?v=1.2", SW)
-        self.assertIn("pass50-v43-live-strict-active", SW)
+        self.assertIn("pass50-v44-ranking-calibration", SW)
         self.assertNotIn("live-radar-v3.js?v=1.1", CONFIG + SW)
         self.assertNotIn("live-radar-v2.js", SW)
 

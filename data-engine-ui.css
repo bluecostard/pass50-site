@@ -76,4 +76,32 @@
 #adminModal .de-ranking-status.insufficient{color:#ffc467;border:1px solid rgba(255,196,103,.4);background:rgba(255,196,103,.08)}
 #adminModal .de-ranking-exclusions{padding:14px;border:1px solid var(--line);border-radius:14px;background:#0c100c}
 #adminModal .de-ranking-exclusions ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin:12px 0 0;padding:0;list-style:none}
+#adminModal .de-ranking-lab .de-ranking-subnav{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
+#adminModal .de-ranking-lab .de-ranking-history-controls{display:flex;justify-content:flex-end}
+#adminModal .de-ranking-lab .de-ranking-history-controls label{display:grid;gap:5px;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase}
+#adminModal .de-ranking-lab .de-ranking-history-controls select{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#0b100b;color:#fff}
+#adminModal .de-ranking-lab .de-ranking-history-wrap{overflow-x:auto;overflow-y:visible}
+#adminModal .de-ranking-lab .de-ranking-history-table{min-width:1580px}
+#adminModal .de-ranking-lab .de-ranking-summary-badge,#adminModal .de-ranking-lab .de-ranking-maturity{display:inline-flex;padding:5px 8px;border:1px solid rgba(183,255,0,.38);border-radius:999px;background:rgba(183,255,0,.08);color:var(--lime);font-size:10px;font-weight:900}
+#adminModal .de-ranking-lab .de-ranking-summary-badge.fallback{border-color:rgba(255,196,103,.38);background:rgba(255,196,103,.08);color:#ffc467}
+#adminModal .de-ranking-lab .de-ranking-calibration-warning{padding:13px;border:1px solid rgba(255,196,103,.4);border-radius:13px;background:rgba(255,196,103,.07);color:#ffd28c;font-weight:900}
+#adminModal .de-ranking-lab .de-ranking-calibration-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+#adminModal .de-ranking-lab .de-ranking-calibration-grid section,#adminModal .de-ranking-lab .de-ranking-matrix-section{min-width:0;padding:15px;border:1px solid var(--line);border-radius:15px;background:#0c100c}
+#adminModal .de-ranking-lab .de-ranking-calibration-grid section>strong,#adminModal .de-ranking-lab .de-ranking-calibration-grid section>small{display:block;margin-top:10px}
+#adminModal .de-ranking-lab .de-ranking-calibration-grid p{color:var(--muted);line-height:1.45}
+#adminModal .de-ranking-lab .de-ranking-calibration-grid dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 12px;margin:13px 0 0}
+#adminModal .de-ranking-lab .de-ranking-calibration-grid dt{color:var(--muted)}
+#adminModal .de-ranking-lab .de-ranking-calibration-grid dd{margin:0;font-weight:900}
+#adminModal .de-ranking-lab .de-ranking-matrix-wrap{max-width:100%;margin-top:12px;overflow-x:auto;overflow-y:visible}
+#adminModal .de-ranking-lab .de-ranking-matrix{width:100%;min-width:720px;border-collapse:separate;border-spacing:5px}
+#adminModal .de-ranking-lab .de-ranking-matrix th{padding:8px;color:var(--muted);font-size:10px}
+#adminModal .de-ranking-lab .de-ranking-matrix td{padding:11px;border:1px solid #303a30;border-radius:10px;background:#090d09;text-align:center}
+#adminModal .de-ranking-lab .de-ranking-matrix td strong,#adminModal .de-ranking-lab .de-ranking-matrix td span{display:block}
+#adminModal .de-ranking-lab .de-ranking-matrix td strong{font-size:18px}
+#adminModal .de-ranking-lab .de-ranking-matrix td span{margin-top:3px;color:var(--muted);font-size:10px}
+#adminModal .de-ranking-lab .de-ranking-matrix td.baseline{border-color:var(--lime);box-shadow:inset 0 0 0 1px rgba(183,255,0,.25);background:rgba(183,255,0,.08)}
+#adminModal .de-ranking-lab .positive{color:#7ee29a!important}
+#adminModal .de-ranking-lab .negative{color:#ff8a8a!important}
+#adminModal .de-ranking-lab td.unranked{color:var(--muted);background:transparent}
 @media(max-width:760px){#adminModal .de-ranking-kpis{grid-template-columns:1fr 1fr}#adminModal .de-ranking-actions{align-items:stretch}#adminModal .de-ranking-actions>*{flex:1}}
+@media(max-width:900px){#adminModal .de-ranking-lab .de-ranking-calibration-grid{grid-template-columns:1fr}}

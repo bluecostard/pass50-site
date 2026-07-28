@@ -60,6 +60,20 @@ function p50_mr_schema_sql(): array {
           UNIQUE KEY uq_p50_mr_snapshot(run_uuid,period_key,profile_id),
           INDEX idx_p50_mr_snapshot_period(algorithm_version,period_key,rank_position)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS p50_metric_ranking_period_runs (
+          run_uuid CHAR(36) CHARACTER SET ascii NOT NULL,algorithm_version VARCHAR(24) NOT NULL,
+          period_key VARCHAR(8) NOT NULL,profiles_considered INT UNSIGNED NOT NULL,
+          classable_count INT UNSIGNED NOT NULL,excluded_count INT UNSIGNED NOT NULL,
+          average_score DECIMAL(7,3) NULL,median_score DECIMAL(7,3) NULL,top_score DECIMAL(7,3) NULL,
+          average_confidence DECIMAL(7,3) NOT NULL,average_coverage DECIMAL(7,3) NOT NULL,
+          threshold_excluded_count INT UNSIGNED NOT NULL,hard_excluded_count INT UNSIGNED NOT NULL,
+          other_excluded_count INT UNSIGNED NOT NULL,exclusion_summary_json LONGTEXT NOT NULL,
+          calculated_at DATETIME NOT NULL,
+          PRIMARY KEY(run_uuid,period_key),
+          INDEX idx_p50_mr_period_algorithm(algorithm_version,period_key,calculated_at),
+          INDEX idx_p50_mr_period_classable(period_key,classable_count),
+          INDEX idx_p50_mr_period_run(run_uuid)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
     ];
 }
 
@@ -100,6 +114,36 @@ function p50_mr_run_metadata(array $metadata=[]): array {
     $dispatchId=is_string($metadata['dispatchId']??null)?trim($metadata['dispatchId']):'';
     if($dispatchId!==''&&strlen($dispatchId)<=120&&preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))$safe['dispatchId']=$dispatchId;
     return $safe;
+}
+
+function p50_mr_median(array $values): ?float {
+    $numeric=[];foreach($values as $value)if(is_int($value)||is_float($value)||is_numeric($value))$numeric[]=(float)$value;
+    if(!$numeric)return null;sort($numeric,SORT_NUMERIC);$count=count($numeric);$middle=intdiv($count,2);
+    return $count%2===1?$numeric[$middle]:($numeric[$middle-1]+$numeric[$middle])/2;
+}
+
+function p50_mr_period_summary(array $rows): array {
+    $profiles=count($rows);$classable=0;$scores=[];$confidence=[];$coverage=[];$exclusions=[];
+    $thresholdExcluded=0;$hardExcluded=0;$otherExcluded=0;$thresholdReasons=['coverage_below_45'=>true,'confidence_below_55'=>true];
+    foreach($rows as $row){
+        $confidence[]=(float)($row['confidence']??0);$coverage[]=(float)($row['coverage']??0);
+        if(!empty($row['classable'])){$classable++;if(($row['score']??null)!==null)$scores[]=(float)$row['score'];continue;}
+        $reasons=array_values(array_unique(array_map('strval',(array)($row['exclusionReasons']??[]))));
+        foreach($reasons as $reason)$exclusions[$reason]=($exclusions[$reason]??0)+1;
+        $hasThreshold=(bool)array_filter($reasons,static fn($reason)=>isset($thresholdReasons[$reason]));
+        $hasHard=(bool)array_filter($reasons,static fn($reason)=>!isset($thresholdReasons[$reason]));
+        if($hasHard)$hardExcluded++;elseif($hasThreshold)$thresholdExcluded++;else $otherExcluded++;
+    }
+    ksort($exclusions);
+    return [
+        'profilesConsidered'=>$profiles,'classableCount'=>$classable,'excludedCount'=>$profiles-$classable,
+        'averageScore'=>$scores?array_sum($scores)/count($scores):null,'medianScore'=>p50_mr_median($scores),
+        'topScore'=>$scores?max($scores):null,
+        'averageConfidence'=>$confidence?array_sum($confidence)/count($confidence):0.0,
+        'averageCoverage'=>$coverage?array_sum($coverage)/count($coverage):0.0,
+        'thresholdExcludedCount'=>$thresholdExcluded,'hardExcludedCount'=>$hardExcluded,
+        'otherExcludedCount'=>$otherExcluded,'exclusionSummary'=>$exclusions,
+    ];
 }
 
 function p50_mr_percentiles(array $values): array {
@@ -282,6 +326,7 @@ function p50_mr_calculate(PDO $pdo,array $periods,string $triggerType,array $met
             $stmt=$pdo->prepare("SELECT profile_id,rank_position FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key=? AND rank_position IS NOT NULL");
             $stmt->execute([P50_MR_ALGORITHM_VERSION,$periodKey]);$previous=[];foreach($stmt->fetchAll() as $row)$previous[$row['profile_id']]=(int)$row['rank_position'];
             $rows=p50_mr_period_rows($loaded,$periodKey,$hours,$now,$previous);$allRows[$periodKey]=$rows;
+            $periodSummary=p50_mr_period_summary($rows);
             $pdo->prepare("DELETE FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key=?")->execute([P50_MR_ALGORITHM_VERSION,$periodKey]);
             $insert=$pdo->prepare("INSERT INTO p50_metric_ranking_current(algorithm_version,period_key,profile_id,run_uuid,rank_position,score,base_score,confidence,coverage,classable,editorial_eligible,platform_count,content_count,capture_count,latest_capture_at,components_json,raw_features_json,exclusion_reasons_json,previous_rank,rank_delta,calculated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $snapshot=$pdo->prepare("INSERT INTO p50_metric_ranking_snapshots(run_uuid,algorithm_version,period_key,profile_id,rank_position,score,confidence,coverage,previous_rank,rank_delta,captured_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)");
@@ -289,6 +334,24 @@ function p50_mr_calculate(PDO $pdo,array $periods,string $triggerType,array $met
                 $insert->execute([P50_MR_ALGORITHM_VERSION,$periodKey,$row['profileId'],$runUuid,$row['rank'],$row['score'],$row['baseScore'],$row['confidence'],$row['coverage'],$row['classable']?1:0,$row['editorialEligible']?1:0,$row['platformCount'],$row['contentCount'],$row['captureCount'],$row['latestCaptureAt'],p50_mr_json($row['components']),p50_mr_json($row['rawFeatures']),p50_mr_json($row['exclusionReasons']),$row['previousRank'],$row['rankDelta'],$now->format('Y-m-d H:i:s')]);$scoresWritten++;
                 if($row['classable']){$classableCount++;if($row['rank']<=100)$snapshot->execute([$runUuid,P50_MR_ALGORITHM_VERSION,$periodKey,$row['profileId'],$row['rank'],$row['score'],$row['confidence'],$row['coverage'],$row['previousRank'],$row['rankDelta'],$now->format('Y-m-d H:i:s')]);}
             }
+            $periodRun=$pdo->prepare("INSERT INTO p50_metric_ranking_period_runs(
+                run_uuid,algorithm_version,period_key,profiles_considered,classable_count,excluded_count,
+                average_score,median_score,top_score,average_confidence,average_coverage,
+                threshold_excluded_count,hard_excluded_count,other_excluded_count,exclusion_summary_json,calculated_at
+              ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              ON DUPLICATE KEY UPDATE profiles_considered=VALUES(profiles_considered),classable_count=VALUES(classable_count),
+                excluded_count=VALUES(excluded_count),average_score=VALUES(average_score),median_score=VALUES(median_score),
+                top_score=VALUES(top_score),average_confidence=VALUES(average_confidence),average_coverage=VALUES(average_coverage),
+                threshold_excluded_count=VALUES(threshold_excluded_count),hard_excluded_count=VALUES(hard_excluded_count),
+                other_excluded_count=VALUES(other_excluded_count),exclusion_summary_json=VALUES(exclusion_summary_json),
+                calculated_at=VALUES(calculated_at)");
+            $periodRun->execute([
+                $runUuid,P50_MR_ALGORITHM_VERSION,$periodKey,$periodSummary['profilesConsidered'],$periodSummary['classableCount'],
+                $periodSummary['excludedCount'],$periodSummary['averageScore'],$periodSummary['medianScore'],$periodSummary['topScore'],
+                $periodSummary['averageConfidence'],$periodSummary['averageCoverage'],$periodSummary['thresholdExcludedCount'],
+                $periodSummary['hardExcludedCount'],$periodSummary['otherExcludedCount'],p50_mr_json($periodSummary['exclusionSummary']),
+                $now->format('Y-m-d H:i:s'),
+            ]);
         }
         $stmt=$pdo->prepare("UPDATE p50_metric_ranking_runs SET status='success',profiles_considered=?,classable_count=?,scores_written=?,metadata_json=?,finished_at=? WHERE run_uuid=?");
         $stmt->execute([count($loaded['profiles']),$classableCount,$scoresWritten,p50_mr_json($runMetadata),$now->format('Y-m-d H:i:s'),$runUuid]);

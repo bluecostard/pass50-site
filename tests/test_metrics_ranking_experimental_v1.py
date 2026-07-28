@@ -148,11 +148,11 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$limit=max(1,min(200,$limit))", read)
 
     def test_cache_and_workflow_versions(self):
-        self.assertIn("data-engine-ui.js?v=17.0", TOOLS)
-        self.assertIn("data-engine-ui.css?v=26.0", TOOLS)
-        self.assertIn("data-engine-ui.js?v=17.0", SW)
-        self.assertIn("data-engine-ui.css?v=26.0", SW)
-        self.assertIn("pass50-v42-ranking-experimental", SW)
+        self.assertIn("data-engine-ui.js?v=18.0", TOOLS)
+        self.assertIn("data-engine-ui.css?v=27.0", TOOLS)
+        self.assertIn("data-engine-ui.js?v=18.0", SW)
+        self.assertIn("data-engine-ui.css?v=27.0", SW)
+        self.assertIn("pass50-v44-ranking-calibration", SW)
         self.assertIn("mariadb:11.4", WORKFLOW)
         for variable in ("P50_TEST_DSN", "P50_TEST_DB_USER", "P50_TEST_DB_PASSWORD"):
             self.assertIn(variable, WORKFLOW)

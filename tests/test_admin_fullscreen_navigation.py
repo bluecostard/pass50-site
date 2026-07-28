@@ -141,12 +141,12 @@ class AdminHomeNavigationTests(unittest.TestCase):
 
 class AdminCacheTests(unittest.TestCase):
     def test_data_engine_versions_and_cache_are_coherent(self):
-        self.assertIn("data-engine-ui.js?v=16.0", TOOLS)
-        self.assertIn("data-engine-ui.css?v=25.0", TOOLS)
-        self.assertIn("data-engine-ui.js?v=16.0", SW)
-        self.assertIn("data-engine-ui.css?v=25.0", SW)
+        self.assertIn("data-engine-ui.js?v=18.0", TOOLS)
+        self.assertIn("data-engine-ui.css?v=27.0", TOOLS)
+        self.assertIn("data-engine-ui.js?v=18.0", SW)
+        self.assertIn("data-engine-ui.css?v=27.0", SW)
         self.assertNotIn("data-engine-ui.js?v=15.0", TOOLS + SW + INDEX)
-        self.assertIn("const CACHE='pass50-v40-admin-fullscreen'", SW)
+        self.assertIn("const CACHE='pass50-v44-ranking-calibration'", SW)
 
 
 if __name__ == "__main__":

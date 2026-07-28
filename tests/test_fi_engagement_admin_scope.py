@@ -83,7 +83,7 @@ class FiEngagementAdminScopeTests(unittest.TestCase):
         self.assertIn(reference, CONFIG)
         self.assertIn(reference, SW)
         self.assertIn("script.dataset.pass50FiEngagement = '3.3'", CONFIG)
-        self.assertIn("const CACHE='pass50-v41-engagement-admin-scope'", SW)
+        self.assertIn("const CACHE='pass50-v44-ranking-calibration'", SW)
         self.assertNotIn("fi-engagement-v3.js?v=1.2", CONFIG)
         self.assertNotIn("fi-engagement-v3.js?v=1.2", SW)
 

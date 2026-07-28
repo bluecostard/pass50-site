@@ -97,6 +97,23 @@ le classement, ni les scores, ni les rangs publics. Une publication vers le
 classement public pourra être étudiée dans une étape ultérieure, uniquement
 après validation de l’algorithme et de ses résultats.
 
+### Historique et calibration
+
+L’administration conserve un historique séparé pour chacune des cinq périodes.
+Les cycles produits à partir de cette version possèdent un résumé exact ; les
+anciens cycles sont reconstruits depuis leurs snapshots Top 100 lorsqu’ils
+existent et restent identifiés comme historiques partiels.
+
+La vue de calibration compare la stabilité du Top 10 et du Top 50, les entrées,
+les sorties et les mouvements entre cycles. Sa matrice simule uniquement des
+seuils de couverture et de confiance : elle ne modifie ni les poids, ni les
+scores, ni les seuils réellement utilisés. La comparaison avec le classement
+public est calculée exclusivement dans le navigateur à partir de la zone active.
+
+Ces outils ne publient rien, n’écrivent jamais dans `app_state` et ne provoquent
+aucun changement automatique. Toute évolution future restera soumise à une
+décision humaine après une période d’observation suffisante.
+
 ## Limites actuelles
 
 Instagram, Facebook et TikTok n’autorisent pas un accès complet aux statistiques de comptes tiers à partir d’un simple lien. Ils seront ajoutés avec :

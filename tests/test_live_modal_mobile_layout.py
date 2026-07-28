@@ -12,7 +12,7 @@ class LiveModalMobileLayoutTests(unittest.TestCase):
     def test_layout_module_is_loaded_and_precached(self):
         self.assertIn("live-modal-layout-v1.js?v=1.0", CONFIG)
         self.assertIn("live-modal-layout-v1.js?v=1.0", SW)
-        self.assertIn("pass50-v35-live-modal-mobile", SW)
+        self.assertIn("pass50-v44-ranking-calibration", SW)
 
     def test_desktop_actions_have_explicit_grid_positions(self):
         self.assertIn("grid-template-columns:62px minmax(0,1fr) minmax(190px,auto)", LAYOUT)
