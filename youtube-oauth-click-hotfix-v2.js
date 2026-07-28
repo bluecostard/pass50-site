@@ -5,6 +5,7 @@
   const TOKEN_KEY = 'pass50_api_token';
   const REQUEST_TIMEOUT_MS = 15000;
   let busy = false;
+  let pollingTimer = null;
 
   function apiBase() {
     return String(window.PASS50_API?.baseUrl || './api').replace(/\/+$/, '') || './api';
@@ -28,9 +29,9 @@
   }
 
   function installStyles() {
-    if (document.getElementById('p50YoutubeClickHotfixV2Styles')) return;
+    if (document.getElementById('p50YoutubeClickHotfixV3Styles')) return;
     const style = document.createElement('style');
-    style.id = 'p50YoutubeClickHotfixV2Styles';
+    style.id = 'p50YoutubeClickHotfixV3Styles';
     style.textContent = `
       #${SECTION_ID} .p50-yt-inline-feedback{margin-top:10px;padding:11px 13px;border:1px solid #536052;border-radius:12px;background:#111611;color:#dbe2d8;font-size:12px;line-height:1.45}
       #${SECTION_ID} .p50-yt-inline-feedback[data-tone="error"]{border-color:#8a3434;background:#241010;color:#ffb4b4}
@@ -73,6 +74,30 @@
     return popup;
   }
 
+  function startStatusPolling(token) {
+    clearInterval(pollingTimer);
+    let attempts = 0;
+    pollingTimer = setInterval(async () => {
+      attempts += 1;
+      try {
+        const response = await fetchWithTimeout(`${apiBase()}/youtube-oauth-status.php`, {
+          method: 'GET',
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }
+        }, 8000);
+        const data = await readJson(response);
+        if (response.ok && data.connected) {
+          clearInterval(pollingTimer);
+          showInline('Chaîne YouTube connectée avec succès.', 'ok');
+          window.postMessage({ source: 'PASS50_YOUTUBE_OAUTH', status: 'connected', code: '' }, window.location.origin);
+          return;
+        }
+      } catch (_) {}
+      if (attempts >= 45) clearInterval(pollingTimer);
+    }, 2000);
+  }
+
   async function startOAuth(button) {
     if (busy) return;
     busy = true;
@@ -111,9 +136,11 @@
       }
 
       showInline('Google s’ouvre maintenant…', 'ok');
+      startStatusPolling(token);
       if (popup && !popup.closed) popup.location.href = data.authorizationUrl;
       else window.location.href = data.authorizationUrl;
     } catch (error) {
+      clearInterval(pollingTimer);
       if (popup && !popup.closed) popup.close();
       showInline(error?.message || 'La connexion YouTube n’a pas pu démarrer.', 'error');
     } finally {
