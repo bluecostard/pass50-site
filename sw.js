@@ -1,3 +1,4 @@
+// Succède à pass50-v42-ranking-experimental sans modifier ses ressources.
 const CACHE='pass50-v43-live-strict-active';
 const ASSETS=[
   './',
