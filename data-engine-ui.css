@@ -9,6 +9,39 @@
 .de-observability-shell{display:grid;gap:15px}.de-observability-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.de-observability-dates>div,.de-observability-card{padding:15px;border:1px solid var(--line);border-radius:15px;background:#0c100c}.de-observability-dates span,.de-reason-grid span{display:block;color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.5px;text-transform:uppercase}.de-observability-dates strong{display:block;margin-top:5px;color:var(--lime);font-size:19px}.de-observability-dates small{display:block;margin-top:4px;color:var(--muted)}.de-observability-card ul{margin:12px 0;padding-left:20px;color:#d7ddd4;line-height:1.55}.de-reason-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.de-reason-grid>div{padding:10px;border:1px solid #283228;border-radius:11px;background:#090d09}.de-reason-grid strong{display:block;color:#ffc467;font-size:20px}.de-observability-table{min-width:900px}.de-observability-foot{text-align:right;font-size:10px}
 @media(max-width:760px){.de-observability-dates{grid-template-columns:1fr}.de-reason-grid{grid-template-columns:1fr 1fr}}
 
+/* Administration plein écran — ne modifie aucune autre modale. */
+#adminModal{padding:0;place-items:stretch;background:var(--bg);backdrop-filter:none;overflow:hidden}
+#adminModal .modal-box{width:100vw;max-width:none;height:100vh;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;overflow:hidden}
+#adminModal .modal-head{position:relative;top:auto;flex:0 0 auto;min-height:64px;padding:14px 18px;gap:16px}
+#adminModal .admin-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+#adminModal .modal-body{flex:1 1 auto;min-height:0;overflow:hidden;padding:0}
+#adminModal #adminBody,#adminModal .admin-grid{height:100%;min-height:0}
+#adminModal .admin-grid{display:grid;grid-template-columns:250px minmax(0,1fr);gap:0;overflow:hidden}
+#adminModal .admin-menu{position:relative;top:auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:18px 14px;border-right:1px solid var(--line);background:#090c09}
+#adminModal .admin-menu .btn{display:flex;width:100%;justify-content:flex-start;margin-bottom:7px;text-align:left}
+#adminModal .admin-pane{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:22px;overscroll-behavior:contain}
+#adminModal .admin-table-wrap{max-width:100%;overflow-x:auto;overflow-y:visible}
+#adminModal .de-admin-home{display:grid;gap:18px;max-width:1500px;margin:0 auto}
+#adminModal .de-admin-home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px}
+#adminModal .de-admin-home-card{min-width:0;min-height:150px;padding:20px;border:1px solid var(--line);border-radius:16px;background:#0c100c;color:#fff;text-align:left;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer}
+#adminModal .de-admin-home-card:hover,#adminModal .de-admin-home-card:focus-visible{border-color:rgba(183,255,0,.55);background:#111711;outline:none}
+#adminModal .de-admin-home-card strong{font-size:18px}
+#adminModal .de-admin-home-card span{margin-top:9px;color:var(--muted);line-height:1.45}
+#adminModal .de-admin-home-card i{margin-top:auto;padding-top:16px;color:var(--lime);font-style:normal;font-size:11px;font-weight:900}
+
+@media(max-width:760px){
+  #adminModal .modal-head{min-height:0;padding:10px 12px;align-items:flex-start}
+  #adminModal .modal-head>strong{padding-top:8px;font-size:13px}
+  #adminModal .admin-head-actions{gap:5px}
+  #adminModal .admin-head-actions .btn{padding:8px 9px;font-size:9px}
+  #adminModal .admin-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  #adminModal .admin-menu{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:8px 10px;border-right:0;border-bottom:1px solid var(--line);margin:0;white-space:nowrap}
+  #adminModal .admin-menu .btn{flex:0 0 auto;width:auto;margin:0 6px 0 0}
+  #adminModal .admin-pane{padding:14px}
+  #adminModal .de-admin-home-grid{grid-template-columns:minmax(0,1fr)}
+  #adminModal .de-admin-home-card{min-height:120px}
+}
+
 /* PASS50 Data Engine V19 */
 .de-kpis{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}
 .de-kpi small{display:block;margin-top:5px;color:#9da69a;font-size:9px;line-height:1.35}
