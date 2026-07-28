@@ -107,6 +107,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : OBRE / Marie-Pascale Obré.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-obre-marie-pascale]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-obre-marie-pascale.js?v=1.0';
+  script.dataset.pass50ProfileObreMariePascale = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Radar LIVE V3 : balayage complet de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
