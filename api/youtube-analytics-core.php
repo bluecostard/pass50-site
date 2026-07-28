@@ -218,7 +218,6 @@ function p50ya_fetch_summary(string $userId, int $days = P50YA_DEFAULT_DAYS): ar
         'startDate' => $range['startDate'],
         'endDate' => $range['endDate'],
         'metrics' => implode(',', P50YA_REPORT_METRICS),
-        'includeHistoricalChannelData' => 'true',
     ];
     $response = p50yo_http(
         'https://youtubeanalytics.googleapis.com/v2/reports?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986),
