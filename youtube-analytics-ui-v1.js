@@ -174,6 +174,13 @@
       scheduled = false;
       const section = document.getElementById(SECTION_ID);
       if (!section || !token()) return;
+      if (!section.querySelector('.p50-yt-status.ok')) {
+        connected = false;
+        initialized = false;
+        render();
+        return;
+      }
+      connected = true;
       if (!document.getElementById(PANEL_ID)) render();
       if (!initialized) {
         initialized = true;
