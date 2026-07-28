@@ -9,8 +9,10 @@ on:
       - 'api/live-radar-v4-storage.php'
       - 'api/live-status-v4.php'
       - 'live-radar-v3.js'
+      - 'LIVE_RADAR_V4_NOTES.md'
       - 'tests/test_live_radar_v3.py'
       - 'tests/test_live_radar_v4_static.py'
+      - 'tests/test_live_radar_v4_docs.py'
       - 'tests/live_radar_v4_core.php'
       - 'tests/live_radar_v4_mariadb.php'
       - '.github/workflows/validate-live-radar-v3.yml'
@@ -53,6 +55,7 @@ jobs:
         run: |
           python3 -m unittest tests/test_live_radar_v3.py
           python3 -m unittest tests/test_live_radar_v4_static.py
+          python3 -m unittest tests/test_live_radar_v4_docs.py
           php tests/live_radar_v4_core.php
       - name: Vérifier la continuité MariaDB
         run: php tests/live_radar_v4_mariadb.php
