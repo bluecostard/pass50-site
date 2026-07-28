@@ -104,6 +104,17 @@ class AdminHomeNavigationTests(unittest.TestCase):
         self.assertNotIn("location.href", go_home.group(1))
         self.assertNotIn("history.back", go_home.group(1))
 
+    def test_reset_demo_explicitly_exits_admin(self):
+        reset_demo = re.search(r"function resetDemo\(\)\{(.*?)\}", INDEX, re.DOTALL)
+        self.assertIsNotNone(reset_demo)
+        self.assertIn("p50ExitAdmin()", reset_demo.group(1))
+        self.assertNotIn("close('adminModal')", reset_demo.group(1))
+
+        exit_admin = re.search(r"function p50ExitAdmin\(\)\{(.*?)\}", INDEX, re.DOTALL)
+        self.assertIsNotNone(exit_admin)
+        self.assertIn("ui.adminTab='adminhome'", exit_admin.group(1))
+        self.assertIn("modal.classList.remove('show')", exit_admin.group(1))
+
     def test_other_modal_close_buttons_are_unchanged(self):
         for modal in (
             "liveModal",
