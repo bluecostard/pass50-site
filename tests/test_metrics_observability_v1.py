@@ -47,6 +47,13 @@ class MetricsObservabilitySecurityTests(unittest.TestCase):
 
     def test_error_details_are_limited_and_redacted(self):
         self.assertIn("ORDER BY started_at DESC LIMIT 20", CORE)
+        self.assertIn("WHERE status='failed'", CORE)
+        self.assertIn("function p50_obs_recent_metric_failures(PDO $pdo, int $limit=20)", CORE)
+        self.assertIn("p50_metrics_table_exists($pdo,'p50_metric_jobs')", CORE)
+        self.assertIn("max(1,min(50,$limit))", CORE)
+        self.assertIn("p50_obs_recent_metric_failures($pdo,20)", CORE)
+        self.assertIn("$metricsOrchestrator['recentFailedJobs']", CORE)
+        self.assertNotIn("$metricsOrchestrator['failedJobs']", CORE)
         self.assertIn("Bearer [redacted]", CORE)
         self.assertIn("[email]", CORE)
         self.assertIn("[url]", CORE)
@@ -162,8 +169,15 @@ class MetricsObservabilityAdminTests(unittest.TestCase):
             "Couverture par plateforme",
             "Dernières erreurs",
             "Pourquoi le classement reste statique",
+            "DERNIÈRES TÂCHES MÉTRIQUES ÉCHOUÉES",
+            "Aucune tâche métrique échouée.",
+            "Ces échecs proviennent de la file du nouvel orchestrateur. Ils sont distincts du journal historique affiché plus bas.",
+            "Erreur sécurisée",
         ):
             self.assertIn(label, UI)
+        self.assertIn("metricAutomation.recentFailedJobs", UI)
+        self.assertIn("String(row.cadence||'').toUpperCase()", UI)
+        self.assertNotIn("row.jobUuid", UI)
 
     def test_admin_refresh_is_get_only(self):
         diagnostic_call = re.search(
