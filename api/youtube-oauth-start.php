@@ -15,7 +15,7 @@ $expiresAt = gmdate('Y-m-d H:i:s', time() + 10 * 60);
 $db = db();
 $db->beginTransaction();
 try {
-    $db->prepare('DELETE FROM p50_youtube_oauth_states WHERE expires_at<NOW() OR user_id=?')->execute([$user['id']]);
+    $db->prepare('DELETE FROM p50_youtube_oauth_states WHERE expires_at<UTC_TIMESTAMP() OR user_id=?')->execute([$user['id']]);
     $db->prepare('INSERT INTO p50_youtube_oauth_states(state_hash,user_id,expires_at) VALUES(?,?,?)')
         ->execute([$stateHash, $user['id'], $expiresAt]);
     $db->commit();
