@@ -1,12 +1,13 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__).'/api/metrics-ranking-core.php';
+require dirname(__DIR__).'/api/metrics-ranking-calibration-core.php';
 
 $dsn=getenv('P50_TEST_DSN');if(!$dsn){fwrite(STDERR,"P50_TEST_DSN absent\n");exit(77);}
 $pdo=new PDO($dsn,getenv('P50_TEST_DB_USER')?:'root',getenv('P50_TEST_DB_PASSWORD')?:'root',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
 function mr_must(bool $condition,string $message): void {if(!$condition)throw new RuntimeException($message);}
 
-foreach(['p50_metric_ranking_snapshots','p50_metric_ranking_current','p50_metric_ranking_runs','p50_metric_captures','p50_metric_contents','p50_metric_jobs','p50_metric_runs','p50_metric_accounts','p50_metric_schema_migrations','p50_profile_registry','app_state'] as $table)$pdo->exec("DROP TABLE IF EXISTS `$table`");
+foreach(['p50_metric_ranking_period_runs','p50_metric_ranking_snapshots','p50_metric_ranking_current','p50_metric_ranking_runs','p50_metric_captures','p50_metric_contents','p50_metric_jobs','p50_metric_runs','p50_metric_accounts','p50_metric_schema_migrations','p50_profile_registry','app_state'] as $table)$pdo->exec("DROP TABLE IF EXISTS `$table`");
 $pdo->exec("CREATE TABLE p50_profile_registry(profile_id VARCHAR(100) PRIMARY KEY,public_name VARCHAR(190) NOT NULL,handle VARCHAR(190) NOT NULL DEFAULT '',region VARCHAR(32) NOT NULL DEFAULT 'CI',category VARCHAR(100) NOT NULL DEFAULT '',alive TINYINT NOT NULL DEFAULT 1,eligible TINYINT NOT NULL DEFAULT 1) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 $pdo->exec("CREATE TABLE app_state(id INT PRIMARY KEY,state_json LONGTEXT NOT NULL,version INT NOT NULL)");
 $pdo->exec("INSERT INTO app_state VALUES(1,'{\"rankingExperimentalSentinel\":true,\"publicScores\":{\"A\":88},\"publicRanks\":{\"A\":1}}',731)");
@@ -89,9 +90,44 @@ mr_must(($scheduledMetadata['cadence']??'')==='2h','La métadonnée cadence vaut
 mr_must(($scheduledMetadata['dispatchId']??'')==='integration-aged-ranking','Le dispatchId automatique est conservé');
 mr_must(($scheduledMetadata['readOnlyCanonicalInputs']??false)===true&&($scheduledMetadata['publicPublication']??true)===false,'Les garanties expérimentales restent enregistrées');
 
+$periodSummaryCount=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_period_runs WHERE run_uuid=?",[$scheduled['runUuid']]);
+mr_must($periodSummaryCount===5,'Le cycle automatique écrit cinq résumés exacts');
+$summaryStmt=$pdo->prepare("SELECT * FROM p50_metric_ranking_period_runs WHERE run_uuid=? AND period_key='24H'");
+$summaryStmt->execute([$scheduled['runUuid']]);$storedSummary=$summaryStmt->fetch();
+$currentSummaryInput=[];foreach($pdo->query("SELECT score,confidence,coverage,classable,exclusion_reasons_json FROM p50_metric_ranking_current WHERE algorithm_version='MR-V1.0' AND period_key='24H'")->fetchAll() as $row){
+    $currentSummaryInput[]=['score'=>$row['score']===null?null:(float)$row['score'],'confidence'=>(float)$row['confidence'],'coverage'=>(float)$row['coverage'],'classable'=>(bool)$row['classable'],'exclusionReasons'=>json_decode((string)$row['exclusion_reasons_json'],true)?:[]];
+}
+$expectedSummary=p50_mr_period_summary($currentSummaryInput);
+mr_must((int)$storedSummary['profiles_considered']===$expectedSummary['profilesConsidered']&&(int)$storedSummary['classable_count']===$expectedSummary['classableCount']&&(int)$storedSummary['excluded_count']===$expectedSummary['excludedCount'],'Le résumé 24H correspond exactement aux lignes courantes');
+mr_must(abs((float)$storedSummary['average_confidence']-$expectedSummary['averageConfidence'])<0.001&&abs((float)$storedSummary['average_coverage']-$expectedSummary['averageCoverage'])<0.001,'Les moyennes de confiance et couverture sont exactes');
+mr_must((int)$storedSummary['threshold_excluded_count']===$expectedSummary['thresholdExcludedCount']&&(int)$storedSummary['hard_excluded_count']===$expectedSummary['hardExcludedCount']&&(int)$storedSummary['other_excluded_count']===$expectedSummary['otherExcludedCount'],'Les catégories d’exclusion sont exactes');
+mr_must(json_decode((string)$storedSummary['exclusion_summary_json'],true)===$expectedSummary['exclusionSummary'],'Le résumé des motifs est valide');
+mr_must((int)$storedSummary['classable_count']+(int)$storedSummary['threshold_excluded_count']+(int)$storedSummary['hard_excluded_count']+(int)$storedSummary['other_excluded_count']===(int)$storedSummary['profiles_considered'],'La partition du résumé couvre tous les profils');
+
+$legacyUuid='00000000-0000-4000-8000-000000000024';$legacyAt=$dueNow->modify('-4 hours')->format('Y-m-d H:i:s');
+$pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,trigger_type,status,periods_json,profiles_considered,classable_count,scores_written,error_message,metadata_json,started_at,finished_at) VALUES(?,?,?,'success',?,8,2,2,NULL,'{}',?,?)")
+    ->execute([$legacyUuid,P50_MR_ALGORITHM_VERSION,'legacy_fixture','["24H"]',$legacyAt,$legacyAt]);
+$legacySnapshot=$pdo->prepare("INSERT INTO p50_metric_ranking_snapshots(run_uuid,algorithm_version,period_key,profile_id,rank_position,score,confidence,coverage,previous_rank,rank_delta,captured_at) VALUES(?,?,?,?,?,?,?,?,NULL,NULL,?)");
+$legacySnapshot->execute([$legacyUuid,P50_MR_ALGORITHM_VERSION,'24H','A',1,80,80,80,$legacyAt]);
+$legacySnapshot->execute([$legacyUuid,P50_MR_ALGORITHM_VERSION,'24H','B',2,70,75,75,$legacyAt]);
+$failedUuid='00000000-0000-4000-8000-000000000025';
+$pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,trigger_type,status,periods_json,error_message,metadata_json,started_at,finished_at) VALUES(?,?,?,'failed',?,'fixture','{}',?,?)")
+    ->execute([$failedUuid,P50_MR_ALGORITHM_VERSION,'failed_fixture','["24H"]',$legacyAt,$legacyAt]);
+mr_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_period_runs WHERE run_uuid=?",[$failedUuid])===0,'Une exécution échouée ne laisse aucun résumé partiel');
+
+$calibration=p50_mrc_read($pdo,'24H',24);
+mr_must(count($calibration['runs'])>=4,'Plusieurs cycles sont retournés');
+mr_must(($calibration['runs'][0]['summaryExact']??false)===true,'Le cycle le plus récent possède un résumé exact');
+mr_must(count(array_filter($calibration['runs'],fn($run)=>!$run['summaryExact']))>=1,'Un ancien cycle utilise le fallback Top 100');
+foreach($calibration['runs'] as $run)foreach(['top10Retention','top50Retention'] as $field)if($run[$field]!==null)mr_must($run[$field]>=0&&$run[$field]<=100,'Les rétentions restent bornées');
+mr_must(count($calibration['thresholdSimulation']['cells'])===36,'La matrice contient 36 cellules');
+$baselineCell=array_values(array_filter($calibration['thresholdSimulation']['cells'],fn($cell)=>$cell['coverageThreshold']===45&&$cell['confidenceThreshold']===55))[0];
+$actualClassable=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key='24H' AND classable=1",[P50_MR_ALGORITHM_VERSION]);
+mr_must($baselineCell['simulatedClassableCount']===$actualClassable&&$calibration['thresholdSimulation']['baseline']['classableCount']===$actualClassable,'La baseline 45/55 égale le classement réellement classable');
+
 $appStateAfter=$pdo->query("SELECT state_json,version FROM app_state WHERE id=1")->fetch();
 mr_must($appStateAfter===$appStateBefore,'app_state, les scores publics et les rangs publics restent strictement inchangés');
-$serialized=json_encode([$rows2,$pdo->query("SELECT components_json,raw_features_json FROM p50_metric_ranking_current")->fetchAll()],JSON_UNESCAPED_SLASHES);
+$serialized=json_encode([$rows2,$calibration,$pdo->query("SELECT components_json,raw_features_json FROM p50_metric_ranking_current")->fetchAll()],JSON_UNESCAPED_SLASHES);
 foreach(['payload','source_reference','lock_token','idempotency_key','Bearer ','token=','https://'] as $secret)mr_must(!str_contains($serialized,$secret),'Donnée sensible absente : '.$secret);
 mr_must(!str_contains($serialized,'"id":'),'Aucun identifiant de capture dans les composants ou caractéristiques');
 
