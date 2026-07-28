@@ -12,6 +12,7 @@ UI = (ROOT / "data-engine-ui.js").read_text(encoding="utf-8")
 CSS = (ROOT / "data-engine-ui.css").read_text(encoding="utf-8")
 TOOLS = (ROOT / "v9-tools.js").read_text(encoding="utf-8")
 SW = (ROOT / "sw.js").read_text(encoding="utf-8")
+INDEX = (ROOT / "index.html").read_text(encoding="utf-8")
 
 
 def function(source, name):
@@ -21,6 +22,15 @@ def function(source, name):
 
 
 def transition(previous, current):
+    if previous is None:
+        return {
+            "top10": None,
+            "top50": None,
+            "entries": None,
+            "exits": None,
+            "movement": None,
+            "score": None,
+        }
     before10 = {profile for profile, rank, _ in previous if rank <= 10}
     after10 = {profile for profile, rank, _ in current if rank <= 10}
     before50 = {profile for profile, rank, _ in previous if rank <= 50}
@@ -114,8 +124,45 @@ class MetricsRankingCalibrationV1Tests(unittest.TestCase):
         self.assertEqual(measured["movement"], 1)
         self.assertEqual(measured["score"], 3)
         transition_php = function(CALIBRATION, "p50_mrc_transition")
+        self.assertIn("function p50_mrc_transition(?array $previous,array $current)", transition_php)
+        self.assertIn("if($previous===null)", transition_php)
         for field in ("top10Retention", "top50Retention", "medianAbsoluteRankMovement", "top50Entries", "top50Exits", "medianScoreChange"):
             self.assertIn(f"'{field}'", transition_php)
+
+    def test_first_empty_and_following_empty_cycles_are_distinct(self):
+        first = transition(None, [("A", 1, 80)])
+        self.assertTrue(all(value is None for value in first.values()))
+        after_empty = transition([], [("A", 1, 80), ("B", 2, 70)])
+        self.assertIsNone(after_empty["top10"])
+        self.assertIsNone(after_empty["top50"])
+        self.assertEqual(after_empty["entries"], 2)
+        self.assertEqual(after_empty["exits"], 0)
+        before_empty = transition([("A", 1, 80), ("B", 2, 70)], [])
+        self.assertEqual(before_empty["top10"], 0)
+        self.assertEqual(before_empty["top50"], 0)
+        self.assertEqual(before_empty["entries"], 0)
+        self.assertEqual(before_empty["exits"], 2)
+        self.assertIsNone(before_empty["movement"])
+        self.assertIsNone(before_empty["score"])
+        read = function(CALIBRATION, "p50_mrc_read")
+        self.assertIn("$previousSnapshots=null", read)
+        self.assertIn("$previousSnapshots=$cycleSnapshots", read)
+
+    def test_capped_cycles_are_excluded_from_average_classable_count(self):
+        cycles = [
+            {"classableCount": 12, "classableCountCapped": False},
+            {"classableCount": 8, "classableCountCapped": False},
+            {"classableCount": 100, "classableCountCapped": True},
+        ]
+        included = [
+            cycle["classableCount"]
+            for cycle in cycles
+            if cycle["classableCount"] is not None and not cycle["classableCountCapped"]
+        ]
+        self.assertEqual(sum(included) / len(included), 10)
+        read = function(CALIBRATION, "p50_mrc_read")
+        self.assertIn("if($run['classableCount']!==null&&!$run['classableCountCapped'])", read)
+        self.assertIn("'averageClassableCount'=>p50_mrc_average($classableValues)", read)
 
     def test_stability_and_maturity_states(self):
         self.assertEqual(stability(5, 100, 0), "insufficient_history")
@@ -160,6 +207,10 @@ class MetricsRankingCalibrationV1Tests(unittest.TestCase):
             self.assertIn(label, UI)
         current = function(UI, "deRankingCurrentHtml")
         self.assertIn("!row.classable?'Non classé'", current)
+        self.assertIn("evolutionClass=!row.classable?'unranked'", current)
+        self.assertIn('class="${evolutionClass}"', current)
+        self.assertIn("#adminModal .de-ranking-lab td.unranked", CSS)
+        self.assertNotIn("class=\"${row.rankDelta>0?", current)
         self.assertIn("row.rankDelta===null?'Nouvelle entrée'", current)
         ranking_block = UI[UI.index("function deRankingCurrentHtml"):UI.index("async function deCalculateRankingLab")]
         for forbidden in (">Appliquer<", ">Publier<", "Valider les seuils", "Remplacer le classement"):
@@ -182,6 +233,9 @@ class MetricsRankingCalibrationV1Tests(unittest.TestCase):
         self.assertIn("data-engine-ui.js?v=18.0", SW)
         self.assertIn("data-engine-ui.css?v=27.0", SW)
         self.assertIn("pass50-v44-ranking-calibration", SW)
+        self.assertIn("v9-tools.js?v=15.1", INDEX)
+        self.assertIn("v9-tools.js?v=15.1", SW)
+        self.assertNotIn("v9-tools.js?v=15.0", INDEX + SW)
         self.assertIn("#adminModal .de-ranking-lab", CSS)
         self.assertNotIn("data-engine-ui.js?v=17.0", TOOLS + SW)
         self.assertNotIn("data-engine-ui.css?v=26.0", TOOLS + SW)

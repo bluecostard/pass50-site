@@ -104,6 +104,37 @@ mr_must((int)$storedSummary['threshold_excluded_count']===$expectedSummary['thre
 mr_must(json_decode((string)$storedSummary['exclusion_summary_json'],true)===$expectedSummary['exclusionSummary'],'Le résumé des motifs est valide');
 mr_must((int)$storedSummary['classable_count']+(int)$storedSummary['threshold_excluded_count']+(int)$storedSummary['hard_excluded_count']+(int)$storedSummary['other_excluded_count']===(int)$storedSummary['profiles_considered'],'La partition du résumé couvre tous les profils');
 
+$currentBeforeRollback=$pdo->query("SELECT * FROM p50_metric_ranking_current ORDER BY algorithm_version,period_key,profile_id")->fetchAll();
+$snapshotsBeforeRollback=$pdo->query("SELECT * FROM p50_metric_ranking_snapshots ORDER BY id")->fetchAll();
+$periodRunsBeforeRollback=$pdo->query("SELECT * FROM p50_metric_ranking_period_runs ORDER BY run_uuid,period_key")->fetchAll();
+$rollbackTrigger='p50_mr_period_runs_rollback_fixture';$rollbackRaised=false;
+$pdo->exec("DROP TRIGGER IF EXISTS `$rollbackTrigger`");
+try{
+    $pdo->exec("CREATE TRIGGER `$rollbackTrigger` BEFORE INSERT ON p50_metric_ranking_period_runs
+        FOR EACH ROW BEGIN
+          IF NEW.period_key='48H' THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='fixture ranking period rollback';
+          END IF;
+        END");
+    try{
+        p50_mr_calculate($pdo,array_keys(p50_mr_periods()),'integration_rollback_fixture');
+    }catch(Throwable){
+        $rollbackRaised=true;
+    }
+}finally{
+    $pdo->exec("DROP TRIGGER IF EXISTS `$rollbackTrigger`");
+}
+mr_must($rollbackRaised,'Le trigger MariaDB provoque une erreur après les premières périodes');
+$failedRollbackStmt=$pdo->query("SELECT run_uuid,status FROM p50_metric_ranking_runs WHERE trigger_type='integration_rollback_fixture' ORDER BY id DESC LIMIT 1");
+$failedRollbackRun=$failedRollbackStmt->fetch();$failedRollbackUuid=(string)($failedRollbackRun['run_uuid']??'');
+mr_must($failedRollbackUuid!==''&&$failedRollbackRun['status']==='failed','Le calcul interrompu est enregistré failed');
+mr_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_period_runs WHERE run_uuid=?",[$failedRollbackUuid])===0,'Les résumés 2H et 24H écrits avant l’erreur sont rollback');
+mr_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_snapshots WHERE run_uuid=?",[$failedRollbackUuid])===0,'Aucun snapshot du run échoué ne subsiste');
+mr_must($pdo->query("SELECT * FROM p50_metric_ranking_current ORDER BY algorithm_version,period_key,profile_id")->fetchAll()===$currentBeforeRollback,'Les lignes current précédentes sont restaurées à l’identique');
+mr_must($pdo->query("SELECT * FROM p50_metric_ranking_snapshots ORDER BY id")->fetchAll()===$snapshotsBeforeRollback,'Les snapshots précédents sont restaurés à l’identique');
+mr_must($pdo->query("SELECT * FROM p50_metric_ranking_period_runs ORDER BY run_uuid,period_key")->fetchAll()===$periodRunsBeforeRollback,'Les résumés précédents sont restaurés à l’identique');
+mr_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME=?",[$rollbackTrigger])===0,'Le trigger de rollback est toujours supprimé');
+
 $legacyUuid='00000000-0000-4000-8000-000000000024';$legacyAt=$dueNow->modify('-4 hours')->format('Y-m-d H:i:s');
 $pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,trigger_type,status,periods_json,profiles_considered,classable_count,scores_written,error_message,metadata_json,started_at,finished_at) VALUES(?,?,?,'success',?,8,2,2,NULL,'{}',?,?)")
     ->execute([$legacyUuid,P50_MR_ALGORITHM_VERSION,'legacy_fixture','["24H"]',$legacyAt,$legacyAt]);

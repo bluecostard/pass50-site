@@ -33,9 +33,9 @@ class FiEngagementCompleteAdminTests(unittest.TestCase):
         self.assertIn("max-height:430px", CLIENT)
 
     def test_new_client_version_is_loaded_and_precached(self):
-        self.assertIn("fi-engagement-v3.js?v=1.2", CONFIG)
-        self.assertIn("fi-engagement-v3.js?v=1.2", SW)
-        self.assertIn("pass50-v38-engagement-all-profiles", SW)
+        self.assertIn("fi-engagement-v3.js?v=1.3", CONFIG)
+        self.assertIn("fi-engagement-v3.js?v=1.3", SW)
+        self.assertIn("pass50-v44-ranking-calibration", SW)
 
 
 if __name__ == "__main__":

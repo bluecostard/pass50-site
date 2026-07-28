@@ -12,7 +12,7 @@ SW = (ROOT / "sw.js").read_text(encoding="utf-8")
 class FiNavigationV3Tests(unittest.TestCase):
     def test_new_uncached_modules_are_loaded(self):
         self.assertIn("fi-navigation-v3.js?v=1.0", CONFIG)
-        self.assertIn("fi-engagement-v3.js?v=1.0", CONFIG)
+        self.assertIn("fi-engagement-v3.js?v=1.3", CONFIG)
         self.assertNotIn("fi-navigation.js?v=1.2", CONFIG)
         self.assertNotIn("fi-engagement-v2.js?v=3.2", CONFIG)
 
@@ -52,9 +52,9 @@ class FiNavigationV3Tests(unittest.TestCase):
         self.assertIn("if(scheduled)return", ENGAGEMENT)
 
     def test_service_worker_forces_fresh_scripts(self):
-        self.assertIn("pass50-v27-fi-navigation-v3", SW)
+        self.assertIn("pass50-v44-ranking-calibration", SW)
         self.assertIn("fi-navigation-v3.js?v=1.0", SW)
-        self.assertIn("fi-engagement-v3.js?v=1.0", SW)
+        self.assertIn("fi-engagement-v3.js?v=1.3", SW)
         self.assertIn("cache:'no-store'", SW)
 
 

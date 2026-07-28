@@ -15,8 +15,8 @@ function p50_mrc_top(array $snapshots,int $limit): array {
     return $top;
 }
 
-function p50_mrc_transition(array $previous,array $current): array {
-    if(!$previous)return [
+function p50_mrc_transition(?array $previous,array $current): array {
+    if($previous===null)return [
         'top10Retention'=>null,'top50Retention'=>null,'medianAbsoluteRankMovement'=>null,
         'top50Entries'=>null,'top50Exits'=>null,'medianScoreChange'=>null,
     ];
@@ -111,7 +111,7 @@ function p50_mrc_read(PDO $pdo,string $period,int $runLimit=24): array {
         $currentStmt->execute([P50_MR_ALGORITHM_VERSION,$period]);$currentRows=$currentStmt->fetchAll();
     }
 
-    $chronological=array_reverse($retained);$runs=[];$previousSnapshots=[];
+    $chronological=array_reverse($retained);$runs=[];$previousSnapshots=null;
     foreach($chronological as $run){
         $runUuid=(string)$run['run_uuid'];$cycleSnapshots=$snapshots[$runUuid]??[];$summary=$summaries[$runUuid]??null;
         $snapshotScores=array_column($cycleSnapshots,'score');$snapshotConfidence=array_column($cycleSnapshots,'confidence');$snapshotCoverage=array_column($cycleSnapshots,'coverage');
@@ -146,7 +146,8 @@ function p50_mrc_read(PDO $pdo,string $period,int $runLimit=24): array {
     elseif($averageTop50!==null&&$averageTop50>=70&&$medianMovement!==null&&$medianMovement<=8)$stability='moderate';
     else $stability='volatile';
     $exactCycles=count(array_intersect(array_keys($summaries),$allRunIds));$historyState=$exactCycles<6?'collecting':($exactCycles<24?'observing':'calibratable');
-    $classableValues=array_values(array_filter(array_column($runs,'classableCount'),static fn($value)=>$value!==null));
+    $classableValues=[];
+    foreach($runs as $run)if($run['classableCount']!==null&&!$run['classableCountCapped'])$classableValues[]=$run['classableCount'];
     $oldestRun=$matching?$matching[count($matching)-1]:null;
 
     return [

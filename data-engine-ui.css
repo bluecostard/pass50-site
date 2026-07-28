@@ -102,5 +102,6 @@
 #adminModal .de-ranking-lab .de-ranking-matrix td.baseline{border-color:var(--lime);box-shadow:inset 0 0 0 1px rgba(183,255,0,.25);background:rgba(183,255,0,.08)}
 #adminModal .de-ranking-lab .positive{color:#7ee29a!important}
 #adminModal .de-ranking-lab .negative{color:#ff8a8a!important}
+#adminModal .de-ranking-lab td.unranked{color:var(--muted);background:transparent}
 @media(max-width:760px){#adminModal .de-ranking-kpis{grid-template-columns:1fr 1fr}#adminModal .de-ranking-actions{align-items:stretch}#adminModal .de-ranking-actions>*{flex:1}}
 @media(max-width:900px){#adminModal .de-ranking-lab .de-ranking-calibration-grid{grid-template-columns:1fr}}
