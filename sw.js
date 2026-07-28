@@ -1,5 +1,5 @@
 // Ajoute le résumé privé YouTube Analytics sans modifier le classement public.
-const CACHE='pass50-v45-youtube-analytics';
+const CACHE='pass50-v44-ranking-calibration';
 const ASSETS=[
   './',
   './index.html',
