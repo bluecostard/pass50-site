@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Balayer tous les liens officiels
         env:
-          ENDPOINT: https://pass50.store/api/live-status-v3.php
+          ENDPOINT: https://pass50.store/api/live-status-v4.php
         run: |
           set -euo pipefail
           cycle="github_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
