@@ -220,11 +220,11 @@ function p50_mc_x(PDO $pdo,array $official,int $limit,string $observedAt,string 
 
 require_once __DIR__.'/metrics-social-collectors-core.php';
 
-function p50_metrics_collect_profile(PDO $pdo,string $profileId,string $platform,int $contentLimit=5,?callable $fetch=null,?string $observedAt=null): array {
+function p50_metrics_collect_profile(PDO $pdo,string $profileId,string $platform,int $contentLimit=5,?callable $fetch=null,?string $observedAt=null,array $options=[]): array {
     $platform=p50_mc_platform($platform);if($platform==='')throw new InvalidArgumentException('Plateforme non prise en charge.');
     $contentLimit=max(1,min(P50_METRICS_COLLECTOR_CONTENTS_MAX,$contentLimit));$observedAt=p50_metrics_timestamp($observedAt??gmdate('c'));$fetch=$fetch??'p50_mc_http';
     p50_metrics_ensure_schema($pdo);
-    $run=p50_metrics_start_run($pdo,['collector'=>strtolower($platform).'_v1','platform'=>$platform,'triggerType'=>'manual','metadata'=>['profileId'=>$profileId,'collectorVersion'=>P50_METRICS_COLLECTOR_VERSION]]);
+    $run=p50_metrics_start_run($pdo,['collector'=>strtolower($platform).'_v1','platform'=>$platform,'jobUuid'=>($options['jobUuid']??null)?:null,'triggerType'=>(string)($options['triggerType']??'manual'),'metadata'=>['profileId'=>$profileId,'collectorVersion'=>P50_METRICS_COLLECTOR_VERSION,'cadence'=>$options['cadence']??null]]);
     $result=p50_mc_result($platform,$profileId,$observedAt,$run['runUuid']);
     try{
         $official=p50_mc_official($pdo,$profileId,$platform);
