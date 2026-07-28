@@ -116,6 +116,24 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Oustaz Diané.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-oustaz-diane]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-oustaz-diane.js?v=1.0';
+  script.dataset.pass50ProfileOustazDiane = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Ismaël Aka.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-ismael-aka]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-ismael-aka.js?v=1.0';
+  script.dataset.pass50ProfileIsmaelAka = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Radar LIVE V3 : balayage complet de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
