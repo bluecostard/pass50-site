@@ -26,11 +26,11 @@
     document.head.appendChild(script);
   }
 
-  // Correctif de clic et retour d’erreur visible pour la connexion OAuth YouTube.
-  if(!document.querySelector('script[data-pass50-youtube-click-hotfix]')){
+  // Correctif V2 : appel OAuth direct, délai maximal et erreur visible.
+  if(!document.querySelector('script[data-pass50-youtube-click-hotfix-v2]')){
     const script=document.createElement('script');
-    script.src='./youtube-oauth-click-hotfix-v1.js?v=1.0';
-    script.dataset.pass50YoutubeClickHotfix='1.0';
+    script.src='./youtube-oauth-click-hotfix-v2.js?v=2.0';
+    script.dataset.pass50YoutubeClickHotfixV2='2.0';
     document.head.appendChild(script);
   }
 })();
