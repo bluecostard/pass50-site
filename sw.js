@@ -1,4 +1,4 @@
-const CACHE='pass50-v38-engagement-all-profiles';
+const CACHE='pass50-v39-obre-marie-pascale';
 const ASSETS=[
   './',
   './index.html',
@@ -10,6 +10,7 @@ const ASSETS=[
   './profile-kawaii-nanami.js?v=1.0',
   './profile-melanie-tms.js?v=1.0',
   './profile-ivorian-kid.js?v=1.0',
+  './profile-obre-marie-pascale.js?v=1.0',
   './live-radar-v3.js?v=1.1',
   './official-links-persistence-v3.js?v=3.2',
   './public-copy-fixes.js?v=1.0',
