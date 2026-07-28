@@ -1,13 +1,16 @@
-name: Validate Live Radar V3
+name: Validate Live Radar V4
 
 on:
   pull_request:
     paths:
-      - 'api/live-status-v3.php'
+      - 'api/live-radar-v4-core.php'
+      - 'api/live-radar-v4-source.php'
+      - 'api/live-radar-v4-parsers.php'
+      - 'api/live-radar-v4-storage.php'
+      - 'api/live-status-v4.php'
       - 'live-radar-v3.js'
-      - 'app-config.js'
-      - 'sw.js'
       - 'tests/test_live_radar_v3.py'
+      - 'tests/live_radar_v4_core.php'
       - '.github/workflows/validate-live-radar-v3.yml'
       - '.github/workflows/live-radar-sweep.yml'
 
@@ -17,8 +20,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Vérifier la syntaxe PHP
-        run: php -l api/live-status-v3.php
+        run: |
+          php -l api/live-radar-v4-core.php
+          php -l api/live-radar-v4-source.php
+          php -l api/live-radar-v4-parsers.php
+          php -l api/live-radar-v4-storage.php
+          php -l api/live-status-v4.php
+          php -l tests/live_radar_v4_core.php
       - name: Vérifier la syntaxe JavaScript
         run: node --check live-radar-v3.js
       - name: Exécuter les tests du Radar LIVE
-        run: python3 -m unittest tests/test_live_radar_v3.py
+        run: |
+          python3 -m unittest tests/test_live_radar_v3.py
+          php tests/live_radar_v4_core.php
+      - name: Vérifier le diff
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
