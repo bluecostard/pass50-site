@@ -4,11 +4,11 @@ Cette intégration connecte une chaîne YouTube à un compte PASS50 avec des dro
 
 ## 1. Fichiers déployés
 
-- `api/youtube-oauth-start.php` : crée immédiatement une demande d’autorisation signée liée à l’utilisateur PASS50 connecté, sans migration ni écriture MySQL avant l’ouverture de Google.
-- `api/youtube-oauth-callback.php` : reçoit le retour Google et enregistre la chaîne autorisée.
+- `api/youtube-oauth-start.php` : crée immédiatement une demande d’autorisation signée à partir du jeton de session présenté, sans aucune lecture, migration ni écriture MySQL avant l’ouverture de Google.
+- `api/youtube-oauth-callback.php` : reçoit le retour Google, vérifie le navigateur et la session PASS50, puis enregistre la chaîne autorisée.
 - `api/youtube-oauth-status.php` : retourne uniquement l’état public de la connexion, jamais les jetons.
 - `api/youtube-oauth-disconnect.php` : révoque l’autorisation Google et supprime la connexion locale.
-- `migration-youtube-oauth-v1.sql` : crée automatiquement les tables nécessaires lors du premier appel.
+- `migration-youtube-oauth-v1.sql` : crée automatiquement les tables nécessaires lors du callback.
 
 ## 2. Configuration privée sur IONOS
 
@@ -55,10 +55,6 @@ Les trois endpoints JSON utilisent le jeton de session PASS50 dans l’en-tête 
 3. Après le retour Google, lire `GET /api/youtube-oauth-status.php`.
 4. Pour déconnecter la chaîne, envoyer `POST /api/youtube-oauth-disconnect.php`.
 
-Le callback n’accepte pas un jeton de session dans l’URL. Il utilise un état
-OAuth aléatoire, signé et valable dix minutes.
+Le jeton de session n’est jamais placé dans une URL. Le démarrage hache ce jeton et l’intègre dans un état OAuth signé, valable dix minutes. Un cookie `Secure`, `HttpOnly` et `SameSite=Lax` lie également cet état au navigateur qui a lancé la connexion. Le domaine du cookie couvre `pass50.store` et `www.pass50.store` lorsque ces deux hôtes sont configurés.
 
-Le démarrage est volontairement indépendant des migrations MySQL afin qu’un
-verrou de métadonnées sur un hébergement mutualisé ne puisse pas bloquer le
-bouton. Les tables OAuth restent créées de façon idempotente au retour Google,
-juste avant l’enregistrement chiffré de la connexion.
+Aucune requête MySQL n’est exécutée dans `youtube-oauth-start.php`. La session est résolue uniquement dans le callback, après le retour de Google. Les tables OAuth restent créées de façon idempotente avant l’enregistrement chiffré de la connexion.
