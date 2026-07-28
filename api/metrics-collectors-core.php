@@ -90,12 +90,18 @@ function p50_mc_youtube_identifier(string $url): array {
     return ['',''];
 }
 
-function p50_mc_youtube_content_type(array $video): array {
+function p50_mc_youtube_duration_seconds(?string $duration): ?int {
+    if(!preg_match('/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/',(string)$duration,$match))return null;
+    return ((int)($match[1]??0)*3600)+((int)($match[2]??0)*60)+(int)($match[3]??0);
+}
+
+function p50_mc_youtube_content_type(array $video,?string $demonstratedUrl=null): array {
     $snippet=(array)($video['snippet']??[]);$details=(array)($video['contentDetails']??[]);$live=(array)($video['liveStreamingDetails']??[]);
-    if(($snippet['liveBroadcastContent']??'')==='live'||(!empty($live['actualStartTime'])&&empty($live['actualEndTime'])))return ['live','live'];
-    if(!empty($live['actualEndTime']))return ['video','replay'];
-    if(($snippet['isShort']??false)===true||($details['contentType']??'')==='short')return ['short','short'];
-    return ['video','video'];
+    if(($snippet['liveBroadcastContent']??'')==='live'||(!empty($live['actualStartTime'])&&empty($live['actualEndTime'])))return ['live','live',false];
+    if(!empty($live['actualEndTime']))return ['video','replay',false];
+    if($demonstratedUrl!==null&&preg_match('#^https?://(?:www\.)?youtube\.com/shorts/[A-Za-z0-9_-]+#i',$demonstratedUrl))return ['short','short',false];
+    $seconds=p50_mc_youtube_duration_seconds(isset($details['duration'])?(string)$details['duration']:null);
+    return ['video','video',$seconds!==null&&$seconds<=180];
 }
 
 function p50_mc_youtube(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {
@@ -122,16 +128,28 @@ function p50_mc_youtube(PDO $pdo,array $official,int $limit,string $observedAt,s
         p50_mc_capture($pdo,$result,['accountId'=>$account['id'],'collector'=>'youtube_v1','sourceType'=>'youtube_api','sourceReference'=>$official['normalized_url'],'observedAt'=>$observedAt,'followers'=>$followers,'metrics'=>$future,'qualityStatus'=>$invalidFuture?'quarantined':'usable','confidence'=>98,'runUuid'=>$runUuid,'rawPayloadHash'=>hash('sha256',(string)$response['body']),'provenance'=>$prov]);
     $uploads=(string)($channel['contentDetails']['relatedPlaylists']['uploads']??'');if($uploads==='')return;
     $playlist=p50_mc_request($fetch,'https://www.googleapis.com/youtube/v3/playlistItems?'.http_build_query(['part'=>'snippet,contentDetails','playlistId'=>$uploads,'maxResults'=>$limit,'key'=>$key]),[],$result);
-    if((int)$playlist['status']===429){$result['rateLimited']=true;return;}$ids=[];
+    $playlistStatus=(int)$playlist['status'];
+    if($playlistStatus<200||$playlistStatus>=300){
+        $result['rateLimited']=$playlistStatus===429;$result['status']='partial';
+        $result['errors'][]='YouTube playlistItems.list '.($playlistStatus===429?'rate_limited':($playlistStatus===403?'forbidden':'http_error'));
+        return;
+    }
+    $ids=[];
     foreach((array)(p50_mc_json($playlist)['items']??[]) as $item){$id=(string)($item['contentDetails']['videoId']??'');if($id!=='')$ids[]=$id;}
     if(!$ids)return;
     $videos=p50_mc_request($fetch,'https://www.googleapis.com/youtube/v3/videos?'.http_build_query(['part'=>'snippet,statistics,status,contentDetails,liveStreamingDetails','id'=>implode(',',$ids),'key'=>$key]),[],$result);
+    $videosStatus=(int)$videos['status'];
+    if($videosStatus<200||$videosStatus>=300){
+        $result['rateLimited']=$videosStatus===429;$result['status']='partial';
+        $result['errors'][]='YouTube videos.list '.($videosStatus===429?'rate_limited':($videosStatus===403?'forbidden':'http_error'));
+        return;
+    }
     foreach((array)(p50_mc_json($videos)['items']??[]) as $video){
         $id=(string)($video['id']??'');if($id===''||($video['status']['privacyStatus']??'public')!=='public')continue;
-        [$contentType,$youtubeFormat]=p50_mc_youtube_content_type($video);
+        [$contentType,$youtubeFormat,$shortCandidate]=p50_mc_youtube_content_type($video);
         $vp=p50_mc_provenance('YouTube','youtube_api','videos.list',$official,gmdate('c'),(int)$videos['status'],$runUuid,'api');
         $contentUrl=$contentType==='short'?'https://www.youtube.com/shorts/'.$id:'https://www.youtube.com/watch?v='.$id;
-        $content=p50_metrics_upsert_content($pdo,['accountId'=>$account['id'],'platformContentId'=>$id,'contentType'=>$contentType,'canonicalUrl'=>$contentUrl,'title'=>(string)($video['snippet']['title']??''),'publishedAt'=>$video['snippet']['publishedAt']??null,'confidence'=>98,'sourceType'=>'youtube_api','observedAt'=>$observedAt,'metadata'=>['youtubeFormat'=>$youtubeFormat],'provenance'=>$vp]);
+        $content=p50_metrics_upsert_content($pdo,['accountId'=>$account['id'],'platformContentId'=>$id,'contentType'=>$contentType,'canonicalUrl'=>$contentUrl,'title'=>(string)($video['snippet']['title']??''),'publishedAt'=>$video['snippet']['publishedAt']??null,'confidence'=>98,'sourceType'=>'youtube_api','observedAt'=>$observedAt,'metadata'=>['youtubeFormat'=>$youtubeFormat,'shortCandidate'=>$shortCandidate],'provenance'=>$vp]);
         $result['contentsFound']++;$vs=(array)($video['statistics']??[]);
         $views=p50_mc_int($vs,'viewCount');$likes=p50_mc_int($vs,'likeCount');$comments=p50_mc_int($vs,'commentCount');
         foreach([$views,$likes,$comments] as $metric)if($metric===null)$result['unavailableMetrics']++;
@@ -173,10 +191,15 @@ function p50_mc_x(PDO $pdo,array $official,int $limit,string $observedAt,string 
     $followers=p50_mc_int($um,'followers_count');[$future,$invalidFuture]=p50_mc_future_metrics(['following'=>p50_mc_int($um,'following_count'),'postCount'=>p50_mc_int($um,'tweet_count')]);$following=$future['following'];$postCount=$future['postCount'];
     if($followers!==null||$following!==null||$postCount!==null)
         p50_mc_capture($pdo,$result,['accountId'=>$account['id'],'collector'=>'x_v1','sourceType'=>'x_api','sourceReference'=>$official['normalized_url'],'observedAt'=>$observedAt,'followers'=>$followers,'metrics'=>['following'=>$following,'postCount'=>$postCount],'qualityStatus'=>$invalidFuture?'quarantined':'usable','confidence'=>96,'runUuid'=>$runUuid,'rawPayloadHash'=>hash('sha256',(string)$userResponse['body']),'provenance'=>$prov]);
-    $tweets=p50_mc_request($fetch,'https://api.x.com/2/users/'.rawurlencode($id).'/tweets?'.http_build_query(['max_results'=>max(5,$limit),'exclude'=>'retweets,replies','tweet.fields'=>'created_at,public_metrics,non_public_metrics']),$headers,$result);
-    if((int)$tweets['status']===429){$result['rateLimited']=true;return;}if((int)$tweets['status']<200||(int)$tweets['status']>=300)return;
+    $tweets=p50_mc_request($fetch,'https://api.x.com/2/users/'.rawurlencode($id).'/tweets?'.http_build_query(['max_results'=>max(5,$limit),'exclude'=>'retweets,replies','tweet.fields'=>'created_at,public_metrics']),$headers,$result);
+    $tweetStatus=(int)$tweets['status'];
+    if($tweetStatus<200||$tweetStatus>=300){
+        $result['rateLimited']=$tweetStatus===429;$result['status']='partial';
+        $result['errors'][]='X users/:id/tweets '.($tweetStatus===429?'rate_limited':($tweetStatus===403?'forbidden':'http_error'));
+        return;
+    }
     foreach(array_slice((array)(p50_mc_json($tweets)['data']??[]),0,$limit) as $tweet){
-        $tid=(string)($tweet['id']??'');if($tid==='')continue;$tm=(array)($tweet['public_metrics']??[])+(array)($tweet['non_public_metrics']??[]);
+        $tid=(string)($tweet['id']??'');if($tid==='')continue;$tm=(array)($tweet['public_metrics']??[]);
         $tp=p50_mc_provenance('X','x_api','users/:id/tweets',$official,gmdate('c'),(int)$tweets['status'],$runUuid,'api');
         $url='https://x.com/'.$handle.'/status/'.$tid;$content=p50_metrics_upsert_content($pdo,['accountId'=>$account['id'],'platformContentId'=>$tid,'contentType'=>'post','canonicalUrl'=>$url,'title'=>substr((string)($tweet['text']??''),0,500),'publishedAt'=>$tweet['created_at']??null,'confidence'=>96,'sourceType'=>'x_api','observedAt'=>$observedAt,'provenance'=>$tp]);$result['contentsFound']++;
         $views=p50_mc_int($tm,'impression_count');$likes=p50_mc_int($tm,'like_count');$replies=p50_mc_int($tm,'reply_count');$reposts=p50_mc_int($tm,'retweet_count');

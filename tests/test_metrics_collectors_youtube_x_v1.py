@@ -20,8 +20,10 @@ class MetricsCollectorsContractTests(unittest.TestCase):
         self.assertNotRegex(CORE,r"INSERT\s+(?:IGNORE\s+)?INTO\s+p50_metric_(?:accounts|contents|captures)")
 
     def test_youtube_contract(self):
-        for token in ("forHandle","forUsername","channel/","playlistItems","videos.list","hiddenSubscriberCount","totalViews","videoCount","youtube_public_feed","quota_exceeded","rate_limited","p50_mc_youtube_content_type","liveStreamingDetails","youtubeFormat"):
+        for token in ("forHandle","forUsername","channel/","playlistItems","videos.list","hiddenSubscriberCount","totalViews","videoCount","youtube_public_feed","quota_exceeded","rate_limited","p50_mc_youtube_content_type","p50_mc_youtube_duration_seconds","liveStreamingDetails","youtubeFormat","shortCandidate"):
             self.assertIn(token,CORE)
+        self.assertNotIn("snippet['isShort']",CORE)
+        self.assertNotIn("contentDetails']['contentType']",CORE)
         self.assertIn("'shares'=>null",CORE)
         self.assertIn("'saves'=>null",CORE)
 
@@ -30,6 +32,15 @@ class MetricsCollectorsContractTests(unittest.TestCase):
             self.assertIn(token,CORE)
         for forbidden in ("browser automation","private endpoint","document.cookie","localStorage.getItem('token"):
             self.assertNotIn(forbidden,CORE.lower())
+        request=CORE[CORE.index("$tweets=p50_mc_request"):CORE.index("$tweetStatus=")]
+        self.assertIn("'tweet.fields'=>'created_at,public_metrics'",request)
+        self.assertNotIn("non_public_metrics",request)
+
+    def test_subrequest_http_failures_are_not_silent_success(self):
+        for endpoint in ("playlistItems.list","videos.list","users/:id/tweets"):
+            self.assertIn(endpoint,CORE)
+        self.assertGreaterEqual(CORE.count("$result['status']='partial'"),3)
+        self.assertGreaterEqual(CORE.count("$result['rateLimited']="),3)
 
     def test_null_zero_and_validation_delegated_to_schema(self):
         self.assertIn("p50_mc_int",CORE)

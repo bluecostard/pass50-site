@@ -7,9 +7,10 @@ $pdo=new PDO($dsn,getenv('P50_TEST_DB_USER')?:'root',getenv('P50_TEST_DB_PASSWOR
 $youtubeCredential=hash('sha256','youtube-fixture');$xCredential=hash('sha256','x-fixture');
 $config=['data_engine'=>['confidence_threshold'=>90],'metrics'=>['PASS50_YOUTUBE_API_KEY'=>$youtubeCredential,'x_bearer_token'=>$xCredential]];
 function must(bool $condition,string $message): void {if(!$condition)throw new RuntimeException($message);}
-must(p50_mc_youtube_content_type(['snippet'=>['isShort'=>true]])===['short','short'],'Type Short');
-must(p50_mc_youtube_content_type(['snippet'=>['liveBroadcastContent'=>'live']])===['live','live'],'Type live');
-must(p50_mc_youtube_content_type(['liveStreamingDetails'=>['actualStartTime'=>'2026-07-28T08:00:00Z','actualEndTime'=>'2026-07-28T09:00:00Z']])===['video','replay'],'Type rediffusion');
+must(p50_mc_youtube_content_type(['contentDetails'=>['duration'=>'PT45S']])===['video','video',true],'Durée courte reste video candidate');
+must(p50_mc_youtube_content_type([], 'https://www.youtube.com/shorts/provenShort')===['short','short',false],'URL Shorts démontrée');
+must(p50_mc_youtube_content_type(['snippet'=>['liveBroadcastContent'=>'live']])===['live','live',false],'Type live');
+must(p50_mc_youtube_content_type(['liveStreamingDetails'=>['actualStartTime'=>'2026-07-28T08:00:00Z','actualEndTime'=>'2026-07-28T09:00:00Z']])===['video','replay',false],'Type rediffusion');
 foreach(['p50_metric_captures','p50_metric_contents','p50_metric_jobs','p50_metric_runs','p50_metric_accounts','p50_metric_schema_migrations','p50_social_links','p50_profile_registry','app_state'] as $table)$pdo->exec("DROP TABLE IF EXISTS `$table`");
 $pdo->exec("CREATE TABLE p50_profile_registry(profile_id VARCHAR(100) PRIMARY KEY,public_name VARCHAR(190),alive TINYINT NOT NULL,score DECIMAL(6,2),rank_position INT)");
 $pdo->exec("CREATE TABLE p50_social_links(profile_id VARCHAR(100),platform VARCHAR(32),normalized_url TEXT,confidence INT,status VARCHAR(24),PRIMARY KEY(profile_id,platform))");
@@ -18,7 +19,8 @@ $pdo->exec("INSERT INTO app_state VALUES(1,'{\"sentinel\":true}',77)");
 $pdo->exec("INSERT INTO p50_profile_registry VALUES('yt','YouTube Fixture',1,42.50,7),('x','X Fixture',1,41.00,8),('yt-fallback','YouTube Fallback',1,40.00,9),('x-blocked','X Blocked',1,39.00,10)");
 $pdo->exec("INSERT INTO p50_social_links VALUES('yt','YouTube','https://youtube.com/@Fixture',98,'verified'),('x','X','https://x.com/FixtureX',97,'verified'),('yt-fallback','YouTube','https://youtube.com/channel/UCfallback',95,'verified'),('x-blocked','X','https://x.com/BlockedFixture',95,'verified')");
 
-$fetch=function(string $url,array $headers=[]): array {
+$requestedUrls=[];$fetch=function(string $url,array $headers=[]) use(&$requestedUrls): array {
+    $requestedUrls[]=$url;
     if(str_contains($url,'youtube/v3/channels'))$body=['items'=>[['id'=>'UCfixture123','snippet'=>['title'=>'Fixture'],'statistics'=>['subscriberCount'=>'0','viewCount'=>'1000','videoCount'=>'1','hiddenSubscriberCount'=>false],'contentDetails'=>['relatedPlaylists'=>['uploads'=>'UUfixture']]]]];
     elseif(str_contains($url,'playlistItems'))$body=['items'=>[['contentDetails'=>['videoId'=>'vid123']]]];
     elseif(str_contains($url,'youtube/v3/videos'))$body=['items'=>[['id'=>'vid123','snippet'=>['title'=>'Video','publishedAt'=>'2026-07-28T10:00:00Z'],'status'=>['privacyStatus'=>'public'],'statistics'=>['viewCount'=>'20','likeCount'=>'0']]]];
@@ -32,6 +34,7 @@ $yt=p50_metrics_collect_profile($pdo,'yt','YouTube',5,$fetch,'2026-07-28T12:00:0
 $x=p50_metrics_collect_profile($pdo,'x','X',5,$fetch,'2026-07-28T12:00:00Z');
 must($yt['accountFound']&&$yt['contentsFound']===1&&$yt['capturesRecorded']===2,'Collecte YouTube');
 must($x['accountFound']&&$x['contentsFound']===1&&$x['capturesRecorded']===2,'Collecte X');
+must(!str_contains(implode("\n",$requestedUrls),'non_public_metrics')&&str_contains(implode("\n",$requestedUrls),'tweet.fields=created_at%2Cpublic_metrics'),'X app-only utilise uniquement public_metrics');
 must((int)p50_metrics_value($pdo,"SELECT followers FROM p50_metric_captures WHERE platform='YouTube' AND content_id IS NULL")===0,'Zéro abonnés conservé');
 must(p50_metrics_value($pdo,"SELECT comments FROM p50_metric_captures WHERE platform='YouTube' AND content_id IS NOT NULL")===null,'Commentaires absents restent NULL');
 must((int)p50_metrics_value($pdo,"SELECT shares FROM p50_metric_captures WHERE platform='X' AND content_id IS NOT NULL")===3,'Reposts explicites');
@@ -47,6 +50,18 @@ $changed=p50_metrics_collect_profile($pdo,'yt','YouTube',5,$changedFetch,'2026-0
 must($changed['capturesRecorded']===1&&$changed['duplicatesSkipped']===1,'Changement réel à observedAt identique');
 $later=p50_metrics_collect_profile($pdo,'yt','YouTube',5,$changedFetch,'2026-07-28T13:00:00Z');
 must($later['capturesRecorded']===2,'Nouvelle observation');
+$playlist403=function(string $url,array $headers=[]) use($fetch): array {
+    if(str_contains($url,'playlistItems'))return ['status'=>403,'body'=>'{}','url'=>$url,'error'=>''];
+    return $fetch($url,$headers);
+};
+$playlistPartial=p50_metrics_collect_profile($pdo,'yt','YouTube',5,$playlist403,'2026-07-28T13:10:00Z');
+must($playlistPartial['status']==='partial'&&$playlistPartial['capturesRecorded']===1&&count($playlistPartial['errors'])===1,'playlistItems 403 donne partial');
+$videos429=function(string $url,array $headers=[]) use($fetch): array {
+    if(str_contains($url,'youtube/v3/videos'))return ['status'=>429,'body'=>'{}','url'=>$url,'error'=>''];
+    return $fetch($url,$headers);
+};
+$videosPartial=p50_metrics_collect_profile($pdo,'yt','YouTube',5,$videos429,'2026-07-28T13:20:00Z');
+must($videosPartial['status']==='partial'&&$videosPartial['rateLimited']===true&&$videosPartial['capturesRecorded']===1,'videos 429 donne partial');
 $config['metrics']['PASS50_YOUTUBE_API_KEY']='';
 $fallbackFetch=function(string $url,array $headers=[]): array {
     $xml='<?xml version="1.0"?><feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"><entry><yt:videoId>fallback1</yt:videoId><title>Fallback video</title><published>2026-07-28T09:00:00Z</published></entry></feed>';
@@ -70,4 +85,4 @@ $stored=(string)p50_metrics_value($pdo,"SELECT GROUP_CONCAT(CONCAT_WS(' ',proven
 must(!str_contains($stored,$youtubeCredential)&&!str_contains($stored,$xCredential)&&!str_contains(strtolower($stored),'authorization'),'Aucun secret stocké');
 must((string)p50_metrics_value($pdo,"SELECT state_json FROM app_state WHERE id=1")==='{"sentinel":true}'&&(int)p50_metrics_value($pdo,"SELECT version FROM app_state WHERE id=1")===77,'app_state inchangé');
 must((string)p50_metrics_value($pdo,"SELECT score FROM p50_profile_registry WHERE profile_id='yt'")==='42.50'&&(int)p50_metrics_value($pdo,"SELECT rank_position FROM p50_profile_registry WHERE profile_id='yt'")===7,'Score et rang inchangés');
-echo json_encode(['ok'=>true,'youtube'=>$yt,'x'=>$x,'duplicateReplay'=>$again,'changedObservation'=>$changed,'laterObservation'=>$later,'youtubeFallback'=>$fallback,'xBlocked'=>$blocked,'quarantine'=>$bad,'collectors'=>$status],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'youtube'=>$yt,'x'=>$x,'duplicateReplay'=>$again,'changedObservation'=>$changed,'laterObservation'=>$later,'playlist403'=>$playlistPartial,'videos429'=>$videosPartial,'youtubeFallback'=>$fallback,'xBlocked'=>$blocked,'quarantine'=>$bad,'collectors'=>$status],JSON_UNESCAPED_SLASHES).PHP_EOL;
