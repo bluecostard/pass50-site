@@ -48,6 +48,7 @@ jobs:
       - name: OAuth and Analytics reliability tests
         run: |
           python3 -m unittest tests.test_youtube_oauth_start_reliability
+          python3 -m unittest tests.test_youtube_analytics_oauth_v1
           php tests/youtube_oauth_state_v2.php
           php tests/youtube_analytics_core.php
       - name: MariaDB migrations
