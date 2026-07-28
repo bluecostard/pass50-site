@@ -164,9 +164,10 @@ function p50ya_store_summary(string $userId, array $connection, array $range, ar
         (string)$range['endDate'],
         $rawHash,
     ]));
-    $sql = 'INSERT IGNORE INTO p50_youtube_analytics_snapshots
+    $sql = 'INSERT INTO p50_youtube_analytics_snapshots
         (snapshot_key,user_id,channel_id,period_days,start_date,end_date,has_data,views,estimated_minutes_watched,average_view_duration,average_view_percentage,likes,comments,shares,subscribers_gained,subscribers_lost,raw_payload_hash,fetched_at)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())';
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP())
+        ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id),fetched_at=UTC_TIMESTAMP()';
     $stmt = db()->prepare($sql);
     $stmt->execute([
         $snapshotKey,
