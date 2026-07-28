@@ -7,6 +7,7 @@ const FULL_CYCLE_KEY='pass50_live_radar_v3_cycle';
 let runningMode='';
 let lastData=null;
 let autoTimer=null;
+const liveRadarEsc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 function liveCount(){
   try{return (db.liveStreams||[]).filter(item=>item.status==='live').length}catch{return 0}
@@ -38,9 +39,9 @@ function platformText(platforms={}){
 }
 
 function healthText(health={}){
-  const totals={live:0,offline:0,unknown:0,never_checked:0};
+  const totals={live:0,offline:0,unknown:0,unconfirmed:0,never_checked:0};
   Object.values(health||{}).forEach(item=>Object.keys(totals).forEach(key=>totals[key]+=Number(item?.[key]||0)));
-  return `${totals.live} en direct · ${totals.offline} hors ligne · ${totals.unknown} bloqués/inconnus · ${totals.never_checked} jamais contrôlés`;
+  return `${totals.live} en direct confirmé · ${totals.offline} terminés · ${totals.unconfirmed} non confirmés · ${totals.unknown} bloqués/inconnus · ${totals.never_checked} jamais contrôlés`;
 }
 
 function ensureStatusBox(){
@@ -64,13 +65,18 @@ function renderStatus(){
   const coverage=Number(radar.coveragePercent||0);
   const completed=radar.lastFullSweep?.completedAt||'';
   const diagnostics=Array.isArray(radar.diagnostics)?radar.diagnostics:[];
-  const detected=diagnostics.filter(item=>item.state==='live').map(item=>item.name).filter(Boolean);
+  const detected=diagnostics.filter(item=>item.state==='live').map(item=>liveRadarEsc(item.name)).filter(Boolean);
+  const diagnosticRows=diagnostics.slice(-12).map(item=>{
+    const probes=Object.values(item.probes||{}).map(probe=>String(probe.status||probe.error||'—')).join(', ');
+    return `${liveRadarEsc(item.platform||'—')} · ${liveRadarEsc(item.publicState||item.state||'unknown')} · vérifié ${item.lastCheckedAt?new Date(item.lastCheckedAt).toLocaleTimeString('fr-FR'):'—'} · confirmé ${item.lastConfirmedAt?new Date(item.lastConfirmedAt).toLocaleTimeString('fr-FR'):'—'} · retrait ${liveRadarEsc(item.withdrawalReason||'—')} · confiance ${Number(item.confidence||0)} · HTTP ${liveRadarEsc(probes||'—')}`;
+  }).join('<br>');
   box.innerHTML=`<strong style="color:#b7ff00">RADAR LIVE V3</strong> · ${liveCount()} direct${liveCount()>1?'s':''} actif${liveCount()>1?'s':''}<br>`+
     `${total} lien${total>1?'s':''} officiel${total>1?'s':''} surveillé${total>1?'s':''}<br>`+
     `<span style="color:#aeb8aa">${platformText(radar.platforms)}</span><br>`+
     `${scanned>0?`Dernier balayage : ${scanned}/${Number(radar.cycleTotal||total)} · ${coverage}%`:'Surveillance rapide active toutes les 45 secondes'}<br>`+
     `${healthText(radar.health)}`+
     `${detected.length?`<br><strong style="color:#b7ff00">Détecté : ${detected.join(', ')}</strong>`:''}`+
+    `${diagnosticRows?`<br><span style="color:#aeb8aa">${diagnosticRows}</span>`:''}`+
     `${completed?`<br>Balayage complet terminé : ${new Date(completed).toLocaleString('fr-FR')}`:''}`;
 }
 
@@ -167,6 +173,43 @@ async function verifyProfile(profileId){
   finally{runningMode='';renderStatus();}
 }
 
+async function waitForRadarIdle(maxWait=2500){
+  const deadline=Date.now()+maxWait;
+  while(runningMode&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,100));
+  return !runningMode;
+}
+
+async function verifyWatchLink(link){
+  const profileId=String(link.dataset.liveProfile||''),platform=String(link.dataset.livePlatform||'');
+  const current=(db.liveStreams||[]).find(item=>item.profileId===profileId&&item.platform===platform&&item.status==='live');
+  if(current?.source==='manual'){window.open(link.href,'_blank','noopener');return;}
+  const pendingWindow=window.open('about:blank','_blank');
+  if(pendingWindow)pendingWindow.opener=null;
+  const confirmedAt=new Date(link.dataset.liveConfirmedAt||'').getTime();
+  const maxAge=platform==='YouTube'?10*60_000:3*60_000;
+  if(platform==='YouTube'&&Number.isFinite(confirmedAt)&&Date.now()-confirmedAt<=maxAge){
+    if(pendingWindow)pendingWindow.location.replace(link.href);
+    return;
+  }
+  if(!await waitForRadarIdle()){
+    if(pendingWindow)pendingWindow.close();
+    if(typeof toast==='function')toast('Vérification du direct en cours. Réessayez dans un instant.');
+    return;
+  }
+  const data=await verifyProfile(profileId);
+  const confirmed=(data?.liveStreams||[]).find(item=>item.profileId===profileId&&item.platform===platform&&item.status==='live');
+  const freshAt=new Date(confirmed?.lastConfirmedAt||confirmed?.lastSeenAt||'').getTime();
+  if(confirmed&&Number.isFinite(freshAt)&&Date.now()-freshAt<=maxAge){
+    const confirmedUrl=String(confirmed.url||'');
+    if(/^https?:\/\//i.test(confirmedUrl)&&pendingWindow)pendingWindow.location.replace(confirmedUrl);
+    else if(pendingWindow)pendingWindow.close();
+    return;
+  }
+  if(pendingWindow)pendingWindow.close();
+  if(typeof openLives==='function')openLives();
+  if(typeof toast==='function')toast('Ce direct vient de se terminer ou ne peut plus être confirmé.');
+}
+
 function bind(){
   const button=document.getElementById('liveRadarRefresh');
   if(button&&!button.dataset.liveRadarV3){
@@ -177,6 +220,13 @@ function bind(){
 }
 
 document.addEventListener('click',event=>{
+  const watchLink=event.target.closest?.('.live-watch-link[data-live-profile][data-live-platform]');
+  if(watchLink){
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    verifyWatchLink(watchLink);
+    return;
+  }
   const radarButton=event.target.closest?.('#liveRadarRefresh');
   if(radarButton){
     event.preventDefault();

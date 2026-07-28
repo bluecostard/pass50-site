@@ -316,8 +316,14 @@ function normalizeLiveStreams(){
   const seen=new Set();
   db.liveStreams=db.liveStreams.filter(x=>{
     if(!x||x.status!=='live'||!x.profileId||!/^https?:\/\//i.test(String(x.url||'')))return false;
-    const end=x.endsAt?new Date(x.endsAt).getTime():0;
-    if(Number.isFinite(end)&&end>0&&end<=now)return false;
+    if(x.source==='manual'){
+      const endsAt=new Date(x.endsAt||'').getTime();
+      if(!Number.isFinite(endsAt)||endsAt<=now)return false;
+    }else{
+      const confirmedAt=new Date(x.lastConfirmedAt||x.lastSeenAt||'').getTime();
+      const maxAge=String(x.platform||'').toLowerCase()==='youtube'?10*60_000:3*60_000;
+      if(!Number.isFinite(confirmedAt)||now-confirmedAt>maxAge||confirmedAt>now+30_000)return false;
+    }
     const key=[x.profileId,x.platform||'',String(x.url).replace(/\/+$/,'')].map(v=>String(v).trim().toLowerCase()).join('|');
     if(seen.has(key))return false;
     seen.add(key);
@@ -335,7 +341,7 @@ function currentUser(){return db.users.find(u=>u.id===session.userId)||null}
 function userPrefs(){const u=currentUser();if(!u)return null;u.favorites=u.favorites||[];u.following=u.following||[];u.followAlerts=u.followAlerts||{};u.notificationMode=u.notificationMode||'daily';u.soundEnabled=Boolean(u.soundEnabled);return u}
 function score(p){return Number(p.scores[ui.period]||0)}
 function regionEligible(p){return ui.region==='ALL'||p.region===ui.region||p.region==='BOTH'}
-function activeLives(){normalizeLiveStreams();const time=x=>{const value=x.startedAt||x.lastSeenAt||x.detectedAt||x.createdAt||x.updatedAt,parsed=value?new Date(value).getTime():0;return Number.isFinite(parsed)?parsed:0};return db.liveStreams.filter(x=>x.status==='live').sort((a,b)=>time(b)-time(a));}
+function activeLives(){normalizeLiveStreams();const time=x=>{const value=x.lastConfirmedAt||x.lastSeenAt||x.endsAt,parsed=value?new Date(value).getTime():0;return Number.isFinite(parsed)?parsed:0};return db.liveStreams.filter(x=>x.status==='live').sort((a,b)=>time(b)-time(a));}
 function renderLiveHeader(){const lives=activeLives(),count=$('#liveCount');if(count)count.textContent=lives.length?`(${lives.length})`:'';}
 function liveAvatarHtml(p,live){
   if(p)return avatarHtml(p,'live-avatar');
@@ -355,8 +361,10 @@ function openLives(){
   const lives=activeLives();
   $('#liveBody').innerHTML=lives.length?`<div class="live-list">${lives.map(l=>{
     const p=profile(l.profileId),url=liveWatchUrl(l),viewers=Number(l.viewers||0);
-    const action=url?`<a class="btn primary live-watch-link" href="${safeAttr(url)}" target="_blank" rel="noopener noreferrer">REGARDER SUR ${safeAttr(l.platform||'LA PLATEFORME')} →</a>`:`<span class="btn disabled" aria-disabled="true">LIEN DU LIVE INDISPONIBLE</span>`;
-    return `<article class="live-card">${liveAvatarHtml(p,l)}<div><strong>${safeAttr(p?.name||l.profileName||'Influenceur')}</strong><div class="live-platform"><span class="live-pulse"></span>EN DIRECT SUR ${safeAttr(l.platform||'UNE PLATEFORME')}</div><div class="muted">${safeAttr(l.title||'Direct en cours')}${viewers?` · ${viewers.toLocaleString('fr-FR')} spectateur(s)`:''}</div></div>${action}</article>`;
+    const confirmed=l.lastConfirmedAt||l.lastSeenAt||'',confirmedMs=new Date(confirmed).getTime(),minutes=Number.isFinite(confirmedMs)?Math.max(0,Math.floor((Date.now()-confirmedMs)/60000)):0;
+    const confirmation=minutes<1?'Confirmé à l’instant':`Confirmé il y a ${minutes} min`;
+    const action=url?`<a class="btn primary live-watch-link" href="${safeAttr(url)}" target="_blank" rel="noopener noreferrer" data-live-profile="${safeAttr(l.profileId)}" data-live-platform="${safeAttr(l.platform||'')}" data-live-confirmed-at="${safeAttr(confirmed)}">REGARDER SUR ${safeAttr(l.platform||'LA PLATEFORME')} →</a>`:`<span class="btn disabled" aria-disabled="true">LIEN DU LIVE INDISPONIBLE</span>`;
+    return `<article class="live-card">${liveAvatarHtml(p,l)}<div><strong>${safeAttr(p?.name||l.profileName||'Influenceur')}</strong><div class="live-platform"><span class="live-pulse"></span>EN DIRECT SUR ${safeAttr(l.platform||'UNE PLATEFORME')}</div><div class="muted">${safeAttr(l.title||'Direct en cours')}${viewers?` · ${viewers.toLocaleString('fr-FR')} spectateur(s)`:''} · ${safeAttr(confirmation)}</div></div>${action}</article>`;
   }).join('')}</div>`:`<div class="live-empty"><strong>Aucun direct détecté pour le moment.</strong><div style="margin-top:6px">Cette fenêtre se met à jour automatiquement.</div></div>`;
   open('liveModal');
 }
@@ -707,12 +715,32 @@ function dataHubRows(rows){return rows.map(({p,c})=>`<tr data-hub-name="${safeAt
 function editHubProfile(id){const p=profile(id),q=ensureQuality(p);$('#adminPane').innerHTML=`<form class="form" id="hubForm" data-id="${p.id}"><div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button><div class="section-title" style="margin-top:10px">${p.name}</div><div class="muted">Seuil public : 90 % minimum</div></div></div><div class="two">${['identity|Identité','photo|Photo','birth|Date de naissance','nationality|Nationalité','social|Réseaux officiels','score|Trend Score','live|LIVE'].map(x=>{const [k,l]=x.split('|');return `<div class="field"><label>${l}</label><input type="number" min="0" max="100" name="${k}" value="${q[k]||0}"><small>${q[k]>=90?'Sera affiché':'Ne sera pas affiché'}</small></div>`}).join('')}</div><div class="field"><label>Note de contrôle</label><input name="qualityNote" value="${safeAttr(p.qualityNote||'')}" placeholder="Source ou motif de validation"></div><button class="btn primary" type="submit">ENREGISTRER LE CONTRÔLE</button></form>`}
 function refreshHubDiagnostic(){db.profiles.forEach(p=>{ensureQuality(p);p.lastCollectedAt=new Date().toISOString();p.quality.photo=p.photoStatus==='validated'?Math.max(90,p.quality.photo):0;p.quality.birth=p.ageStatus==='confirmed'?Math.max(90,p.quality.birth):0;const links=Object.values(p.links||{}).filter(u=>u&&!/results\?|search\/top|\/search\?/.test(u));if(!links.length)p.quality.social=0;});save();renderAdminPane();toast('Diagnostic Data Hub actualisé')}
 
+function p50LiveDateMs(value){
+  if(!value)return null;
+  const milliseconds=new Date(value).getTime();
+  if(!Number.isFinite(milliseconds)||milliseconds<Date.UTC(2020,0,1))return null;
+  return milliseconds;
+}
+function p50LiveConfirmedLabel(live){
+  const milliseconds=p50LiveDateMs(live?.lastConfirmedAt||live?.lastSeenAt);
+  if(milliseconds===null)return 'Confirmation indisponible';
+  const minutes=Math.max(0,Math.floor((Date.now()-milliseconds)/60000));
+  return minutes<1?'Confirmé à l’instant':`Confirmé il y a ${minutes} min`;
+}
+function p50LiveAdminTiming(live){
+  const startedAt=p50LiveDateMs(live?.startedAt),endsAt=p50LiveDateMs(live?.endsAt);
+  if(live?.source==='automatic')return `<div class="muted">Dernière confirmation : ${safeAttr(p50LiveConfirmedLabel(live))}</div>${startedAt===null?'':`<div class="muted">Début : ${new Date(startedAt).toLocaleString('fr-FR')}</div>`}`;
+  const values=[];
+  if(startedAt!==null)values.push(`Début : ${new Date(startedAt).toLocaleString('fr-FR')}`);
+  if(endsAt!==null)values.push(`Fin prévue : ${new Date(endsAt).toLocaleString('fr-FR')}`);
+  return `<div class="muted">${values.length?values.join(' · '):'Horaire non renseigné'}</div>`;
+}
 function renderLiveAdmin(pane){
-  const lives=activeLives(),radar=window.PASS50_LIVE_RADAR||{},last=radar.lastScanAt?new Date(radar.lastScanAt).toLocaleString('fr-FR'):'pas encore exécuté';
+  const lives=activeLives(),radar=window.PASS50_LIVE_RADAR||{},lastMs=p50LiveDateMs(radar.lastScanAt),last=lastMs===null?'pas encore exécuté':new Date(lastMs).toLocaleString('fr-FR');
   pane.innerHTML=`<div class="media-hint"><strong>Radar LIVE :</strong> YouTube est vérifié automatiquement par rotation. Les autres plateformes restent en mode hybride : détection lorsqu’un signal public fiable existe, ou ajout manuel de secours. Les directs terminés sont retirés automatiquement.</div>
   <div class="admin-toolbar"><button class="btn primary" id="liveRadarRefresh">🔴 LANCER LE RADAR MAINTENANT</button><span class="muted">Dernier passage : ${last}${radar.youtubeProfilesKnown!==undefined?` · ${radar.youtubeProfilesKnown} chaîne(s) YouTube connue(s)`:''}</span></div>
   <form id="liveForm" class="form"><div class="two"><div class="field"><label>Influenceur</label><select name="profileId">${db.profiles.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select></div><div class="field"><label>Plateforme</label><select name="platform"><option>YouTube</option><option>TikTok</option><option>Instagram</option><option>Facebook</option><option>TV</option></select></div></div><div class="field"><label>Lien direct du live</label><input name="url" type="url" placeholder="https://..." required></div><div class="two"><div class="field"><label>Titre</label><input name="title" placeholder="Direct en cours"></div><div class="field"><label>Durée prévue</label><select name="duration"><option value="60">1 heure</option><option value="120" selected>2 heures</option><option value="240">4 heures</option><option value="480">8 heures</option></select></div></div><button class="btn primary" type="submit">ACTIVER LE LIVE MANUEL</button></form>
-  <h3 style="margin-top:22px">Directs actifs (${lives.length})</h3>${lives.length?lives.map(l=>{const p=profile(l.profileId),source=l.source==='automatic'?'AUTO':'MANUEL';return `<div class="signal"><div><strong>${p?.name||l.profileId}</strong><div><span class="live-pulse"></span>${l.platform} · ${l.title||'Direct en cours'} <span class="badge live-badge">${source}</span></div><div class="muted">Début : ${new Date(l.startedAt).toLocaleString('fr-FR')}${l.endsAt?` · Fin prévue : ${new Date(l.endsAt).toLocaleString('fr-FR')}`:''}</div></div><div class="signal-actions"><a class="btn small" href="${safeAttr(l.url)}" target="_blank">Ouvrir</a>${l.source==='manual'?`<button class="btn small danger live-stop" data-id="${l.id}">ARRÊTER</button>`:''}</div></div>`}).join(''):'<div class="live-empty">Aucun direct actif.</div>'}`;
+  <h3 style="margin-top:22px">Directs actifs (${lives.length})</h3>${lives.length?lives.map(l=>{const p=profile(l.profileId),source=l.source==='automatic'?'AUTO':'MANUEL';return `<div class="signal"><div><strong>${p?.name||l.profileId}</strong><div><span class="live-pulse"></span>${l.platform} · ${l.title||'Direct en cours'} <span class="badge live-badge">${source}</span></div>${p50LiveAdminTiming(l)}</div><div class="signal-actions"><a class="btn small" href="${safeAttr(l.url)}" target="_blank">Ouvrir</a>${l.source==='manual'?`<button class="btn small danger live-stop" data-id="${l.id}">ARRÊTER</button>`:''}</div></div>`}).join(''):'<div class="live-empty">Aucun direct actif.</div>'}`;
 }
 function startLive(fd){const minutes=Math.max(15,Number(fd.get('duration')||120));db.liveStreams.push({id:'live_'+Date.now(),profileId:String(fd.get('profileId')),platform:String(fd.get('platform')),url:String(fd.get('url')),title:String(fd.get('title')||'Direct en cours'),status:'live',source:'manual',startedAt:new Date().toISOString(),endsAt:new Date(Date.now()+minutes*60000).toISOString()});save();render();renderAdminPane();toast('LIVE activé')}
 function stopLive(id){const l=db.liveStreams.find(x=>x.id===id);if(l)l.status='ended';save();render();renderAdminPane();toast('LIVE arrêté')}
@@ -809,7 +837,7 @@ async function apiFetch(path,{method='GET',body=null,formData=null,auth=true}={}
   if(!res.ok)throw new Error(data.error||'Erreur serveur');
   return data;
 }
-function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};return copy;}
+function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};copy.liveStreams=(copy.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});return copy;}
 function scheduleCloudSync(){
   if(window.majPass50Running||!CLOUD.enabled||!CLOUD.ready)return;
   clearTimeout(CLOUD.syncTimer);
@@ -851,7 +879,7 @@ async function loadCloudState(){
   const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p.birthManualLocked&&p.birthDate).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(p.birthDate.slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...(p.quality||{}),birth:100},dataEngine:{...(p.dataEngine||{}),verifiedFacts:[...new Set([...(p.dataEngine?.verifiedFacts||[]),'birth_date'])]}}]));
   const data=await apiFetch('state.php',{auth:false});
   if(Number.isFinite(Number(data?.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
-  if(data?.data){const cloud=data.data;db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{if(manualPhotos[p.id])Object.assign(p,manualPhotos[p.id]);if(manualBirths[p.id])Object.assign(p,manualBirths[p.id]);if(manualLinks[p.id]){p.links={...(p.links||{}),...manualLinks[p.id].links};p.linkChecks={...(p.linkChecks||{}),...manualLinks[p.id].linkChecks};}});localStorage.setItem(APP_KEY,JSON.stringify(db));}
+  if(data?.data){const cloud=data.data;cloud.liveStreams=(cloud.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{if(manualPhotos[p.id])Object.assign(p,manualPhotos[p.id]);if(manualBirths[p.id])Object.assign(p,manualBirths[p.id]);if(manualLinks[p.id]){p.links={...(p.links||{}),...manualLinks[p.id].links};p.linkChecks={...(p.linkChecks||{}),...manualLinks[p.id].linkChecks};}});normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));}
 }
 function hydrateApiUser(apiUser,notes=[]){
   if(!apiUser)return;

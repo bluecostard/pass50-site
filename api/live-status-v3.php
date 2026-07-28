@@ -115,9 +115,9 @@ function p50_live_v3_youtube_base(string $url): string {
 function p50_live_v3_manual_priority_ids(array $state): array {
     $ids=[];$now=time();
     foreach((array)($state['liveStreams']??[]) as $live){
-        if(!is_array($live)||($live['status']??'')!=='live'||empty($live['profileId']))continue;
+        if(!is_array($live)||($live['source']??'')!=='manual'||str_starts_with((string)($live['id']??''),'auto_')||($live['status']??'')!=='live'||empty($live['profileId']))continue;
         $ends=strtotime((string)($live['endsAt']??''));
-        if($ends!==false&&$ends>0&&$ends<=$now)continue;
+        if($ends===false||$ends<=$now)continue;
         $ids[(string)$live['profileId']]=true;
     }
     return $ids;
@@ -320,19 +320,23 @@ function p50_live_v3_parse_tiktok(array $source,array $responses): array {
         $maxMs=max($maxMs,(int)($r['timeMs']??0));
     }
     if($ok===0)return ['state'=>'unknown','error'=>implode(';',$errors),'confidence'=>0,'responseMs'=>$maxMs];
-    $roomId=p50_live_v3_tiktok_room_id($combined);
-    $strong=(bool)preg_match('/"(?:isLive|isLiveStreaming|is_live)"\s*:\s*true/i',$combined)
-        ||(bool)preg_match('/"(?:liveStatus|live_status|status)"\s*:\s*2(?:\D|$)/i',$combined)
-        ||(bool)preg_match('/"LiveRoom"\s*:/i',$combined)
-        ||(bool)preg_match('/x-tiktok-player.{0,800}(?:onPlayerReady|liveRoom|roomId)/is',$combined);
-    $negative=(bool)preg_match('/not currently live|live has ended|room not found|"liveStatus"\s*:\s*4|"status"\s*:\s*4/iu',$combined);
-    if($roomId===''&&!$strong)return ['state'=>$negative?'offline':'unknown','error'=>$negative?'':'tiktok_no_live_signal','confidence'=>$negative?92:0,'responseMs'=>$maxMs];
-    if($roomId===''&&$strong){
-        $embed=(string)($responses['embed']['body']??'');
-        if($embed===''||preg_match('/blocked|not currently live|live has ended/iu',$embed))return ['state'=>'unknown','error'=>'tiktok_signal_incomplete','confidence'=>0,'responseMs'=>$maxMs];
+    $negative=(bool)preg_match('/live has ended|not currently live|room not found|"(?:liveStatus|live_status|status)"\s*:\s*4(?:\D|$)|"(?:isLive|is_live)"\s*:\s*false/i',$combined);
+    if($negative)return ['state'=>'offline','error'=>'tiktok_explicit_offline','confidence'=>98,'responseMs'=>$maxMs];
+    $roomId='';$positive=false;$apiBody='';
+    foreach(['api','api_basic'] as $label){
+        $body=(string)($responses[$label]['body']??'');
+        if(empty($responses[$label]['ok'])||$body===''||json_decode($body,true)===null)continue;
+        $candidate=p50_live_v3_tiktok_room_id($body);
+        $active=(bool)preg_match('/"(?:liveStatus|live_status|status)"\s*:\s*2(?:\D|$)/i',$body);
+        if(!$active||$candidate==='')continue;
+        if(preg_match('/"(?:uniqueId|unique_id|ownerHandle|owner_handle)"\s*:\s*"@?([^"]+)"/i',$body,$owner)
+            &&strcasecmp(trim($owner[1],'@'),(string)$identity['handle'])!==0)continue;
+        $roomId=$candidate;$positive=true;$apiBody=$body;break;
     }
+    if(!$positive)return ['state'=>'unknown','error'=>'tiktok_no_explicit_api_live_signal','confidence'=>0,'responseMs'=>$maxMs];
     $best='';$bestUrl=$identity['liveUrl'];
-    foreach(['live','embed','profile','api'] as $label){if(!empty($responses[$label]['body'])){$best=(string)$responses[$label]['body'];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}}
+    foreach(['live','embed','profile'] as $label){if(!empty($responses[$label]['body'])){$best=(string)$responses[$label]['body'];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}}
+    if($best==='')$best=$apiBody;
     $meta=p50_page_metadata($best,$bestUrl);$title=trim((string)($meta['title']??''));$title=preg_replace('/\s*\|\s*TikTok\s*$/iu','',$title)??$title;
     if($title===''||preg_match('/^(TikTok|Make Your Day)$/iu',$title))$title=trim((string)($source['public_name']??''));
     if($title==='')$title='Direct TikTok en cours';elseif(!preg_match('/\b(direct|live)\b/iu',$title))$title.=' est en direct';
@@ -348,6 +352,8 @@ function p50_live_v3_parse_instagram(array $source,array $responses): array {
     $identity=p50_live_v3_identity('Instagram',(string)$source['url']);$combined='';$ok=0;$errors=[];$maxMs=0;
     foreach($responses as $label=>$r){if(!empty($r['ok'])){$ok++;$combined.="\n".(string)$r['body'];}else $errors[]=$label.':http_'.($r['status']??0);$maxMs=max($maxMs,(int)($r['timeMs']??0));}
     if($ok===0)return ['state'=>'unknown','error'=>implode(';',$errors),'confidence'=>0,'responseMs'=>$maxMs];
+    $negative=(bool)preg_match('/"(?:is_live_broadcast|isLiveBroadcast|is_live|isLive)"\s*:\s*false|"(?:broadcast_status)"\s*:\s*"(?:ended|archived|replay|vod|finished)"|\b(?:ended|archived|replay)\b/i',$combined);
+    if($negative)return ['state'=>'offline','error'=>'instagram_explicit_offline','confidence'=>98,'responseMs'=>$maxMs];
     $live=(bool)preg_match('/"(?:is_live_broadcast|isLiveBroadcast|is_live|isLive)"\s*:\s*true/i',$combined)
         ||(bool)preg_match('/"broadcast_status"\s*:\s*"(?:active|live)"/i',$combined);
     if(!$live)return ['state'=>'unknown','error'=>'instagram_no_public_live_signal','confidence'=>0,'responseMs'=>$maxMs];
@@ -363,9 +369,13 @@ function p50_live_v3_parse_facebook(array $source,array $responses): array {
     $identity=p50_live_v3_identity('Facebook',(string)$source['url']);$combined='';$ok=0;$errors=[];$maxMs=0;
     foreach($responses as $label=>$r){if(!empty($r['ok'])){$ok++;$combined.="\n".(string)$r['body']."\n".(string)($r['finalUrl']??'');}else $errors[]=$label.':http_'.($r['status']??0);$maxMs=max($maxMs,(int)($r['timeMs']??0));}
     if($ok===0)return ['state'=>'unknown','error'=>implode(';',$errors),'confidence'=>0,'responseMs'=>$maxMs];
-    $live=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live)"\s*:\s*true/i',$combined)
-        ||(bool)preg_match('/"broadcast_status"\s*:\s*"LIVE"/i',$combined)
-        ||(bool)preg_match('#facebook\.com/(?:watch/live|[^"\']+/videos/\d+)#i',$combined);
+    $negative=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live)"\s*:\s*false|"(?:broadcast_status)"\s*:\s*"(?:VOD|ENDED)"|was live|live video has ended|"endTimestamp"\s*:|\breplay\b/i',$combined);
+    if($negative)return ['state'=>'offline','error'=>'facebook_explicit_offline','confidence'=>98,'responseMs'=>$maxMs];
+    $active=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live)"\s*:\s*true/i',$combined)
+        ||(bool)preg_match('/"broadcast_status"\s*:\s*"LIVE"/i',$combined);
+    $specific=(bool)preg_match('#facebook\.com/[^"\']+/videos/\d+#i',$combined)
+        ||(bool)preg_match('/"(?:video_id|videoId|broadcast_id|broadcastId)"\s*:\s*"?[1-9]\d{5,}"?/i',$combined);
+    $live=$active&&$specific;
     if(!$live)return ['state'=>'unknown','error'=>'facebook_no_public_live_signal','confidence'=>0,'responseMs'=>$maxMs];
     $meta=p50_page_metadata($combined,$identity['liveUrl']);$url=(string)($meta['canonical']?:$identity['liveUrl']);
     return ['state'=>'live','confidence'=>92,'responseMs'=>$maxMs,'live'=>[
@@ -405,7 +415,7 @@ function p50_live_v3_store(array $live): void {
     // Certaines plateformes renvoient une URL de LIVE générique ou canonique
     // commune à plusieurs profils. Le profil doit donc faire partie de la clé.
     $key=hash('sha256',strtolower($profileId.'|'.$platform.'|'.rtrim($url,'/')));
-    $endOthers=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live' AND stream_key<>?");
+    $endOthers=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed') AND stream_key<>?");
     $endOthers->execute([$profileId,$platform,$key]);
     $title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata)
@@ -430,19 +440,30 @@ function p50_live_v3_health_update(array $source,array $result): array {
 }
 
 function p50_live_v3_mark_ended(string $profileId,string $platform): void {
-    $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE profile_id=? AND platform=? AND source='automatic' AND status='live'");
+    $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed')");
     $stmt->execute([$profileId,$platform]);
 }
 
+function p50_live_v3_mark_unconfirmed(string $profileId,string $platform,string $reason): void {
+    $stmt=db()->prepare("UPDATE p50_live_streams SET status='unconfirmed',metadata=JSON_SET(COALESCE(metadata,'{}'),'$.withdrawalReason',?) WHERE profile_id=? AND platform=? AND source='automatic' AND status='live'");
+    $stmt->execute([substr($reason,0,120),$profileId,$platform]);
+}
+
 function p50_live_v3_active_rows(int $staleMinutes): array {
-    $staleMinutes=max(5,min(1440,$staleMinutes));
-    db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=NOW() WHERE source='automatic' AND status='live' AND last_seen_at<DATE_SUB(NOW(),INTERVAL {$staleMinutes} MINUTE)");
-    $stmt=db()->query("SELECT * FROM p50_live_streams WHERE status='live' ORDER BY COALESCE(started_at,last_seen_at) DESC");$out=[];
+    db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()) WHERE source='automatic' AND status IN ('live','unconfirmed') AND last_seen_at<DATE_SUB(NOW(),INTERVAL 24 HOUR)");
+    db()->exec("UPDATE p50_live_streams SET status='unconfirmed',metadata=JSON_SET(COALESCE(metadata,'{}'),'$.withdrawalReason','stale_confirmation') WHERE source='automatic' AND status='live' AND ((platform IN ('TikTok','Instagram','Facebook') AND last_seen_at<DATE_SUB(NOW(),INTERVAL 3 MINUTE)) OR (platform='YouTube' AND last_seen_at<DATE_SUB(NOW(),INTERVAL 10 MINUTE)))");
+    $stmt=db()->query("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms,h.metadata health_metadata
+        FROM p50_live_streams s JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform
+        WHERE s.source='automatic' AND s.status='live' AND h.last_state='live'
+          AND ((s.platform IN ('TikTok','Instagram','Facebook') AND h.last_checked_at>=DATE_SUB(NOW(),INTERVAL 3 MINUTE) AND s.last_seen_at>=DATE_SUB(NOW(),INTERVAL 3 MINUTE))
+            OR (s.platform='YouTube' AND h.last_checked_at>=DATE_SUB(NOW(),INTERVAL 10 MINUTE) AND s.last_seen_at>=DATE_SUB(NOW(),INTERVAL 10 MINUTE)))
+        ORDER BY s.last_seen_at DESC");$out=[];
     foreach($stmt->fetchAll() as $row)$out[]=[
         'id'=>'auto_'.substr((string)$row['stream_key'],0,18),'profileId'=>(string)$row['profile_id'],'platform'=>(string)$row['platform'],
         'title'=>(string)$row['title'],'url'=>(string)$row['url'],'thumbnail'=>(string)($row['thumbnail_url']??''),'status'=>'live','source'=>'automatic',
         'confidence'=>(int)$row['confidence'],'viewers'=>$row['viewers']!==null?(int)$row['viewers']:null,
-        'startedAt'=>p50_live_v3_iso($row['started_at']??null),'lastSeenAt'=>p50_live_v3_iso($row['last_seen_at']??null),'endsAt'=>null,
+        'startedAt'=>p50_live_v3_iso($row['started_at']??null),'lastSeenAt'=>p50_live_v3_iso($row['last_seen_at']??null),
+        'lastConfirmedAt'=>p50_live_v3_iso($row['last_checked_at']??null),'endsAt'=>null,
     ];
     return $out;
 }
@@ -450,8 +471,8 @@ function p50_live_v3_active_rows(int $staleMinutes): array {
 function p50_live_v3_manual_streams(array $state): array {
     $now=time();$out=[];
     foreach((array)($state['liveStreams']??[]) as $live){
-        if(!is_array($live)||($live['status']??'')!=='live'||empty($live['profileId'])||empty($live['url']))continue;
-        $end=strtotime((string)($live['endsAt']??''));if($end!==false&&$end>0&&$end<=$now)continue;
+        if(!is_array($live)||($live['source']??'')!=='manual'||str_starts_with((string)($live['id']??''),'auto_')||($live['status']??'')!=='live'||empty($live['profileId'])||!p50_public_http_url((string)($live['url']??'')))continue;
+        $end=strtotime((string)($live['endsAt']??''));if($end===false||$end<=$now)continue;
         $live['id']=(string)($live['id']??('manual_'.substr(hash('sha256',(string)$live['url']),0,16)));$live['source']='manual';$out[]=$live;
     }
     return $out;
@@ -478,10 +499,18 @@ function p50_live_v3_cycle_id(): string {
 function p50_live_v3_cycle_key(string $cycleId): string {return 'live_radar_v3_cycle_'.substr(hash('sha256',$cycleId),0,24);}
 
 function p50_live_v3_health_summary(): array {
-    $summary=[];foreach(P50_LIVE_PLATFORMS as $platform)$summary[$platform]=['live'=>0,'offline'=>0,'unknown'=>0,'never_checked'=>0];
+    $summary=[];foreach(P50_LIVE_PLATFORMS as $platform)$summary[$platform]=['live'=>0,'offline'=>0,'unknown'=>0,'unconfirmed'=>0,'never_checked'=>0];
     try{
-        $stmt=db()->query('SELECT platform,last_state,COUNT(*) total FROM p50_live_source_health GROUP BY platform,last_state');
-        foreach($stmt->fetchAll() as $row){$p=(string)$row['platform'];$s=(string)$row['last_state'];if(isset($summary[$p]))$summary[$p][$s]=(int)$row['total'];}
+        $stmt=db()->query("SELECT h.platform,
+            CASE WHEN EXISTS(
+                SELECT 1 FROM p50_live_streams s
+                WHERE s.profile_id=h.profile_id AND s.platform=h.platform AND s.source='automatic' AND s.status='unconfirmed'
+            ) AND NOT EXISTS(
+                SELECT 1 FROM p50_live_streams current_live
+                WHERE current_live.profile_id=h.profile_id AND current_live.platform=h.platform AND current_live.source='automatic' AND current_live.status='live'
+            ) THEN 'unconfirmed' ELSE h.last_state END public_state
+            FROM p50_live_source_health h");
+        foreach($stmt->fetchAll() as $row){$p=(string)$row['platform'];$s=(string)$row['public_state'];if(isset($summary[$p][$s]))$summary[$p][$s]++;}
     }catch(Throwable){}
     return $summary;
 }
@@ -521,9 +550,13 @@ if($canScan&&$selected&&$lock){
         $source=$result['source'];$platform=(string)$source['platform'];$platformStats[$platform]['scanned']++;
         $health=p50_live_v3_health_update($source,$result);$stateValue=(string)$result['state'];
         if($stateValue==='live'&&!empty($result['live'])){p50_live_v3_store($result['live']);$foundThisPass++;$platformStats[$platform]['found']++;}
-        elseif($stateValue==='offline'&&$health['offline']>=2)p50_live_v3_mark_ended((string)$source['profile_id'],$platform);
+        elseif($stateValue==='offline')p50_live_v3_mark_ended((string)$source['profile_id'],$platform);
+        elseif($stateValue==='unknown'&&in_array($platform,['TikTok','Instagram','Facebook'],true))p50_live_v3_mark_unconfirmed((string)$source['profile_id'],$platform,(string)($result['error']??'unknown'));
         $diagnostics[]=[
             'profileId'=>(string)$source['profile_id'],'name'=>(string)$source['public_name'],'platform'=>$platform,'state'=>$stateValue,
+            'publicState'=>$stateValue==='unknown'&&in_array($platform,['TikTok','Instagram','Facebook'],true)?'unconfirmed':$stateValue,
+            'lastCheckedAt'=>gmdate(DATE_ATOM),'lastConfirmedAt'=>$stateValue==='live'?gmdate(DATE_ATOM):null,
+            'withdrawalReason'=>$stateValue==='live'?'':(string)($result['error']??$stateValue),
             'confidence'=>(int)($result['confidence']??0),'error'=>(string)($result['error']??''),'probes'=>$result['probes']??[],
         ];
     }
