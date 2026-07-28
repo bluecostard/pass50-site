@@ -1,16 +1,16 @@
 (function(){
   window.majPass50Running=Boolean(window.majPass50Running);
   const fallbackRenderAdminPane=renderAdminPane;
-  const DE={hub:null,intelligence:null,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
+  const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
 
   renderAdmin=function(){
-    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['update','MAJ PASS50'],['intelligence','PASS50 Intelligence'],['hub','Data Hub'],['quality','Contrôle qualité'],['ranking','Classement'],['data','Maintenance']];
+    const items=[['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['update','MAJ PASS50'],['metricsdiag','Diagnostic métriques'],['intelligence','PASS50 Intelligence'],['hub','Data Hub'],['quality','Contrôle qualité'],['ranking','Classement'],['data','Maintenance']];
     const menu=`<div class="admin-menu">${items.map(([id,label])=>`<button class="btn ${ui.adminTab===id?'primary':''}" data-admin-tab="${id}">${label}</button>`).join('')}</div>`;
     $('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;
     renderAdminPane();
   };
 
-  renderAdminPane=function(){if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
+  renderAdminPane=function(){if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function deThreshold(){return Number(DE.hub?.threshold||90);}
@@ -23,6 +23,57 @@
     return '<span class="de-status empty">Absent</span>';
   }
   function deTime(value){if(!value)return 'Jamais';const d=new Date(String(value).replace(' ','T')+'Z');return Number.isNaN(d.getTime())?deEsc(value):d.toLocaleString('fr-FR');}
+  function deObsAge(value){
+    if(!value)return 'Jamais';
+    const minutes=Number(value.minutes||0);
+    if(minutes<60)return `il y a ${minutes} min`;
+    if(minutes<1440)return `il y a ${Number(value.hours||0).toLocaleString('fr-FR',{maximumFractionDigits:1})} h`;
+    return `il y a ${Number(value.days||0).toLocaleString('fr-FR',{maximumFractionDigits:1})} j`;
+  }
+  function deObsNumber(value){return Number(value||0).toLocaleString('fr-FR');}
+  function deObsStatus(status){
+    const values={operational:['Opérationnel','verified'],incomplete:['Incomplet','candidate'],blocked:['Bloqué','conflict']};
+    const item=values[status]||['Inconnu','empty'];
+    return `<span class="de-status ${item[1]}">${item[0]}</span>`;
+  }
+  async function deLoadMetricsDiagnostic(force=false){
+    if(DE.metricsDiagnosticLoading||(!force&&DE.metricsDiagnostic))return;
+    DE.metricsDiagnosticLoading=true;
+    try{DE.metricsDiagnostic=await apiFetch('metrics-diagnostic.php');}
+    catch(error){DE.metricsDiagnostic={error:error.message||'Diagnostic indisponible'};}
+    finally{DE.metricsDiagnosticLoading=false;if(ui.adminTab==='metricsdiag')deDrawMetricsDiagnostic($('#adminPane'));}
+  }
+  function deRenderMetricsDiagnostic(pane){
+    if(!pane)return;
+    pane.innerHTML='<div class="de-loading">Lecture du pipeline de métriques…</div>';
+    if(DE.metricsDiagnostic)deDrawMetricsDiagnostic(pane);else deLoadMetricsDiagnostic();
+  }
+  function deDrawMetricsDiagnostic(pane){
+    if(!pane)return;
+    const data=DE.metricsDiagnostic;
+    if(!data){pane.innerHTML='<div class="de-loading">Lecture du pipeline de métriques…</div>';return;}
+    if(data.error){pane.innerHTML=`<div class="de-error">${deEsc(data.error)}</div><button class="btn de-metrics-refresh">Réessayer</button>`;return;}
+    const ranking=data.ranking||{},volumes=data.volumes||{},fresh=data.freshness||{},collections=data.collections||{},platforms=data.platforms||[],errors=collections.recentErrors||[];
+    const kpis=[
+      ['Événements uniques',volumes.activity_events],
+      ['Captures métriques',volumes.activity_metric_history],
+      ['Métriques actives',ranking.activeMetrics],
+      ['Profils mesurables',ranking.measurableProfiles],
+      ['Profils classables',ranking.classableProfiles],
+      ['Scores modifiés',ranking.scoresChanged],
+      ['Rangs modifiés',ranking.ranksChanged],
+    ];
+    const reasonLabels={insufficientConfidence:'Confiance insuffisante',insufficientCoverage:'Couverture insuffisante',fewerThanSixCriteria:'Moins de 6 critères',noRecentMetrics:'Aucune métrique récente'};
+    pane.innerHTML=`<div class="de-observability-shell">
+      <div class="section-head"><div><div class="section-title">DIAGNOSTIC MÉTRIQUES</div><div class="muted">Lecture seule · aucune collecte, aucun recalcul et aucune publication.</div></div><div class="de-toolbar">${deObsStatus(data.status)}<button class="btn de-metrics-refresh">Actualiser</button></div></div>
+      <div class="de-observability-dates"><div><span>Dernière collecte réussie</span><strong>${deEsc(deObsAge(fresh.collection_success))}</strong><small>${deEsc(fresh.collection_success?.at?deTime(fresh.collection_success.at):'Jamais')}</small></div><div><span>Dernière publication atomique</span><strong>${deEsc(deObsAge(ranking.lastAtomicPublicationAge))}</strong><small>${deEsc(ranking.lastAtomicPublicationAt?deTime(ranking.lastAtomicPublicationAt):'Jamais')}</small></div></div>
+      <div class="de-kpis">${kpis.map(([label,value])=>`<div class="de-kpi"><strong>${deObsNumber(value)}</strong><span>${deEsc(label.toUpperCase())}</span></div>`).join('')}</div>
+      <section class="de-observability-card"><div class="section-title">Pourquoi le classement reste statique</div><ul>${(data.staticRankingReasons||[]).map(reason=>`<li>${deEsc(reason)}</li>`).join('')||'<li>Aucun blocage principal détecté.</li>'}</ul><div class="de-reason-grid">${Object.entries(ranking.nonClassableReasons||{}).map(([key,value])=>`<div><strong>${deObsNumber(value)}</strong><span>${deEsc(reasonLabels[key]||key)}</span></div>`).join('')}</div><div class="media-hint">${deEsc(data.automation?.summary||'État de l’automatisation inconnu.')}</div></section>
+      <section class="de-observability-card"><div class="section-head"><div class="section-title">Couverture par plateforme</div><span class="muted">${deObsNumber(data.platformsWithoutData?.length)} sans donnée</span></div><div class="admin-table-wrap"><table class="admin-table de-observability-table"><thead><tr><th>Plateforme</th><th>Événements</th><th>Captures</th><th>Exploitables</th><th>Actives</th><th>Profils</th><th>Dernière donnée</th><th>État</th></tr></thead><tbody>${platforms.map(row=>`<tr><td><strong>${deEsc(row.platform)}</strong></td><td>${deObsNumber(row.uniqueEvents)}</td><td>${deObsNumber(row.metricCaptures)}</td><td>${deObsNumber(row.usableMetrics)}</td><td>${deObsNumber(row.activeMetrics)}</td><td>${deObsNumber(row.coveredProfiles)}</td><td>${deEsc(row.lastMetricCaptureAt?deTime(row.lastMetricCaptureAt):(row.lastCollectedAt?deTime(row.lastCollectedAt):'Jamais'))}</td><td>${row.noData?'<span class="de-status conflict">Sans donnée</span>':'<span class="de-status verified">Collectée</span>'}</td></tr>`).join('')||'<tr><td colspan="8">Aucune plateforme observée.</td></tr>'}</tbody></table></div></section>
+      <section class="de-observability-card"><div class="section-head"><div class="section-title">Dernières erreurs</div><span class="muted">${deObsNumber(collections.summary?.errors)} erreur(s) · ${deObsNumber(Number(collections.summary?.interrupted||0)+Number(collections.summary?.stale_running||0))} interrompue(s) ou bloquée(s)</span></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Date</th><th>Collecteur</th><th>Profil</th><th>Statut</th><th>Erreur sécurisée</th></tr></thead><tbody>${errors.map(row=>`<tr><td>${deEsc(row.startedAt?deTime(row.startedAt):'—')}</td><td>${deEsc(row.collector)}</td><td>${deEsc(row.profileId||'Global')}</td><td>${deEsc(row.status)}</td><td>${deEsc(row.message||'Erreur sans détail')}</td></tr>`).join('')||'<tr><td colspan="5">Aucune erreur récente.</td></tr>'}</tbody></table></div></section>
+      <div class="muted de-observability-foot">Généré ${deTime(data.generatedAt)} · limites : ${deObsNumber(data.limits?.eventRows)} événements, ${deObsNumber(data.limits?.captureSeries)} séries, ${deObsNumber(data.limits?.recentErrors)} erreurs.</div>
+    </div>`;
+  }
   function deApplyVerifiedBirthsFromHub(){
     if(!DE.hub||!Array.isArray(DE.hub.profiles)||!Array.isArray(db?.profiles))return 0;
     const threshold=deThreshold();let changed=0;
@@ -287,6 +338,7 @@
     try{
       if(e.target.id==='deMajPass50')await deRunMajPass50();
       if(e.target.id==='deReloadIntelligence')await deLoadIntelligence();
+      if(e.target.matches('.de-metrics-refresh')){DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);}
       if(e.target.id==='deStopMajPass50'){DE.majStopRequested=true;DE.majMessage='Arrêt demandé : le lot en cours se termine…';deDrawMajProgress();}
       if(e.target.id==='deSync')await deSync(e.target);
       if(e.target.id==='deCollectBatch')await deCollect(e.target);

@@ -1,0 +1,28 @@
+name: Validate Metrics Observability V1
+
+on:
+  pull_request:
+    paths:
+      - 'api/metrics-diagnostic.php'
+      - 'api/metrics-observability-core.php'
+      - 'data-engine-ui.js'
+      - 'data-engine-ui.css'
+      - 'tests/test_metrics_observability_v1.py'
+      - '.github/workflows/validate-metrics-observability-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la syntaxe PHP
+        run: |
+          php -l api/metrics-observability-core.php
+          php -l api/metrics-diagnostic.php
+      - name: Vérifier la syntaxe JavaScript
+        run: node --check data-engine-ui.js
+      - name: Exécuter les tests du diagnostic métriques
+        run: python3 -m unittest tests/test_metrics_observability_v1.py
