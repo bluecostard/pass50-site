@@ -51,3 +51,29 @@
 .de-progress-large{height:9px;margin-bottom:7px}
 .de-info-chips{display:flex;gap:5px;flex-wrap:wrap}.de-info-chips span{display:inline-flex;padding:4px 6px;border:1px solid #344034;border-radius:999px;background:#0b100b;color:#cdd5ca;font-size:9px;font-weight:850}
 .p50i-section{margin-top:22px}.p50i-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}.p50i-card{border:1px solid var(--line);background:rgba(15,19,15,.82);border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:10px}.p50i-head{display:flex;align-items:center;gap:10px}.p50i-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;background:#222b22;display:grid;place-items:center;font-weight:800}.p50i-avatar img{width:100%;height:100%;object-fit:cover}.p50i-indexes{display:flex;gap:8px}.p50i-indexes span{flex:1;border-radius:10px;background:#121812;padding:8px;color:var(--muted);font-size:11px;text-transform:uppercase}.p50i-indexes b{display:block;color:#fff;font-size:20px}.p50i-confidence{display:inline-flex;margin-top:4px;padding:3px 7px;border-radius:999px;font-size:10px;text-transform:uppercase}.p50i-confidence.high{background:#183d23;color:#78e795}.p50i-confidence.medium{background:#403719;color:#f4d36b}.p50i-confidence.low{background:#3c2525;color:#ef9292}.p50i-signal{font-weight:750;color:#d8ffd8}.p50i-card p{margin:0;line-height:1.45}.p50i-card small{color:var(--muted)}.p50i-empty{border:1px dashed var(--line);border-radius:14px;padding:20px;color:var(--muted)}
+
+/* Classement métrique expérimental V1 — administration uniquement. */
+#adminModal .de-ranking-lab{display:grid;gap:16px}
+#adminModal .de-ranking-warning{margin-top:6px;color:#ffc467;font-weight:900}
+#adminModal .de-ranking-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#adminModal .de-ranking-actions select{padding:10px;border:1px solid var(--line);border-radius:10px;background:#0b100b;color:#fff}
+#adminModal .de-ranking-meta{color:var(--muted);font-size:12px}
+#adminModal .de-ranking-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+#adminModal .de-ranking-kpis>div{padding:14px;border:1px solid var(--line);border-radius:14px;background:#0c100c}
+#adminModal .de-ranking-kpis strong,#adminModal .de-ranking-kpis span{display:block}
+#adminModal .de-ranking-kpis strong{color:var(--lime);font-size:23px}
+#adminModal .de-ranking-kpis span{margin-top:4px;color:var(--muted);font-size:10px;text-transform:uppercase}
+#adminModal .de-ranking-table-wrap{overflow-x:auto}
+#adminModal .de-ranking-table{min-width:1120px}
+#adminModal .de-ranking-table td strong,#adminModal .de-ranking-table td small{display:block}
+#adminModal .de-ranking-table td small{color:var(--muted)}
+#adminModal .de-ranking-score{color:var(--lime);font-size:17px;font-weight:1000}
+#adminModal .de-ranking-table .positive{color:#7ee29a}
+#adminModal .de-ranking-table .negative{color:#ff8a8a}
+#adminModal .de-ranking-table .new{color:#ffc467}
+#adminModal .de-ranking-status{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:900}
+#adminModal .de-ranking-status.classable{color:var(--lime);border:1px solid rgba(183,255,0,.4);background:rgba(183,255,0,.08)}
+#adminModal .de-ranking-status.insufficient{color:#ffc467;border:1px solid rgba(255,196,103,.4);background:rgba(255,196,103,.08)}
+#adminModal .de-ranking-exclusions{padding:14px;border:1px solid var(--line);border-radius:14px;background:#0c100c}
+#adminModal .de-ranking-exclusions ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin:12px 0 0;padding:0;list-style:none}
+@media(max-width:760px){#adminModal .de-ranking-kpis{grid-template-columns:1fr 1fr}#adminModal .de-ranking-actions{align-items:stretch}#adminModal .de-ranking-actions>*{flex:1}}
