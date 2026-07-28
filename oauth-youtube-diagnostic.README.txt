@@ -1,0 +1,8 @@
+Page temporaire de diagnostic : oauth-youtube-diagnostic.html
+
+- lit uniquement le jeton PASS50 depuis localStorage sans l’afficher ;
+- teste le POST authentifié vers api/youtube-oauth-start.php ;
+- couvre le téléchargement complet de la réponse avec un délai de 20 secondes ;
+- affiche seulement le statut HTTP, le délai et l’erreur publique ;
+- ouvre Google uniquement si une URL accounts.google.com valide est reçue ;
+- ne modifie aucune donnée PASS50.
