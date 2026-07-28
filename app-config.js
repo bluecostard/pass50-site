@@ -39,8 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-fi-engagement]')) return;
   var script = document.createElement('script');
-  script.src = './fi-engagement-v3.js?v=1.2';
-  script.dataset.pass50FiEngagement = '3.2';
+  script.src = './fi-engagement-v3.js?v=1.3';
+  script.dataset.pass50FiEngagement = '3.3';
   document.head.appendChild(script);
 })();
 

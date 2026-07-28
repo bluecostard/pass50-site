@@ -1,10 +1,10 @@
-const CACHE='pass50-v40-admin-fullscreen';
+const CACHE='pass50-v41-engagement-admin-scope';
 const ASSETS=[
   './',
   './index.html',
   './app-config.js',
   './fi-navigation-v3.js?v=1.0',
-  './fi-engagement-v3.js?v=1.2',
+  './fi-engagement-v3.js?v=1.3',
   './live-modal-layout-v1.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0',
   './profile-kawaii-nanami.js?v=1.0',

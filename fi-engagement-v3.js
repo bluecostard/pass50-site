@@ -16,6 +16,13 @@ function isVerified(p){return p?.verifiedPass50!==false}
 function verifiedBadge(){return '<span class="p50-verified" tabindex="0" title="Les liens et informations de cette fiche ont été vérifiés par PASS50." aria-label="Vérifié PASS50. Les liens et informations de cette fiche ont été vérifiés par PASS50.">✓ Vérifié PASS50</span>'}
 function esc(value=''){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 function engagementSearchKey(value=''){return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
+function isEngagementAdminTab(){
+  try{
+    return ui?.adminTab==='profiles';
+  }catch{
+    return false;
+  }
+}
 
 function getProfileId(){
   const body=document.getElementById('profileBody');
@@ -162,7 +169,13 @@ function completeEngagementRows(serverProfiles=[]){
 
 async function adminMetrics(){
   const pane=document.getElementById('adminPane');
-  if(!pane||pane.querySelector('.p50-admin-metrics')||pane.dataset.p50MetricsLoading==='1')return;
+  if(!pane)return;
+  if(!isEngagementAdminTab()){
+    pane.querySelectorAll('.p50-admin-metrics').forEach(element=>element.remove());
+    delete pane.dataset.p50MetricsLoading;
+    return;
+  }
+  if(pane.querySelector('.p50-admin-metrics')||pane.dataset.p50MetricsLoading==='1')return;
   let user;
   try{user=currentUser()}catch{}
   if(!user||!['owner','admin'].includes(user.role))return;
@@ -181,6 +194,7 @@ async function adminMetrics(){
     const box=document.createElement('section');
     box.className='p50-admin-metrics';
     box.innerHTML=`<div class="p50-admin-metrics-head"><div><strong>Engagement des fiches</strong><div class="p50-admin-metrics-summary"><strong>${activeCount}</strong> fiche${activeCount>1?'s':''} avec activité sur <strong>${allRows.length}</strong> recensée${allRows.length>1?'s':''} · les autres apparaissent avec zéro.</div></div><input id="p50EngagementSearch" class="p50-admin-metrics-search" type="search" autocomplete="off" placeholder="Rechercher une fiche…"></div><div class="p50-admin-metrics-table-wrap"><table><thead><tr><th>Influenceur</th><th>Likes</th><th>Partages FI</th><th>Partages live</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Aucune fiche disponible</td></tr>'}</tbody></table></div><div class="p50-admin-metrics-footer"><span id="p50EngagementVisibleCount">${allRows.length} fiche${allRows.length>1?'s':''} affichée${allRows.length>1?'s':''}</span><span>${totalLikes} like${totalLikes>1?'s':''} · ${totalProfileShares} partage${totalProfileShares>1?'s':''} FI · ${totalLiveShares} partage${totalLiveShares>1?'s':''} live</span></div>`;
+    if(!isEngagementAdminTab()||!pane.isConnected||pane!==document.getElementById('adminPane'))return;
     pane.prepend(box);
     const search=box.querySelector('#p50EngagementSearch');
     search?.addEventListener('input',()=>{
