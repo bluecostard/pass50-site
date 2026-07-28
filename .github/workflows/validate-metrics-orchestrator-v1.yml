@@ -19,9 +19,9 @@ jobs:
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s --health-timeout=5s --health-retries=20
     env:
-      PASS50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
-      PASS50_TEST_DB_USER: root
-      PASS50_TEST_DB_PASSWORD: root
+      P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      P50_TEST_DB_USER: root
+      P50_TEST_DB_PASSWORD: root
     steps:
       - uses: actions/checkout@v4
         with:
