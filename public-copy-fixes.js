@@ -17,4 +17,12 @@
   const observer=new MutationObserver(()=>replaceInternalCopy(document));
   observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
   document.addEventListener('DOMContentLoaded',()=>replaceInternalCopy(document));
+
+  // Interface sécurisée de connexion YouTube dans « Mon espace ».
+  if(!document.querySelector('script[data-pass50-youtube-oauth-ui]')){
+    const script=document.createElement('script');
+    script.src='./youtube-oauth-ui-v1.js?v=1.0';
+    script.dataset.pass50YoutubeOauthUi='1.0';
+    document.head.appendChild(script);
+  }
 })();
