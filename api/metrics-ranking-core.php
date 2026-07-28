@@ -93,6 +93,15 @@ function p50_mr_safe_error(Throwable $error): string {
     return function_exists('mb_substr')?mb_substr($message,0,500,'UTF-8'):substr($message,0,500);
 }
 
+function p50_mr_run_metadata(array $metadata=[]): array {
+    $safe=['readOnlyCanonicalInputs'=>true,'publicPublication'=>false];
+    if(array_key_exists('scheduled',$metadata))$safe['scheduled']=(bool)$metadata['scheduled'];
+    if(($metadata['cadence']??null)==='2h')$safe['cadence']='2h';
+    $dispatchId=is_string($metadata['dispatchId']??null)?trim($metadata['dispatchId']):'';
+    if($dispatchId!==''&&strlen($dispatchId)<=120&&preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))$safe['dispatchId']=$dispatchId;
+    return $safe;
+}
+
 function p50_mr_percentiles(array $values): array {
     $numeric=[];foreach($values as $key=>$value)if(is_int($value)||is_float($value))$numeric[(string)$key]=(float)$value;
     $count=count($numeric);
@@ -258,15 +267,15 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
     return $rows;
 }
 
-function p50_mr_calculate(PDO $pdo,array $periods,string $triggerType): array {
+function p50_mr_calculate(PDO $pdo,array $periods,string $triggerType,array $metadata=[]): array {
     $allowed=p50_mr_periods();$selected=[];foreach($periods as $period)if(isset($allowed[$period]))$selected[$period]=$allowed[$period];
     if(!$selected)throw new InvalidArgumentException('Aucune période valide.');
     if((int)p50_metrics_value($pdo,"SELECT GET_LOCK(?,10)",[P50_MR_LOCK])!==1)throw new RuntimeException('Un calcul expérimental est déjà en cours.');
-    $runUuid=p50_mr_uuid();$now=new DateTimeImmutable('now',new DateTimeZone('UTC'));$runCreated=false;
+    $runUuid=p50_mr_uuid();$now=new DateTimeImmutable('now',new DateTimeZone('UTC'));$runCreated=false;$runMetadata=p50_mr_run_metadata($metadata);
     try{
         p50_mr_ensure_schema($pdo);
-        $stmt=$pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,trigger_type,status,periods_json,metadata_json,started_at) VALUES(?,?,?,'running',?,'{}',?)");
-        $stmt->execute([$runUuid,P50_MR_ALGORITHM_VERSION,mb_substr($triggerType,0,32),p50_mr_json(array_keys($selected)),$now->format('Y-m-d H:i:s')]);$runCreated=true;
+        $stmt=$pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,trigger_type,status,periods_json,metadata_json,started_at) VALUES(?,?,?,'running',?,?,?)");
+        $stmt->execute([$runUuid,P50_MR_ALGORITHM_VERSION,mb_substr($triggerType,0,32),p50_mr_json(array_keys($selected)),p50_mr_json($runMetadata),$now->format('Y-m-d H:i:s')]);$runCreated=true;
         $pdo->beginTransaction();
         $loaded=p50_mr_load($pdo,$now);$allRows=[];$classableCount=0;$scoresWritten=0;
         foreach($selected as $periodKey=>$hours){
@@ -282,13 +291,33 @@ function p50_mr_calculate(PDO $pdo,array $periods,string $triggerType): array {
             }
         }
         $stmt=$pdo->prepare("UPDATE p50_metric_ranking_runs SET status='success',profiles_considered=?,classable_count=?,scores_written=?,metadata_json=?,finished_at=? WHERE run_uuid=?");
-        $stmt->execute([count($loaded['profiles']),$classableCount,$scoresWritten,p50_mr_json(['readOnlyCanonicalInputs'=>true,'publicPublication'=>false]),$now->format('Y-m-d H:i:s'),$runUuid]);
+        $stmt->execute([count($loaded['profiles']),$classableCount,$scoresWritten,p50_mr_json($runMetadata),$now->format('Y-m-d H:i:s'),$runUuid]);
         $pdo->commit();return ['ok'=>true,'runUuid'=>$runUuid,'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'periods'=>array_keys($selected),'profilesConsidered'=>count($loaded['profiles']),'classableCount'=>$classableCount,'scoresWritten'=>$scoresWritten];
     }catch(Throwable $error){
         if($pdo->inTransaction())$pdo->rollBack();
         if($runCreated)$pdo->prepare("UPDATE p50_metric_ranking_runs SET status='failed',error_message=?,finished_at=UTC_TIMESTAMP() WHERE run_uuid=?")->execute([p50_mr_safe_error($error),$runUuid]);
         throw $error;
     }finally{try{p50_metrics_value($pdo,"SELECT RELEASE_LOCK(?)",[P50_MR_LOCK]);}catch(Throwable){}}
+}
+
+function p50_mr_calculate_if_due(PDO $pdo,DateTimeImmutable $now,int $minimumMinutes,string $dispatchId): array {
+    $minimumMinutes=max(60,min(240,$minimumMinutes));
+    p50_mr_ensure_schema($pdo);
+    $stmt=$pdo->prepare("SELECT finished_at FROM p50_metric_ranking_runs
+        WHERE algorithm_version=? AND status='success' AND finished_at IS NOT NULL
+        ORDER BY finished_at DESC,id DESC LIMIT 1");
+    $stmt->execute([P50_MR_ALGORITHM_VERSION]);$latest=$stmt->fetchColumn();
+    if($latest){
+        $finishedAt=new DateTimeImmutable((string)$latest,new DateTimeZone('UTC'));
+        if($finishedAt>$now->modify("-$minimumMinutes minutes"))return [
+            'ok'=>true,'skipped'=>true,'reason'=>'recent_success',
+            'latestFinishedAt'=>$finishedAt->format(DATE_ATOM),'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
+        ];
+    }
+    $result=p50_mr_calculate($pdo,array_keys(p50_mr_periods()),'cron_2h',[
+        'scheduled'=>true,'cadence'=>'2h','dispatchId'=>$dispatchId,
+    ]);
+    return array_merge(['skipped'=>false],$result);
 }
 
 function p50_mr_read(PDO $pdo,string $period,int $limit): array {

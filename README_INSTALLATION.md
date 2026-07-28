@@ -81,14 +81,21 @@ refusés.
 
 ## Classement métrique expérimental
 
-Le classement métrique expérimental se calcule manuellement depuis
-**Administration → Classement expérimental**. Il utilise uniquement les données
-canoniques collectées et produit cinq périodes : 2H, 24H, 48H, 7J et 15J.
+Le classement métrique expérimental se calcule automatiquement toutes les deux
+heures, après la fin probable de la collecte P1. Le workflow réutilise les mêmes
+secrets HMAC `PASS50_METRICS_CRON_URL` et `PASS50_METRICS_CRON_SECRET` que
+l’orchestrateur. Un succès datant de moins de 90 minutes provoque un skip
+automatique ; le calcul manuel reste disponible depuis
+**Administration → Classement expérimental**.
+
+Le moteur utilise uniquement les données canoniques collectées et produit cinq
+périodes : 2H, 24H, 48H, 7J et 15J.
 
 Ses résultats sont conservés dans des tables séparées. Ils ne déclenchent aucune
-publication automatique et ne modifient ni les scores ni les rangs publics. Une
-publication vers le classement public pourra être étudiée dans une étape
-ultérieure, uniquement après validation de l’algorithme et de ses résultats.
+publication automatique, n’écrivent jamais dans `app_state` et ne modifient ni
+le classement, ni les scores, ni les rangs publics. Une publication vers le
+classement public pourra être étudiée dans une étape ultérieure, uniquement
+après validation de l’algorithme et de ses résultats.
 
 ## Limites actuelles
 

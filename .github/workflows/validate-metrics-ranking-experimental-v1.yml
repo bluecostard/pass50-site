@@ -30,6 +30,7 @@ jobs:
         run: |
           php -l api/metrics-ranking-core.php
           php -l api/metrics-ranking.php
+          php -l api/metrics-ranking-cron.php
           php -l tests/metrics_ranking_integration.php
       - name: JavaScript syntax
         run: |
@@ -38,6 +39,7 @@ jobs:
       - name: Python tests
         run: |
           python3 -m unittest tests.test_metrics_ranking_experimental_v1
+          python3 -m unittest tests.test_metrics_ranking_schedule_v1
           python3 -m unittest tests.test_metrics_schema_v1
           python3 -m unittest tests.test_metrics_observability_v1
           python3 -m unittest tests.test_metrics_orchestrator_v1

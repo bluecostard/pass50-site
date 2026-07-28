@@ -1,0 +1,79 @@
+name: Metrics Ranking Experimental
+
+on:
+  schedule:
+    - cron: '57 */2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: pass50-metrics-ranking-experimental
+  cancel-in-progress: false
+
+jobs:
+  calculate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - name: Calculate experimental ranking
+        shell: bash
+        run: |
+          if [ -z "$CRON_URL" ] && [ -z "$CRON_SECRET" ]; then
+            echo "::warning::PASS50 metrics cron secrets are not configured."
+            exit 0
+          fi
+          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Les deux secrets PASS50 metrics cron doivent être configurés."
+            exit 1
+          fi
+
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              RANKING_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-cron.php"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
+              exit 1
+              ;;
+          esac
+
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-ranking"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"calculate",dispatchId:$dispatchId}')"
+          timestamp="$(date +%s)"
+          signature="$(
+            printf '%s\n%s' "$timestamp" "$body" |
+              openssl dgst -sha256 -hmac "$CRON_SECRET" -r |
+              awk '{print $1}'
+          )"
+          response="$(
+            curl --fail-with-body --silent --show-error --max-time 55 \
+              -H "Content-Type: application/json" \
+              -H "X-P50-Timestamp: $timestamp" \
+              -H "X-P50-Signature: $signature" \
+              --data "$body" \
+              "$RANKING_URL"
+          )"
+
+          skipped="$(jq -r '.skipped // false' <<<"$response")"
+          run_uuid="$(jq -r '.runUuid // "—"' <<<"$response")"
+          algorithm="$(jq -r '.algorithmVersion // "—"' <<<"$response")"
+          periods="$(jq -r '(.periods // []) | join(", ")' <<<"$response")"
+          classable="$(jq -r '.classableCount // 0' <<<"$response")"
+          scores="$(jq -r '.scoresWritten // 0' <<<"$response")"
+          duration="$(jq -r '.durationMs // 0' <<<"$response")"
+          result="exécuté"
+          [ "$skipped" = "true" ] && result="ignoré (succès récent)"
+
+          {
+            printf '### Classement métrique expérimental\n'
+            printf -- '- dispatchId : `%s`\n' "$dispatch_id"
+            printf -- '- Calcul : %s\n' "$result"
+            printf -- '- runUuid : `%s`\n' "$run_uuid"
+            printf -- '- Algorithme : `%s`\n' "$algorithm"
+            printf -- '- Périodes : %s\n' "${periods:-—}"
+            printf -- '- Profils classables : %s\n' "$classable"
+            printf -- '- Scores écrits : %s\n' "$scores"
+            printf -- '- Durée : %s ms\n' "$duration"
+          } >> "$GITHUB_STEP_SUMMARY"
