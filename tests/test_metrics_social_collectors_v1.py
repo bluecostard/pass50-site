@@ -63,15 +63,20 @@ class SocialCollectorsV1Tests(unittest.TestCase):
 
     def test_instagram_semantics(self):
         source=ADAPTERS["instagram"]
-        for token in ("unsupported_account_type","CAROUSEL_ALBUM","REELS","STORY","like_count","comments_count","reach","plays","totalInteractions","accountsEngaged","/media","/insights","business_discovery.username"):
+        for token in ("unsupported_account_type","CAROUSEL_ALBUM","REELS","STORY","like_count","comments_count","reach","plays","totalInteractions","accountsEngaged","/insights","business_discovery.username","p50_mc_instagram_insight_groups","$preferred,$fallback","'stories'","'media'"):
             self.assertIn(token,source)
         self.assertNotIn("/instagram_business_discovery",source)
+        self.assertIn("storiesAuthorized",source)
 
     def test_facebook_semantics(self):
         source=ADAPTERS["facebook"]
         for token in ("PAGE","unsupported_account_type","reactions.type(LIKE)","comments.limit(0).summary(true)","posts","insights","reactionsTotal","videoViews","postClicks"):
             self.assertIn(token,source)
         self.assertIn("['id']??''",source)
+        canonical=source[source.index("p50_msc_store_content"):source.index("],(int)$postsResponse")]
+        self.assertIn("'views'=>p50_mc_int($insights,'post_video_views')",canonical)
+        self.assertNotIn("'views'=>p50_mc_int($insights,'post_impressions_unique')",canonical)
+        self.assertIn("'reach'=>p50_mc_int($insights,'post_impressions_unique')",canonical)
 
     def test_snapchat_semantics(self):
         source=ADAPTERS["snapchat"]
@@ -84,6 +89,12 @@ class SocialCollectorsV1Tests(unittest.TestCase):
         self.assertIn("CURLOPT_POSTFIELDS",COMMON)
         self.assertIn("Content-Type: application/json",COMMON)
         self.assertIn("string $method='GET'",COMMON)
+
+    def test_insights_parser_accepts_all_official_shapes(self):
+        parser=SOCIAL[SOCIAL.index("function p50_msc_graph_insights"):SOCIAL.index("function p50_msc_snap_assets")]
+        self.assertIn("$item['value']",parser)
+        self.assertIn("$values[0]['value']",parser)
+        self.assertIn("$item['total_value']['value']",parser)
 
     def test_statuses_and_idempotence_contract(self):
         for status in ("success","partial","authorization_required","configuration_missing","unavailable_or_blocked","unsupported_account_type","rate_limited","error"):

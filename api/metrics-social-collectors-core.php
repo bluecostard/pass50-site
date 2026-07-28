@@ -84,7 +84,7 @@ function p50_msc_graph_insights(array $payload): array {
     $metrics=[];
     foreach((array)($payload['data']??[]) as $item){
         $name=(string)($item['name']??'');$values=(array)($item['values']??[]);
-        $value=$item['value']??($values[0]['value']??null);
+        $value=$item['value']??($values[0]['value']??($item['total_value']['value']??null));
         if($name!==''&&$value!==null)$metrics[$name]=$value;
     }
     return $metrics;

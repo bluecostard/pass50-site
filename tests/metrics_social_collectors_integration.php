@@ -45,9 +45,16 @@ $fetch=function(string $url,array $headers=[],string $method='GET',?array $json=
         $second=($query['after']??'')==='IG2';$id=$second?'ig-reel':'ig-photo';
         return fixture_response(['data'=>[['id'=>$id,'media_type'=>$second?'VIDEO':'IMAGE','media_product_type'=>$second?'REELS':'FEED','permalink'=>$second?'https://instagram.com/reel/reel1':'https://instagram.com/p/photo1','timestamp'=>'2026-07-28T10:00:00Z','like_count'=>0,'comments_count'=>1]],'paging'=>['cursors'=>['after'=>$second?'':'IG2']]],$url);
     }
-    if(preg_match('#^/v22\.0/(ig-photo|ig-reel)/insights$#',$path,$m))return fixture_response(['data'=>[
-      ['name'=>'reach','period'=>'lifetime','values'=>[['value'=>15]]],['name'=>'plays','period'=>'lifetime','values'=>[['value'=>20]]],
-      ['name'=>'views','period'=>'lifetime','values'=>[['value'=>$m[1]==='ig-reel'?20:0]]],['name'=>'total_interactions','period'=>'lifetime','values'=>[['value'=>2]]]
+    if($path==='/v22.0/ig-business-1/stories')return fixture_response(['data'=>[['id'=>'ig-story','media_type'=>'IMAGE','media_product_type'=>'STORY','permalink'=>'https://instagram.com/stories/creator/story1','timestamp'=>'2026-07-28T11:00:00Z']]],$url);
+    if($path==='/v22.0/ig-photo/insights')return fixture_response(['data'=>[
+      ['name'=>'reach','period'=>'lifetime','values'=>[['value'=>15]]],['name'=>'total_interactions','period'=>'lifetime','value'=>2]
+    ]],$url);
+    if($path==='/v22.0/ig-reel/insights'){
+        if(str_contains((string)($query['metric']??''),'saved'))return fixture_response(['error'=>['message'=>'metric incompatible']],$url,400);
+        return fixture_response(['data'=>[['name'=>'views','period'=>'lifetime','total_value'=>['value'=>20]],['name'=>'reach','period'=>'lifetime','total_value'=>['value'=>15]]]],$url);
+    }
+    if($path==='/v22.0/ig-story/insights')return fixture_response(['data'=>[
+      ['name'=>'reach','period'=>'lifetime','total_value'=>['value'=>7]],['name'=>'replies','period'=>'lifetime','values'=>[['value'=>1]]]
     ]],$url);
     if($path==='/v22.0/fb-page-1')return fixture_response(['id'=>'fb-page-1','name'=>'Official Page','username'=>'OfficialPage','followers_count'=>0,'fan_count'=>20],$url);
     if($path==='/v22.0/fb-page-1/posts'){
@@ -59,9 +66,11 @@ $fetch=function(string $url,array $headers=[],string $method='GET',?array $json=
           'like_reactions'=>['summary'=>['total_count'=>3]],'reactions'=>['summary'=>['total_count'=>8]]
         ]],'paging'=>['cursors'=>['after'=>$second?'':'FB2']]],$url);
     }
-    if(preg_match('#^/v22\.0/(fb-post|fb-live)/insights$#',$path))return fixture_response(['data'=>[
-      ['name'=>'post_impressions_unique','values'=>[['value'=>30]]],['name'=>'post_clicks','values'=>[['value'=>4]]],['name'=>'post_video_views','values'=>[['value'=>20]]]
-    ]],$url);
+    if(preg_match('#^/v22\.0/(fb-post|fb-live)/insights$#',$path,$m)){
+        $data=[['name'=>'post_impressions_unique','values'=>[['value'=>30]]],['name'=>'post_clicks','values'=>[['value'=>4]]]];
+        if($m[1]==='fb-live')$data[]=['name'=>'post_video_views','values'=>[['value'=>20]]];
+        return fixture_response(['data'=>$data],$url);
+    }
     if($path==='/public/v1/public_profiles/search'){social_must(($query['query']??'')==='creator','Snapchat search query');return fixture_response(['public_profiles'=>[['public_profile'=>['id'=>'snap-public-1','snap_user_name'=>'creator']]]],$url);}
     if($path==='/public/v1/public_profiles/snap-public-1')return fixture_response(['public_profile'=>['id'=>'snap-public-1','snap_user_name'=>'creator','subscriber_count'=>0]],$url);
     if($path==='/public/v1/public_profiles/snap-public-1/spotlights')return fixture_response(['spotlights'=>[['spotlight'=>['id'=>'spot-1','share_url'=>'https://snapchat.com/spotlight/spot-1','created_at'=>'2026-07-28T10:00:00Z']]],'page'=>[]],$url);
@@ -73,6 +82,12 @@ $fetch=function(string $url,array $headers=[],string $method='GET',?array $json=
     return fixture_response(['error'=>['message'=>'fixture endpoint absent']],$url,404);
 };
 
+$config['metrics']['instagram_stories_authorized']=false;$beforeUnauthorized=count($requests);
+$igUnauthorized=p50_metrics_collect_profile($pdo,'ig','Instagram',1,$fetch,'2026-07-28T11:00:00Z');
+$unauthorizedRequests=array_slice($requests,$beforeUnauthorized);
+social_must(!array_filter($unauthorizedRequests,static fn($request)=>str_ends_with((string)parse_url($request['url'],PHP_URL_PATH),'/stories')),'Story non autorisée non appelée');
+social_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_contents WHERE platform='Instagram' AND content_type='story'")===0,'Story non autorisée non créée');
+$config['metrics']['instagram_stories_authorized']=true;
 $results=[];
 foreach([['tt','TikTok',3],['ig','Instagram',3],['fb','Facebook',3],['sc','Snapchat',5]] as [$id,$platform,$limit])$results[strtolower($platform)]=p50_metrics_collect_profile($pdo,$id,$platform,$limit,$fetch,'2026-07-28T12:00:00Z');
 foreach($results as $platform=>$result)social_must(in_array($result['status'],['success','partial'],true)&&$result['accountFound'],"Collecte $platform");
@@ -80,6 +95,12 @@ social_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_account
 social_must((int)p50_metrics_value($pdo,"SELECT followers FROM p50_metric_captures WHERE platform='TikTok' AND content_id IS NULL")===0,'TikTok zéro conservé');
 social_must(p50_metrics_value($pdo,"SELECT saves FROM p50_metric_captures WHERE platform='TikTok' AND platform='TikTok' AND content_id IS NOT NULL LIMIT 1")===null,'TikTok métrique absente reste NULL');
 social_must((int)p50_metrics_value($pdo,"SELECT likes FROM p50_metric_captures WHERE platform='Facebook' AND content_id IS NOT NULL LIMIT 1")===3,'Facebook LIKE distinct des réactions');
+social_must(p50_metrics_value($pdo,"SELECT c.views FROM p50_metric_captures c JOIN p50_metric_contents m ON m.id=c.content_id WHERE m.platform_content_id='fb-post' ORDER BY c.id DESC LIMIT 1")===null,'Portée Facebook non convertie en vues');
+$facebookMetrics=json_decode((string)p50_metrics_value($pdo,"SELECT c.metrics_json FROM p50_metric_captures c JOIN p50_metric_contents m ON m.id=c.content_id WHERE m.platform_content_id='fb-post' ORDER BY c.id DESC LIMIT 1"),true);
+social_must((int)($facebookMetrics['reach']??0)===30,'Portée Facebook conservée dans metrics_json');
+social_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_contents WHERE platform='Instagram' AND content_type='story'")===1,'Story Instagram autorisée collectée');
+social_must((int)p50_metrics_value($pdo,"SELECT views FROM p50_metric_captures c JOIN p50_metric_contents m ON m.id=c.content_id WHERE m.platform_content_id='ig-reel' ORDER BY c.id DESC LIMIT 1")===20,'Fallback Instagram et total_value normalisés');
+social_must((int)p50_metrics_value($pdo,"SELECT likes FROM p50_metric_captures c JOIN p50_metric_contents m ON m.id=c.content_id WHERE m.platform_content_id='ig-reel' ORDER BY c.id DESC LIMIT 1")===0,'Compteur public conservé après fallback insights');
 social_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_contents WHERE platform='Snapchat' AND status='expired'")===1,'Story expirée conservée');
 
 $retry=p50_metrics_collect_profile($pdo,'tt','TikTok',3,$fetch,'2026-07-28T12:00:00Z');social_must($retry['capturesRecorded']===0&&$retry['duplicatesSkipped']>=3,'Retry TikTok idempotent');
