@@ -316,8 +316,14 @@ function normalizeLiveStreams(){
   const seen=new Set();
   db.liveStreams=db.liveStreams.filter(x=>{
     if(!x||x.status!=='live'||!x.profileId||!/^https?:\/\//i.test(String(x.url||'')))return false;
-    const end=x.endsAt?new Date(x.endsAt).getTime():0;
-    if(Number.isFinite(end)&&end>0&&end<=now)return false;
+    if(x.source==='manual'){
+      const endsAt=new Date(x.endsAt||'').getTime();
+      if(!Number.isFinite(endsAt)||endsAt<=now)return false;
+    }else{
+      const confirmedAt=new Date(x.lastConfirmedAt||x.lastSeenAt||'').getTime();
+      const maxAge=String(x.platform||'').toLowerCase()==='youtube'?10*60_000:3*60_000;
+      if(!Number.isFinite(confirmedAt)||now-confirmedAt>maxAge||confirmedAt>now+30_000)return false;
+    }
     const key=[x.profileId,x.platform||'',String(x.url).replace(/\/+$/,'')].map(v=>String(v).trim().toLowerCase()).join('|');
     if(seen.has(key))return false;
     seen.add(key);
@@ -335,7 +341,7 @@ function currentUser(){return db.users.find(u=>u.id===session.userId)||null}
 function userPrefs(){const u=currentUser();if(!u)return null;u.favorites=u.favorites||[];u.following=u.following||[];u.followAlerts=u.followAlerts||{};u.notificationMode=u.notificationMode||'daily';u.soundEnabled=Boolean(u.soundEnabled);return u}
 function score(p){return Number(p.scores[ui.period]||0)}
 function regionEligible(p){return ui.region==='ALL'||p.region===ui.region||p.region==='BOTH'}
-function activeLives(){normalizeLiveStreams();const time=x=>{const value=x.startedAt||x.lastSeenAt||x.detectedAt||x.createdAt||x.updatedAt,parsed=value?new Date(value).getTime():0;return Number.isFinite(parsed)?parsed:0};return db.liveStreams.filter(x=>x.status==='live').sort((a,b)=>time(b)-time(a));}
+function activeLives(){normalizeLiveStreams();const time=x=>{const value=x.lastConfirmedAt||x.lastSeenAt||x.endsAt,parsed=value?new Date(value).getTime():0;return Number.isFinite(parsed)?parsed:0};return db.liveStreams.filter(x=>x.status==='live').sort((a,b)=>time(b)-time(a));}
 function renderLiveHeader(){const lives=activeLives(),count=$('#liveCount');if(count)count.textContent=lives.length?`(${lives.length})`:'';}
 function liveAvatarHtml(p,live){
   if(p)return avatarHtml(p,'live-avatar');
@@ -355,8 +361,10 @@ function openLives(){
   const lives=activeLives();
   $('#liveBody').innerHTML=lives.length?`<div class="live-list">${lives.map(l=>{
     const p=profile(l.profileId),url=liveWatchUrl(l),viewers=Number(l.viewers||0);
-    const action=url?`<a class="btn primary live-watch-link" href="${safeAttr(url)}" target="_blank" rel="noopener noreferrer">REGARDER SUR ${safeAttr(l.platform||'LA PLATEFORME')} →</a>`:`<span class="btn disabled" aria-disabled="true">LIEN DU LIVE INDISPONIBLE</span>`;
-    return `<article class="live-card">${liveAvatarHtml(p,l)}<div><strong>${safeAttr(p?.name||l.profileName||'Influenceur')}</strong><div class="live-platform"><span class="live-pulse"></span>EN DIRECT SUR ${safeAttr(l.platform||'UNE PLATEFORME')}</div><div class="muted">${safeAttr(l.title||'Direct en cours')}${viewers?` · ${viewers.toLocaleString('fr-FR')} spectateur(s)`:''}</div></div>${action}</article>`;
+    const confirmed=l.lastConfirmedAt||l.lastSeenAt||'',confirmedMs=new Date(confirmed).getTime(),minutes=Number.isFinite(confirmedMs)?Math.max(0,Math.floor((Date.now()-confirmedMs)/60000)):0;
+    const confirmation=minutes<1?'Confirmé à l’instant':`Confirmé il y a ${minutes} min`;
+    const action=url?`<a class="btn primary live-watch-link" href="${safeAttr(url)}" target="_blank" rel="noopener noreferrer" data-live-profile="${safeAttr(l.profileId)}" data-live-platform="${safeAttr(l.platform||'')}" data-live-confirmed-at="${safeAttr(confirmed)}">REGARDER SUR ${safeAttr(l.platform||'LA PLATEFORME')} →</a>`:`<span class="btn disabled" aria-disabled="true">LIEN DU LIVE INDISPONIBLE</span>`;
+    return `<article class="live-card">${liveAvatarHtml(p,l)}<div><strong>${safeAttr(p?.name||l.profileName||'Influenceur')}</strong><div class="live-platform"><span class="live-pulse"></span>EN DIRECT SUR ${safeAttr(l.platform||'UNE PLATEFORME')}</div><div class="muted">${safeAttr(l.title||'Direct en cours')}${viewers?` · ${viewers.toLocaleString('fr-FR')} spectateur(s)`:''} · ${safeAttr(confirmation)}</div></div>${action}</article>`;
   }).join('')}</div>`:`<div class="live-empty"><strong>Aucun direct détecté pour le moment.</strong><div style="margin-top:6px">Cette fenêtre se met à jour automatiquement.</div></div>`;
   open('liveModal');
 }
@@ -809,7 +817,7 @@ async function apiFetch(path,{method='GET',body=null,formData=null,auth=true}={}
   if(!res.ok)throw new Error(data.error||'Erreur serveur');
   return data;
 }
-function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};return copy;}
+function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};copy.liveStreams=(copy.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});return copy;}
 function scheduleCloudSync(){
   if(window.majPass50Running||!CLOUD.enabled||!CLOUD.ready)return;
   clearTimeout(CLOUD.syncTimer);
@@ -851,7 +859,7 @@ async function loadCloudState(){
   const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p.birthManualLocked&&p.birthDate).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(p.birthDate.slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...(p.quality||{}),birth:100},dataEngine:{...(p.dataEngine||{}),verifiedFacts:[...new Set([...(p.dataEngine?.verifiedFacts||[]),'birth_date'])]}}]));
   const data=await apiFetch('state.php',{auth:false});
   if(Number.isFinite(Number(data?.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
-  if(data?.data){const cloud=data.data;db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{if(manualPhotos[p.id])Object.assign(p,manualPhotos[p.id]);if(manualBirths[p.id])Object.assign(p,manualBirths[p.id]);if(manualLinks[p.id]){p.links={...(p.links||{}),...manualLinks[p.id].links};p.linkChecks={...(p.linkChecks||{}),...manualLinks[p.id].linkChecks};}});localStorage.setItem(APP_KEY,JSON.stringify(db));}
+  if(data?.data){const cloud=data.data;cloud.liveStreams=(cloud.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{if(manualPhotos[p.id])Object.assign(p,manualPhotos[p.id]);if(manualBirths[p.id])Object.assign(p,manualBirths[p.id]);if(manualLinks[p.id]){p.links={...(p.links||{}),...manualLinks[p.id].links};p.linkChecks={...(p.linkChecks||{}),...manualLinks[p.id].linkChecks};}});normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));}
 }
 function hydrateApiUser(apiUser,notes=[]){
   if(!apiUser)return;

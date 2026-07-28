@@ -1,4 +1,4 @@
-const CACHE='pass50-v42-ranking-experimental';
+const CACHE='pass50-v43-live-strict-active';
 const ASSETS=[
   './',
   './index.html',
@@ -11,7 +11,7 @@ const ASSETS=[
   './profile-melanie-tms.js?v=1.0',
   './profile-ivorian-kid.js?v=1.0',
   './profile-obre-marie-pascale.js?v=1.0',
-  './live-radar-v3.js?v=1.1',
+  './live-radar-v3.js?v=1.2',
   './official-links-persistence-v3.js?v=3.2',
   './public-copy-fixes.js?v=1.0',
   './v9-tools.css?v=22.4',

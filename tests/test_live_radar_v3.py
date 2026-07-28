@@ -59,9 +59,10 @@ class LiveRadarV3Tests(unittest.TestCase):
     def test_a_network_block_does_not_end_a_live(self):
         self.assertIn("consecutive_offline", API)
         self.assertIn("consecutive_unknown", API)
-        self.assertIn("$health['offline']>=2", API)
         self.assertIn("$sameUrl", API)
-        self.assertNotIn("$health['unknown']>=", API)
+        self.assertIn("p50_live_v3_mark_unconfirmed", API)
+        self.assertIn("in_array($platform,['TikTok','Instagram','Facebook'],true)", API)
+        self.assertNotIn("elseif($stateValue==='unknown')p50_live_v3_mark_ended", API)
 
     def test_full_sweep_advances_even_when_a_source_disappears(self):
         self.assertIn("count($keys)", API)
@@ -69,10 +70,13 @@ class LiveRadarV3Tests(unittest.TestCase):
         self.assertIn("cycleComplete", API)
         self.assertIn("last_full_sweep", API)
 
-    def test_active_lives_have_a_longer_safety_window(self):
-        self.assertIn("$refresh=45;$stale=90", API)
-        self.assertIn("stream_key<>?", API)
-        self.assertIn("p50_live_v3_active_rows($stale)", API)
+    def test_active_lives_have_strict_safety_windows(self):
+        active = re.search(r"function p50_live_v3_active_rows\(.*?\n}", API, re.S).group(0)
+        self.assertIn("INTERVAL 3 MINUTE", active)
+        self.assertIn("INTERVAL 10 MINUTE", active)
+        self.assertIn("INTERVAL 24 HOUR", active)
+        self.assertIn("h.last_state='live'", active)
+        self.assertIn("status='unconfirmed'", active)
 
     def test_client_runs_quick_and_complete_scans(self):
         self.assertIn("const QUICK_INTERVAL=45_000", CLIENT)
@@ -83,9 +87,12 @@ class LiveRadarV3Tests(unittest.TestCase):
         self.assertIn("RADAR LIVE V3", CLIENT)
 
     def test_v3_replaces_v2_in_the_browser_and_cache(self):
-        self.assertIn("live-radar-v3.js?v=1.1", CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.2", CONFIG)
+        self.assertIn("pass50LiveRadar = '3.2'", CONFIG)
         self.assertNotIn("live-radar-v2.js", CONFIG)
-        self.assertIn("live-radar-v3.js?v=1.1", SW)
+        self.assertIn("live-radar-v3.js?v=1.2", SW)
+        self.assertIn("pass50-v43-live-strict-active", SW)
+        self.assertNotIn("live-radar-v3.js?v=1.1", CONFIG + SW)
         self.assertNotIn("live-radar-v2.js", SW)
 
     def test_server_side_full_sweep_is_scheduled(self):
@@ -129,19 +136,23 @@ class LiveRadarV3Tests(unittest.TestCase):
         )
         self.assertIn("'lastSeenAt'=>p50_live_v3_iso", active_rows.group(0))
 
-    def test_browser_normalizers_keep_undated_server_confirmed_lives(self):
+    def test_browser_normalizers_require_recent_confirmation(self):
         base = re.search(r"function normalizeLiveStreams\(\)\{.*?\n}", INDEX, re.S)
         override = re.search(r"function freshLive\(x\)\{.*?\n}", TOOLS, re.S)
         self.assertIsNotNone(base)
         self.assertIsNotNone(override)
         for source in (base.group(0), override.group(0)):
-            self.assertNotIn("start<=0", source)
-            self.assertNotIn("now-start>8*3600000", source)
+            self.assertIn("lastConfirmedAt||x.lastSeenAt", source)
+            self.assertIn("10*60_000:3*60_000", source)
+            self.assertNotIn("detectedAt", source)
+            self.assertNotIn("createdAt", source)
 
-    def test_manual_stream_is_not_rejected_only_for_missing_dates(self):
+    def test_manual_stream_requires_future_ends_at(self):
         manual = re.search(r"function p50_live_v3_manual_streams\(.*?\n}", API, re.S)
         self.assertIsNotNone(manual)
-        self.assertNotIn("$start<=0", manual.group(0))
+        self.assertIn("($live['source']??'')!=='manual'", manual.group(0))
+        self.assertIn("$end===false||$end<=$now", manual.group(0))
+        self.assertIn("p50_public_http_url", manual.group(0))
 
     def test_active_lives_sorts_without_requiring_started_at(self):
         active = re.search(r"function activeLives\(\)\{.*?\n}", INDEX, re.S)
@@ -158,6 +169,101 @@ class LiveRadarV3Tests(unittest.TestCase):
         self.assertNotIn("viewers", header.group(0))
         self.assertIn("lives.map(", modal.group(0))
         self.assertNotIn("lives[0]", modal.group(0))
+
+    def test_tiktok_requires_active_json_and_room_id(self):
+        parser = re.search(r"function p50_live_v3_parse_tiktok\(.*?\n}", API, re.S).group(0)
+        self.assertIn("foreach(['api','api_basic']", parser)
+        self.assertIn("json_decode($body,true)===null", parser)
+        self.assertIn("$active", parser)
+        self.assertIn("$candidate===''", parser)
+        self.assertIn("tiktok_no_explicit_api_live_signal", parser)
+        self.assertNotIn('"LiveRoom"\\s*:', parser)
+
+    def test_tiktok_negative_evidence_wins_before_positive(self):
+        parser = re.search(r"function p50_live_v3_parse_tiktok\(.*?\n}", API, re.S).group(0)
+        negative = parser.index("tiktok_explicit_offline")
+        positive = parser.index("foreach(['api','api_basic']")
+        self.assertLess(negative, positive)
+        for evidence in ("live has ended", "not currently live", "room not found", "is_live"):
+            self.assertIn(evidence, parser)
+
+    def test_instagram_and_facebook_require_explicit_active_state(self):
+        instagram = re.search(r"function p50_live_v3_parse_instagram\(.*?\n}", API, re.S).group(0)
+        facebook = re.search(r"function p50_live_v3_parse_facebook\(.*?\n}", API, re.S).group(0)
+        self.assertIn("is_live_broadcast", instagram)
+        self.assertIn("broadcast_status", instagram)
+        self.assertIn("instagram_explicit_offline", instagram)
+        self.assertIn("$live=$active&&$specific", facebook)
+        self.assertIn("facebook_explicit_offline", facebook)
+        self.assertNotIn("watch/live|", facebook)
+
+    def test_unknown_is_hidden_and_server_returns_confirmation(self):
+        active = re.search(r"function p50_live_v3_active_rows\(.*?\n}", API, re.S).group(0)
+        self.assertIn("h.last_state='live'", active)
+        self.assertIn("'lastConfirmedAt'=>p50_live_v3_iso", active)
+        self.assertNotIn("last_state='unknown'", active)
+
+    def test_cloud_never_persists_automatic_lives(self):
+        safe = re.search(r"function cloudSafeState\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cloud = re.search(r"async function loadCloudState\(\)\{.*?\n}", INDEX, re.S).group(0)
+        for source in (safe, cloud):
+            self.assertIn("source!=='manual'", source)
+            self.assertIn("startsWith('auto_')", source)
+            self.assertIn("endsAt>Date.now()", source)
+        self.assertIn("normalizeLiveStreams();localStorage.setItem", cloud)
+
+    def test_public_copy_uses_confirmation_only(self):
+        modal = re.search(r"function openLives\(\)\{.*?\n}", INDEX, re.S).group(0)
+        active = re.search(r"function activeLives\(\)\{.*?\n}", INDEX, re.S).group(0)
+        self.assertIn("Confirmé à l’instant", modal)
+        self.assertIn("Confirmé il y a", modal)
+        self.assertIn("data-live-profile", modal)
+        self.assertIn("data-live-platform", modal)
+        self.assertIn("data-live-confirmed-at", modal)
+        self.assertIn("lastConfirmedAt||l.lastSeenAt", modal)
+        for stale_field in ("startedAt", "detectedAt", "createdAt", "updatedAt"):
+            self.assertNotIn(stale_field, active)
+
+    def test_watch_link_is_revalidated_before_social_navigation(self):
+        self.assertIn("verifyWatchLink", CLIENT)
+        self.assertIn("mode:'profile',force:'1'", CLIENT)
+        self.assertIn("Ce direct vient de se terminer ou ne peut plus être confirmé.", CLIENT)
+        self.assertIn("dataset.liveConfirmedAt", CLIENT)
+        self.assertIn("Date.now()-freshAt<=maxAge", CLIENT)
+
+    def test_deterministic_false_live_scenarios(self):
+        def tiktok(body, api_json=False):
+            lowered = body.lower()
+            if any(value in lowered for value in ("live has ended", "not currently live", "room not found", '"livestatus":4')):
+                return "offline"
+            has_room = "roomid" in lowered or "room_id" in lowered
+            return "live" if api_json and '"status":2' in lowered and has_room else "unknown"
+
+        def facebook(body):
+            lowered = body.lower()
+            if any(value in lowered for value in ('"is_live":false', '"broadcast_status":"vod"', "replay")):
+                return "offline"
+            active = '"is_live":true' in lowered or '"broadcast_status":"live"' in lowered
+            specific = "/videos/" in lowered or '"video_id":' in lowered
+            return "live" if active and specific else "unknown"
+
+        def instagram(body):
+            lowered = body.lower()
+            if any(value in lowered for value in ('"is_live":false', '"broadcast_status":"ended"', "replay")):
+                return "offline"
+            return "live" if '"is_live":true' in lowered or '"broadcast_status":"active"' in lowered else "unknown"
+
+        def fresh(platform, age_seconds):
+            return age_seconds <= (10 * 60 if platform == "YouTube" else 3 * 60)
+
+        self.assertEqual(tiktok('{"roomId":"123456789","liveStatus":4} live has ended', True), "offline")
+        self.assertEqual(tiktok('{"roomId":"123456789","LiveRoom":{}}'), "unknown")
+        self.assertEqual(tiktok('{"status":2,"room_id":"123456789"}', True), "live")
+        self.assertEqual(facebook("https://facebook.com/pass50/videos/123456789"), "unknown")
+        self.assertEqual(instagram("<html>profil accessible</html>"), "unknown")
+        self.assertFalse(fresh("TikTok", 11 * 7 * 24 * 3600))
+        self.assertFalse(fresh("Instagram", 27 * 60))
+        self.assertTrue(fresh("YouTube", 9 * 60))
 
 
 if __name__ == "__main__":
