@@ -1,4 +1,4 @@
-const CACHE='pass50-v41-engagement-admin-scope';
+const CACHE='pass50-v42-ranking-experimental';
 const ASSETS=[
   './',
   './index.html',
@@ -17,7 +17,7 @@ const ASSETS=[
   './v9-tools.css?v=22.4',
   './v9-tools.js?v=15.0',
   './pass50_nouveaux_candidats_90_v19.json?v=22.6',
-  './data-engine-ui.js?v=16.0',
+  './data-engine-ui.js?v=17.0',
   './manifest.webmanifest?v=22.4',
   './icon.svg?v=22.4',
   './favicon-32.png?v=22.4',
@@ -26,7 +26,7 @@ const ASSETS=[
   './assets/hero-media-2.jpg',
   './assets/hero-media-3.jpg',
   './assets/hero-media-4.jpg',
-  './data-engine-ui.css?v=25.0'
+  './data-engine-ui.css?v=26.0'
 ];
 
 self.addEventListener('install',event=>{

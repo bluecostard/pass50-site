@@ -1,0 +1,59 @@
+<?php
+declare(strict_types=1);
+require dirname(__DIR__).'/api/metrics-ranking-core.php';
+
+$dsn=getenv('P50_TEST_DSN');if(!$dsn){fwrite(STDERR,"P50_TEST_DSN absent\n");exit(77);}
+$pdo=new PDO($dsn,getenv('P50_TEST_DB_USER')?:'root',getenv('P50_TEST_DB_PASSWORD')?:'root',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+function mr_must(bool $condition,string $message): void {if(!$condition)throw new RuntimeException($message);}
+
+foreach(['p50_metric_ranking_snapshots','p50_metric_ranking_current','p50_metric_ranking_runs','p50_metric_captures','p50_metric_contents','p50_metric_jobs','p50_metric_runs','p50_metric_accounts','p50_metric_schema_migrations','p50_profile_registry','app_state'] as $table)$pdo->exec("DROP TABLE IF EXISTS `$table`");
+$pdo->exec("CREATE TABLE p50_profile_registry(profile_id VARCHAR(100) PRIMARY KEY,public_name VARCHAR(190) NOT NULL,handle VARCHAR(190) NOT NULL DEFAULT '',region VARCHAR(32) NOT NULL DEFAULT 'CI',category VARCHAR(100) NOT NULL DEFAULT '',alive TINYINT NOT NULL DEFAULT 1,eligible TINYINT NOT NULL DEFAULT 1)");
+$pdo->exec("CREATE TABLE app_state(id INT PRIMARY KEY,state_json LONGTEXT NOT NULL,version INT NOT NULL)");
+$pdo->exec("INSERT INTO app_state VALUES(1,'{\"rankingExperimentalSentinel\":true}',731)");
+foreach([
+  ['A','Profil A',1],['B','Profil B',1],['C','Profil C zéro mesuré',1],['D','Profil D absent',1],
+  ['E','Profil E fallback',1],['F','Profil F quarantaine',1],['G','Profil G non éligible',0],
+] as [$id,$name,$eligible])$pdo->prepare("INSERT INTO p50_profile_registry VALUES(?,?,?,'CI','Fixture',1,?)")->execute([$id,$name,'@'.strtolower($id),$eligible]);
+
+p50_metrics_ensure_schema($pdo);
+$now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+function mr_at(DateTimeImmutable $now,int $hours): string {return $now->modify(($hours>=0?'+':'').$hours.' hours')->format('c');}
+function mr_fixture(PDO $pdo,DateTimeImmutable $now,string $profile,int $startViews,int $endViews,int $startInteractions,int $endInteractions,bool $publishedInside=false,bool $quarantined=false): array {
+    $account=p50_metrics_upsert_account($pdo,['profileId'=>$profile,'platform'=>'YouTube','platformAccountId'=>'UC'.$profile,'canonicalUrl'=>'https://youtube.com/@fixture'.$profile,'status'=>'active','confidence'=>95,'sourceType'=>'manual_owner','observedAt'=>mr_at($now,-30),'provenance'=>['fixture'=>'ranking']]);
+    $published=$publishedInside?mr_at($now,-5):mr_at($now,-48);
+    $content=p50_metrics_upsert_content($pdo,['accountId'=>$account['id'],'platformContentId'=>'video-'.$profile,'canonicalUrl'=>'https://youtube.com/watch?v=fixture'.$profile,'contentType'=>'video','publishedAt'=>$published,'status'=>'active','confidence'=>95,'sourceType'=>'manual_owner','observedAt'=>mr_at($now,-30),'provenance'=>['fixture'=>'ranking']]);
+    p50_metrics_record_capture($pdo,['accountId'=>$account['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>mr_at($now,-1),'followers'=>1000,'confidence'=>95,'provenance'=>['fixture'=>'ranking']]);
+    if(!$publishedInside)p50_metrics_record_capture($pdo,['accountId'=>$account['id'],'contentId'=>$content['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>mr_at($now,-25),'views'=>$startViews,'likes'=>$startInteractions,'comments'=>$startInteractions,'shares'=>$startInteractions,'saves'=>$startInteractions,'confidence'=>95,'qualityStatus'=>$quarantined?'quarantined':'usable','provenance'=>['fixture'=>'ranking']]);
+    p50_metrics_record_capture($pdo,['accountId'=>$account['id'],'contentId'=>$content['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>mr_at($now,-1),'views'=>$endViews,'likes'=>$endInteractions,'comments'=>$endInteractions,'shares'=>$endInteractions,'saves'=>$endInteractions,'confidence'=>95,'qualityStatus'=>$quarantined?'quarantined':'usable','provenance'=>['fixture'=>'ranking']]);
+    return ['accountId'=>$account['id'],'contentId'=>$content['id']];
+}
+
+mr_fixture($pdo,$now,'A',100,1100,10,110);
+$b=mr_fixture($pdo,$now,'B',100,600,10,60);
+mr_fixture($pdo,$now,'C',100,100,10,10);
+$d=mr_fixture($pdo,$now,'D',0,300,0,30,true);
+$pdo->prepare("UPDATE p50_metric_contents SET published_at=? WHERE id=?")->execute([mr_at($now,-48),$d['contentId']]);
+mr_fixture($pdo,$now,'E',0,450,0,45,true);
+mr_fixture($pdo,$now,'F',0,999999999,0,999999,true,true);
+mr_fixture($pdo,$now,'G',100,900,10,90);
+
+$first=p50_mr_calculate($pdo,['24H'],'integration_fixture');
+$rows=p50_mr_read($pdo,'24H',100)['rows'];$byId=[];foreach($rows as $row)$byId[$row['profileId']]=$row;
+mr_must($byId['A']['rank']<$byId['B']['rank'],'A est devant B au premier calcul');
+mr_must($byId['C']['score']!==null&&!in_array('no_measurable_content',$byId['C']['exclusionReasons'],true),'C conserve son zéro réellement mesuré');
+mr_must(!$byId['D']['classable']&&in_array('no_measurable_content',$byId['D']['exclusionReasons'],true),'D reste sans contenu mesurable');
+$eRaw=(string)p50_metrics_value($pdo,"SELECT raw_features_json FROM p50_metric_ranking_current WHERE period_key='24H' AND profile_id='E'");
+mr_must(str_contains($eRaw,'"publishedInsideWindowFallback":true'),'E utilise le fallback de publication');
+mr_must(!$byId['F']['classable']&&$byId['F']['score']===null,'F quarantainé ne contribue jamais');
+mr_must(!$byId['G']['classable']&&$byId['G']['rank']===null&&$byId['G']['score']!==null,'G a un score expérimental sans rang');
+
+p50_metrics_record_capture($pdo,['accountId'=>$b['accountId'],'contentId'=>$b['contentId'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$now->format('c'),'views'=>5000,'likes'=>500,'comments'=>500,'shares'=>500,'saves'=>500,'confidence'=>99,'provenance'=>['fixture'=>'ranking']]);
+$second=p50_mr_calculate($pdo,['24H'],'integration_fixture_second');
+$rows2=p50_mr_read($pdo,'24H',100)['rows'];$byId2=[];foreach($rows2 as $row)$byId2[$row['profileId']]=$row;
+mr_must($byId2['B']['rank']<$byId2['A']['rank'],'B dépasse A après la nouvelle capture');
+mr_must($byId2['B']['previousRank']!==null&&$byId2['B']['rankDelta']>0,'B possède une évolution positive');
+mr_must((string)p50_metrics_value($pdo,"SELECT state_json FROM app_state WHERE id=1")==='{"rankingExperimentalSentinel":true}'&&(int)p50_metrics_value($pdo,"SELECT version FROM app_state WHERE id=1")===731,'app_state reste strictement inchangé');
+$serialized=json_encode([$rows2,$pdo->query("SELECT components_json,raw_features_json FROM p50_metric_ranking_current")->fetchAll()],JSON_UNESCAPED_SLASHES);
+foreach(['payload','source_reference','lock_token','idempotency_key','Bearer ','token=','https://'] as $secret)mr_must(!str_contains($serialized,$secret),'Donnée sensible absente : '.$secret);
+
+echo json_encode(['ok'=>true,'first'=>$first,'second'=>$second,'ranks'=>array_map(fn($row)=>[$row['profileId'],$row['rank'],$row['previousRank'],$row['rankDelta']],$rows2)],JSON_UNESCAPED_SLASHES).PHP_EOL;

@@ -1,12 +1,12 @@
 (function(){
   window.majPass50Running=Boolean(window.majPass50Running);
   const fallbackRenderAdminPane=renderAdminPane;
-  const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
+  const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,rankingLab:null,rankingLabPeriod:'2H',rankingLabLoading:false,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
   const ADMIN_ITEMS=[
     ['adminhome','Accueil'],['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],
     ['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['update','MAJ PASS50'],
     ['metricsdiag','Diagnostic métriques'],['intelligence','PASS50 Intelligence'],['hub','Data Hub'],
-    ['quality','Contrôle qualité'],['ranking','Classement'],['data','Maintenance']
+    ['quality','Contrôle qualité'],['rankinglab','Classement expérimental'],['ranking','Classement'],['data','Maintenance']
   ];
   const ADMIN_DESCRIPTIONS={
     adminhome:'Vue d’ensemble et accès rapide à tous les outils administratifs.',
@@ -15,7 +15,7 @@
     news:'Rechercher et valider les contenus déclencheurs.',live:'Superviser les directs et leur disponibilité.',
     update:'Synchroniser, calculer et publier les données validées.',metricsdiag:'Inspecter le pipeline métrique en lecture seule.',
     intelligence:'Consulter les tendances et diagnostics éditoriaux.',hub:'Contrôler la complétude et les preuves des fiches.',
-    quality:'Repérer les données manquantes ou incohérentes.',ranking:'Prévisualiser et publier le classement.',
+    quality:'Repérer les données manquantes ou incohérentes.',rankinglab:'Comparer un classement métrique isolé, sans effet public.',ranking:'Prévisualiser et publier le classement.',
     data:'Sauvegarder, restaurer et diagnostiquer les données.'
   };
 
@@ -25,7 +25,7 @@
     renderAdminPane();
   };
 
-  renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
+  renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='rankinglab')return deRenderRankingLab($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function deRenderAdminHome(pane){
@@ -54,6 +54,26 @@
     const item=values[status]||['Inconnu','empty'];
     return `<span class="de-status ${item[1]}">${item[0]}</span>`;
   }
+  const DE_RANKING_REASON_LABELS={editorial_not_eligible:'Non éligible éditorialement',no_official_metric_account:'Aucun compte métrique officiel',no_measurable_content:'Aucun contenu mesurable',coverage_below_45:'Couverture inférieure à 45 %',confidence_below_55:'Confiance inférieure à 55 %',stale_captures:'Captures trop anciennes'};
+  async function deLoadRankingLab(force=false){
+    if(DE.rankingLabLoading||(!force&&DE.rankingLab?.selectedPeriod===DE.rankingLabPeriod))return;
+    DE.rankingLabLoading=true;
+    try{DE.rankingLab=await apiFetch(`metrics-ranking.php?period=${encodeURIComponent(DE.rankingLabPeriod)}&limit=100`);}
+    catch(error){DE.rankingLab={error:error.message||'Classement expérimental indisponible'};}
+    finally{DE.rankingLabLoading=false;if(ui.adminTab==='rankinglab')deDrawRankingLab($('#adminPane'));}
+  }
+  function deRenderRankingLab(pane){pane.innerHTML='<div class="de-ranking-lab"><div class="de-loading">Chargement du classement expérimental…</div></div>';deLoadRankingLab();}
+  function dePublicRank(profileId){try{const index=ranking().findIndex(profile=>profile.id===profileId);return index<0?null:index+1;}catch{return null;}}
+  function deDrawRankingLab(pane){
+    if(!pane)return;const data=DE.rankingLab||{},summary=data.summary||{},rows=Array.isArray(data.rows)?data.rows.slice(0,100):[],run=data.latestRun||{};
+    if(data.error){pane.innerHTML=`<div class="de-ranking-lab"><div class="de-error">${deEsc(data.error)}</div><button class="btn de-ranking-refresh">Actualiser</button></div>`;return;}
+    const periods=['2H','24H','48H','7J','15J'];
+    const tableRows=rows.map(row=>{const publicRank=dePublicRank(row.profileId),gap=row.rank&&publicRank?publicRank-row.rank:null,evolution=row.rankDelta===null?'Nouvelle entrée':row.rankDelta>0?`+${row.rankDelta}`:String(row.rankDelta),status=row.classable?'Classable':(row.exclusionReasons||[]).map(reason=>DE_RANKING_REASON_LABELS[reason]||reason).join(' · ');
+      return `<tr><td>${row.rank??'—'}</td><td>${publicRank??'—'}</td><td>${gap===null?'—':gap>0?'+'+gap:gap}</td><td><strong>${deEsc(row.name)}</strong><small>${deEsc(row.handle||row.profileId)}</small></td><td class="de-ranking-score">${row.score===null?'—':Number(row.score).toLocaleString('fr-FR',{maximumFractionDigits:2})}</td><td>${Number(row.confidence||0).toLocaleString('fr-FR',{maximumFractionDigits:1})} %</td><td>${Number(row.coverage||0).toLocaleString('fr-FR',{maximumFractionDigits:1})} %</td><td>${Number(row.platformCount||0)}</td><td class="${row.rankDelta>0?'positive':row.rankDelta<0?'negative':'new'}">${deEsc(evolution)}</td><td><span class="de-ranking-status ${row.classable?'classable':'insufficient'}">${deEsc(status||'Insuffisant')}</span></td></tr>`;}).join('');
+    const exclusions=Object.entries(data.exclusionSummary||{}).map(([reason,count])=>`<li><strong>${Number(count)}</strong> ${deEsc(DE_RANKING_REASON_LABELS[reason]||reason)}</li>`).join('')||'<li>Aucune exclusion enregistrée.</li>';
+    pane.innerHTML=`<div class="de-ranking-lab"><div class="section-head"><div><div class="section-title">CLASSEMENT MÉTRIQUE EXPÉRIMENTAL</div><div class="de-ranking-warning">Ce calcul n’a aucun effet sur le classement public.</div></div><div class="de-ranking-actions"><button class="btn primary de-ranking-calculate">Calculer les 5 périodes</button><button class="btn de-ranking-refresh">Actualiser</button><select id="deRankingLabPeriod">${periods.map(period=>`<option ${period===DE.rankingLabPeriod?'selected':''}>${period}</option>`).join('')}</select></div></div><div class="de-ranking-meta">Dernier calcul : <strong>${deEsc(run.finished_at?deTime(run.finished_at):'Jamais')}</strong> · Algorithme : <strong>${deEsc(data.algorithmVersion||'MR-V1.0')}</strong></div><div class="de-ranking-kpis"><div><strong>${Number(summary.classable||0)}</strong><span>Profils classables</span></div><div><strong>${Number(summary.excluded||0)}</strong><span>Profils exclus</span></div><div><strong>${Number(summary.averageConfidence||0).toLocaleString('fr-FR',{maximumFractionDigits:1})} %</strong><span>Confiance moyenne</span></div><div><strong>${Number(summary.averageCoverage||0).toLocaleString('fr-FR',{maximumFractionDigits:1})} %</strong><span>Couverture moyenne</span></div></div><div class="admin-table-wrap de-ranking-table-wrap"><table class="admin-table de-ranking-table"><thead><tr><th>Rang expérimental</th><th>Rang public</th><th>Écart</th><th>Influenceur</th><th>Score</th><th>Confiance</th><th>Couverture</th><th>Plateformes</th><th>Évolution expérimentale</th><th>Statut</th></tr></thead><tbody>${tableRows||'<tr><td colspan="10">Aucun résultat expérimental pour cette période.</td></tr>'}</tbody></table></div><section class="de-ranking-exclusions"><div class="section-title">Résumé des exclusions</div><ul>${exclusions}</ul></section></div>`;
+  }
+  async function deCalculateRankingLab(button){await deAction(button,async()=>{await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});DE.rankingLab=null;await deLoadRankingLab(true);toast('Classements expérimentaux calculés');},'Calcul…');}
   async function deLoadMetricsDiagnostic(force=false){
     if(DE.metricsDiagnosticLoading||(!force&&DE.metricsDiagnostic))return;
     DE.metricsDiagnosticLoading=true;
@@ -403,6 +423,8 @@
       if(e.target.id==='deMajPass50')await deRunMajPass50();
       if(e.target.id==='deReloadIntelligence')await deLoadIntelligence();
       if(e.target.matches('.de-metrics-refresh')){DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);}
+      if(e.target.matches('.de-ranking-refresh')){DE.rankingLab=null;await deLoadRankingLab(true);}
+      if(e.target.matches('.de-ranking-calculate'))await deCalculateRankingLab(e.target);
       if(e.target.matches('.de-install-metrics-schema'))await deInstallMetricsSchema(e.target);
       if(e.target.matches('.de-collect-metrics')){const platform=e.target.dataset.platform,profileId=document.getElementById('deMetricProfile')?.value||'';await deAction(e.target,async()=>{await apiFetch('metrics-canonical-collect.php',{method:'POST',body:profileId?{action:'collect_profile',platform,profileId,contentLimit:10}:{action:'collect_batch',platform,profileLimit:10,contentLimit:5}});DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);toast(`Collecte ${platform} terminée`);},'Collecte…');}
       if(e.target.matches('.de-orchestrator-action'))await deMetricsOrchestratorAction(e.target);
@@ -420,7 +442,7 @@
       if(e.target.matches('.de-reject-link')){if(!confirm('Rejeter ce lien officiel ?'))return;await apiFetch('social-links.php',{method:'POST',body:{action:'reject',profileId:e.target.dataset.profile,platform:e.target.dataset.platform}});await deOpenSocial(e.target.dataset.profile);toast('Lien rejeté');}
     }catch(err){console.error(err);toast(err.message||'Action impossible');}
   });
-  document.addEventListener('change',async e=>{if(e.target.id==='deSocialProfileSelect')await deOpenSocial(e.target.value);});
+  document.addEventListener('change',async e=>{if(e.target.id==='deSocialProfileSelect')await deOpenSocial(e.target.value);if(e.target.id==='deRankingLabPeriod'){DE.rankingLabPeriod=e.target.value;DE.rankingLab=null;await deLoadRankingLab(true);}});
   document.addEventListener('submit',async e=>{
     if(e.target.id==='deBirthForm'){
       e.preventDefault();const form=e.target,fd=new FormData(form),button=form.querySelector('button[type=submit]');

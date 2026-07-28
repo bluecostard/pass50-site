@@ -79,6 +79,17 @@ Un cron IONOS pourra appeler le même contrat HTTP. Les appels `GET`, les jetons
 dans l’URL et les secrets de plateforme transmis par le planificateur sont
 refusés.
 
+## Classement métrique expérimental
+
+Le classement métrique expérimental se calcule manuellement depuis
+**Administration → Classement expérimental**. Il utilise uniquement les données
+canoniques collectées et produit cinq périodes : 2H, 24H, 48H, 7J et 15J.
+
+Ses résultats sont conservés dans des tables séparées. Ils ne déclenchent aucune
+publication automatique et ne modifient ni les scores ni les rangs publics. Une
+publication vers le classement public pourra être étudiée dans une étape
+ultérieure, uniquement après validation de l’algorithme et de ses résultats.
+
 ## Limites actuelles
 
 Instagram, Facebook et TikTok n’autorisent pas un accès complet aux statistiques de comptes tiers à partir d’un simple lien. Ils seront ajoutés avec :
