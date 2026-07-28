@@ -9,6 +9,7 @@ on:
       - 'api/metrics-observability-core.php'
       - 'data-engine-ui.js'
       - 'tests/test_metrics_schema_v1.py'
+      - 'tests/test_metrics_schema_activation.py'
       - 'tests/metrics_schema_integration.php'
       - '.github/workflows/validate-metrics-schema-v1.yml'
 
@@ -40,7 +41,9 @@ jobs:
           php -l tests/metrics_schema_integration.php
           node --check data-engine-ui.js
       - name: Exécuter les tests Python
-        run: python3 -m unittest tests/test_metrics_schema_v1.py
+        run: |
+          python3 -m unittest tests/test_metrics_schema_activation.py
+          python3 -m unittest tests/test_metrics_schema_v1.py tests/test_metrics_observability_v1.py
       - name: Exécuter l’intégration MariaDB
         env:
           P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
