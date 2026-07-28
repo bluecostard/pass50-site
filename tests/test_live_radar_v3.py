@@ -309,12 +309,57 @@ class LiveRadarV3Tests(unittest.TestCase):
 
     def test_health_categories_are_mutually_exclusive(self):
         summary = re.search(r"function p50_live_v3_health_summary\(.*?\n}", API, re.S).group(0)
-        self.assertIn("public_state", summary)
-        self.assertIn("THEN 'unconfirmed' ELSE h.last_state", summary)
-        self.assertIn("current_live.status='live'", summary)
-        self.assertNotIn("$summary[$p]['unconfirmed']=", summary)
+        self.assertIn("array $sources,array $activeAutomatic", summary)
+        self.assertIn("if(isset($active[$key]))$category='live'", summary)
+        self.assertIn("$state==='live'", summary)
+        self.assertIn("$category='unconfirmed'", summary)
+        self.assertEqual(summary.count("$summary[$source['platform']][$category]++"), 1)
         for state in ("live", "offline", "unknown", "unconfirmed", "never_checked"):
             self.assertIn(f"'{state}'=>0", summary)
+
+    def test_health_summary_uses_only_current_official_public_sources(self):
+        summary = re.search(r"function p50_live_v3_health_summary\(.*?\n}", API, re.S).group(0)
+        self.assertIn("if(isset($official[$key]))$active[$key]=true", summary)
+        self.assertIn("if(isset($official[$key]))$health[$key]", summary)
+        self.assertIn("isset($official[$key])&&!isset($currentStreams[$key])", summary)
+        self.assertIn("ORDER BY profile_id,platform,last_seen_at DESC,stream_key DESC", summary)
+        self.assertNotIn("FROM p50_live_source_health h", summary)
+
+    def test_health_summary_matches_the_public_automatic_total(self):
+        self.assertIn("$healthSummary=p50_live_v3_health_summary($sources,$automatic)", API)
+        self.assertIn("'activeAutomaticConfirmed'=>count($automatic)", API)
+        self.assertIn("'health'=>$healthSummary", API)
+        self.assertIn("$officialLiveKeys", API)
+        self.assertIn("p50_live_v3_active_rows($stale)", API)
+
+        sources = ["A", "B", "C", "D", "E"]
+        active = {"A"}
+        health = {"A": "live", "B": "live", "C": "offline", "D": "unknown"}
+        current_streams = {"A": "live", "B": "unconfirmed"}
+        totals = {state: 0 for state in ("live", "offline", "unconfirmed", "unknown", "never_checked")}
+        memberships = {}
+        for source in sources:
+            state = health.get(source)
+            if source in active:
+                category = "live"
+            elif current_streams.get(source) == "unconfirmed" or state in ("live", "unconfirmed"):
+                category = "unconfirmed"
+            elif state == "offline":
+                category = "offline"
+            elif state == "unknown":
+                category = "unknown"
+            else:
+                category = "never_checked"
+            totals[category] += 1
+            memberships[source] = category
+
+        self.assertEqual(
+            totals,
+            {"live": 1, "offline": 1, "unconfirmed": 1, "unknown": 1, "never_checked": 1},
+        )
+        self.assertEqual(sum(totals.values()), len(sources))
+        self.assertEqual(totals["live"], len(active))
+        self.assertEqual(len(memberships), len(sources))
 
     def test_revalidation_preopens_and_reuses_the_pending_window(self):
         verify = re.search(r"async function verifyWatchLink\(.*?\n}", CLIENT, re.S).group(0)
