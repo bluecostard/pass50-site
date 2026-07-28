@@ -1,4 +1,4 @@
-// Conserve les nouveaux profils recensés et ajoute l’historique de calibration.
+// Ajoute le résumé privé YouTube Analytics sans modifier le classement public.
 const CACHE='pass50-v44-ranking-calibration';
 const ASSETS=[
   './',
@@ -22,6 +22,7 @@ const ASSETS=[
   './live-radar-v3.js?v=1.2',
   './official-links-persistence-v3.js?v=3.2',
   './public-copy-fixes.js?v=1.0',
+  './youtube-analytics-ui-v1.js?v=1.0',
   './v9-tools.css?v=22.4',
   './v9-tools.js?v=15.1',
   './pass50_nouveaux_candidats_90_v19.json?v=22.6',

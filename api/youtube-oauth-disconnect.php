@@ -34,6 +34,14 @@ if ($connection) {
 $db = db();
 $db->beginTransaction();
 try {
+    $tableCheck = $db->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='p50_youtube_analytics_snapshots'");
+    $tableCheck->execute();
+    $analyticsDeleted = 0;
+    if ((int)$tableCheck->fetchColumn() === 1) {
+        $analyticsDelete = $db->prepare('DELETE FROM p50_youtube_analytics_snapshots WHERE user_id=?');
+        $analyticsDelete->execute([$userId]);
+        $analyticsDeleted = $analyticsDelete->rowCount();
+    }
     $db->prepare('DELETE FROM p50_youtube_oauth_connections WHERE user_id=?')->execute([$userId]);
     $db->prepare('DELETE FROM p50_youtube_oauth_states WHERE user_id=?')->execute([$userId]);
     $db->commit();
@@ -46,5 +54,6 @@ json_response([
     'ok' => true,
     'connected' => false,
     'revokedAtGoogle' => $revokedAtGoogle,
+    'privateAnalyticsDeleted' => (int)$analyticsDeleted,
     'warning' => $warning,
 ]);

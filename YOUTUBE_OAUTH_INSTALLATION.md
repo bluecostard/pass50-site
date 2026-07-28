@@ -8,7 +8,9 @@ Cette intégration connecte une chaîne YouTube à un compte PASS50 avec des dro
 - `api/youtube-oauth-callback.php` : reçoit le retour Google, vérifie le navigateur et la session PASS50, puis enregistre la chaîne autorisée.
 - `api/youtube-oauth-status.php` : retourne uniquement l’état public de la connexion, jamais les jetons.
 - `api/youtube-oauth-disconnect.php` : révoque l’autorisation Google et supprime la connexion locale.
-- `migration-youtube-oauth-v1.sql` : crée automatiquement les tables nécessaires lors du callback.
+- `api/youtube-analytics-summary.php` : lit et conserve un résumé privé YouTube Analytics pour l’utilisateur connecté.
+- `migration-youtube-oauth-v1.sql` : crée automatiquement les tables OAuth nécessaires lors du callback.
+- `migration-youtube-analytics-v1.sql` : crée le stockage privé des captures Analytics.
 
 ## 2. Configuration privée sur IONOS
 
@@ -48,13 +50,30 @@ Aucune autorisation d’écriture, de gestion de chaîne ou de lecture des reven
 
 ## 5. Appels depuis l’interface PASS50
 
-Les trois endpoints JSON utilisent le jeton de session PASS50 dans l’en-tête `Authorization: Bearer ...`.
+Les endpoints JSON utilisent le jeton de session PASS50 dans l’en-tête `Authorization: Bearer ...`.
 
 1. Envoyer `POST /api/youtube-oauth-start.php`.
 2. Rediriger l’utilisateur vers la valeur `authorizationUrl` reçue.
 3. Après le retour Google, lire `GET /api/youtube-oauth-status.php`.
-4. Pour déconnecter la chaîne, envoyer `POST /api/youtube-oauth-disconnect.php`.
+4. Lire la dernière capture privée avec `GET /api/youtube-analytics-summary.php?days=28`.
+5. Actualiser Analytics avec `POST /api/youtube-analytics-summary.php` et le corps `{"days":28}`.
+6. Pour déconnecter la chaîne, envoyer `POST /api/youtube-oauth-disconnect.php`.
 
 Le jeton de session n’est jamais placé dans une URL. Le démarrage hache ce jeton et l’intègre dans un état OAuth signé, valable dix minutes. Un cookie `Secure`, `HttpOnly` et `SameSite=Lax` lie également cet état au navigateur qui a lancé la connexion. Le domaine du cookie couvre `pass50.store` et `www.pass50.store` lorsque ces deux hôtes sont configurés.
 
 Aucune requête MySQL n’est exécutée dans `youtube-oauth-start.php`. La session est résolue uniquement dans le callback, après le retour de Google. Les tables OAuth restent créées de façon idempotente avant l’enregistrement chiffré de la connexion.
+
+## 6. Rapport Analytics privé
+
+Le rapport par défaut couvre les 28 derniers jours complets et récupère uniquement des métriques non monétaires : vues, temps de visionnage, durée moyenne, pourcentage moyen regardé, mentions J’aime, commentaires, partages et abonnés gagnés ou perdus.
+
+Les données sont :
+
+- accessibles uniquement au compte PASS50 ayant autorisé la chaîne ;
+- enregistrées sans jeton, secret ni réponse brute ;
+- limitées à une actualisation toutes les cinq minutes ;
+- séparées des captures publiques du classement.
+
+## 7. Règle d’équité
+
+Les statistiques privées OAuth ne modifient aucun score ni rang public. Elles ne sont pas écrites dans `app_state` ni dans les captures canoniques utilisées par le classement expérimental. Une utilisation future nécessitera une règle d’équité explicite, car seules les chaînes volontaires fournissent ces données.
