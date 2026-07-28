@@ -4,7 +4,7 @@ Cette intégration connecte une chaîne YouTube à un compte PASS50 avec des dro
 
 ## 1. Fichiers déployés
 
-- `api/youtube-oauth-start.php` : crée une demande d’autorisation liée à l’utilisateur PASS50 connecté.
+- `api/youtube-oauth-start.php` : crée immédiatement une demande d’autorisation signée liée à l’utilisateur PASS50 connecté, sans migration ni écriture MySQL avant l’ouverture de Google.
 - `api/youtube-oauth-callback.php` : reçoit le retour Google et enregistre la chaîne autorisée.
 - `api/youtube-oauth-status.php` : retourne uniquement l’état public de la connexion, jamais les jetons.
 - `api/youtube-oauth-disconnect.php` : révoque l’autorisation Google et supprime la connexion locale.
@@ -55,4 +55,10 @@ Les trois endpoints JSON utilisent le jeton de session PASS50 dans l’en-tête 
 3. Après le retour Google, lire `GET /api/youtube-oauth-status.php`.
 4. Pour déconnecter la chaîne, envoyer `POST /api/youtube-oauth-disconnect.php`.
 
-Le callback n’accepte pas un jeton de session dans l’URL. Il utilise un état OAuth aléatoire, à usage unique et valable dix minutes.
+Le callback n’accepte pas un jeton de session dans l’URL. Il utilise un état
+OAuth aléatoire, signé et valable dix minutes.
+
+Le démarrage est volontairement indépendant des migrations MySQL afin qu’un
+verrou de métadonnées sur un hébergement mutualisé ne puisse pas bloquer le
+bouton. Les tables OAuth restent créées de façon idempotente au retour Google,
+juste avant l’enregistrement chiffré de la connexion.

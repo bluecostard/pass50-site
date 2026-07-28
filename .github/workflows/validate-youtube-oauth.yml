@@ -1,0 +1,50 @@
+name: Validate YouTube OAuth
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      P50_TEST_DB_USER: root
+      P50_TEST_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP 8 compatibility
+        run: |
+          php -l api/youtube-oauth-core.php
+          php -l api/youtube-oauth-state-v2.php
+          php -l api/youtube-oauth-start.php
+          php -l api/youtube-oauth-callback.php
+          php -l api/youtube-oauth-status.php
+          php -l api/youtube-oauth-disconnect.php
+          php -l tests/youtube_oauth_state_v2.php
+          php -l tests/youtube_oauth_migration_integration.php
+      - name: Browser syntax
+        run: |
+          node --check youtube-oauth-ui-v1.js
+          node --check youtube-oauth-click-hotfix-v2.js
+      - name: OAuth reliability tests
+        run: |
+          python3 -m unittest tests.test_youtube_oauth_start_reliability
+          php tests/youtube_oauth_state_v2.php
+      - name: MariaDB migration
+        run: php tests/youtube_oauth_migration_integration.php
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD

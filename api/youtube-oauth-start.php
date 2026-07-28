@@ -2,34 +2,18 @@
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/youtube-oauth-core.php';
+require __DIR__ . '/youtube-oauth-state-v2.php';
 
 require_method('POST');
-set_time_limit(20);
+set_time_limit(10);
 $user = auth_user();
 
 try {
-    // Vérifier d’abord la configuration privée : inutile de lancer une migration si elle est incomplète.
+    // La configuration et l’état signé suffisent pour ouvrir Google.
+    // Aucune migration ni écriture MySQL n’est effectuée à cette étape.
     $oauth = p50yo_config();
-
-    // Éviter qu’une attente de verrou MySQL bloque indéfiniment le clic utilisateur.
-    try { db()->exec('SET SESSION lock_wait_timeout=5'); } catch (Throwable) {}
-    p50yo_ensure_schema();
-
-    $state = p50yo_base64url_encode(random_bytes(32));
-    $stateHash = hash('sha256', $state);
+    $state = p50yo_create_state((string)$user['id']);
     $expiresAt = gmdate('Y-m-d H:i:s', time() + 10 * 60);
-
-    $db = db();
-    $db->beginTransaction();
-    try {
-        $db->prepare('DELETE FROM p50_youtube_oauth_states WHERE expires_at<UTC_TIMESTAMP() OR user_id=?')->execute([$user['id']]);
-        $db->prepare('INSERT INTO p50_youtube_oauth_states(state_hash,user_id,expires_at) VALUES(?,?,?)')
-            ->execute([$stateHash, $user['id'], $expiresAt]);
-        $db->commit();
-    } catch (Throwable $e) {
-        if ($db->inTransaction()) $db->rollBack();
-        throw $e;
-    }
 
     $params = [
         'client_id' => $oauth['client_id'],
@@ -56,9 +40,9 @@ try {
         || str_contains($message, 'Clé de chiffrement OAuth')
         || str_contains($message, 'URI de redirection OAuth')
         || str_contains($message, 'Extension OpenSSL')
-        || str_contains($message, 'Migration OAuth YouTube');
+        || str_contains($message, 'état OAuth');
     json_response([
-        'error' => $safe ? $message : 'Le serveur n’a pas pu initialiser la connexion YouTube. Réessaie dans quelques secondes.',
+        'error' => $safe ? $message : 'Le serveur n’a pas pu préparer la connexion YouTube.',
         'diagnostic' => $safe ? 'oauth_configuration' : 'oauth_initialization',
     ], 503);
 }
