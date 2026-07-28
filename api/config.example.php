@@ -65,6 +65,18 @@ return [
         'snapchat_mode' => 'public_profile_api',
         'snapchat_access_token' => getenv('PASS50_SNAPCHAT_ACCESS_TOKEN') ?: '',
         'snapchat_stories_authorized' => false,
+        // Orchestrateur PR5 : activation explicite après configuration d'un secret d'au moins 32 caractères.
+        'cron_secret' => getenv('PASS50_METRICS_CRON_SECRET') ?: '',
+        'orchestrator_enabled' => false,
+        'p0_max_profiles' => 20,
+        'p1_max_profiles' => 100,
+        'p1_max_rank' => 70,
+        'p2_max_profiles' => 500,
+        'priority_profile_ids' => [],
+        'p0_min_freshness_minutes' => 12,
+        'p1_min_freshness_minutes' => 90,
+        'p2_min_freshness_minutes' => 600,
+        'worker_lock_timeout_minutes' => 10,
     ],
     'upload' => [
         'max_bytes' => 5 * 1024 * 1024,

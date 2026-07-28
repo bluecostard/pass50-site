@@ -288,17 +288,24 @@ function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
 
     $pipeline=p50_obs_pipeline_state($pdo);
     $canonical=p50_metrics_schema_status($pdo);
+    $metricsOrchestrator=p50_mo_status($pdo);
     $freshness['pipeline_publication']=$pipeline['age'];
     $lastCron=p50_obs_scalar($pdo,"SELECT MAX(started_at) FROM p50_collection_runs WHERE collector LIKE 'cron_%'");
+    $automaticCollectionObserved=(bool)$metricsOrchestrator['automationObservedRecently'];
     $browserDependent=true;
     $automation=[
         'browserDependent'=>$browserDependent,
-        'summary'=>'Le classement dépend encore du bouton MAJ PASS50 et du maintien de la page ouverte : aucun workflow métriques planifié n’est présent dans le dépôt.',
+        'summary'=>$automaticCollectionObserved
+            ?'Une collecte métrique automatique a été observée récemment. Le calcul et la publication du classement dépendent encore du bouton MAJ PASS50 et du navigateur.'
+            :'Le classement dépend encore du bouton MAJ PASS50 et du maintien de la page ouverte : aucun dispatch métrique automatique récent n’a été observé.',
         'lastObservedCronRun'=>p50_obs_age($lastCron!==false&&$lastCron!==null?(string)$lastCron:null),
+        'metricsOrchestrator'=>$metricsOrchestrator,
         'known'=>[
             ['name'=>'PASS50 Live Radar Sweep','schedule'=>'*/10 * * * *','scope'=>'live uniquement','publishesScores'=>false],
-            ['name'=>'data-cron.php','schedule'=>null,'scope'=>'collecte historique et publication par profil','publishesScores'=>true],
-            ['name'=>'metrics-cron.php','schedule'=>null,'scope'=>'YouTube/X expérimental','publishesScores'=>true],
+            ['name'=>'Metrics Priority P0','schedule'=>'*/15 * * * * UTC','scope'=>'collecte métrique prioritaire','publishesScores'=>false],
+            ['name'=>'Metrics Top 50 P1','schedule'=>'7 */2 * * * UTC','scope'=>'rangs 1 à 70','publishesScores'=>false],
+            ['name'=>'Metrics Census P2','schedule'=>'23 */12 * * * UTC','scope'=>'recensement des profils actifs','publishesScores'=>false],
+            ['name'=>'data-cron.php','schedule'=>null,'scope'=>'ancien moteur historique','publishesScores'=>true],
             ['name'=>'Bouton MAJ PASS50','schedule'=>null,'scope'=>'collecte complète pilotée par navigateur','publishesScores'=>true],
         ],
     ];
@@ -312,7 +319,7 @@ function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
     $status=$classification['classableProfiles']===0||$activeMetrics===0?'blocked':
         (($browserDependent||$platformsWithoutData||$classification['classableProfiles']<$classification['totalProfiles'])?'incomplete':'operational');
     $staticReasons=[];
-    if($browserDependent)$staticReasons[]='Aucune collecte métrique générale n’est planifiée sans navigateur.';
+    if(!$automaticCollectionObserved)$staticReasons[]='Aucune collecte métrique générale n’est planifiée sans navigateur.';
     if($classification['classableProfiles']===0)$staticReasons[]='Aucun profil ne satisfait actuellement les seuils de classement automatique.';
     if($activeMetrics===0)$staticReasons[]='Aucune métrique récente active n’alimente le moteur.';
     if($reasonCounts['insufficientCoverage']>0)$staticReasons[]='La couverture des critères est insuffisante pour '.$reasonCounts['insufficientCoverage'].' profil(s).';

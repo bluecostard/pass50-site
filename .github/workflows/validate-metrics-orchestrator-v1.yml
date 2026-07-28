@@ -1,0 +1,60 @@
+name: Validate Metrics Orchestrator V1
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      PASS50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      PASS50_TEST_DB_USER: root
+      PASS50_TEST_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: |
+          php -l api/metrics-orchestrator-core.php
+          php -l api/metrics-orchestrator.php
+          php -l api/metrics-cron.php
+          php -l api/metrics-collectors-core.php
+          php -l api/metrics-observability-core.php
+          php -l api/metrics-diagnostic.php
+          php -l api/config.example.php
+          php -l tests/metrics_orchestrator_integration.php
+      - name: JavaScript syntax
+        run: node --check data-engine-ui.js
+      - name: Python tests
+        run: |
+          python3 -m unittest tests.test_metrics_orchestrator_v1
+          python3 -m unittest tests.test_metrics_social_collectors_v1
+          python3 -m unittest tests.test_metrics_collectors_youtube_x_v1
+          python3 -m unittest tests.test_metrics_schema_v1
+          python3 -m unittest tests.test_metrics_schema_activation
+          python3 -m unittest tests.test_metrics_observability_v1
+          python3 -m unittest tests.test_maj_pass50_pipeline
+          python3 -m unittest tests.test_live_radar_v3
+          python3 -m unittest tests.test_pass50_radar_v1
+          python3 -m unittest tests.test_pass50_intelligence_v1
+      - name: MariaDB integration
+        run: |
+          php tests/metrics_schema_integration.php
+          php tests/metrics_collectors_integration.php
+          php tests/metrics_social_collectors_integration.php
+          php tests/metrics_orchestrator_integration.php
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD

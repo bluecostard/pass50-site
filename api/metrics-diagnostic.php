@@ -4,6 +4,7 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/data-engine-core.php';
 require __DIR__.'/metrics-schema-core.php';
 require __DIR__.'/metrics-collectors-core.php';
+require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/metrics-observability-core.php';
 
 require_method('GET');

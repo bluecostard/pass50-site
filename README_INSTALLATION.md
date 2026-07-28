@@ -68,15 +68,16 @@ Après publication :
 Administration → Métriques → Collecter maintenant
 ```
 
-## Collecte automatique IONOS
+## Collecte automatique
 
-Programmer l’URL suivante toutes les heures :
+Les workflows GitHub Actions P0, P1 et P2 appellent `api/metrics-cron.php` en
+`POST` avec une signature HMAC. Configurer uniquement les secrets GitHub
+`PASS50_METRICS_CRON_URL` et `PASS50_METRICS_CRON_SECRET`, puis activer
+explicitement `metrics.orchestrator_enabled` côté serveur.
 
-```text
-https://pass50.store/api/metrics-cron.php?token=VOTRE_JETON&limit=20
-```
-
-Pour les profils HOT, une fréquence de 15 minutes est recommandée. Pour le reste, une heure suffit.
+Un cron IONOS pourra appeler le même contrat HTTP. Les appels `GET`, les jetons
+dans l’URL et les secrets de plateforme transmis par le planificateur sont
+refusés.
 
 ## Limites actuelles
 
