@@ -46,7 +46,16 @@ $p1=p50_mo_select($pdo,'p1');$p1Ids=array_column($p1['candidates'],'profileId');
 orchestrator_must(in_array('live',$p1Ids,true)&&in_array('priority',$p1Ids,true)&&in_array('near',$p1Ids,true),'P1 couvre rangs 1 à 70');
 $p2=p50_mo_select($pdo,'p2');$p2Ids=array_column($p2['candidates'],'profileId');
 orchestrator_must(!in_array('dead',$p2Ids,true)&&!in_array('low',$p2Ids,true)&&!in_array('candidate',$p2Ids,true),'Census filtre morts, confiance et liens non vérifiés');
-orchestrator_must($p2['summary']['skippedConfiguration']>0&&$p2['summary']['skippedAuthorization']>0&&$p2['summary']['skippedUnsupported']>0,'Plateformes non configurées, non autorisées et incompatibles exclues');
+orchestrator_must($p2['summary']['skippedConfiguration']>0&&$p2['summary']['skippedAuthRequired']>0&&$p2['summary']['skippedUnsupported']>0,'Plateformes non configurées, non autorisées et incompatibles exclues');
+p50_metrics_assert_safe(['skippedAuthRequired'=>$p2['summary']['skippedAuthRequired']],'metadata');
+foreach(['authorization','Authorization','token','secret','password','cookie'] as $sensitive){
+    $rejected=false;try{p50_metrics_assert_safe([$sensitive=>'fixture'],'metadata');}catch(InvalidArgumentException){$rejected=true;}
+    orchestrator_must($rejected,'Champ sensible toujours refusé : '.$sensitive);
+}
+$authDispatch=p50_mo_dispatch($pdo,'p2','fixture-auth-exclusions');
+$authRun=$pdo->query("SELECT status,metadata_json FROM p50_metric_runs WHERE collector='metrics_orchestrator_v1' AND trigger_type='dispatch_p2' ORDER BY id DESC LIMIT 1")->fetch();
+$authMetadata=json_decode((string)$authRun['metadata_json'],true);
+orchestrator_must($authRun['status']==='success'&&($authMetadata['skippedAuthRequired']??0)>0,'Dispatch avec exclusions faute d’autorisation réussi');
 
 $freshAccount=p50_metrics_upsert_account($pdo,['profileId'=>'fresh','platform'=>'YouTube','platformAccountId'=>'UCfresh','canonicalUrl'=>'https://youtube.com/@Fresh','sourceType'=>'fixture','observedAt'=>gmdate('c'),'provenance'=>['fixture'=>'orchestrator']]);
 p50_metrics_record_capture($pdo,['accountId'=>$freshAccount['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>gmdate('c'),'followers'=>10,'confidence'=>99,'provenance'=>['fixture'=>'orchestrator']]);

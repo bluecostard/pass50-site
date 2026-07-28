@@ -94,6 +94,11 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
         for forbidden in ("token", "secret", "url", "endpoint", "headers", "sql", "query"):
             self.assertIn(f"'{forbidden}'", ADMIN)
 
+    def test_auth_exclusion_metadata_is_safe_without_weakening_secret_filter(self):
+        self.assertIn("skippedAuthRequired", CORE)
+        schema = (ROOT / "api/metrics-schema-core.php").read_text()
+        self.assertIn("token|secret|password|passwd|cookie|authorization|session", schema)
+
     def test_observability_and_ui(self):
         self.assertIn("'metricsOrchestrator'=>$metricsOrchestrator", OBS)
         self.assertIn("automationObservedRecently", OBS)

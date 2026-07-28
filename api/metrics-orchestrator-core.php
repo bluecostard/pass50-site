@@ -87,7 +87,7 @@ function p50_mo_candidate_ids(PDO $pdo,array $cadence,array $live,array $cfg): a
 function p50_mo_select(PDO $pdo,string $cadenceKey,array $options=[]): array {
     $cadence=p50_mo_cadence($cadenceKey);$cfg=p50_mo_config();$bucket=p50_mo_bucket($cadence,$options['now']??null);$live=p50_mo_live_profiles($pdo);
     $ids=p50_mo_candidate_ids($pdo,$cadence,$live,$cfg);$max=$cadence['key']==='p0'?$cfg['p0Max']:($cadence['key']==='p1'?$cfg['p1Max']:$cfg['p2Max']);$ids=array_slice($ids,0,$max);
-    $summary=['eligibleProfiles'=>0,'eligibleLinks'=>0,'jobsCreated'=>0,'duplicateJobs'=>0,'skippedFresh'=>0,'skippedConfiguration'=>0,'skippedAuthorization'=>0,'skippedUnsupported'=>0];
+    $summary=['eligibleProfiles'=>0,'eligibleLinks'=>0,'jobsCreated'=>0,'duplicateJobs'=>0,'skippedFresh'=>0,'skippedConfiguration'=>0,'skippedAuthRequired'=>0,'skippedUnsupported'=>0];
     if(!$ids)return compact('cadence','bucket','live','summary')+['candidates'=>[]];
     $placeholders=implode(',',array_fill(0,count($ids),'?'));$threshold=max(90,min(100,(int)($GLOBALS['config']['data_engine']['confidence_threshold']??90)));
     $stmt=$pdo->prepare("SELECT r.profile_id,s.platform FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id
@@ -96,7 +96,7 @@ function p50_mo_select(PDO $pdo,string $cadenceKey,array $options=[]): array {
     $stmt->execute([...$ids,$threshold]);$rows=$stmt->fetchAll();$summary['eligibleProfiles']=count(array_unique(array_column($rows,'profile_id')));$summary['eligibleLinks']=count($rows);$candidates=[];$liveSet=array_fill_keys($live['profileIds'],true);
     $selectionTime=strtotime((string)($options['now']??'now'));if($selectionTime===false)$selectionTime=time();
     foreach($rows as $row){$profileId=(string)$row['profile_id'];$platform=(string)$row['platform'];$access=p50_mc_public_access($platform,$profileId);
-        if(!$access['configured']){$summary['skippedConfiguration']++;continue;}if(!$access['authorized']){$summary['skippedAuthorization']++;continue;}
+        if(!$access['configured']){$summary['skippedConfiguration']++;continue;}if(!$access['authorized']){$summary['skippedAuthRequired']++;continue;}
         if(($access['mode']??'')==='unsupported_account_type'){$summary['skippedUnsupported']++;continue;}
         $fresh=$pdo->prepare("SELECT MAX(captured_at) FROM p50_metric_captures WHERE profile_id=? AND platform=? AND quality_status='usable'");$fresh->execute([$profileId,$platform]);$last=$fresh->fetchColumn();
         $liveConfirmed=$cadence['key']==='p0'&&isset($liveSet[$profileId]);if(!$liveConfirmed&&$last&&strtotime((string)$last)>=$selectionTime-$cfg['fresh'][$cadence['key']]*60){$summary['skippedFresh']++;continue;}
@@ -132,7 +132,7 @@ function p50_mo_dispatch(PDO $pdo,string $cadenceKey,string $dispatchId,array $o
     $depth=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE status IN ('pending','running','retry_wait')");
     $duration=(int)round((microtime(true)-$started)*1000);if($run)p50_metrics_finish_run($pdo,$run['runUuid'],'success',['accountsProcessed'=>$summary['eligibleProfiles'],'contentsFound'=>$summary['eligibleLinks']],null,[
       'cadence'=>$cadenceKey,'bucket'=>$selection['bucket']['key'],'dispatchId'=>substr($dispatchId,0,120),'source'=>$source,'candidates'=>count($selection['candidates']),'jobsCreated'=>$summary['jobsCreated'],'duplicateJobs'=>$summary['duplicateJobs'],
-      'skippedFresh'=>$summary['skippedFresh'],'skippedConfiguration'=>$summary['skippedConfiguration'],'skippedAuthorization'=>$summary['skippedAuthorization'],'liveSource'=>$selection['live']['status'],'durationMs'=>$duration,'queueDepthAfter'=>$depth]);
+      'skippedFresh'=>$summary['skippedFresh'],'skippedConfiguration'=>$summary['skippedConfiguration'],'skippedAuthRequired'=>$summary['skippedAuthRequired'],'liveSource'=>$selection['live']['status'],'durationMs'=>$duration,'queueDepthAfter'=>$depth]);
     return ['ok'=>true,'cadence'=>$cadenceKey,'dispatchId'=>$dispatchId,'bucket'=>$selection['bucket'],'summary'=>$summary,'candidates'=>$preview?$selection['candidates']:[],'enqueued'=>$summary['jobsCreated'],'remaining'=>$depth,'liveSourceStatus'=>$selection['live']['status'],'durationMs'=>$duration];
 }
 
@@ -207,7 +207,7 @@ function p50_mo_status(PDO $pdo): array {
     }
     $queue['completed24h']=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE status IN ('completed','completed_partial') AND updated_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR)");
     $lastWorker=p50_metrics_value($pdo,"SELECT MAX(finished_at) FROM p50_metric_runs WHERE job_uuid IS NOT NULL");$recent=p50_metrics_value($pdo,"SELECT MAX(finished_at) FROM p50_metric_runs WHERE collector=? AND trigger_type LIKE 'dispatch_p%' AND status='success' AND metadata_json LIKE '%\"source\":\"cron_hmac\"%'",[P50_METRICS_ORCHESTRATOR_COLLECTOR]);
-    $excludedAuthorization=array_sum(array_map(static fn($row): int=>(int)($row['metadata']['skippedAuthorization']??0),array_filter($dispatches)));
+    $excludedAuthorization=array_sum(array_map(static fn($row): int=>(int)($row['metadata']['skippedAuthRequired']??0),array_filter($dispatches)));
     return ['enabled'=>$cfg['enabled'],'cronSecretConfigured'=>strlen($cfg['cronSecret'])>=32,'lastDispatchP0'=>$dispatches['p0'],'lastDispatchP1'=>$dispatches['p1'],'lastDispatchP2'=>$dispatches['p2'],
       'expectedCadences'=>['p0'=>'*/15 * * * * UTC','p1'=>'7 */2 * * * UTC','p2'=>'23 */12 * * * UTC'],
       'nextExpectedAt'=>['p0'=>p50_mo_next_expected('p0'),'p1'=>p50_mo_next_expected('p1'),'p2'=>p50_mo_next_expected('p2')],'queue'=>$queue,
