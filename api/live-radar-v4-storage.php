@@ -1,0 +1,84 @@
+<?php
+declare(strict_types=1);
+
+function p50_live_v4_stream_key(array $live): string {
+    return hash('sha256',strtolower((string)$live['profileId'].'|'.(string)$live['platform'].'|'.rtrim((string)$live['url'],'/')));
+}
+
+function p50_live_v4_store_live(array $live): void {
+    $key=p50_live_v4_stream_key($live);$profileId=(string)$live['profileId'];$platform=(string)$live['platform'];
+    $end=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed') AND stream_key<>?");$end->execute([$profileId,$platform,$key]);
+    $title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
+    $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata)
+        VALUES(?,?,?,?,?,?,'live','automatic',?,?,?,NOW(),NULL,?)
+        ON DUPLICATE KEY UPDATE title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='live',confidence=VALUES(confidence),viewers=VALUES(viewers),started_at=COALESCE(started_at,VALUES(started_at)),last_seen_at=NOW(),ended_at=NULL,metadata=VALUES(metadata)");
+    $stmt->execute([$key,$profileId,$platform,$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($live['metadata']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+}
+
+function p50_live_v4_store_candidate(array $live,string $reason): void {
+    $key=p50_live_v4_stream_key($live);$title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
+    $metadata=(array)($live['metadata']??[]);$metadata['candidateReason']=$reason;$metadata['candidateSeenAt']=gmdate(DATE_ATOM);
+    $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata)
+        VALUES(?,?,?,?,?,?,'unconfirmed','automatic',?,?,?,NOW(),NULL,?)
+        ON DUPLICATE KEY UPDATE title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status=IF(status='live','live','unconfirmed'),confidence=GREATEST(confidence,VALUES(confidence)),viewers=COALESCE(VALUES(viewers),viewers),metadata=VALUES(metadata),ended_at=NULL");
+    $stmt->execute([$key,(string)$live['profileId'],(string)$live['platform'],$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+}
+
+function p50_live_v4_health_update(array $source,array $result): array {
+    $state=(string)($result['state']??'unknown');$profileId=(string)$source['profile_id'];$platform=(string)$source['platform'];$url=(string)$source['url'];$urlHash=hash('sha256',strtolower(rtrim($url,'/')));
+    $stmt=db()->prepare('SELECT url_hash,last_state,last_live_at,consecutive_offline,consecutive_unknown FROM p50_live_source_health WHERE profile_id=? AND platform=? LIMIT 1');$stmt->execute([$profileId,$platform]);$previous=$stmt->fetch()?:[];
+    $sameUrl=(string)($previous['url_hash']??'')===$urlHash;$offline=$state==='offline'?($sameUrl?(int)($previous['consecutive_offline']??0):0)+1:0;$unknown=$state==='unknown'?($sameUrl?(int)($previous['consecutive_unknown']??0):0)+1:0;
+    $metadata=['confidence'=>(int)($result['confidence']??0),'probes'=>$result['probes']??[],'evidence'=>$result['evidence']??[]];
+    $upsert=db()->prepare("INSERT INTO p50_live_source_health(profile_id,platform,url_hash,official_url,last_state,consecutive_offline,consecutive_unknown,last_checked_at,last_live_at,response_ms,last_error,metadata)
+        VALUES(?,?,?,?,?,?,?,NOW(),IF(?='live',NOW(),NULL),?,?,?)
+        ON DUPLICATE KEY UPDATE url_hash=VALUES(url_hash),official_url=VALUES(official_url),last_state=VALUES(last_state),consecutive_offline=VALUES(consecutive_offline),consecutive_unknown=VALUES(consecutive_unknown),last_checked_at=NOW(),last_live_at=IF(VALUES(last_state)='live',NOW(),last_live_at),response_ms=VALUES(response_ms),last_error=VALUES(last_error),metadata=VALUES(metadata)");
+    $upsert->execute([$profileId,$platform,$urlHash,$url,$state,$offline,$unknown,$state,(int)($result['responseMs']??0),substr((string)($result['error']??''),0,255),json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+    return ['previousState'=>(string)($previous['last_state']??'never_checked'),'previousLiveAt'=>$previous['last_live_at']??null,'offline'=>$offline,'unknown'=>$unknown];
+}
+
+function p50_live_v4_mark_ended(string $profileId,string $platform,string $reason='offline',?array $replay=null): void {
+    $metadata=json_encode(['endReason'=>$reason,'replay'=>$replay,'endedObservedAt'=>gmdate(DATE_ATOM)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()),metadata=JSON_MERGE_PATCH(COALESCE(metadata,'{}'),?) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed')");$stmt->execute([$metadata,$profileId,$platform]);
+}
+
+function p50_live_v4_active_rows(): array {
+    db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,NOW()) WHERE source='automatic' AND status='unconfirmed' AND last_seen_at<DATE_SUB(NOW(),INTERVAL 24 HOUR)");
+    foreach(P50_LIVE_V4_GRACE_MINUTES as $platform=>$minutes){
+        $minutes=max(1,(int)$minutes);
+        $stmt=db()->prepare("UPDATE p50_live_streams SET status='unconfirmed',metadata=JSON_SET(COALESCE(metadata,'{}'),'$.withdrawalReason','confirmation_grace_expired') WHERE source='automatic' AND status='live' AND platform=? AND last_seen_at<DATE_SUB(NOW(),INTERVAL {$minutes} MINUTE)");$stmt->execute([$platform]);
+    }
+    $conditions=[];$params=[];foreach(P50_LIVE_V4_GRACE_MINUTES as $platform=>$minutes){$minutes=max(1,(int)$minutes);$conditions[]="(s.platform=? AND s.last_seen_at>=DATE_SUB(NOW(),INTERVAL {$minutes} MINUTE))";$params[]=$platform;}
+    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform WHERE s.source='automatic' AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY s.last_seen_at DESC");$stmt->execute($params);$out=[];
+    foreach($stmt->fetchAll() as $row)$out[]=['id'=>'auto_'.substr((string)$row['stream_key'],0,18),'profileId'=>(string)$row['profile_id'],'platform'=>(string)$row['platform'],'title'=>(string)$row['title'],'url'=>(string)$row['url'],'thumbnail'=>(string)($row['thumbnail_url']??''),'status'=>'live','source'=>'automatic','confidence'=>(int)$row['confidence'],'viewers'=>$row['viewers']!==null?(int)$row['viewers']:null,'startedAt'=>p50_live_v4_iso($row['started_at']??null),'lastSeenAt'=>p50_live_v4_iso($row['last_seen_at']??null),'lastConfirmedAt'=>p50_live_v4_iso($row['last_seen_at']??null),'lastCheckState'=>(string)($row['last_state']??'unknown'),'endsAt'=>null];
+    return $out;
+}
+
+function p50_live_v4_manual_streams(array $state): array {
+    $now=time();$out=[];foreach((array)($state['liveStreams']??[]) as $live){
+        if(!is_array($live)||($live['source']??'')!=='manual'||str_starts_with((string)($live['id']??''),'auto_')||($live['status']??'')!=='live'||empty($live['profileId'])||!p50_public_http_url((string)($live['url']??'')))continue;
+        $end=strtotime((string)($live['endsAt']??''));if($end===false||$end<=$now)continue;$live['id']=(string)($live['id']??('manual_'.substr(hash('sha256',(string)$live['url']),0,16)));$live['source']='manual';$out[]=$live;
+    }return $out;
+}
+
+function p50_live_v4_dedup(array $automatic,array $manual): array {
+    $out=[];$seen=[];foreach(array_merge($automatic,$manual) as $stream){$key=strtolower(trim((string)($stream['profileId']??'')).'|'.trim((string)($stream['platform']??'')).'|'.rtrim(trim((string)($stream['url']??'')),'/'));if($key==='||'||isset($seen[$key]))continue;$seen[$key]=true;$out[]=$stream;}
+    usort($out,static fn($a,$b)=>strcmp((string)($b['startedAt']??$b['lastSeenAt']??''),(string)($a['startedAt']??$a['lastSeenAt']??'')));return $out;
+}
+
+function p50_live_v4_health_summary(array $sources,array $activeAutomatic): array {
+    $summary=[];foreach(P50_LIVE_V4_PLATFORMS as $platform)$summary[$platform]=['live'=>0,'offline'=>0,'replay'=>0,'unknown'=>0,'unconfirmed'=>0,'never_checked'=>0];
+    $official=[];$active=[];$health=[];$streams=[];
+    foreach($sources as $source){$key=strtolower((string)$source['platform']).'|'.trim((string)$source['profile_id']);$official[$key]=['platform'=>(string)$source['platform']];}
+    foreach($activeAutomatic as $stream){$key=strtolower((string)$stream['platform']).'|'.trim((string)$stream['profileId']);$active[$key]=true;}
+    try{
+        foreach(db()->query('SELECT profile_id,platform,last_state FROM p50_live_source_health')->fetchAll() as $row){$key=strtolower((string)$row['platform']).'|'.trim((string)$row['profile_id']);if(isset($official[$key]))$health[$key]=(string)$row['last_state'];}
+        foreach(db()->query("SELECT profile_id,platform,status FROM p50_live_streams WHERE source='automatic' ORDER BY profile_id,platform,last_seen_at DESC,stream_key DESC")->fetchAll() as $row){$key=strtolower((string)$row['platform']).'|'.trim((string)$row['profile_id']);if(isset($official[$key])&&!isset($streams[$key]))$streams[$key]=(string)$row['status'];}
+    }catch(Throwable){}
+    foreach($official as $key=>$source){$state=$health[$key]??null;if(isset($active[$key]))$category='live';elseif(($streams[$key]??'')==='unconfirmed'||$state==='probable')$category='unconfirmed';elseif($state==='replay')$category='replay';elseif($state==='offline')$category='offline';elseif($state==='unknown')$category='unknown';else $category='never_checked';$summary[$source['platform']][$category]++;}
+    return $summary;
+}
+
+function p50_live_v4_cycle_id(): string {
+    $raw=preg_replace('/[^a-zA-Z0-9_-]/','',(string)($_GET['cycle']??''))?:'';return $raw!==''?substr($raw,0,64):('cycle_'.gmdate('Ymd_His').'_'.bin2hex(random_bytes(4)));
+}
+function p50_live_v4_cycle_key(string $cycleId): string {return 'live_radar_v4_cycle_'.substr(hash('sha256',$cycleId),0,24);}

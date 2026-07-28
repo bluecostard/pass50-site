@@ -1,0 +1,227 @@
+<?php
+declare(strict_types=1);
+
+const P50_LIVE_V4_PLATFORMS = ['TikTok','YouTube','Instagram','Facebook'];
+const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];
+const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>20,'YouTube'=>15,'Instagram'=>15,'Facebook'=>15];
+const P50_LIVE_V4_CANDIDATE_TTL_MINUTES = 30;
+
+function p50_live_v4_ensure_schema(): void {
+    p50_de_ensure_schema();
+    db()->exec("CREATE TABLE IF NOT EXISTS p50_live_streams (
+        stream_key CHAR(64) CHARACTER SET ascii PRIMARY KEY,
+        profile_id VARCHAR(100) NOT NULL,
+        platform VARCHAR(32) NOT NULL,
+        title VARCHAR(255) NOT NULL DEFAULT '',
+        url TEXT NOT NULL,
+        thumbnail_url TEXT NULL,
+        status VARCHAR(24) NOT NULL DEFAULT 'live',
+        source VARCHAR(32) NOT NULL DEFAULT 'automatic',
+        confidence TINYINT UNSIGNED NOT NULL DEFAULT 0,
+        viewers INT UNSIGNED NULL,
+        started_at DATETIME NULL,
+        last_seen_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ended_at DATETIME NULL,
+        metadata LONGTEXT NULL,
+        INDEX idx_p50_live_active (status,platform,last_seen_at),
+        INDEX idx_p50_live_profile (profile_id,platform,status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    db()->exec("CREATE TABLE IF NOT EXISTS p50_live_source_health (
+        profile_id VARCHAR(100) NOT NULL,
+        platform VARCHAR(32) NOT NULL,
+        url_hash CHAR(64) CHARACTER SET ascii NOT NULL,
+        official_url TEXT NOT NULL,
+        last_state VARCHAR(24) NOT NULL DEFAULT 'never_checked',
+        consecutive_offline SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        consecutive_unknown SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+        last_checked_at DATETIME NULL,
+        last_live_at DATETIME NULL,
+        response_ms INT UNSIGNED NULL,
+        last_error VARCHAR(255) NOT NULL DEFAULT '',
+        metadata LONGTEXT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (profile_id,platform),
+        INDEX idx_p50_live_health_state (last_state,last_checked_at),
+        INDEX idx_p50_live_health_platform (platform,last_checked_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+function p50_live_v4_iso(?string $mysql): ?string {
+    if (!$mysql) return null;
+    try { return (new DateTimeImmutable($mysql,new DateTimeZone('UTC')))->format(DATE_ATOM); }
+    catch (Throwable) { return null; }
+}
+
+function p50_live_v4_bool_query(string $key): bool {
+    return isset($_GET[$key]) && in_array(strtolower((string)$_GET[$key]),['1','true','yes','on'],true);
+}
+
+function p50_live_v4_direct_url(string $platform,string $url): bool {
+    $url=trim($url);
+    if($url===''||p50_platform($url)!==$platform)return false;
+    $parts=parse_url($url);$path=(string)($parts['path']??'');
+    return match($platform){
+        'TikTok'=>(bool)preg_match('#/@[A-Za-z0-9._-]+(?:/live)?/?$#',$path),
+        'YouTube'=>!preg_match('#/(results|search)(?:/|$)#i',$path)&&(bool)preg_match('#/(?:@[^/]+|channel/[^/]+|c/[^/]+|user/[^/]+|watch|live)(?:/|$)#i',$path),
+        'Instagram'=>(bool)preg_match('#^/[A-Za-z0-9._-]+/?$#',$path)&&!preg_match('#^/(explore|accounts|reels?|stories|direct|developer|about|privacy|legal)(?:/|$)#i',$path),
+        'Facebook'=>!preg_match('#^/(login|watch|groups|marketplace|gaming|events|reels?|share|sharer)(?:/|$)#i',$path)&&trim($path,'/')!=='',
+        default=>false,
+    };
+}
+
+function p50_live_v4_identity(string $platform,string $url): array {
+    $parts=parse_url(trim($url));$path=(string)($parts['path']??'');
+    if($platform==='TikTok'&&preg_match('#/@([A-Za-z0-9._-]+)#',$path,$m)){
+        $handle=$m[1];$profile='https://www.tiktok.com/@'.$handle;
+        return ['handle'=>$handle,'profileUrl'=>$profile,'liveUrl'=>$profile.'/live'];
+    }
+    if($platform==='Instagram'&&preg_match('#^/([A-Za-z0-9._-]+)/?#',$path,$m)){
+        $handle=$m[1];$profile='https://www.instagram.com/'.$handle.'/';
+        return ['handle'=>$handle,'profileUrl'=>$profile,'liveUrl'=>$profile.'live/'];
+    }
+    if($platform==='Facebook'){
+        $base='https://www.facebook.com/'.trim($path,'/');
+        if(!empty($parts['query']))$base.='?'.$parts['query'];
+        return ['handle'=>'','profileUrl'=>$base,'liveUrl'=>rtrim($base,'/').'/live/'];
+    }
+    return ['handle'=>'','profileUrl'=>$url,'liveUrl'=>$url];
+}
+
+function p50_live_v4_youtube_live_url(string $url): string {
+    $parts=parse_url($url);
+    if(!$parts||empty($parts['host']))return '';
+    $scheme=(string)($parts['scheme']??'https');$host=(string)$parts['host'];$path=rtrim((string)($parts['path']??''),'/');
+    if(str_contains(strtolower($host),'youtu.be'))return $url;
+    if(preg_match('#/(watch|shorts|embed|live)(?:/|$)#i',$path)||!empty($parts['query']))return $url;
+    $path=preg_replace('#/(featured|videos|shorts|streams|about|community)$#i','',$path)??$path;
+    return $path===''?'':$scheme.'://'.$host.rtrim($path,'/').'/live';
+}
+
+function p50_live_v4_active_auto_ids(): array {
+    $out=[];
+    try{
+        $stmt=db()->query("SELECT profile_id,platform FROM p50_live_streams WHERE source='automatic' AND status IN ('live','unconfirmed')");
+        foreach($stmt->fetchAll() as $row)$out[(string)$row['platform'].'|'.(string)$row['profile_id']]=true;
+    }catch(Throwable){}
+    return $out;
+}
+
+function p50_live_v4_health_map(): array {
+    $out=[];
+    try{
+        $stmt=db()->query('SELECT profile_id,platform,last_state,last_checked_at,last_live_at,consecutive_offline,consecutive_unknown FROM p50_live_source_health');
+        foreach($stmt->fetchAll() as $row)$out[(string)$row['platform'].'|'.(string)$row['profile_id']]=$row;
+    }catch(Throwable){}
+    return $out;
+}
+
+function p50_live_v4_manual_priority_ids(array $state): array {
+    $ids=[];$now=time();
+    foreach((array)($state['liveStreams']??[]) as $live){
+        if(!is_array($live)||($live['source']??'')!=='manual'||str_starts_with((string)($live['id']??''),'auto_')||($live['status']??'')!=='live'||empty($live['profileId']))continue;
+        $ends=strtotime((string)($live['endsAt']??''));if($ends===false||$ends<=$now)continue;
+        $ids[(string)$live['profileId']]=true;
+    }
+    return $ids;
+}
+
+function p50_live_v4_sources(array $state): array {
+    $threshold=p50_de_threshold();$seen=[];$out=[];
+    try{
+        $stmt=db()->prepare("SELECT r.profile_id,r.public_name,r.handle,s.platform,s.normalized_url url,s.confidence,'verified' verification_status
+            FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id
+            WHERE r.alive=1 AND s.platform IN ('TikTok','YouTube','Instagram','Facebook') AND s.status='verified' AND s.confidence>=?");
+        $stmt->execute([$threshold]);
+        foreach($stmt->fetchAll() as $row){
+            $platform=(string)$row['platform'];$id=(string)$row['profile_id'];$url=trim((string)$row['url']);$key=$platform.'|'.$id;
+            if(isset($seen[$key])||!p50_live_v4_direct_url($platform,$url))continue;
+            $seen[$key]=true;$out[]=$row;
+        }
+    }catch(Throwable){}
+    foreach((array)($state['profiles']??[]) as $profile){
+        if(!is_array($profile)||empty($profile['id'])||(array_key_exists('alive',$profile)&&empty($profile['alive'])))continue;
+        foreach(P50_LIVE_V4_PLATFORMS as $platform){
+            $id=(string)$profile['id'];$key=$platform.'|'.$id;if(isset($seen[$key]))continue;
+            $url=trim((string)(($profile['links']??[])[$platform]??''));
+            $status=(string)(($profile['linkChecks']??[])[$platform]['status']??'');
+            if(!in_array($status,P50_LIVE_V4_OFFICIAL_STATUSES,true)||!p50_live_v4_direct_url($platform,$url))continue;
+            $seen[$key]=true;$out[]=[
+                'profile_id'=>$id,'public_name'=>(string)($profile['name']??$id),'handle'=>(string)($profile['handle']??''),
+                'platform'=>$platform,'url'=>$url,'confidence'=>in_array($status,['owner_verified','manual_verified','verified'],true)?98:94,
+                'verification_status'=>$status,
+            ];
+        }
+    }
+    $manual=p50_live_v4_manual_priority_ids($state);$automatic=p50_live_v4_active_auto_ids();$health=p50_live_v4_health_map();
+    $platformOrder=['TikTok'=>0,'YouTube'=>1,'Instagram'=>2,'Facebook'=>3];
+    foreach($out as &$source){
+        $id=(string)$source['profile_id'];$platform=(string)$source['platform'];$key=$platform.'|'.$id;$status=(string)($source['verification_status']??'');
+        $source['source_key']=$key;
+        $source['priority']=isset($manual[$id])?0:(isset($automatic[$key])?1:(in_array($status,['owner_verified','manual_verified','verified'],true)?2:3));
+        $source['last_checked_at']=(string)($health[$key]['last_checked_at']??'');$source['platform_order']=$platformOrder[$platform]??9;
+    }
+    unset($source);
+    usort($out,static function(array $a,array $b): int {
+        $cmp=((int)$a['priority'])<=>((int)$b['priority']);if($cmp!==0)return $cmp;
+        $ad=(string)$a['last_checked_at'];$bd=(string)$b['last_checked_at'];
+        if($ad!==$bd){if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);}
+        $cmp=((int)$a['platform_order'])<=>((int)$b['platform_order']);
+        return $cmp!==0?$cmp:strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
+    });
+    return $out;
+}
+
+function p50_live_v4_probe_requests(array $source): array {
+    $platform=(string)$source['platform'];$identity=p50_live_v4_identity($platform,(string)$source['url']);
+    if($platform==='YouTube'){
+        $live=p50_live_v4_youtube_live_url((string)$source['url']);
+        return $live!==''?['live'=>['url'=>$live,'accept'=>'text/html,*/*;q=0.7']]:[];
+    }
+    if($platform==='TikTok'&&$identity['handle']!==''){
+        $handle=rawurlencode($identity['handle']);
+        return [
+            'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],
+            'api_basic'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],
+            'mobile_live'=>['url'=>'https://m.tiktok.com/@'.$handle.'/live','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'live'=>['url'=>$identity['liveUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'embed'=>['url'=>'https://www.tiktok.com/embed/live/@'.$handle.'?autoplay=0&muted=1&controls=1&embed_domain=pass50.store','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'profile'=>['url'=>$identity['profileUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+        ];
+    }
+    if($platform==='Instagram'&&$identity['handle']!=='')return [
+        'profile'=>['url'=>$identity['profileUrl'].'?hl=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+        'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+    ];
+    if($platform==='Facebook')return [
+        'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+        'videos'=>['url'=>rtrim($identity['profileUrl'],'/').'/videos/','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+        'mobile'=>['url'=>str_replace('www.facebook.com','m.facebook.com',$identity['profileUrl']),'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+    ];
+    return [];
+}
+
+function p50_live_v4_parallel_fetch(array $jobs,int $timeout=7): array {
+    if(!$jobs)return [];
+    $multi=curl_multi_init();$handles=[];$results=[];
+    if(defined('CURLMOPT_MAX_TOTAL_CONNECTIONS'))@curl_multi_setopt($multi,CURLMOPT_MAX_TOTAL_CONNECTIONS,16);
+    foreach($jobs as $jobId=>$job){
+        $url=(string)$job['url'];
+        if(!p50_public_http_url($url)){$results[$jobId]=['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'error'=>'invalid_url','timeMs'=>0];continue;}
+        $ch=curl_init($url);
+        curl_setopt_array($ch,[
+            CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>$timeout,CURLOPT_CONNECTTIMEOUT=>min(3,$timeout),CURLOPT_ENCODING=>'',
+            CURLOPT_USERAGENT=>'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36',
+            CURLOPT_HTTPHEADER=>['Accept: '.(string)($job['accept']??'text/html,*/*;q=0.7'),'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7','Cache-Control: no-cache','Pragma: no-cache','DNT: 1','Referer: https://www.google.com/'],
+            CURLOPT_HEADER=>false,
+        ]);
+        $handles[(int)$ch]=['handle'=>$ch,'id'=>$jobId,'url'=>$url];curl_multi_add_handle($multi,$ch);
+    }
+    do{$status=curl_multi_exec($multi,$active);if($active)curl_multi_select($multi,0.35);}while($active&&$status===CURLM_OK);
+    foreach($handles as $item){
+        $ch=$item['handle'];$body=curl_multi_getcontent($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+        $results[$item['id']]=['ok'=>is_string($body)&&$http>=200&&$http<400,'status'=>$http,'body'=>is_string($body)?$body:'','finalUrl'=>(string)(curl_getinfo($ch,CURLINFO_EFFECTIVE_URL)?:$item['url']),'error'=>curl_error($ch),'timeMs'=>(int)round(((float)curl_getinfo($ch,CURLINFO_TOTAL_TIME))*1000)];
+        curl_multi_remove_handle($multi,$ch);curl_close($ch);
+    }
+    curl_multi_close($multi);return $results;
+}

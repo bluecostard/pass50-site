@@ -1,24 +1,65 @@
-name: Validate Live Radar V3
+name: Validate Live Radar V4
 
 on:
   pull_request:
     paths:
-      - 'api/live-status-v3.php'
+      - 'api/live-radar-v4-core.php'
+      - 'api/live-radar-v4-source.php'
+      - 'api/live-radar-v4-parsers.php'
+      - 'api/live-radar-v4-storage.php'
+      - 'api/live-status-v4.php'
       - 'live-radar-v3.js'
-      - 'app-config.js'
-      - 'sw.js'
+      - 'LIVE_RADAR_V4_NOTES.md'
       - 'tests/test_live_radar_v3.py'
+      - 'tests/test_live_radar_v4_static.py'
+      - 'tests/test_live_radar_v4_docs.py'
+      - 'tests/live_radar_v4_core.php'
+      - 'tests/live_radar_v4_mariadb.php'
       - '.github/workflows/validate-live-radar-v3.yml'
       - '.github/workflows/live-radar-sweep.yml'
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      P50_TEST_DB_USER: root
+      P50_TEST_DB_PASSWORD: root
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Vérifier la syntaxe PHP
-        run: php -l api/live-status-v3.php
+        run: |
+          php -l api/live-radar-v4-core.php
+          php -l api/live-radar-v4-source.php
+          php -l api/live-radar-v4-parsers.php
+          php -l api/live-radar-v4-storage.php
+          php -l api/live-status-v4.php
+          php -l tests/live_radar_v4_core.php
+          php -l tests/live_radar_v4_mariadb.php
       - name: Vérifier la syntaxe JavaScript
         run: node --check live-radar-v3.js
-      - name: Exécuter les tests du Radar LIVE
-        run: python3 -m unittest tests/test_live_radar_v3.py
+      - name: Exécuter les tests déterministes
+        run: |
+          python3 -m unittest tests/test_live_radar_v3.py
+          python3 -m unittest tests/test_live_radar_v4_static.py
+          python3 -m unittest tests/test_live_radar_v4_docs.py
+          php tests/live_radar_v4_core.php
+      - name: Vérifier la continuité MariaDB
+        run: php tests/live_radar_v4_mariadb.php
+      - name: Vérifier le diff
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
