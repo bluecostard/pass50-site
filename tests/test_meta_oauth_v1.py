@@ -44,6 +44,12 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertNotIn("'scope'=>implode(',',P50MO_REQUIRED_SCOPES)", START)
         self.assertIn('configurationIdConfigured', STATUS)
 
+    def test_authorization_code_exchange_uses_post_grant(self):
+        self.assertIn("'grant_type'=>'authorization_code'", CALLBACK)
+        self.assertIn("'POST'", CALLBACK)
+        self.assertIn("['Accept: application/json']", CALLBACK)
+        self.assertNotIn("oauth/access_token','GET',['client_id'", CALLBACK)
+
     def test_callback_discovers_pages_and_linked_instagram(self):
         self.assertIn('me/accounts', CALLBACK)
         self.assertIn('instagram_business_account', CALLBACK)

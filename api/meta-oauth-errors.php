@@ -19,8 +19,25 @@ function p50mo_exception_error_code(Throwable $error): string {
     $message=strtolower($error->getMessage());
     if(str_contains($message,'public_profile')||str_contains($message,'advanced access'))return 'public_profile_advanced_access';
     if(str_contains($message,'configuration')||str_contains($message,'config_id'))return 'invalid_configuration';
-    if(str_contains($message,'redirect_uri')||str_contains($message,'redirect uri'))return 'redirect_uri_mismatch';
-    if(str_contains($message,'invalid client')||str_contains($message,'app secret')||str_contains($message,'client_secret'))return 'invalid_client';
+    if(str_contains($message,'redirect_uri')||str_contains($message,'redirect uri')||str_contains($message,'url de redirection'))return 'redirect_uri_mismatch';
+    if(
+        str_contains($message,'invalid client')||
+        str_contains($message,'app secret')||
+        str_contains($message,'client_secret')||
+        str_contains($message,'client secret')||
+        str_contains($message,'secret de l’application')||
+        str_contains($message,"secret de l'application")||
+        str_contains($message,'secret fourni')||
+        str_contains($message,'credentials')
+    )return 'invalid_client';
+    if(
+        str_contains($message,'authorization code')||
+        str_contains($message,'verification code')||
+        str_contains($message,'code has been used')||
+        str_contains($message,'code was already used')||
+        str_contains($message,'invalid code')||
+        str_contains($message,'code expir')
+    )return 'code_exchange_failed';
     if(str_contains($message,'autorisations meta manquantes')||str_contains($message,'permissions'))return 'permissions_missing';
     if(str_contains($message,'session'))return 'pass50_session_expired';
     if(str_contains($message,'échange du code')||str_contains($message,'code meta'))return 'code_exchange_failed';

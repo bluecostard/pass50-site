@@ -15,7 +15,19 @@ try{
     $stmt=db()->prepare('SELECT u.id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>UTC_TIMESTAMP() AND u.deleted_at IS NULL LIMIT 1');
     $stmt->execute([$sessionHash]);$sessionUser=$stmt->fetch();if(!is_array($sessionUser))p50mo_redirect('error','pass50_session_expired');$userId=(string)$sessionUser['id'];
     $cfg=p50mo_config();
-    $short=p50mo_http('https://graph.facebook.com/'.$cfg['graph_version'].'/oauth/access_token','GET',['client_id'=>$cfg['app_id'],'client_secret'=>$cfg['app_secret'],'redirect_uri'=>$cfg['redirect_uri'],'code'=>$code]);
+    $short=p50mo_http(
+        'https://graph.facebook.com/'.$cfg['graph_version'].'/oauth/access_token',
+        'POST',
+        [],
+        [
+            'grant_type'=>'authorization_code',
+            'client_id'=>$cfg['app_id'],
+            'client_secret'=>$cfg['app_secret'],
+            'redirect_uri'=>$cfg['redirect_uri'],
+            'code'=>$code,
+        ],
+        ['Accept: application/json']
+    );
     if($short['status']<200||$short['status']>=300)throw p50mo_error($short,'Échange du code Meta refusé');
     $accessToken=trim((string)($short['json']['access_token']??''));if($accessToken==='')throw new RuntimeException('Jeton d’accès Meta absent.');$expiresIn=max(300,(int)($short['json']['expires_in']??3600));
     $long=p50mo_http('https://graph.facebook.com/'.$cfg['graph_version'].'/oauth/access_token','GET',['grant_type'=>'fb_exchange_token','client_id'=>$cfg['app_id'],'client_secret'=>$cfg['app_secret'],'fb_exchange_token'=>$accessToken]);
