@@ -29,6 +29,14 @@ class LiveRadarV4StaticTests(unittest.TestCase):
         self.assertIn("tiktok_blocked_or_challenged", FILES['parsers'])
         self.assertIn("P50_LIVE_V4_GRACE_MINUTES", FILES['source'])
 
+    def test_authorized_meta_live_is_not_filtered_by_manual_links(self):
+        endpoint = FILES['endpoint']
+        self.assertIn("==='meta_authorized')return true", endpoint)
+        self.assertIn("Une connexion Meta autorisée", endpoint)
+        meta_check = endpoint.index("==='meta_authorized')return true")
+        manual_key_check = endpoint.index("return isset($officialKeys[$key])")
+        self.assertLess(meta_check, manual_key_check)
+
 
 if __name__ == '__main__':
     unittest.main()
