@@ -62,6 +62,16 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn("p50mo_graph($pageId,$userToken", ASSET_DISCOVERY)
         self.assertIn('p50mo_discover_authorized_assets', CALLBACK)
 
+    def test_page_token_is_requested_before_detailed_fields(self):
+        self.assertIn("return 'id,name,access_token,tasks,instagram_business_account'", ASSET_DISCOVERY)
+        self.assertIn("['fields'=>'id,name,access_token']", ASSET_DISCOVERY)
+        self.assertIn('p50mo_page_detail_fields()', ASSET_DISCOVERY)
+        token_request = ASSET_DISCOVERY.index("['fields'=>'id,name,access_token']")
+        detail_request = ASSET_DISCOVERY.index("['fields'=>p50mo_page_detail_fields()]")
+        self.assertLess(token_request, detail_request)
+        self.assertIn('p50mo_safe_graph_error', ASSET_DISCOVERY)
+        self.assertIn('Réponse Meta :', ASSET_DISCOVERY)
+
     def test_page_rediscovery_does_not_require_reauthorization(self):
         self.assertIn('p50mo_decrypt', REFRESH_ASSETS)
         self.assertIn('p50mo_discover_authorized_assets', REFRESH_ASSETS)
