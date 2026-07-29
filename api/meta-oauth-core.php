@@ -5,6 +5,7 @@ const P50MO_REQUIRED_SCOPES = ['pages_show_list','pages_read_engagement','instag
 const P50MO_STATE_TTL_SECONDS = 600;
 const P50MO_NONCE_COOKIE = 'p50_meta_oauth_nonce';
 const P50MO_NONCE_PATH = '/api/meta-oauth-callback.php';
+const P50MO_RESULT_STORAGE_KEY = 'pass50_meta_oauth_result_v2';
 
 function p50mo_config_value(array $oauth,string $key,string $env): string {
     $value=trim((string)($oauth[$key]??''));
@@ -54,7 +55,7 @@ function p50mo_decrypt(?string $payload): string {
 function p50mo_http(string $url,string $method='GET',array $query=[],?array $form=null,array $headers=[]): array {
     if($query)$url.=(str_contains($url,'?')?'&':'?').http_build_query($query,'','&',PHP_QUERY_RFC3986);
     $ch=curl_init($url);if($ch===false)throw new RuntimeException('cURL indisponible.');
-    $opts=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>25,CURLOPT_USERAGENT=>'PASS50-Meta-OAuth/1.1',CURLOPT_HTTPHEADER=>$headers];
+    $opts=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>25,CURLOPT_USERAGENT=>'PASS50-Meta-OAuth/1.2',CURLOPT_HTTPHEADER=>$headers];
     if($method==='POST'){$opts[CURLOPT_POST]=true;$opts[CURLOPT_POSTFIELDS]=http_build_query($form??[],'','&',PHP_QUERY_RFC3986);}
     elseif($method==='DELETE')$opts[CURLOPT_CUSTOMREQUEST]='DELETE';
     curl_setopt_array($ch,$opts);$body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$error=curl_error($ch);curl_close($ch);
@@ -96,10 +97,22 @@ function p50mo_verify_state(string $state,string $nonce): string {
     $sid=strtolower(trim((string)($payload['sid']??'')));if(!preg_match('/^[a-f0-9]{64}$/',$sid))throw new RuntimeException('Session OAuth Meta invalide.');return $sid;
 }
 function p50mo_redirect(string $status,string $code=''): never {
-    global $config;$base=rtrim((string)($config['app']['base_url']??''),'/');$query=['meta_oauth'=>$status];if($code!=='')$query['code']=$code;$target=$base.'/?'.http_build_query($query);
-    $origin=(string)(parse_url($base,PHP_URL_SCHEME).'://'.parse_url($base,PHP_URL_HOST));$message=['source'=>'PASS50_META_OAUTH','status'=>$status,'code'=>$code];
-    header_remove('Content-Type');header('Content-Type: text/html; charset=utf-8');header('Cache-Control: no-store');header('Referrer-Policy: no-referrer');
-    echo '<!doctype html><html lang="fr"><meta charset="utf-8"><title>PASS50 · Meta</title><body><p>Connexion Meta terminée.</p><script>(function(){var m='.json_encode($message).';var t='.json_encode($target).';var o='.json_encode($origin).';try{if(window.opener&&!window.opener.closed){window.opener.postMessage(m,o);window.close();return;}}catch(e){}window.location.replace(t);}());</script></body></html>';exit;
+    global $config;
+    $base=rtrim((string)($config['app']['base_url']??''),'/');
+    $target=$base.'/';
+    $origin=(string)(parse_url($base,PHP_URL_SCHEME).'://'.parse_url($base,PHP_URL_HOST));
+    $message=['source'=>'PASS50_META_OAUTH','status'=>$status,'code'=>$code,'at'=>time()];
+    header_remove('Content-Type');
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Referrer-Policy: no-referrer');
+    $jsonMessage=json_encode($message,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    $jsonTarget=json_encode($target,JSON_UNESCAPED_SLASHES);
+    $jsonOrigin=json_encode($origin,JSON_UNESCAPED_SLASHES);
+    $jsonStorageKey=json_encode(P50MO_RESULT_STORAGE_KEY);
+    echo '<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PASS50 · Meta</title><body><p>Retour vers PASS50…</p><script>(function(){var m='.$jsonMessage.';var t='.$jsonTarget.';var o='.$jsonOrigin.';var k='.$jsonStorageKey.';try{sessionStorage.setItem(k,JSON.stringify(m));}catch(e){}try{if(window.opener&&!window.opener.closed){window.opener.postMessage(m,o);window.close();return;}}catch(e){}window.location.replace(t);}());</script><noscript><a href="'.htmlspecialchars($target,ENT_QUOTES,'UTF-8').'">Retourner vers PASS50</a></noscript></body></html>';
+    exit;
 }
 
 function p50mo_parse_signed_request(string $signedRequest): array {
