@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS p50_meta_oauth_connections (
     last_error VARCHAR(255) NULL,
     connected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_refreshed_at DATETIME NULL,
-    INDEX idx_p50_meta_status (status, token_expires_at)
+    INDEX idx_p50_meta_status (status, token_expires_at),
+    INDEX idx_p50_meta_user (meta_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS p50_meta_oauth_assets (
@@ -33,4 +34,14 @@ CREATE TABLE IF NOT EXISTS p50_meta_oauth_assets (
     UNIQUE KEY uq_p50_meta_asset (user_id, platform, asset_id),
     INDEX idx_p50_meta_profile (profile_id, platform, status),
     INDEX idx_p50_meta_asset_status (platform, status, last_checked_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS p50_meta_deletion_requests (
+    confirmation_code CHAR(32) CHARACTER SET ascii PRIMARY KEY,
+    meta_user_hash CHAR(64) CHARACTER SET ascii NOT NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'completed',
+    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME NULL,
+    INDEX idx_p50_meta_deletion_hash (meta_user_hash, requested_at),
+    INDEX idx_p50_meta_deletion_status (status, requested_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

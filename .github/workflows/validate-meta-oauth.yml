@@ -4,8 +4,13 @@ on:
   pull_request:
     paths:
       - 'api/meta-oauth-*.php'
+      - 'api/meta-data-deletion*.php'
       - 'api/meta-live-collect.php'
       - 'meta-oauth-ui-v1.js'
+      - 'meta-deletion-status.html'
+      - 'privacy.html'
+      - 'data-deletion.html'
+      - 'terms.html'
       - 'migration-meta-oauth-v1.sql'
       - 'api/config.example.php'
       - 'public-copy-fixes.js'
@@ -46,6 +51,8 @@ jobs:
           php -l api/meta-oauth-callback.php
           php -l api/meta-oauth-status.php
           php -l api/meta-oauth-disconnect.php
+          php -l api/meta-data-deletion.php
+          php -l api/meta-data-deletion-status.php
           php -l api/meta-live-collect.php
           php -l api/live-radar-v4-storage.php
           php -l tests/meta_oauth_core.php
@@ -54,10 +61,18 @@ jobs:
         run: |
           node --check meta-oauth-ui-v1.js
           node --check public-copy-fixes.js
+          node -e "const fs=require('fs');for(const f of ['meta-deletion-status.html']){const html=fs.readFileSync(f,'utf8');const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);scripts.forEach((s,i)=>new Function(s));}"
       - name: Exécuter les tests déterministes
         run: |
           python3 -m unittest tests/test_meta_oauth_v1.py
           php tests/meta_oauth_core.php
+      - name: Vérifier les pages publiques
+        run: |
+          grep -q 'Politique de confidentialité' privacy.html
+          grep -q 'Suppression des données Meta' data-deletion.html
+          grep -q 'Conditions d’utilisation' terms.html
+          grep -q 'confirmation_code' api/meta-data-deletion.php
+          grep -q 'p50_meta_deletion_requests' migration-meta-oauth-v1.sql
       - name: Vérifier la migration MariaDB
         run: php tests/meta_oauth_mariadb.php
       - name: Vérifier le diff

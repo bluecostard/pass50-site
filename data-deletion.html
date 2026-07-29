@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="index,follow">
+  <title>PASS50 · Suppression des données</title>
+  <style>
+    :root{color-scheme:dark;--bg:#050705;--panel:#0d110d;--line:#293129;--text:#f6f8f4;--muted:#a8b1a5;--lime:#b7ff00}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,rgba(183,255,0,.09),transparent 26%),var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;line-height:1.65}
+    main{width:min(900px,calc(100% - 28px));margin:36px auto;padding:28px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,#111611,#080b08)}
+    h1{font-size:clamp(30px,5vw,48px);line-height:1.05;margin:0 0 8px}h2{margin-top:28px;color:var(--lime);font-size:21px}p,li{color:#d9dfd6}.muted{color:var(--muted)}a{color:var(--lime)}.step{padding:16px;border:1px solid var(--line);border-radius:15px;background:#0a0e0a;margin:12px 0}nav{display:flex;gap:14px;flex-wrap:wrap;margin-top:30px;padding-top:18px;border-top:1px solid var(--line)}
+  </style>
+</head>
+<body>
+<main>
+  <p class="muted">PASS50 · Version du 29 juillet 2026</p>
+  <h1>Suppression des données Meta</h1>
+  <p>Vous pouvez retirer l’autorisation Facebook et Instagram accordée à PASS50 et supprimer les données de connexion associées.</p>
+
+  <h2>Depuis PASS50</h2>
+  <div class="step"><strong>1.</strong> Connectez-vous à votre compte PASS50.</div>
+  <div class="step"><strong>2.</strong> Ouvrez « Mon espace ».</div>
+  <div class="step"><strong>3.</strong> Dans « Meta · Facebook & Instagram », cliquez sur « Déconnecter » et confirmez.</div>
+  <p>PASS50 supprime alors les jetons chiffrés, les Pages et comptes Instagram professionnels associés à cette autorisation ainsi que les lignes LIVE créées par le connecteur Meta.</p>
+
+  <h2>Depuis Facebook</h2>
+  <div class="step"><strong>1.</strong> Ouvrez les paramètres de votre compte Facebook.</div>
+  <div class="step"><strong>2.</strong> Accédez aux applications et sites web liés à votre compte.</div>
+  <div class="step"><strong>3.</strong> Sélectionnez PASS50 Meta LIVE, puis retirez l’application.</div>
+  <p>Lorsque Meta envoie la demande signée de suppression à PASS50, la suppression est exécutée automatiquement. Meta reçoit un code de confirmation et une adresse permettant de consulter l’état de la demande.</p>
+
+  <h2>Données concernées</h2>
+  <ul>
+    <li>connexion entre le compte PASS50 et le compte Meta ;</li>
+    <li>jetons d’accès Meta chiffrés ;</li>
+    <li>Pages Facebook et comptes Instagram professionnels découverts grâce à cette connexion ;</li>
+    <li>données LIVE stockées avec la provenance <code>meta_authorized</code>.</li>
+  </ul>
+
+  <h2>Délai</h2>
+  <p>Le callback automatique traite normalement la demande immédiatement. En cas d’incident technique, le statut du code de confirmation permet de vérifier l’avancement.</p>
+
+  <nav><a href="./">Retour à PASS50</a><a href="./privacy.html">Politique de confidentialité</a><a href="./terms.html">Conditions d’utilisation</a></nav>
+</main>
+</body>
+</html>

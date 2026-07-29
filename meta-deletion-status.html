@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>PASS50 · Statut de suppression Meta</title>
+  <style>
+    :root{color-scheme:dark;--bg:#050705;--panel:#0d110d;--line:#293129;--text:#f6f8f4;--muted:#a8b1a5;--lime:#b7ff00}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;line-height:1.6}main{width:min(720px,calc(100% - 28px));margin:60px auto;padding:28px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,#111611,#080b08)}h1{margin:0 0 8px;font-size:36px}.muted{color:var(--muted)}.status{margin:22px 0;padding:18px;border:1px solid var(--line);border-radius:16px;background:#090c09}.ok{color:var(--lime)}a{color:var(--lime)}code{word-break:break-all}
+  </style>
+</head>
+<body>
+<main>
+  <p class="muted">PASS50</p>
+  <h1>Suppression des données Meta</h1>
+  <div id="status" class="status">Vérification de la demande…</div>
+  <p><a href="./data-deletion.html">Consulter les instructions de suppression</a></p>
+</main>
+<script>
+(async function(){
+  const box=document.getElementById('status');
+  const code=new URL(location.href).searchParams.get('code')||'';
+  if(!/^[a-f0-9]{32}$/i.test(code)){box.textContent='Code de confirmation invalide.';return;}
+  try{
+    const response=await fetch('./api/meta-data-deletion-status.php?code='+encodeURIComponent(code),{cache:'no-store',headers:{Accept:'application/json'}});
+    const data=await response.json();
+    if(!response.ok||!data.found){box.textContent='Aucune demande correspondant à ce code n’a été trouvée.';return;}
+    const completed=data.status==='completed';
+    box.innerHTML='<strong class="'+(completed?'ok':'')+'">'+(completed?'Suppression terminée':'Suppression en cours')+'</strong><br>Code de confirmation : <code>'+code+'</code>'+(data.completedAt?'<br>Traitée le : '+new Date(data.completedAt).toLocaleString('fr-FR'):'');
+  }catch(error){box.textContent='Le statut ne peut pas être chargé actuellement.';}
+}());
+</script>
+</body>
+</html>
