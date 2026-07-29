@@ -47,15 +47,16 @@ return [
         'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
     ],
     'data_engine' => [
-        // PASS50 publie uniquement les données à 90 % ou plus.
-        'confidence_threshold' => 90,
+        // Politique actuelle : collecter et publier les données à partir de 80 % de confiance.
+        'confidence_threshold' => 80,
         // Facultatif : ajoutez une valeur longue et aléatoire avant d'activer un cron externe.
         'cron_token' => '',
-        'batch_size' => 5,
+        // Collecte élargie : davantage de profils traités à chaque passage.
+        'batch_size' => 8,
         // V22 : lancer data-cron.php?action=priority16 une fois la nuit, puis cycle toutes les 15 minutes.
-        'priority_wave_size' => 16,
-        // Radar LIVE : nombre de chaînes YouTube contrôlées à chaque passage.
-        'live_batch_size' => 6,
+        'priority_wave_size' => 20,
+        // Radar LIVE : davantage de comptes contrôlés à chaque passage.
+        'live_batch_size' => 12,
         // Intervalle minimum entre deux passages du radar public.
         'live_refresh_seconds' => 50,
         // Sécurité : un live automatique non revu depuis ce délai est retiré.
