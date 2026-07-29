@@ -9,7 +9,7 @@ if($connection){
     catch(Throwable $e){error_log('Meta OAuth revoke: '.$e->getMessage());$warning='Connexion locale supprimée, mais la révocation Meta n’a pas pu être confirmée.';}
 }
 $pdo=db();$pdo->beginTransaction();try{
-    $assets=p50mo_assets($userId);foreach($assets as $asset){if(empty($asset['profile_id']))continue;$stmt=$pdo->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE profile_id=? AND platform=? AND source='meta_authorized' AND status IN ('live','unconfirmed')");$stmt->execute([(string)$asset['profile_id'],(string)$asset['platform']]);}
+    $assets=p50mo_assets($userId);foreach($assets as $asset){if(empty($asset['profile_id']))continue;$stmt=$pdo->prepare("DELETE FROM p50_live_streams WHERE profile_id=? AND platform=? AND source='meta_authorized'");$stmt->execute([(string)$asset['profile_id'],(string)$asset['platform']]);}
     $pdo->prepare('DELETE FROM p50_meta_oauth_assets WHERE user_id=?')->execute([$userId]);$pdo->prepare('DELETE FROM p50_meta_oauth_connections WHERE user_id=?')->execute([$userId]);$pdo->commit();
 }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
 json_response(['ok'=>true,'connected'=>false,'revokedAtMeta'=>$revoked,'warning'=>$warning]);
