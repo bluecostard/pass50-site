@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 const P50MO_REQUIRED_SCOPES = ['pages_show_list','pages_read_engagement','instagram_basic'];
 const P50MO_STATE_TTL_SECONDS = 600;
-const P50MO_NONCE_COOKIE = 'p50_meta_oauth_nonce';
-const P50MO_NONCE_PATH = '/api/meta-oauth-callback.php';
+const P50MO_NONCE_COOKIE = 'p50_meta_oauth_nonce_v2';
+const P50MO_LEGACY_NONCE_COOKIE = 'p50_meta_oauth_nonce';
+const P50MO_NONCE_PATH = '/';
 const P50MO_RESULT_STORAGE_KEY = 'pass50_meta_oauth_result_v2';
 
 function p50mo_config_value(array $oauth,string $key,string $env): string {
@@ -55,7 +56,7 @@ function p50mo_decrypt(?string $payload): string {
 function p50mo_http(string $url,string $method='GET',array $query=[],?array $form=null,array $headers=[]): array {
     if($query)$url.=(str_contains($url,'?')?'&':'?').http_build_query($query,'','&',PHP_QUERY_RFC3986);
     $ch=curl_init($url);if($ch===false)throw new RuntimeException('cURL indisponible.');
-    $opts=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>25,CURLOPT_USERAGENT=>'PASS50-Meta-OAuth/1.3',CURLOPT_HTTPHEADER=>$headers];
+    $opts=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>25,CURLOPT_USERAGENT=>'PASS50-Meta-OAuth/1.4',CURLOPT_HTTPHEADER=>$headers];
     if($method==='POST'){$opts[CURLOPT_POST]=true;$opts[CURLOPT_POSTFIELDS]=http_build_query($form??[],'','&',PHP_QUERY_RFC3986);}
     elseif($method==='DELETE')$opts[CURLOPT_CUSTOMREQUEST]='DELETE';
     curl_setopt_array($ch,$opts);$body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$error=curl_error($ch);curl_close($ch);
@@ -82,9 +83,21 @@ function p50mo_match_profile(string $platform,string $profileUrl,string $usernam
     foreach($stmt->fetchAll() as $row)if(in_array(p50mo_normalize_url((string)$row['normalized_url']),$candidates,true))return (string)$row['profile_id'];
     return null;
 }
-function p50mo_cookie_options(int $expires): array {return ['expires'=>$expires,'path'=>P50MO_NONCE_PATH,'secure'=>true,'httponly'=>true,'samesite'=>'Lax'];}
+function p50mo_cookie_domain(): ?string {
+    $host=strtolower(trim((string)parse_url(p50mo_config()['redirect_uri'],PHP_URL_HOST)));
+    if($host==='pass50.store'||str_ends_with($host,'.pass50.store'))return 'pass50.store';
+    return null;
+}
+function p50mo_cookie_options(int $expires): array {
+    $options=['expires'=>$expires,'path'=>P50MO_NONCE_PATH,'secure'=>true,'httponly'=>true,'samesite'=>'None'];
+    $domain=p50mo_cookie_domain();if($domain!==null)$options['domain']=$domain;
+    return $options;
+}
 function p50mo_set_nonce(string $nonce): void {if(!setcookie(P50MO_NONCE_COOKIE,$nonce,p50mo_cookie_options(time()+P50MO_STATE_TTL_SECONDS)))throw new RuntimeException('Création du cookie OAuth Meta impossible.');}
-function p50mo_clear_nonce(): void {setcookie(P50MO_NONCE_COOKIE,'',p50mo_cookie_options(time()-3600));}
+function p50mo_clear_nonce(): void {
+    setcookie(P50MO_NONCE_COOKIE,'',p50mo_cookie_options(time()-3600));
+    setcookie(P50MO_LEGACY_NONCE_COOKIE,'',['expires'=>time()-3600,'path'=>'/api/meta-oauth-callback.php','secure'=>true,'httponly'=>true,'samesite'=>'Lax']);
+}
 function p50mo_state_key(): string {return hash_hmac('sha256','PASS50:meta-oauth-state:v1',p50mo_key(),true);}
 function p50mo_create_state(string $sessionHash,string $nonce): string {
     $payload=['v'=>1,'sid'=>strtolower($sessionHash),'nh'=>hash('sha256',$nonce),'iat'=>time(),'exp'=>time()+P50MO_STATE_TTL_SECONDS,'jti'=>p50mo_b64e(random_bytes(18))];

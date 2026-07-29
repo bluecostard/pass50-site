@@ -5,7 +5,8 @@ require __DIR__.'/meta-oauth-core.php';
 require __DIR__.'/meta-oauth-errors.php';
 set_time_limit(45);
 
-$state=trim((string)($_GET['state']??''));$nonce=trim((string)($_COOKIE[P50MO_NONCE_COOKIE]??''));
+$state=trim((string)($_GET['state']??''));
+$nonce=trim((string)($_COOKIE[P50MO_NONCE_COOKIE]??$_COOKIE[P50MO_LEGACY_NONCE_COOKIE]??''));
 try{$sessionHash=p50mo_verify_state($state,$nonce);p50mo_clear_nonce();}catch(Throwable $e){p50mo_clear_nonce();error_log('Meta OAuth state: '.$e->getMessage());p50mo_redirect('error','invalid_state');}
 if(isset($_GET['error'])){$errorCode=p50mo_dialog_error_code($_GET);p50mo_redirect($errorCode==='access_denied'?'cancelled':'error',$errorCode);}
 $code=trim((string)($_GET['code']??''));if($code==='')p50mo_redirect('error','missing_code');

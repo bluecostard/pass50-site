@@ -26,8 +26,15 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('aes-256-gcm', CORE)
         self.assertIn('hash_hmac', CORE)
         self.assertIn('httponly', CORE)
-        self.assertIn("'samesite'=>'Lax'", CORE)
+        self.assertIn("'samesite'=>'None'", CORE)
         self.assertNotIn("app_secret' => '", CONFIG)
+
+    def test_nonce_cookie_survives_meta_round_trip(self):
+        self.assertIn("P50MO_NONCE_COOKIE = 'p50_meta_oauth_nonce_v2'", CORE)
+        self.assertIn("P50MO_NONCE_PATH = '/'", CORE)
+        self.assertIn("return 'pass50.store'", CORE)
+        self.assertIn("$options['domain']=$domain", CORE)
+        self.assertIn('P50MO_LEGACY_NONCE_COOKIE', CALLBACK)
 
     def test_business_login_configuration(self):
         self.assertIn("'configuration_id'", CORE)
