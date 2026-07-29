@@ -84,6 +84,11 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertNotIn("$query=['meta_oauth'", CORE)
         self.assertIn("url.searchParams.get('meta_oauth_code')", UI)
 
+    def test_oauth_return_stays_on_callback_origin(self):
+        self.assertIn("$target='/'", CORE)
+        self.assertIn('window.location.origin', CORE)
+        self.assertNotIn("$config['app']['base_url']", CORE)
+
     def test_connector_sections_are_collapsible_and_future_ready(self):
         self.assertIn('connector-sections-v1.js?v=1.1', LOADER)
         self.assertIn('p50YoutubeOauthSection', CONNECTORS)
