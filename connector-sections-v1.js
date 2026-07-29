@@ -36,6 +36,14 @@
     const state=readState();state[key]=Boolean(collapsed);writeState(state);
   }
 
+  function setText(node,value){
+    if(node&&node.textContent!==value)node.textContent=value;
+  }
+
+  function setAttribute(node,name,value){
+    if(node&&node.getAttribute(name)!==value)node.setAttribute(name,value);
+  }
+
   function apply(section,collapsed,{persistState=false}={}){
     const key=keyFor(section);if(!key)return;
     const panel=section.querySelector(':scope > .p50-connector-panel');
@@ -43,12 +51,12 @@
     if(!panel||!toggle)return;
     const forced=mustStayOpen(section);
     const effective=forced?false:Boolean(collapsed);
-    panel.hidden=effective;
+    if(panel.hidden!==effective)panel.hidden=effective;
     section.classList.toggle('is-collapsed',effective);
-    toggle.setAttribute('aria-expanded',String(!effective));
-    toggle.setAttribute('aria-controls',panel.id);
-    toggle.querySelector('[data-p50-connector-arrow]').textContent=effective?'▸':'▾';
-    toggle.querySelector('[data-p50-connector-label]').textContent=effective?'Déplier':'Replier';
+    setAttribute(toggle,'aria-expanded',String(!effective));
+    setAttribute(toggle,'aria-controls',panel.id);
+    setText(toggle.querySelector('[data-p50-connector-arrow]'),effective?'▸':'▾');
+    setText(toggle.querySelector('[data-p50-connector-label]'),effective?'Déplier':'Replier');
     if(persistState&&!forced)persist(key,effective);
   }
 
@@ -103,7 +111,8 @@
   }
 
   function schedule(){
-    if(scheduled)return;scheduled=true;queueMicrotask(scan);
+    if(scheduled)return;scheduled=true;
+    requestAnimationFrame(scan);
   }
 
   function injectStyles(){
@@ -135,7 +144,10 @@
 
   function install(){
     injectStyles();scan();
-    new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+    new MutationObserver(mutations=>{
+      const relevant=mutations.some(mutation=>mutation.addedNodes.length>0||mutation.removedNodes.length>0);
+      if(relevant)schedule();
+    }).observe(document.body,{childList:true,subtree:true});
     window.PASS50_CONNECTOR_SECTIONS={
       register(section,key,defaultState='collapsed'){
         if(!section)return;

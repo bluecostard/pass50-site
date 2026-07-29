@@ -11,7 +11,7 @@
   }
   const observer=new MutationObserver(()=>{replaceInternalCopy(document);installLegalLinks();});observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
   document.addEventListener('DOMContentLoaded',()=>{replaceInternalCopy(document);installLegalLinks();});
-  if(!document.querySelector('script[data-pass50-connector-sections]')){const script=document.createElement('script');script.src='./connector-sections-v1.js?v=1.0';script.dataset.pass50ConnectorSections='1.0';document.head.appendChild(script);}
+  if(!document.querySelector('script[data-pass50-connector-sections]')){const script=document.createElement('script');script.src='./connector-sections-v1.js?v=1.1';script.dataset.pass50ConnectorSections='1.1';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-youtube-oauth-ui]')){const script=document.createElement('script');script.src='./youtube-oauth-ui-v1.js?v=1.0';script.dataset.pass50YoutubeOauthUi='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-youtube-click-hotfix-v3]')){const script=document.createElement('script');script.src='./youtube-oauth-click-hotfix-v2.js?v=3.0';script.dataset.pass50YoutubeClickHotfixV3='3.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-youtube-analytics-ui]')){const script=document.createElement('script');script.src='./youtube-analytics-ui-v1.js?v=1.0';script.dataset.pass50YoutubeAnalyticsUi='1.0';document.head.appendChild(script);}
