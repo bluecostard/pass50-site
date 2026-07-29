@@ -9,6 +9,7 @@ STATUS = (ROOT / 'api' / 'meta-oauth-status.php').read_text(encoding='utf-8')
 COLLECT = (ROOT / 'api' / 'meta-live-collect.php').read_text(encoding='utf-8')
 UI = (ROOT / 'meta-oauth-ui-v1.js').read_text(encoding='utf-8')
 LOADER = (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8')
+CONNECTORS = (ROOT / 'connector-sections-v1.js').read_text(encoding='utf-8')
 STORAGE = (ROOT / 'api' / 'live-radar-v4-storage.php').read_text(encoding='utf-8')
 CONFIG = (ROOT / 'api' / 'config.example.php').read_text(encoding='utf-8')
 MIGRATION = (ROOT / 'migration-meta-oauth-v1.sql').read_text(encoding='utf-8')
@@ -60,6 +61,18 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn("addEventListener('click'", UI)
         self.assertIn('},true);', UI)
         self.assertIn('AbortController', UI)
+
+    def test_connector_sections_are_collapsible_and_future_ready(self):
+        self.assertIn('connector-sections-v1.js?v=1.0', LOADER)
+        self.assertIn('p50YoutubeOauthSection', CONNECTORS)
+        self.assertIn('p50MetaOauthSection', CONNECTORS)
+        self.assertIn('PASS50_CONNECTOR_SECTIONS', CONNECTORS)
+        self.assertIn('register(section,key', CONNECTORS)
+        self.assertIn('pass50_connector_sections_v1', CONNECTORS)
+        self.assertIn("defaultState='collapsed'", CONNECTORS)
+        self.assertIn('role="alert"', CONNECTORS)
+        self.assertIn('Déplier', CONNECTORS)
+        self.assertIn('Replier', CONNECTORS)
 
     def test_schema_is_separate_and_user_scoped(self):
         self.assertIn('p50_meta_oauth_connections', MIGRATION)
