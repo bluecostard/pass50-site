@@ -28,28 +28,18 @@ function p50_meta_safe_configuration_status(): array {
         'encryptionKeyConfigured'=>$encryptionKey!=='',
     ];
     $labels=[
-        'appIdConfigured'=>'App ID Meta',
-        'appSecretConfigured'=>'App Secret Meta',
-        'configurationIdConfigured'=>'Configuration ID Facebook Login for Business',
-        'redirectUriValid'=>'URI de redirection HTTPS',
-        'graphVersionValid'=>'version Graph API',
-        'encryptionKeyConfigured'=>'clé de chiffrement',
+        'appIdConfigured'=>'App ID Meta','appSecretConfigured'=>'App Secret Meta',
+        'configurationIdConfigured'=>'Configuration ID Facebook Login for Business','redirectUriValid'=>'URI de redirection HTTPS',
+        'graphVersionValid'=>'version Graph API','encryptionKeyConfigured'=>'clé de chiffrement',
     ];
     $missing=[];foreach($checks as $key=>$ok)if(!$ok)$missing[]=$labels[$key];
     return $checks+[
-        'ready'=>!in_array(false,$checks,true),
-        'missing'=>$missing,
-        'redirectUri'=>$redirectUri!==''?$redirectUri:null,
-        'graphVersion'=>$graphVersion!==''?$graphVersion:null,
-        'authorizationMode'=>'facebook_login_for_business',
+        'ready'=>!in_array(false,$checks,true),'missing'=>$missing,'redirectUri'=>$redirectUri!==''?$redirectUri:null,
+        'graphVersion'=>$graphVersion!==''?$graphVersion:null,'authorizationMode'=>'facebook_login_for_business',
     ];
 }
 
-$user=auth_user();
-p50mo_ensure_schema();
-$userId=(string)$user['id'];
-$configuration=p50_meta_safe_configuration_status();
-$connection=p50mo_connection($userId);
+$user=auth_user();p50mo_ensure_schema();$userId=(string)$user['id'];$configuration=p50_meta_safe_configuration_status();$connection=p50mo_connection($userId);
 if(!$connection)json_response(['ok'=>true,'connected'=>false,'assets'=>[],'configuration'=>$configuration]);
 $assets=array_map(static fn($asset)=>[
     'platform'=>(string)$asset['platform'],'id'=>(string)$asset['asset_id'],'profileId'=>$asset['profile_id']?:null,
@@ -59,4 +49,12 @@ $assets=array_map(static fn($asset)=>[
     'lastError'=>$asset['last_error']?:null,
 ],p50mo_assets($userId));
 $expires=(string)($connection['token_expires_at']??'');$expiresTs=$expires!==''?strtotime($expires.' UTC'):false;
-json_response(['ok'=>true,'connected'=>in_array((string)$connection['status'],['active','reauthorization_required'],true),'status'=>$connection['status'],'account'=>['id'=>$connection['meta_user_id'],'name'=>$connection['meta_user_name']],'scopes'=>preg_split('/\s+/',trim((string)$connection['scopes']))?:[],'tokenExpiresAt'=>$expires!==''?$expires.'Z':null,'tokenExpired'=>$expiresTs===false||$expiresTs<=time(),'requiresReauthorization'=>$connection['status']==='reauthorization_required','assets'=>$assets,'connectedAt'=>(string)$connection['connected_at'].'Z','configuration'=>$configuration]);
+json_response([
+    'ok'=>true,'connected'=>in_array((string)$connection['status'],['active','reauthorization_required'],true),
+    'status'=>$connection['status'],'account'=>['id'=>$connection['meta_user_id'],'name'=>$connection['meta_user_name']],
+    'scopes'=>preg_split('/\s+/',trim((string)$connection['scopes']))?:[],'tokenExpiresAt'=>$expires!==''?$expires.'Z':null,
+    'tokenExpired'=>$expiresTs===false||$expiresTs<=time(),'requiresReauthorization'=>$connection['status']==='reauthorization_required',
+    'assets'=>$assets,'connectedAt'=>(string)$connection['connected_at'].'Z',
+    'lastRefreshedAt'=>$connection['last_refreshed_at']?(string)$connection['last_refreshed_at'].'Z':null,
+    'discoveryWarning'=>$connection['last_error']?:null,'configuration'=>$configuration,
+]);
