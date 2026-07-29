@@ -47,3 +47,5 @@ jobs:
           git add api/data-engine-core.php
           git commit -m "Abaisser le seuil global de confiance à 80"
           git push origin HEAD:feat/broader-radar-data-coverage
+
+# Deuxième commit volontaire : le workflow doit exister avant le push déclencheur.
