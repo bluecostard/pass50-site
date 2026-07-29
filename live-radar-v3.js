@@ -4,7 +4,9 @@
 const ENDPOINT='./api/live-status-v4.php';
 const QUICK_INTERVAL=45_000;
 const FULL_CYCLE_KEY='pass50_live_radar_v4_cycle';
-const DEFAULT_GRACE_MINUTES={TikTok:20,YouTube:15,Instagram:15,Facebook:15};
+const DEFAULT_GRACE_MINUTES={TikTok:20,Facebook:15,YouTube:15,Instagram:15};
+const PLATFORM_PRIORITY=['TikTok','Facebook','YouTube','Instagram'];
+const RADAR_BATCH_SIZE='12';
 let runningMode='';
 let lastData=null;
 let autoTimer=null;
@@ -82,7 +84,7 @@ function applyRadarData(data){
 }
 
 function platformText(platforms={}){
-  return ['TikTok','YouTube','Instagram','Facebook'].map(name=>{
+  return PLATFORM_PRIORITY.map(name=>{
     const item=platforms[name]||{};
     const known=Number(item.known||0),scanned=Number(item.scanned||0),found=Number(item.found||0),candidates=Number(item.candidates||0),replays=Number(item.replays||0);
     return `${name} ${known}${scanned?` · ${scanned} testés`:''}${found?` · ${found} LIVE`:''}${candidates?` · ${candidates} à confirmer`:''}${replays?` · ${replays} replay`:''}`;
@@ -148,7 +150,7 @@ async function fetchRadar(params){
 async function runQuick(){
   if(runningMode||document.hidden)return null;
   runningMode='quick';
-  try{return await fetchRadar({mode:'quick',batch:'8'});}
+  try{return await fetchRadar({mode:'quick',batch:RADAR_BATCH_SIZE});}
   catch(error){console.warn('Radar LIVE rapide',error);return null;}
   finally{runningMode='';}
 }
@@ -166,7 +168,7 @@ async function runFullSweep(){
   let data=null,calls=0,busyRetries=0;setButton('RADAR LIVE · PRÉPARATION…');
   try{
     do{
-      data=await fetchRadar({mode:'full',force:'1',cycle,batch:'8'});const radar=data.radar||{};
+      data=await fetchRadar({mode:'full',force:'1',cycle,batch:RADAR_BATCH_SIZE});const radar=data.radar||{};
       if(radar.busy){busyRetries++;if(busyRetries>12)throw new Error('Le radar est déjà occupé');setButton('RADAR LIVE · ATTENTE DU SERVEUR…');await new Promise(resolve=>setTimeout(resolve,800));continue;}
       busyRetries=0;
       const scanned=Number(radar.cycleScanned||0),total=Number(radar.cycleTotal||0),confirmed=Number(radar.livesFoundInCycle||0),active=Number(radar.activeAutomaticConfirmed||0),candidates=Number(radar.candidatesFoundInCycle||0);
@@ -183,7 +185,7 @@ async function runFullSweep(){
 
 async function verifyProfile(profileId){
   if(!profileId||runningMode)return null;runningMode='profile';
-  try{return await fetchRadar({mode:'profile',force:'1',profileId:String(profileId),batch:'8'});}
+  try{return await fetchRadar({mode:'profile',force:'1',profileId:String(profileId),batch:RADAR_BATCH_SIZE});}
   catch(error){console.warn('Vérification LIVE ciblée',error);return null;}
   finally{runningMode='';renderStatus();}
 }
