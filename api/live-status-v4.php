@@ -90,7 +90,16 @@ if($canScan&&$selected&&$lock){
 }
 
 $officialKeys=[];foreach($sources as $source)$officialKeys[strtolower((string)$source['platform']).'|'.trim((string)$source['profile_id'])]=true;
-$automatic=array_values(array_filter(p50_live_v4_active_rows(),static fn($stream)=>isset($officialKeys[strtolower((string)($stream['platform']??'')).'|'.trim((string)($stream['profileId']??''))])));
+$automatic=array_values(array_filter(p50_live_v4_active_rows(),static function(array $stream) use($officialKeys): bool {
+    $profileId=trim((string)($stream['profileId']??''));
+    if($profileId==='')return false;
+    // Une connexion Meta autorisée et explicitement associée à une fiche est déjà
+    // une source officielle. Elle ne doit pas être supprimée parce que la fiche ne
+    // possède pas encore de lien Facebook/Instagram saisi manuellement.
+    if((string)($stream['source']??'')==='meta_authorized')return true;
+    $key=strtolower((string)($stream['platform']??'')).'|'.$profileId;
+    return isset($officialKeys[$key]);
+}));
 $manual=p50_live_v4_manual_streams($state);$streams=p50_live_v4_dedup($automatic,$manual);$healthSummary=p50_live_v4_health_summary($sources,$automatic);
 $coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;$lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
 
