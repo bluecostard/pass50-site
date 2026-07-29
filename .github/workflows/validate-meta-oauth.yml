@@ -7,6 +7,7 @@ on:
       - 'api/meta-data-deletion*.php'
       - 'api/meta-live-collect.php'
       - 'meta-oauth-ui-v1.js'
+      - 'connector-sections-v1.js'
       - 'meta-deletion-status.html'
       - 'privacy.html'
       - 'data-deletion.html'
@@ -14,6 +15,7 @@ on:
       - 'migration-meta-oauth-v1.sql'
       - 'api/config.example.php'
       - 'public-copy-fixes.js'
+      - 'sw.js'
       - 'api/live-radar-v4-storage.php'
       - 'tests/meta_oauth_core.php'
       - 'tests/meta_oauth_mariadb.php'
@@ -60,7 +62,9 @@ jobs:
       - name: Vérifier la syntaxe JavaScript
         run: |
           node --check meta-oauth-ui-v1.js
+          node --check connector-sections-v1.js
           node --check public-copy-fixes.js
+          node --check sw.js
           node -e "const fs=require('fs');for(const f of ['meta-deletion-status.html']){const html=fs.readFileSync(f,'utf8');const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);scripts.forEach((s,i)=>new Function(s));}"
       - name: Exécuter les tests déterministes
         run: |
