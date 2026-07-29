@@ -1,10 +1,27 @@
 'use strict';
 (function(){
   const SECTION_ID='p50MetaOauthSection',TOKEN_KEY='pass50_api_token';
-  let status=null,loading=false,connecting=false,pollTimer=null,lastError='';
+  const RESULT_KEY='pass50_meta_oauth_result_v2',LEGACY_ERROR_KEY='pass50_meta_oauth_error_code';
+  const messages={
+    public_profile_advanced_access:'Active l’accès avancé à public_profile dans Contrôle app → Autorisations et fonctionnalités, puis relance la connexion.',
+    invalid_configuration:'Vérifie que configuration_id correspond bien à PASS50 Meta LIVE dans la nouvelle application Business.',
+    redirect_uri_mismatch:'Vérifie que l’URI OAuth valide est exactement https://www.pass50.store/api/meta-oauth-callback.php.',
+    invalid_client:'L’App ID ou l’App Secret de PASS50 Business ne correspond pas à la nouvelle application.',
+    unsupported_permission:'La configuration Meta contient une permission non prise en charge par Facebook Login for Business.',
+    app_not_available:'L’application Meta n’est pas disponible pour cette connexion. Vérifie son état, ton rôle dans l’application et public_profile.',
+    permissions_missing:'Meta n’a pas accordé toutes les permissions attendues : pages_show_list, pages_read_engagement et instagram_basic.',
+    pass50_session_expired:'Ta session PASS50 a expiré pendant la connexion. Reconnecte-toi à PASS50 puis relance Meta.',
+    code_exchange_failed:'Meta a autorisé la connexion, mais l’échange du code a échoué. Vérifie l’App ID, l’App Secret et l’URI OAuth.',
+    pages_access_failed:'La connexion Meta fonctionne, mais les Pages sélectionnées n’ont pas pu être lues.',
+    invalid_state:'La vérification de sécurité OAuth a expiré. Recharge PASS50 puis recommence.',
+    missing_code:'Meta n’a pas renvoyé de code d’autorisation.',
+    connection_failed:'Meta a autorisé la connexion, mais PASS50 n’a pas pu terminer l’enregistrement côté serveur.'
+  };
+  let status=null,loading=false,connecting=false,lastError='';
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const apiBase=()=>String(window.PASS50_API?.baseUrl||'./api').replace(/\/+$/,'')||'./api';
   const token=()=>String(localStorage.getItem(TOKEN_KEY)||'').trim();
+  const diagnosticMessage=code=>messages[String(code||'').trim()]||'Meta a interrompu ou refusé la connexion.';
 
   async function api(path,options={}){
     const accessToken=token();
@@ -57,12 +74,9 @@
     const configuration=status?.configuration;
     if(!configuration||configuration.ready!==false)return '';
     const missing=Array.isArray(configuration.missing)?configuration.missing.join(', '):'réglages Meta';
-    return `<div class="p50-meta-message warn" role="status">Configuration IONOS incomplète : ${esc(missing)}. Le bouton affichera le détail exact après tentative.</div>`;
+    return `<div class="p50-meta-message warn" role="status">Configuration IONOS incomplète : ${esc(missing)}.</div>`;
   }
-
-  function errorHtml(){
-    return lastError?`<div class="p50-meta-message error" role="alert" aria-live="assertive"><strong>Connexion Meta impossible :</strong> ${esc(lastError)}</div>`:'';
-  }
+  function errorHtml(){return lastError?`<div class="p50-meta-message error" role="alert" aria-live="assertive"><strong>Connexion Meta impossible :</strong> ${esc(lastError)}</div>`:'';}
 
   function render(){
     const section=ensure();if(!section)return;
@@ -74,13 +88,13 @@
     }
     const assets=Array.isArray(status.assets)?status.assets:[],mapped=assets.filter(a=>a.mapped).length;
     const items=assets.map(a=>`<div class="p50-meta-asset"><div class="p50-meta-platform">${esc(a.platform)}</div><div class="p50-meta-name">${esc(a.name||a.username||a.id)}</div><div class="p50-meta-state ${a.mapped?'':'warn'}">${a.mapped?`Relié à la fiche PASS50 ${esc(a.profileId)}`:'Compte connecté, fiche PASS50 non associée'}${a.lastError?` · ${esc(a.lastError)}`:''}</div></div>`).join('');
-    section.innerHTML=`<div class="user-title"><span>Meta · Facebook & Instagram</span><span class="muted">Lecture seule</span></div><div class="p50-meta-card"><div class="p50-meta-head"><div class="p50-meta-main"><div class="p50-meta-logo">META</div><div><div class="p50-meta-title">${esc(status.account?.name||'Compte Meta connecté')}</div><div class="p50-meta-copy">${assets.length} compte(s) professionnel(s) découvert(s) · ${mapped} associé(s) à une fiche PASS50${status.requiresReauthorization?' · Reconnexion nécessaire':''}</div></div></div><div class="p50-meta-actions">${status.requiresReauthorization?'<button class="btn primary" type="button" data-p50-meta-connect>Reconnecter</button>':'<button class="btn primary" type="button" data-p50-meta-collect>Actualiser les LIVE</button>'}<button class="btn danger" type="button" data-p50-meta-disconnect>Déconnecter</button></div></div>${items?`<div class="p50-meta-assets">${items}</div>`:'<div class="p50-meta-copy" style="margin-top:12px">Aucune Page Facebook gérée ou aucun compte Instagram professionnel lié n’a été trouvé.</div>'}${errorHtml()}</div>`;
+    section.innerHTML=`<div class="user-title"><span>Meta · Facebook & Instagram</span><span class="muted">Lecture seule</span></div><div class="p50-meta-card"><div class="p50-meta-head"><div class="p50-meta-main"><div class="p50-meta-logo">META</div><div><div class="p50-meta-title">${esc(status.account?.name||'Compte Meta connecté')}</div><div class="p50-meta-copy">${assets.length} compte(s) professionnel(s) découvert(s) · ${mapped} associé(s) à une fiche PASS50${status.requiresReauthorization?' · Reconnexion nécessaire':''}</div></div></div><div class="p50-meta-actions">${status.requiresReauthorization?'<button class="btn primary" type="button" data-p50-meta-connect>Reconnecter</button>':'<button class="btn primary" type="button" data-p50-meta-collect>Actualiser les LIVE</button>'}<button class="btn danger" type="button" data-p50-meta-disconnect>Déconnecter</button></div></div>${items?`<div class="p50-meta-assets">${items}</div>`:'<div class="p50-meta-copy" style="margin-top:12px">Connexion enregistrée. Aucune Page sélectionnée ou aucun compte Instagram professionnel lié n’a été trouvé.</div>'}${errorHtml()}</div>`;
   }
 
   async function refresh(showError=false){
-    if(!token())return;loading=true;render();
-    try{status=await api('meta-oauth-status.php');}
-    catch(error){status={connected:false};if(showError){lastError=error.message||'Statut Meta indisponible.';notify(lastError);}}
+    if(!token())return null;loading=true;render();
+    try{status=await api('meta-oauth-status.php');return status;}
+    catch(error){status={connected:false};if(showError){lastError=error.message||'Statut Meta indisponible.';notify(lastError);}return null;}
     finally{loading=false;render();}
   }
 
@@ -88,6 +102,7 @@
     if(connecting)return;
     connecting=true;lastError='';render();
     try{
+      sessionStorage.removeItem(RESULT_KEY);sessionStorage.removeItem(LEGACY_ERROR_KEY);
       const data=await api('meta-oauth-start.php',{method:'POST',body:{}});
       const authorizationUrl=String(data.authorizationUrl||'');
       if(!authorizationUrl)throw new Error('Le serveur n’a pas retourné l’adresse d’autorisation Meta.');
@@ -112,19 +127,36 @@
     catch(error){lastError=error.message;render();notify(lastError);}
   }
 
-  function result(value){
-    clearInterval(pollTimer);connecting=false;
-    if(value==='connected'){lastError='';notify('Comptes Meta connectés.');}
-    else if(value==='cancelled'){lastError='';notify('Connexion Meta annulée.');}
-    else{lastError='Meta a interrompu ou refusé la connexion.';notify('Connexion Meta non finalisée.');}
-    setTimeout(()=>refresh(value!=='cancelled'),250);
+  async function result(value,code=''){
+    connecting=false;
+    sessionStorage.removeItem('pass50_meta_oauth_return');
+    if(value==='connected'){
+      lastError='';sessionStorage.removeItem(LEGACY_ERROR_KEY);notify('Autorisation Meta reçue. Vérification de l’enregistrement…');
+      await refresh(true);
+      if(status?.connected){notify('Comptes Meta connectés.');return;}
+      if(!lastError)lastError='Meta a autorisé PASS50, mais la connexion n’a pas été enregistrée. Relance une seule fois après avoir rechargé la page.';
+      render();return;
+    }
+    if(value==='cancelled'){lastError='';notify('Connexion Meta annulée.');await refresh(false);return;}
+    lastError=diagnosticMessage(code);sessionStorage.setItem(LEGACY_ERROR_KEY,String(code||'connection_failed'));
+    notify('Connexion Meta non finalisée.');await refresh(false);render();
+  }
+
+  function readStoredResult(){
+    let payload=null;
+    try{const raw=sessionStorage.getItem(RESULT_KEY);if(raw)payload=JSON.parse(raw);}catch{}
+    sessionStorage.removeItem(RESULT_KEY);
+    if(payload&&typeof payload==='object'&&payload.source==='PASS50_META_OAUTH')return payload;
+    return null;
   }
 
   function consume(){
-    const url=new URL(location.href),value=url.searchParams.get('meta_oauth');if(!value)return;
-    url.searchParams.delete('meta_oauth');url.searchParams.delete('code');history.replaceState(null,'',url.pathname+url.search+url.hash);
-    sessionStorage.removeItem('pass50_meta_oauth_return');
-    setTimeout(()=>{document.getElementById('accountBtn')?.click();result(value);},450);
+    let payload=readStoredResult();
+    const url=new URL(location.href),legacyStatus=url.searchParams.get('meta_oauth');
+    if(!payload&&legacyStatus)payload={source:'PASS50_META_OAUTH',status:legacyStatus,code:url.searchParams.get('meta_oauth_code')||url.searchParams.get('code')||''};
+    if(legacyStatus){url.searchParams.delete('meta_oauth');url.searchParams.delete('meta_oauth_code');url.searchParams.delete('code');history.replaceState(null,'',url.pathname+url.search+url.hash);}
+    if(!payload)return;
+    setTimeout(()=>{document.getElementById('accountBtn')?.click();result(String(payload.status||'error'),String(payload.code||''));},350);
   }
 
   function install(){
@@ -138,7 +170,7 @@
       if(collectButton){event.preventDefault();event.stopPropagation();collect();return;}
       if(event.target.closest?.('#accountBtn'))setTimeout(()=>refresh(false),100);
     },true);
-    window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.source==='PASS50_META_OAUTH')result(String(event.data.status||'error'));});
+    window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.source==='PASS50_META_OAUTH')result(String(event.data.status||'error'),String(event.data.code||''));});
     const body=document.getElementById('userBody');
     if(body)new MutationObserver(()=>{if(body.innerHTML.trim()&&token()){ensure();if(!loading&&status===null)refresh(false);}}).observe(body,{childList:true,subtree:false});
     consume();
