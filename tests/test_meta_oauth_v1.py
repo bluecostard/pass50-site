@@ -63,7 +63,7 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('AbortController', UI)
 
     def test_connector_sections_are_collapsible_and_future_ready(self):
-        self.assertIn('connector-sections-v1.js?v=1.0', LOADER)
+        self.assertIn('connector-sections-v1.js?v=1.1', LOADER)
         self.assertIn('p50YoutubeOauthSection', CONNECTORS)
         self.assertIn('p50MetaOauthSection', CONNECTORS)
         self.assertIn('PASS50_CONNECTOR_SECTIONS', CONNECTORS)
