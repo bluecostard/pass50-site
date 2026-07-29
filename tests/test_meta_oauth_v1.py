@@ -3,6 +3,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = (ROOT / 'api' / 'meta-oauth-core.php').read_text(encoding='utf-8')
+ASSET_DISCOVERY = (ROOT / 'api' / 'meta-oauth-assets.php').read_text(encoding='utf-8')
+REFRESH_ASSETS = (ROOT / 'api' / 'meta-oauth-refresh-assets.php').read_text(encoding='utf-8')
 START = (ROOT / 'api' / 'meta-oauth-start.php').read_text(encoding='utf-8')
 CALLBACK = (ROOT / 'api' / 'meta-oauth-callback.php').read_text(encoding='utf-8')
 STATUS = (ROOT / 'api' / 'meta-oauth-status.php').read_text(encoding='utf-8')
@@ -13,6 +15,7 @@ CONNECTORS = (ROOT / 'connector-sections-v1.js').read_text(encoding='utf-8')
 STORAGE = (ROOT / 'api' / 'live-radar-v4-storage.php').read_text(encoding='utf-8')
 CONFIG = (ROOT / 'api' / 'config.example.php').read_text(encoding='utf-8')
 MIGRATION = (ROOT / 'migration-meta-oauth-v1.sql').read_text(encoding='utf-8')
+
 
 class MetaOauthV1Tests(unittest.TestCase):
     def test_required_read_only_scopes(self):
@@ -50,10 +53,26 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn("['Accept: application/json']", CALLBACK)
         self.assertNotIn("oauth/access_token','GET',['client_id'", CALLBACK)
 
+    def test_page_discovery_uses_edge_and_granular_targets(self):
+        self.assertIn("p50mo_graph('me/accounts'", ASSET_DISCOVERY)
+        self.assertIn("'/debug_token'", ASSET_DISCOVERY)
+        self.assertIn('granular_scopes', ASSET_DISCOVERY)
+        self.assertIn('target_ids', ASSET_DISCOVERY)
+        self.assertIn("['pages_show_list','pages_read_engagement']", ASSET_DISCOVERY)
+        self.assertIn("p50mo_graph($pageId,$userToken", ASSET_DISCOVERY)
+        self.assertIn('p50mo_discover_authorized_assets', CALLBACK)
+
+    def test_page_rediscovery_does_not_require_reauthorization(self):
+        self.assertIn('p50mo_decrypt', REFRESH_ASSETS)
+        self.assertIn('p50mo_discover_authorized_assets', REFRESH_ASSETS)
+        self.assertIn('p50mo_replace_assets_for_user', REFRESH_ASSETS)
+        self.assertIn('meta-oauth-refresh-assets.php', UI)
+        self.assertIn('Rechercher mes Pages', UI)
+        self.assertIn('discoveryWarning', STATUS)
+
     def test_callback_discovers_pages_and_linked_instagram(self):
-        self.assertIn('me/accounts', CALLBACK)
-        self.assertIn('instagram_business_account', CALLBACK)
-        self.assertIn('p50mo_match_profile', CALLBACK)
+        self.assertIn('instagram_business_account', ASSET_DISCOVERY)
+        self.assertIn('p50mo_match_profile', ASSET_DISCOVERY)
         self.assertIn('fb_exchange_token', CALLBACK)
 
     def test_private_tokens_never_leave_status_endpoint(self):
@@ -71,7 +90,7 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn("'meta_authorized'", STORAGE)
 
     def test_ui_is_loaded_and_has_no_publish_action(self):
-        self.assertIn('meta-oauth-ui-v1.js?v=1.3', LOADER)
+        self.assertIn('meta-oauth-ui-v1.js?v=1.4', LOADER)
         self.assertIn('meta-live-collect.php', UI)
         self.assertIn('Aucune publication automatique', UI)
         self.assertNotIn('publish', UI.lower())
@@ -124,6 +143,7 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('/dialog/oauth', START)
         self.assertIn('p50mo_create_state', START)
         self.assertIn('p50mo_set_nonce', START)
+
 
 if __name__ == '__main__':
     unittest.main()
