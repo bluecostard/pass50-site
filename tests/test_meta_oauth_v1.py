@@ -5,6 +5,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CORE = (ROOT / 'api' / 'meta-oauth-core.php').read_text(encoding='utf-8')
 ASSET_DISCOVERY = (ROOT / 'api' / 'meta-oauth-assets.php').read_text(encoding='utf-8')
 REFRESH_ASSETS = (ROOT / 'api' / 'meta-oauth-refresh-assets.php').read_text(encoding='utf-8')
+MAPPING_OPTIONS = (ROOT / 'api' / 'meta-oauth-mapping-options.php').read_text(encoding='utf-8')
+MAP_ASSET = (ROOT / 'api' / 'meta-oauth-map-asset.php').read_text(encoding='utf-8')
 START = (ROOT / 'api' / 'meta-oauth-start.php').read_text(encoding='utf-8')
 CALLBACK = (ROOT / 'api' / 'meta-oauth-callback.php').read_text(encoding='utf-8')
 STATUS = (ROOT / 'api' / 'meta-oauth-status.php').read_text(encoding='utf-8')
@@ -80,6 +82,24 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('Rechercher mes Pages', UI)
         self.assertIn('discoveryWarning', STATUS)
 
+    def test_manual_asset_mapping_is_admin_only_and_profile_validated(self):
+        self.assertIn("require_role($user,'owner','admin')", MAPPING_OPTIONS)
+        self.assertIn("require_role($user,'owner','admin')", MAP_ASSET)
+        self.assertIn('p50_de_registry_profiles', MAPPING_OPTIONS)
+        self.assertIn('p50_de_registry_profiles($profileId', MAP_ASSET)
+        self.assertIn("UPDATE p50_meta_oauth_assets SET profile_id=?", MAP_ASSET)
+        self.assertIn("parent_page_id=?", MAP_ASSET)
+        self.assertIn('canManageMappings', STATUS)
+
+    def test_manual_mapping_survives_asset_rediscovery(self):
+        self.assertIn("SELECT platform,asset_id,parent_page_id,profile_id", ASSET_DISCOVERY)
+        self.assertIn('$existing[$key]=$profileId', ASSET_DISCOVERY)
+        self.assertIn('$pageMappings', ASSET_DISCOVERY)
+        self.assertIn("meta-oauth-map-asset.php", UI)
+        self.assertIn("meta-oauth-mapping-options.php", UI)
+        self.assertIn('Associer à une fiche', UI)
+        self.assertIn('Retirer l’association', UI)
+
     def test_callback_discovers_pages_and_linked_instagram(self):
         self.assertIn('instagram_business_account', ASSET_DISCOVERY)
         self.assertIn('p50mo_match_profile', ASSET_DISCOVERY)
@@ -91,6 +111,8 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn("'assets'", STATUS)
         self.assertIn("'configuration'", STATUS)
         self.assertIn('appSecretConfigured', STATUS)
+        self.assertNotIn('access_token_encrypted', MAPPING_OPTIONS)
+        self.assertNotIn('access_token_encrypted', MAP_ASSET)
 
     def test_official_live_collection(self):
         self.assertIn('/live_videos', COLLECT)
@@ -100,7 +122,7 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn("'meta_authorized'", STORAGE)
 
     def test_ui_is_loaded_and_has_no_publish_action(self):
-        self.assertIn('meta-oauth-ui-v1.js?v=1.4', LOADER)
+        self.assertIn('meta-oauth-ui-v1.js?v=1.5', LOADER)
         self.assertIn('meta-live-collect.php', UI)
         self.assertIn('Aucune publication automatique', UI)
         self.assertNotIn('publish', UI.lower())
