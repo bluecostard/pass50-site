@@ -1,0 +1,39 @@
+from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+LEGACY = (ROOT / 'api' / 'live-status.php').read_text(encoding='utf-8')
+ENDPOINT = (ROOT / 'api' / 'live-status-v4.php').read_text(encoding='utf-8')
+CLIENT = (ROOT / 'live-radar-v3.js').read_text(encoding='utf-8')
+
+
+class LiveRadarRuntimeV4Tests(unittest.TestCase):
+    def test_legacy_endpoint_cannot_overwrite_v4_results(self):
+        self.assertIn("require __DIR__ . '/live-status-v4.php'", LEGACY)
+        self.assertNotIn('Radar LIVE V2', LEGACY)
+        self.assertNotIn('p50_live_scan_tiktok', LEGACY)
+
+    def test_mysql_session_and_server_clock_are_utc(self):
+        self.assertIn("SET time_zone = '+00:00'", ENDPOINT)
+        self.assertIn("'serverNow'=>gmdate(DATE_ATOM)", ENDPOINT)
+
+    def test_browser_uses_platform_grace_instead_of_three_minutes(self):
+        self.assertIn('installLiveNormalizerV4', CLIENT)
+        self.assertIn('DEFAULT_GRACE_MINUTES', CLIENT)
+        self.assertIn('graceMinutes(String(item.platform', CLIENT)
+        self.assertIn('confirmation', CLIENT.lower())
+        self.assertNotIn("10*60_000:3*60_000", CLIENT)
+
+    def test_reasonable_ionos_future_skew_is_repaired(self):
+        self.assertIn('futureSkew>5*60_000', CLIENT)
+        self.assertIn('futureSkew<=6*60*60_000', CLIENT)
+        self.assertIn('item.lastConfirmedAt=fixed', CLIENT)
+
+    def test_full_sweep_distinguishes_active_lives_from_cycle_confirmations(self):
+        self.assertIn('activeAutomaticConfirmed', CLIENT)
+        self.assertIn('ACTIF', CLIENT)
+        self.assertIn('CONFIRMATION', CLIENT)
+
+
+if __name__ == '__main__':
+    unittest.main()
