@@ -20,6 +20,7 @@ on:
       - 'tests/meta_oauth_core.php'
       - 'tests/meta_oauth_mariadb.php'
       - 'tests/test_meta_oauth_v1.py'
+      - 'tests/test_meta_login_for_business_v1.py'
       - 'tests/test_connector_sections_v1.py'
       - '.github/workflows/validate-meta-oauth.yml'
 
@@ -70,6 +71,7 @@ jobs:
       - name: Exécuter les tests déterministes
         run: |
           python3 -m unittest tests/test_meta_oauth_v1.py
+          python3 -m unittest tests/test_meta_login_for_business_v1.py
           python3 -m unittest tests/test_connector_sections_v1.py
           php tests/meta_oauth_core.php
       - name: Vérifier les pages publiques

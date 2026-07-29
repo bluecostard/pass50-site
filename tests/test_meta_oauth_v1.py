@@ -16,8 +16,9 @@ MIGRATION = (ROOT / 'migration-meta-oauth-v1.sql').read_text(encoding='utf-8')
 
 class MetaOauthV1Tests(unittest.TestCase):
     def test_required_read_only_scopes(self):
-        for scope in ('pages_show_list', 'pages_read_engagement', 'pages_manage_metadata', 'instagram_basic'):
+        for scope in ('pages_show_list', 'pages_read_engagement', 'instagram_basic'):
             self.assertIn(scope, CORE)
+        self.assertNotIn('pages_manage_metadata', CORE)
         self.assertNotIn('pages_manage_posts', CORE)
         self.assertNotIn('instagram_content_publish', CORE)
 
@@ -27,6 +28,14 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('httponly', CORE)
         self.assertIn("'samesite'=>'Lax'", CORE)
         self.assertNotIn("app_secret' => '", CONFIG)
+
+    def test_business_login_configuration(self):
+        self.assertIn("'configuration_id'", CORE)
+        self.assertIn('META_CONFIGURATION_ID', CORE)
+        self.assertIn("'config_id'", START)
+        self.assertIn("'override_default_response_type'=>'true'", START)
+        self.assertNotIn("'scope'=>implode(',',P50MO_REQUIRED_SCOPES)", START)
+        self.assertIn('configurationIdConfigured', STATUS)
 
     def test_callback_discovers_pages_and_linked_instagram(self):
         self.assertIn('me/accounts', CALLBACK)
@@ -63,10 +72,10 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('AbortController', UI)
 
     def test_oauth_does_not_use_conflicting_window_open(self):
-        self.assertNotIn("window.open(", UI)
-        self.assertNotIn("about:blank", UI)
+        self.assertNotIn('window.open(', UI)
+        self.assertNotIn('about:blank', UI)
         self.assertIn('window.location.assign(authorizationUrl)', UI)
-        self.assertIn("pass50_meta_oauth_return", UI)
+        self.assertIn('pass50_meta_oauth_return', UI)
 
     def test_connector_sections_are_collapsible_and_future_ready(self):
         self.assertIn('connector-sections-v1.js?v=1.1', LOADER)

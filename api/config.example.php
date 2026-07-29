@@ -35,9 +35,11 @@ return [
         'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
     ],
     'meta_oauth' => [
-        // Application Business Meta. Ne jamais écrire App Secret ou jetons dans GitHub.
+        // Application Business Meta. Ne jamais écrire App Secret, Configuration ID ou jetons dans GitHub.
         'app_id' => getenv('META_APP_ID') ?: '',
         'app_secret' => getenv('META_APP_SECRET') ?: '',
+        // ID de la configuration créée dans Facebook Login for Business.
+        'configuration_id' => getenv('META_CONFIGURATION_ID') ?: '',
         'redirect_uri' => getenv('META_REDIRECT_URI') ?: 'https://www.pass50.store/api/meta-oauth-callback.php',
         // Utiliser la version Graph API affichée dans le tableau de bord de l’application Meta.
         'graph_version' => getenv('META_GRAPH_VERSION') ?: '',

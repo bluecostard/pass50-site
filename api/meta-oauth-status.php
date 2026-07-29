@@ -14,6 +14,7 @@ function p50_meta_safe_configuration_status(): array {
     };
     $appId=$value($oauth,'app_id','META_APP_ID');
     $appSecret=$value($oauth,'app_secret','META_APP_SECRET');
+    $configurationId=$value($oauth,'configuration_id','META_CONFIGURATION_ID');
     $redirectUri=$value($oauth,'redirect_uri','META_REDIRECT_URI');
     $graphVersion=$value($oauth,'graph_version','META_GRAPH_VERSION');
     $encryptionKey=$value($oauth,'token_encryption_key','PASS50_TOKEN_ENCRYPTION_KEY');
@@ -21,6 +22,7 @@ function p50_meta_safe_configuration_status(): array {
     $checks=[
         'appIdConfigured'=>$appId!=='',
         'appSecretConfigured'=>$appSecret!=='',
+        'configurationIdConfigured'=>$configurationId!==''&&(bool)preg_match('/^[A-Za-z0-9_-]{4,100}$/',$configurationId),
         'redirectUriValid'=>$redirectUri!==''&&filter_var($redirectUri,FILTER_VALIDATE_URL)&&str_starts_with($redirectUri,'https://'),
         'graphVersionValid'=>(bool)preg_match('/^v\d+\.\d+$/',$graphVersion),
         'encryptionKeyConfigured'=>$encryptionKey!=='',
@@ -28,6 +30,7 @@ function p50_meta_safe_configuration_status(): array {
     $labels=[
         'appIdConfigured'=>'App ID Meta',
         'appSecretConfigured'=>'App Secret Meta',
+        'configurationIdConfigured'=>'Configuration ID Facebook Login for Business',
         'redirectUriValid'=>'URI de redirection HTTPS',
         'graphVersionValid'=>'version Graph API',
         'encryptionKeyConfigured'=>'clé de chiffrement',
@@ -38,6 +41,7 @@ function p50_meta_safe_configuration_status(): array {
         'missing'=>$missing,
         'redirectUri'=>$redirectUri!==''?$redirectUri:null,
         'graphVersion'=>$graphVersion!==''?$graphVersion:null,
+        'authorizationMode'=>'facebook_login_for_business',
     ];
 }
 
