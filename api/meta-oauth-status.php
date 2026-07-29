@@ -40,7 +40,8 @@ function p50_meta_safe_configuration_status(): array {
 }
 
 $user=auth_user();p50mo_ensure_schema();$userId=(string)$user['id'];$configuration=p50_meta_safe_configuration_status();$connection=p50mo_connection($userId);
-if(!$connection)json_response(['ok'=>true,'connected'=>false,'assets'=>[],'configuration'=>$configuration]);
+$canManageMappings=in_array((string)$user['role'],['owner','admin'],true);
+if(!$connection)json_response(['ok'=>true,'connected'=>false,'assets'=>[],'configuration'=>$configuration,'canManageMappings'=>$canManageMappings]);
 $assets=array_map(static fn($asset)=>[
     'platform'=>(string)$asset['platform'],'id'=>(string)$asset['asset_id'],'profileId'=>$asset['profile_id']?:null,
     'name'=>(string)$asset['asset_name'],'username'=>(string)$asset['username'],'profileUrl'=>(string)($asset['profile_url']??''),
@@ -57,4 +58,5 @@ json_response([
     'assets'=>$assets,'connectedAt'=>(string)$connection['connected_at'].'Z',
     'lastRefreshedAt'=>$connection['last_refreshed_at']?(string)$connection['last_refreshed_at'].'Z':null,
     'discoveryWarning'=>$connection['last_error']?:null,'configuration'=>$configuration,
+    'canManageMappings'=>$canManageMappings,
 ]);
