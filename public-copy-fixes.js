@@ -15,5 +15,5 @@
   if(!document.querySelector('script[data-pass50-youtube-oauth-ui]')){const script=document.createElement('script');script.src='./youtube-oauth-ui-v1.js?v=1.0';script.dataset.pass50YoutubeOauthUi='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-youtube-click-hotfix-v3]')){const script=document.createElement('script');script.src='./youtube-oauth-click-hotfix-v2.js?v=3.0';script.dataset.pass50YoutubeClickHotfixV3='3.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-youtube-analytics-ui]')){const script=document.createElement('script');script.src='./youtube-analytics-ui-v1.js?v=1.0';script.dataset.pass50YoutubeAnalyticsUi='1.0';document.head.appendChild(script);}
-  if(!document.querySelector('script[data-pass50-meta-oauth-ui]')){const script=document.createElement('script');script.src='./meta-oauth-ui-v1.js?v=1.1';script.dataset.pass50MetaOauthUi='1.1';document.head.appendChild(script);}
+  if(!document.querySelector('script[data-pass50-meta-oauth-ui]')){const script=document.createElement('script');script.src='./meta-oauth-ui-v1.js?v=1.2';script.dataset.pass50MetaOauthUi='1.2';document.head.appendChild(script);}
 })();
