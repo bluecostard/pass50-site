@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const P50MO_REQUIRED_SCOPES = ['pages_show_list','pages_read_engagement','pages_manage_metadata','instagram_basic'];
+const P50MO_REQUIRED_SCOPES = ['pages_show_list','pages_read_engagement','instagram_basic'];
 const P50MO_STATE_TTL_SECONDS = 600;
 const P50MO_NONCE_COOKIE = 'p50_meta_oauth_nonce';
 const P50MO_NONCE_PATH = '/api/meta-oauth-callback.php';
@@ -17,12 +17,14 @@ function p50mo_config(): array {
     $values=[
         'app_id'=>p50mo_config_value($oauth,'app_id','META_APP_ID'),
         'app_secret'=>p50mo_config_value($oauth,'app_secret','META_APP_SECRET'),
+        'configuration_id'=>p50mo_config_value($oauth,'configuration_id','META_CONFIGURATION_ID'),
         'redirect_uri'=>p50mo_config_value($oauth,'redirect_uri','META_REDIRECT_URI'),
         'graph_version'=>p50mo_config_value($oauth,'graph_version','META_GRAPH_VERSION'),
         'token_encryption_key'=>p50mo_config_value($oauth,'token_encryption_key','PASS50_TOKEN_ENCRYPTION_KEY'),
     ];
     if($values['token_encryption_key']==='')$values['token_encryption_key']=trim((string)($google['token_encryption_key']??''));
-    if($values['app_id']===''||$values['app_secret']===''||$values['redirect_uri']===''||$values['graph_version']==='')throw new RuntimeException('Configuration OAuth Meta incomplète dans api/config.php.');
+    if($values['app_id']===''||$values['app_secret']===''||$values['configuration_id']===''||$values['redirect_uri']===''||$values['graph_version']==='')throw new RuntimeException('Configuration Facebook Login for Business incomplète dans api/config.php.');
+    if(!preg_match('/^[A-Za-z0-9_-]{4,100}$/',$values['configuration_id']))throw new RuntimeException('ID de configuration Facebook Login for Business invalide.');
     if(!preg_match('/^v\d+\.\d+$/',$values['graph_version']))throw new RuntimeException('Version Graph API Meta invalide.');
     if(!filter_var($values['redirect_uri'],FILTER_VALIDATE_URL)||!str_starts_with($values['redirect_uri'],'https://'))throw new RuntimeException('URI de redirection OAuth Meta invalide.');
     if($values['token_encryption_key']==='')throw new RuntimeException('Clé de chiffrement OAuth manquante.');
@@ -52,7 +54,7 @@ function p50mo_decrypt(?string $payload): string {
 function p50mo_http(string $url,string $method='GET',array $query=[],?array $form=null,array $headers=[]): array {
     if($query)$url.=(str_contains($url,'?')?'&':'?').http_build_query($query,'','&',PHP_QUERY_RFC3986);
     $ch=curl_init($url);if($ch===false)throw new RuntimeException('cURL indisponible.');
-    $opts=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>25,CURLOPT_USERAGENT=>'PASS50-Meta-OAuth/1.0',CURLOPT_HTTPHEADER=>$headers];
+    $opts=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>25,CURLOPT_USERAGENT=>'PASS50-Meta-OAuth/1.1',CURLOPT_HTTPHEADER=>$headers];
     if($method==='POST'){$opts[CURLOPT_POST]=true;$opts[CURLOPT_POSTFIELDS]=http_build_query($form??[],'','&',PHP_QUERY_RFC3986);}
     elseif($method==='DELETE')$opts[CURLOPT_CUSTOMREQUEST]='DELETE';
     curl_setopt_array($ch,$opts);$body=curl_exec($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);$error=curl_error($ch);curl_close($ch);
