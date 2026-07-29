@@ -85,6 +85,14 @@
       title.appendChild(button);
     }
 
+    if(!title.dataset.p50ConnectorClickInstalled){
+      title.dataset.p50ConnectorClickInstalled='1';
+      title.addEventListener('click',event=>{
+        if(event.target.closest('a,button,input,select,textarea,label'))return;
+        toggle(section);
+      });
+    }
+
     apply(section,storedCollapsed(section,key));
   }
 
@@ -102,7 +110,7 @@
     if(document.getElementById('p50ConnectorSectionsStyles'))return;
     const style=document.createElement('style');style.id='p50ConnectorSectionsStyles';
     style.textContent=`
-      .p50-connector-section>.p50-connector-header{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:default}
+      .p50-connector-section>.p50-connector-header{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
       .p50-connector-toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid #394339;border-radius:999px;background:#0c110c;color:#d7ded4;padding:5px 9px;font:inherit;font-size:10px;font-weight:950;cursor:pointer;white-space:nowrap}
       .p50-connector-toggle:hover,.p50-connector-toggle:focus-visible{border-color:#b7ff00;color:#b7ff00;outline:none}
       .p50-connector-panel[hidden]{display:none!important}
@@ -114,15 +122,27 @@
   }
 
   function setOpen(key,open){
-    const section=document.querySelector(`[data-p50-connector-key="${CSS.escape(String(key))}"]`)||Object.entries(KNOWN_IDS).find(([,value])=>value===key)?.[0]&&document.getElementById(Object.entries(KNOWN_IDS).find(([,value])=>value===key)[0]);
-    if(!section)return;enhance(section);apply(section,!open,{persistState:true});
+    const escaped=CSS.escape(String(key));
+    let section=document.querySelector(`[data-p50-connector-key="${escaped}"]`);
+    if(!section){
+      const entry=Object.entries(KNOWN_IDS).find(([,value])=>value===key);
+      if(entry)section=document.getElementById(entry[0]);
+    }
+    if(!section)return;
+    enhance(section);
+    apply(section,!open,{persistState:true});
   }
 
   function install(){
     injectStyles();scan();
     new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
     window.PASS50_CONNECTOR_SECTIONS={
-      register(section,key,defaultState='collapsed'){if(!section)return;section.dataset.p50ConnectorKey=String(key);section.dataset.p50ConnectorDefault=defaultState;enhance(section);},
+      register(section,key,defaultState='collapsed'){
+        if(!section)return;
+        section.dataset.p50ConnectorKey=String(key);
+        section.dataset.p50ConnectorDefault=defaultState;
+        enhance(section);
+      },
       open:key=>setOpen(key,true),
       close:key=>setOpen(key,false),
       refresh:scan,
