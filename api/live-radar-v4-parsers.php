@@ -53,8 +53,15 @@ function p50_live_v4_tiktok_owner_mismatch(string $body,string $handle): bool {
     return strcasecmp(trim($m[1],'@'),$handle)!==0;
 }
 
+function p50_live_v4_tiktok_ended_signal(string $body): bool {
+    $body=p50_live_v4_unescape($body);
+    $textEnd=(bool)preg_match('/\b(?:(?:ce|le)\s+)?live\s+(?:est\s+|has\s+)?(?:termin(?:é|ée|e|ee|és|ées|es)|ended)\b|\b(?:direct|diffusion|broadcast)\s+(?:est\s+)?(?:termin(?:é|ée|e|ee|és|ées|es)|ended)\b|\bnot\s+currently\s+live\b|\broom\s+not\s+found\b/iu',$body);
+    $structured=(bool)preg_match('/"(?:liveStatus|live_status)"\s*:\s*4(?:\D|$)|"(?:isLive|is_live|isLiveStreaming)"\s*:\s*false|"(?:broadcast_status|roomStatus|room_status)"\s*:\s*"?(?:4|ended|finished|replay|offline)"?/i',$body);
+    return $textEnd||$structured;
+}
+
 function p50_live_v4_parse_tiktok(array $source,array $responses): array {
-    $identity=p50_live_v4_identity('TikTok',(string)$source['url']);$errors=[];$maxMs=0;$blocked=0;$offline=0;$positive=[];$bodies=[];$roomVotes=[];
+    $identity=p50_live_v4_identity('TikTok',(string)$source['url']);$errors=[];$maxMs=0;$blocked=0;$offline=0;$positive=[];$bodies=[];$roomVotes=[];$endedLabels=[];
     foreach($responses as $label=>$r){
         $maxMs=max($maxMs,(int)($r['timeMs']??0));
         if(empty($r['ok'])){$errors[]=$label.':'.((string)($r['error']??'')?:('http_'.($r['status']??0)));continue;}
@@ -62,17 +69,18 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
         if($body===''||p50_live_v4_block_page($body)){$blocked++;continue;}
         $roomId=p50_live_v4_tiktok_room_id($body);$isApi=in_array($label,['api','api_basic'],true);$json=$isApi?json_decode($body,true):null;
         if(p50_live_v4_tiktok_owner_mismatch($body,(string)$identity['handle']))continue;
+        $explicitEnded=p50_live_v4_tiktok_ended_signal($body)||($isApi&&$json!==null&&(bool)preg_match('/"status"\s*:\s*4(?:\D|$)/i',$body));
+        if($explicitEnded){$offline++;$endedLabels[]=$label;continue;}
         $active=(bool)preg_match('/"(?:liveStatus|live_status)"\s*:\s*2(?:\D|$)|"(?:isLive|is_live)"\s*:\s*true/i',$body)
             ||($isApi&&$json!==null&&(bool)preg_match('/"status"\s*:\s*2(?:\D|$)/i',$body))
             ||($roomId!==''&&(bool)preg_match('/"LiveRoom"\s*:|"webcastRoomId"\s*:|"liveRoomId"\s*:/i',$body));
-        $explicitOffline=($isApi&&$json!==null&&(bool)preg_match('/"(?:liveStatus|live_status)"\s*:\s*4(?:\D|$)|"(?:isLive|is_live)"\s*:\s*false/i',$body))
-            ||(in_array($label,['live','mobile_live','embed'],true)&&$roomId===''&&(bool)preg_match('/live has ended|not currently live|room not found/i',$body));
-        if($explicitOffline){$offline++;continue;}
         if($roomId!==''&&$active){$positive[$label]=['roomId'=>$roomId,'api'=>$isApi,'body'=>$body];$roomVotes[$roomId]=($roomVotes[$roomId]??0)+1;}
     }
+    $strongApi=false;foreach($positive as $item)if($item['api']){$strongApi=true;break;}
+    if($endedLabels&&!$strongApi)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'offline'=>$offline,'positive'=>array_keys($positive)]];
     if($positive){
         uasort($positive,static fn($a,$b)=>(int)$b['api']<=>(int)$a['api']);$first=reset($positive);$roomId=(string)$first['roomId'];
-        $strongApi=false;foreach($positive as $item)if($item['api']){$strongApi=true;$roomId=(string)$item['roomId'];break;}
+        foreach($positive as $item)if($item['api']){$roomId=(string)$item['roomId'];break;}
         arsort($roomVotes);$votedRoom=(string)array_key_first($roomVotes);$votes=(int)($roomVotes[$votedRoom]??0);if($votes>1)$roomId=$votedRoom;
         $state=$strongApi||$votes>=2?'live':'probable';$confidence=$strongApi?99:($votes>=2?95:78);
         $best='';$bestUrl=$identity['liveUrl'];foreach(['live','mobile_live','embed','profile','api','api_basic'] as $label)if(!empty($bodies[$label])){$best=$bodies[$label];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}
@@ -80,10 +88,10 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
         if($title===''||preg_match('/^(TikTok|Make Your Day)$/iu',$title))$title=trim((string)($source['public_name']??''));
         if($title==='')$title='Direct TikTok détecté';elseif(!preg_match('/\b(direct|live)\b/iu',$title))$title.=' est en direct';
         $live=['profileId'=>(string)$source['profile_id'],'platform'=>'TikTok','title'=>$title,'url'=>$identity['liveUrl'],'thumbnail'=>(string)($meta['image']??''),'confidence'=>$confidence,'startedAt'=>null,'viewers'=>p50_live_v4_viewers(implode("\n",$bodies)),'metadata'=>['profileUrl'=>$identity['profileUrl'],'handle'=>'@'.$identity['handle'],'roomId'=>$roomId,'probeLabels'=>array_keys($positive),'roomVotes'=>$votes,'classification'=>$state]];
-        return ['state'=>$state,'confidence'=>$confidence,'responseMs'=>$maxMs,'error'=>$state==='probable'?'tiktok_single_positive_probe':'','live'=>$live,'evidence'=>['positive'=>array_keys($positive),'blocked'=>$blocked,'offline'=>$offline]];
+        return ['state'=>$state,'confidence'=>$confidence,'responseMs'=>$maxMs,'error'=>$state==='probable'?'tiktok_single_positive_probe':'','live'=>$live,'evidence'=>['positive'=>array_keys($positive),'ended'=>$endedLabels,'blocked'=>$blocked,'offline'=>$offline]];
     }
-    if($offline>0)return ['state'=>'offline','error'=>'tiktok_explicit_offline','confidence'=>96,'responseMs'=>$maxMs,'evidence'=>['blocked'=>$blocked,'offline'=>$offline]];
-    return ['state'=>'unknown','error'=>$blocked>0?'tiktok_blocked_or_challenged':($errors?implode(';',$errors):'tiktok_no_live_signal'),'confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['blocked'=>$blocked,'offline'=>$offline]];
+    if($offline>0)return ['state'=>'offline','error'=>'tiktok_explicit_offline','confidence'=>96,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'offline'=>$offline]];
+    return ['state'=>'unknown','error'=>$blocked>0?'tiktok_blocked_or_challenged':($errors?implode(';',$errors):'tiktok_no_live_signal'),'confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'offline'=>$offline]];
 }
 
 function p50_live_v4_parse_instagram(array $source,array $responses): array {

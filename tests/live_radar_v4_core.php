@@ -30,6 +30,17 @@ must($single['state']==='probable','Une seule preuve positive doit rester à con
 $offline=p50_live_v4_parse_tiktok($source,['api'=>response('{"liveStatus":4,"isLive":false,"uniqueId":"coachtest"}')]);
 must($offline['state']==='offline','Une preuve API explicite de fin doit être hors ligne.');
 
+$endedHtml='<!doctype html><div>Le LIVE est terminé</div><script>{"LiveRoom":{"id":"741234567891"},"isLive":true,"roomId":"741234567891"}</script>';
+$endedFrench=p50_live_v4_parse_tiktok($source,['live'=>response($endedHtml,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($endedHtml,200,'https://www.tiktok.com/embed/live/@coachtest')]);
+must($endedFrench['state']==='offline','« Le LIVE est terminé » doit gagner sur les anciens roomId et LiveRoom.');
+must(($endedFrench['error']??'')==='tiktok_live_ended','La raison de fin TikTok doit être explicite.');
+
+$apiLiveWithStaleEmbed=p50_live_v4_parse_tiktok($source,[
+    'api'=>response('{"status":2,"room_id":"741234567892","uniqueId":"coachtest"}'),
+    'embed'=>response($endedHtml,200,'https://www.tiktok.com/embed/live/@coachtest'),
+]);
+must($apiLiveWithStaleEmbed['state']==='live','Une API TikTok active et cohérente doit gagner sur un embed HTML retardé.');
+
 $blocked=p50_live_v4_parse_tiktok($source,['live'=>response('<html>Verify to continue - captcha</html>')]);
 must($blocked['state']==='unknown','Un challenge anti-bot ne doit pas être interprété comme une fin de direct.');
 
@@ -47,4 +58,4 @@ must($instagram['state']==='live','Signal Instagram actif explicite.');
 $facebook=p50_live_v4_parse_facebook(['profile_id'=>'fb','public_name'=>'FB','platform'=>'Facebook','url'=>'https://www.facebook.com/test'],['live'=>response('{"is_live_streaming":true,"video_id":"123456789"} https://www.facebook.com/test/videos/123456789')]);
 must($facebook['state']==='live','Signal Facebook actif et vidéo spécifique.');
 
-echo json_encode(['ok'=>true,'cases'=>9],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>11],JSON_UNESCAPED_SLASHES).PHP_EOL;
