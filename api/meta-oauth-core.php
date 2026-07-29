@@ -99,3 +99,36 @@ function p50mo_redirect(string $status,string $code=''): never {
     header_remove('Content-Type');header('Content-Type: text/html; charset=utf-8');header('Cache-Control: no-store');header('Referrer-Policy: no-referrer');
     echo '<!doctype html><html lang="fr"><meta charset="utf-8"><title>PASS50 · Meta</title><body><p>Connexion Meta terminée.</p><script>(function(){var m='.json_encode($message).';var t='.json_encode($target).';var o='.json_encode($origin).';try{if(window.opener&&!window.opener.closed){window.opener.postMessage(m,o);window.close();return;}}catch(e){}window.location.replace(t);}());</script></body></html>';exit;
 }
+
+function p50mo_parse_signed_request(string $signedRequest): array {
+    if($signedRequest===''||substr_count($signedRequest,'.')!==1)throw new RuntimeException('Requête de suppression Meta invalide.');
+    [$encodedSignature,$encodedPayload]=explode('.',$signedRequest,2);
+    $signature=p50mo_b64d($encodedSignature);$payload=json_decode(p50mo_b64d($encodedPayload),true);
+    if(!is_array($payload))throw new RuntimeException('Charge utile de suppression Meta invalide.');
+    $algorithm=strtoupper((string)($payload['algorithm']??''));
+    if($algorithm!=='HMAC-SHA256')throw new RuntimeException('Algorithme de signature Meta non pris en charge.');
+    $expected=hash_hmac('sha256',$encodedPayload,p50mo_config()['app_secret'],true);
+    if(!hash_equals($expected,$signature))throw new RuntimeException('Signature de suppression Meta invalide.');
+    $metaUserId=trim((string)($payload['user_id']??''));
+    if($metaUserId===''||!preg_match('/^[A-Za-z0-9_-]{2,100}$/',$metaUserId))throw new RuntimeException('Identifiant Meta de suppression invalide.');
+    return $payload;
+}
+
+function p50mo_delete_local_data_for_meta_user(string $metaUserId,string $confirmationCode): int {
+    p50mo_ensure_schema();$pdo=db();$stmt=$pdo->prepare('SELECT user_id FROM p50_meta_oauth_connections WHERE meta_user_id=?');$stmt->execute([$metaUserId]);$userIds=array_values(array_filter(array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN))));
+    $deletedConnections=0;$pdo->beginTransaction();
+    try{
+        foreach($userIds as $userId){
+            $assets=$pdo->prepare('SELECT profile_id,platform FROM p50_meta_oauth_assets WHERE user_id=?');$assets->execute([$userId]);
+            foreach($assets->fetchAll() as $asset){
+                $profileId=trim((string)($asset['profile_id']??''));$platform=trim((string)($asset['platform']??''));if($profileId===''||$platform==='')continue;
+                $deleteLives=$pdo->prepare("DELETE FROM p50_live_streams WHERE profile_id=? AND platform=? AND source='meta_authorized'");$deleteLives->execute([$profileId,$platform]);
+            }
+            $pdo->prepare('DELETE FROM p50_meta_oauth_assets WHERE user_id=?')->execute([$userId]);
+            $deleteConnection=$pdo->prepare('DELETE FROM p50_meta_oauth_connections WHERE user_id=?');$deleteConnection->execute([$userId]);$deletedConnections+=$deleteConnection->rowCount();
+        }
+        $insert=$pdo->prepare("INSERT INTO p50_meta_deletion_requests(confirmation_code,meta_user_hash,status,requested_at,completed_at) VALUES(?,?, 'completed',UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE status='completed',completed_at=UTC_TIMESTAMP()");
+        $insert->execute([$confirmationCode,hash('sha256',$metaUserId)]);$pdo->commit();
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    return $deletedConnections;
+}
