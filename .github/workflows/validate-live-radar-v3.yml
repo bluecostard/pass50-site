@@ -8,11 +8,13 @@ on:
       - 'api/live-radar-v4-parsers.php'
       - 'api/live-radar-v4-storage.php'
       - 'api/live-status-v4.php'
+      - 'api/live-status.php'
       - 'live-radar-v3.js'
       - 'LIVE_RADAR_V4_NOTES.md'
       - 'tests/test_live_radar_v3.py'
       - 'tests/test_live_radar_v4_static.py'
       - 'tests/test_live_radar_v4_docs.py'
+      - 'tests/test_live_radar_runtime_v4.py'
       - 'tests/live_radar_v4_core.php'
       - 'tests/live_radar_v4_mariadb.php'
       - '.github/workflows/validate-live-radar-v3.yml'
@@ -49,6 +51,7 @@ jobs:
           php -l api/live-radar-v4-parsers.php
           php -l api/live-radar-v4-storage.php
           php -l api/live-status-v4.php
+          php -l api/live-status.php
           php -l tests/live_radar_v4_core.php
           php -l tests/live_radar_v4_mariadb.php
       - name: Vérifier la syntaxe JavaScript
@@ -58,6 +61,7 @@ jobs:
           python3 -m unittest tests/test_live_radar_v3.py
           python3 -m unittest tests/test_live_radar_v4_static.py
           python3 -m unittest tests/test_live_radar_v4_docs.py
+          python3 -m unittest tests/test_live_radar_runtime_v4.py
           php tests/live_radar_v4_core.php
       - name: Vérifier la continuité MariaDB
         run: php tests/live_radar_v4_mariadb.php
