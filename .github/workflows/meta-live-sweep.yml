@@ -1,0 +1,35 @@
+name: PASS50 Meta Live Sweep
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Contrôler les comptes Meta autorisés
+        env:
+          CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "$CRON_SECRET"
+          response="$(curl --fail --silent --show-error --location --max-time 45 \
+            -X POST \
+            -H "Accept: application/json" \
+            -H "X-PASS50-CRON-SECRET: ${CRON_SECRET}" \
+            "https://pass50.store/api/meta-live-collect.php?t=$(date +%s)")"
+          printf '%s' "$response" > /tmp/meta-live.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/meta-live.json', encoding='utf-8') as stream:
+              data=json.load(stream)
+          if not data.get('ok'):
+              raise SystemExit('Collecte Meta refusée')
+          print(f"Meta PASS50 : {int(data.get('assetsChecked') or 0)} actifs contrôlés · {int(data.get('activeLives') or 0)} live(s)")
+          PY

@@ -34,6 +34,16 @@ return [
         // Clé de 32 octets encodée en base64, utilisée pour chiffrer les jetons OAuth en base.
         'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
     ],
+    'meta_oauth' => [
+        // Application Business Meta. Ne jamais écrire App Secret ou jetons dans GitHub.
+        'app_id' => getenv('META_APP_ID') ?: '',
+        'app_secret' => getenv('META_APP_SECRET') ?: '',
+        'redirect_uri' => getenv('META_REDIRECT_URI') ?: 'https://www.pass50.store/api/meta-oauth-callback.php',
+        // Utiliser la version Graph API affichée dans le tableau de bord de l’application Meta.
+        'graph_version' => getenv('META_GRAPH_VERSION') ?: '',
+        // Peut réutiliser la même clé de chiffrement de 32 octets que YouTube.
+        'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
+    ],
     'data_engine' => [
         // PASS50 publie uniquement les données à 90 % ou plus.
         'confidence_threshold' => 90,
