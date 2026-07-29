@@ -16,13 +16,13 @@ function p50mo_safe_graph_error(array $response): array {
     $message=trim((string)($error['message']??''));
     if($message!==''){
         $message=preg_replace('/(?:EA[A-Za-z0-9_-]{20,}|access_token=[^&\s]+)/i','[valeur masquée]',$message)??$message;
-        $message=mb_substr($message,0,180);
+        $message=substr($message,0,180);
     }
     return [
         'http'=>(int)($response['status']??0),
         'code'=>isset($error['code'])?(int)$error['code']:null,
         'subcode'=>isset($error['error_subcode'])?(int)$error['error_subcode']:null,
-        'type'=>mb_substr(trim((string)($error['type']??'')),0,80),
+        'type'=>substr(trim((string)($error['type']??'')),0,80),
         'message'=>$message,
     ];
 }
