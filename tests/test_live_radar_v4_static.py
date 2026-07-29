@@ -37,6 +37,21 @@ class LiveRadarV4StaticTests(unittest.TestCase):
         manual_key_check = endpoint.index("return isset($officialKeys[$key])")
         self.assertLess(meta_check, manual_key_check)
 
+    def test_public_rows_require_latest_confirmation(self):
+        storage = FILES['storage']
+        self.assertIn("h.last_state='live'", storage)
+        self.assertIn("INTERVAL 3 MINUTE", storage)
+        self.assertIn("latest_probe_not_confirmed", storage)
+        self.assertIn("h.last_state IN ('unknown','probable')", storage)
+
+    def test_facebook_uses_specific_video_and_independent_probes(self):
+        parser = FILES['parsers']
+        self.assertIn('videoVotes', parser)
+        self.assertIn('public_multi_probe', parser)
+        self.assertIn("$votes>=2", parser)
+        self.assertIn('facebook_active_without_specific_video', parser)
+        self.assertIn('watch/?v=', parser)
+
 
 if __name__ == '__main__':
     unittest.main()
