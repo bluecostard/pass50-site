@@ -49,18 +49,24 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn("'meta_authorized'", STORAGE)
 
     def test_ui_is_loaded_and_has_no_publish_action(self):
-        self.assertIn('meta-oauth-ui-v1.js?v=1.1', LOADER)
+        self.assertIn('meta-oauth-ui-v1.js?v=1.2', LOADER)
         self.assertIn('meta-live-collect.php', UI)
         self.assertIn('Aucune publication automatique', UI)
         self.assertNotIn('publish', UI.lower())
 
     def test_connect_button_cannot_fail_silently(self):
-        self.assertIn('Préparation…', UI)
+        self.assertIn('Redirection vers Meta…', UI)
         self.assertIn('p50-meta-message error', UI)
         self.assertIn('Connexion Meta impossible', UI)
         self.assertIn("addEventListener('click'", UI)
         self.assertIn('},true);', UI)
         self.assertIn('AbortController', UI)
+
+    def test_oauth_does_not_use_conflicting_window_open(self):
+        self.assertNotIn("window.open(", UI)
+        self.assertNotIn("about:blank", UI)
+        self.assertIn('window.location.assign(authorizationUrl)', UI)
+        self.assertIn("pass50_meta_oauth_return", UI)
 
     def test_connector_sections_are_collapsible_and_future_ready(self):
         self.assertIn('connector-sections-v1.js?v=1.1', LOADER)
