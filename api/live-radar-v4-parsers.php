@@ -107,17 +107,44 @@ function p50_live_v4_parse_instagram(array $source,array $responses): array {
 }
 
 function p50_live_v4_parse_facebook(array $source,array $responses): array {
-    $identity=p50_live_v4_identity('Facebook',(string)$source['url']);$combined='';$errors=[];$maxMs=0;$ok=0;
-    foreach($responses as $label=>$r){$maxMs=max($maxMs,(int)($r['timeMs']??0));if(!empty($r['ok'])){$ok++;$combined.="\n".(string)$r['body']."\n".(string)($r['finalUrl']??'');}else $errors[]=$label.':http_'.($r['status']??0);}
+    $identity=p50_live_v4_identity('Facebook',(string)$source['url']);$errors=[];$maxMs=0;$ok=0;$blocked=0;$positive=[];$activeWithoutVideo=[];$endedLabels=[];$videoVotes=[];$bodies=[];$structuredLabels=[];
+    foreach($responses as $label=>$r){
+        $maxMs=max($maxMs,(int)($r['timeMs']??0));
+        if(empty($r['ok'])){$errors[]=$label.':http_'.($r['status']??0);continue;}
+        $ok++;$body=p50_live_v4_unescape((string)($r['body']??''));$probe=$body."\n".(string)($r['finalUrl']??'');$bodies[$label]=$body;
+        if($body===''||p50_live_v4_block_page($probe)){$blocked++;continue;}
+        $structuredActive=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live|isLive)"\s*:\s*true|"broadcast_status"\s*:\s*"(?:LIVE|ACTIVE)"/i',$probe);
+        $textActive=(bool)preg_match('/\b(?:est\s+en\s+direct|en\s+direct\s+maintenant|is\s+live(?:\s+now)?|currently\s+live|live\s+now|diffusion\s+en\s+direct)\b/iu',$probe);
+        $ended=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live|isLive)"\s*:\s*false|"broadcast_status"\s*:\s*"(?:VOD|ENDED|FINISHED)"|live video has ended|\bwas live\b|\bétait en direct\b|\bdirect (?:est )?termin(?:é|e)\b/iu',$probe);
+        $ids=[];
+        foreach([
+            '#facebook\.com/(?:watch/\?v=|[^"\'<>\s]+/videos/)([1-9]\d{5,})#i',
+            '#/(?:videos|live_videos)/([1-9]\d{5,})#i',
+            '/"(?:video_id|videoId|broadcast_id|broadcastId)"\s*:\s*"?([1-9]\d{5,})"?/i',
+        ] as $pattern)if(preg_match_all($pattern,$probe,$matches))foreach($matches[1] as $id)$ids[(string)$id]=true;
+        if($ended&&!$structuredActive){$endedLabels[]=$label;continue;}
+        $active=$structuredActive||$textActive;
+        if(!$active)continue;
+        if($structuredActive)$structuredLabels[]=$label;
+        if(!$ids){$activeWithoutVideo[]=$label;continue;}
+        $positive[$label]=array_keys($ids);
+        foreach(array_keys($ids) as $id)$videoVotes[$id]=($videoVotes[$id]??0)+1;
+    }
     if($ok===0)return ['state'=>'unknown','error'=>implode(';',$errors),'confidence'=>0,'responseMs'=>$maxMs];
-    if(p50_live_v4_block_page($combined))return ['state'=>'unknown','error'=>'facebook_blocked_or_challenged','confidence'=>0,'responseMs'=>$maxMs];
-    $active=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live)"\s*:\s*true|"broadcast_status"\s*:\s*"LIVE"/i',$combined);
-    $specific=(bool)preg_match('#facebook\.com/[^"\']+/videos/\d+#i',$combined)||(bool)preg_match('/"(?:video_id|videoId|broadcast_id|broadcastId)"\s*:\s*"?[1-9]\d{5,}"?/i',$combined);
-    $offline=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live)"\s*:\s*false|"broadcast_status"\s*:\s*"(?:VOD|ENDED)"|live video has ended/i',$combined);
-    if($active&&$specific){$meta=p50_page_metadata($combined,$identity['liveUrl']);return ['state'=>'live','confidence'=>94,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'Facebook','title'=>trim((string)($source['public_name']??'Facebook')).' est en direct','url'=>(string)($meta['canonical']?:$identity['liveUrl']),'thumbnail'=>(string)($meta['image']??''),'confidence'=>94,'startedAt'=>null,'viewers'=>p50_live_v4_viewers($combined),'metadata'=>['profileUrl'=>$identity['profileUrl'],'probe'=>'public_live_page']]];}
-    if($active)return ['state'=>'probable','error'=>'facebook_active_without_specific_video','confidence'=>72,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'Facebook','title'=>trim((string)($source['public_name']??'Facebook')).' semble être en direct','url'=>$identity['liveUrl'],'thumbnail'=>'','confidence'=>72,'startedAt'=>null,'viewers'=>p50_live_v4_viewers($combined),'metadata'=>['profileUrl'=>$identity['profileUrl'],'classification'=>'probable']]];
-    if($offline)return ['state'=>'offline','error'=>'facebook_explicit_offline','confidence'=>96,'responseMs'=>$maxMs];
-    return ['state'=>'unknown','error'=>'facebook_no_public_live_signal','confidence'=>0,'responseMs'=>$maxMs];
+    $bestId='';$votes=0;if($videoVotes){arsort($videoVotes);$bestId=(string)array_key_first($videoVotes);$votes=(int)($videoVotes[$bestId]??0);}
+    $hasStructuredVideo=false;foreach($structuredLabels as $label)if(!empty($positive[$label])){$hasStructuredVideo=true;break;}
+    if($bestId!==''&&$positive){
+        $confidence=$hasStructuredVideo?96:($votes>=2?91:86);$bestLabel='';
+        foreach(array_keys($positive) as $label)if(in_array($bestId,$positive[$label],true)){$bestLabel=$label;break;}
+        if($bestLabel==='')$bestLabel=(string)array_key_first($positive);
+        $bestBody=(string)($bodies[$bestLabel]??'');$meta=p50_page_metadata($bestBody,(string)($responses[$bestLabel]['finalUrl']??$identity['liveUrl']));
+        $title=trim((string)($meta['title']??''));if($title===''||preg_match('/^(Facebook|Watch Facebook)$/iu',$title))$title=trim((string)($source['public_name']??'Facebook')).' est en direct';
+        $url='https://www.facebook.com/watch/?v='.rawurlencode($bestId);
+        return ['state'=>'live','confidence'=>$confidence,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'Facebook','title'=>$title,'url'=>$url,'thumbnail'=>(string)($meta['image']??''),'confidence'=>$confidence,'startedAt'=>null,'viewers'=>p50_live_v4_viewers(implode("\n",$bodies)),'metadata'=>['profileUrl'=>$identity['profileUrl'],'videoId'=>$bestId,'probeLabels'=>array_keys($positive),'videoVotes'=>$votes,'structuredLabels'=>$structuredLabels,'probe'=>'public_multi_probe']],'evidence'=>['positive'=>array_keys($positive),'ended'=>$endedLabels,'blocked'=>$blocked,'videoVotes'=>$videoVotes]];
+    }
+    if($activeWithoutVideo)return ['state'=>'probable','error'=>'facebook_active_without_specific_video','confidence'=>74,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'Facebook','title'=>trim((string)($source['public_name']??'Facebook')).' semble être en direct','url'=>$identity['liveUrl'],'thumbnail'=>'','confidence'=>74,'startedAt'=>null,'viewers'=>p50_live_v4_viewers(implode("\n",$bodies)),'metadata'=>['profileUrl'=>$identity['profileUrl'],'classification'=>'probable','probeLabels'=>$activeWithoutVideo]],'evidence'=>['positive'=>[],'ended'=>$endedLabels,'blocked'=>$blocked]];
+    if($endedLabels)return ['state'=>'offline','error'=>'facebook_explicit_offline','confidence'=>96,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked]];
+    return ['state'=>'unknown','error'=>$blocked>0?'facebook_blocked_or_challenged':'facebook_no_public_live_signal','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'errors'=>$errors]];
 }
 
 function p50_live_v4_parse_source(array $source,array $responses): array {
