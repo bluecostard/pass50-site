@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/meta-oauth-core.php';
+require __DIR__.'/meta-oauth-assets.php';
 require __DIR__.'/meta-oauth-errors.php';
 set_time_limit(45);
 
@@ -16,16 +17,8 @@ try{
     $stmt->execute([$sessionHash]);$sessionUser=$stmt->fetch();if(!is_array($sessionUser))p50mo_redirect('error','pass50_session_expired');$userId=(string)$sessionUser['id'];
     $cfg=p50mo_config();
     $short=p50mo_http(
-        'https://graph.facebook.com/'.$cfg['graph_version'].'/oauth/access_token',
-        'POST',
-        [],
-        [
-            'grant_type'=>'authorization_code',
-            'client_id'=>$cfg['app_id'],
-            'client_secret'=>$cfg['app_secret'],
-            'redirect_uri'=>$cfg['redirect_uri'],
-            'code'=>$code,
-        ],
+        'https://graph.facebook.com/'.$cfg['graph_version'].'/oauth/access_token','POST',[],
+        ['grant_type'=>'authorization_code','client_id'=>$cfg['app_id'],'client_secret'=>$cfg['app_secret'],'redirect_uri'=>$cfg['redirect_uri'],'code'=>$code],
         ['Accept: application/json']
     );
     if($short['status']<200||$short['status']>=300)throw p50mo_error($short,'Échange du code Meta refusé');
@@ -36,22 +29,13 @@ try{
     $permissions=p50mo_graph('me/permissions',$accessToken);if($permissions['status']<200||$permissions['status']>=300)throw p50mo_error($permissions,'Lecture des autorisations Meta impossible');
     $granted=[];foreach((array)($permissions['json']['data']??[]) as $permission)if(($permission['status']??'')==='granted')$granted[]=(string)($permission['permission']??'');
     $missing=array_values(array_diff(P50MO_REQUIRED_SCOPES,$granted));if($missing)throw new RuntimeException('Autorisations Meta manquantes : '.implode(', ',$missing).'.');
-    $pagesResponse=p50mo_graph('me/accounts',$accessToken,['fields'=>'id,name,access_token,tasks,link,picture{url},instagram_business_account','limit'=>100]);if($pagesResponse['status']<200||$pagesResponse['status']>=300)throw p50mo_error($pagesResponse,'Lecture des Pages Facebook impossible');
-    $assets=[];
-    foreach((array)($pagesResponse['json']['data']??[]) as $page){
-        $pageId=trim((string)($page['id']??''));$pageToken=trim((string)($page['access_token']??''));if($pageId===''||$pageToken==='')continue;
-        $detail=p50mo_graph($pageId,$pageToken,['fields'=>'id,name,link,picture{url},instagram_business_account{id,username,name,profile_picture_url}']);$data=$detail['status']>=200&&$detail['status']<300?$detail['json']:$page;
-        $pageUrl=trim((string)($data['link']??$page['link']??''));$pageName=(string)($data['name']??$page['name']??'Page Facebook');$picture=(string)($data['picture']['data']['url']??$page['picture']['data']['url']??'');
-        $assets[]=['platform'=>'Facebook','asset_id'=>$pageId,'profile_id'=>p50mo_match_profile('Facebook',$pageUrl),'name'=>$pageName,'username'=>'','url'=>$pageUrl,'picture'=>$picture,'parent'=>null,'token'=>$pageToken,'tasks'=>json_encode($page['tasks']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)];
-        $ig=$data['instagram_business_account']??null;
-        if(is_array($ig)&&trim((string)($ig['id']??''))!==''){$igId=(string)$ig['id'];$igDetail=$ig;if(empty($ig['username'])){$response=p50mo_graph($igId,$pageToken,['fields'=>'id,username,name,profile_picture_url']);if($response['status']>=200&&$response['status']<300)$igDetail=$response['json'];}$username=trim((string)($igDetail['username']??''));$igUrl=$username!==''?'https://www.instagram.com/'.$username.'/':'';$assets[]=['platform'=>'Instagram','asset_id'=>$igId,'profile_id'=>p50mo_match_profile('Instagram',$igUrl,$username),'name'=>(string)($igDetail['name']??$username?:'Compte Instagram'),'username'=>$username,'url'=>$igUrl,'picture'=>(string)($igDetail['profile_picture_url']??''),'parent'=>$pageId,'token'=>$pageToken,'tasks'=>null];}
-    }
-    p50mo_ensure_schema();$pdo=db();$pdo->beginTransaction();
+
+    $discovery=p50mo_discover_authorized_assets($accessToken);$warning=$discovery['warning'];p50mo_ensure_schema();$pdo=db();$pdo->beginTransaction();
     try{
-        $pdo->prepare("INSERT INTO p50_meta_oauth_connections(user_id,meta_user_id,meta_user_name,access_token_encrypted,scopes,token_expires_at,status,last_error,connected_at,last_refreshed_at) VALUES(?,?,?,?,?,?,'active',NULL,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE meta_user_id=VALUES(meta_user_id),meta_user_name=VALUES(meta_user_name),access_token_encrypted=VALUES(access_token_encrypted),scopes=VALUES(scopes),token_expires_at=VALUES(token_expires_at),status='active',last_error=NULL,connected_at=UTC_TIMESTAMP(),last_refreshed_at=UTC_TIMESTAMP()")
-            ->execute([$userId,(string)($me['json']['id']??''),(string)($me['json']['name']??''),p50mo_encrypt($accessToken),implode(' ',$granted),gmdate('Y-m-d H:i:s',time()+$expiresIn)]);
-        $pdo->prepare('DELETE FROM p50_meta_oauth_assets WHERE user_id=?')->execute([$userId]);$insert=$pdo->prepare("INSERT INTO p50_meta_oauth_assets(user_id,platform,asset_id,profile_id,asset_name,username,profile_url,picture_url,parent_page_id,access_token_encrypted,tasks,status,last_checked_at,last_error,connected_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,'active',NULL,NULL,UTC_TIMESTAMP())");
-        foreach($assets as $asset)$insert->execute([$userId,$asset['platform'],$asset['asset_id'],$asset['profile_id'],$asset['name'],$asset['username'],$asset['url'],$asset['picture'],$asset['parent'],p50mo_encrypt($asset['token']),$asset['tasks']]);$pdo->commit();
+        $pdo->prepare("INSERT INTO p50_meta_oauth_connections(user_id,meta_user_id,meta_user_name,access_token_encrypted,scopes,token_expires_at,status,last_error,connected_at,last_refreshed_at) VALUES(?,?,?,?,?,?,'active',?,UTC_TIMESTAMP(),UTC_TIMESTAMP()) ON DUPLICATE KEY UPDATE meta_user_id=VALUES(meta_user_id),meta_user_name=VALUES(meta_user_name),access_token_encrypted=VALUES(access_token_encrypted),scopes=VALUES(scopes),token_expires_at=VALUES(token_expires_at),status='active',last_error=VALUES(last_error),connected_at=UTC_TIMESTAMP(),last_refreshed_at=UTC_TIMESTAMP()")
+            ->execute([$userId,(string)($me['json']['id']??''),(string)($me['json']['name']??''),p50mo_encrypt($accessToken),implode(' ',$granted),gmdate('Y-m-d H:i:s',time()+$expiresIn),$warning!==null?substr((string)$warning,0,255):null]);
+        p50mo_replace_assets_for_user($userId,$discovery['assets']);$pdo->commit();
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    error_log('Meta OAuth connected: user='.$userId.' assets='.count($discovery['assets']).' selected='.$discovery['selectedPages'].' edge='.$discovery['edgePages']);
     p50mo_redirect('connected');
 }catch(Throwable $e){$diagnostic=p50mo_exception_error_code($e);error_log('Meta OAuth callback ['.$diagnostic.']: '.$e->getMessage());p50mo_redirect('error',$diagnostic);}
