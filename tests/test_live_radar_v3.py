@@ -35,11 +35,13 @@ class LiveRadarV4Tests(unittest.TestCase):
         self.assertIn('continuityPreserved', ENDPOINT)
         self.assertIn("elseif($stateValue==='probable'", ENDPOINT)
 
-    def test_public_live_has_a_sweep_aligned_grace_window(self):
+    def test_public_live_requires_recent_confirmation(self):
         self.assertIn("'TikTok'=>20", SOURCE)
         self.assertIn("'YouTube'=>15", SOURCE)
         active = re.search(r'function p50_live_v4_active_rows\(.*?\n}', STORAGE, re.S).group(0)
-        self.assertNotIn("h.last_state='live'", active)
+        self.assertIn("h.last_state='live'", active)
+        self.assertIn('INTERVAL 3 MINUTE', active)
+        self.assertIn('latest_probe_not_confirmed', active)
         self.assertIn("'lastConfirmedAt'=>p50_live_v4_iso($row['last_seen_at']", active)
         self.assertIn('confirmation_grace_expired', active)
 
