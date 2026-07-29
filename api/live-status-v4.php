@@ -16,6 +16,20 @@ p50_live_v4_ensure_schema();
 p50_de_sync_registry_from_state();
 $state=p50_de_load_public_state();
 $sources=p50_live_v4_sources($state);
+
+// Priorité demandée : TikTok, Facebook, YouTube, Instagram. Les sources jamais
+// contrôlées et les directs récents conservent leur priorité interne avant ce
+// classement par plateforme afin de ne pas bloquer la rotation générale.
+$platformPriority=['TikTok'=>0,'Facebook'=>1,'YouTube'=>2,'Instagram'=>3];
+usort($sources,static function(array $a,array $b) use($platformPriority): int {
+    $cmp=((int)($a['priority']??3))<=>((int)($b['priority']??3));
+    if($cmp!==0)return $cmp;
+    $ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');
+    if($ad!==$bd){if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);}
+    $cmp=($platformPriority[(string)($a['platform']??'')]??9)<=>($platformPriority[(string)($b['platform']??'')]??9);
+    return $cmp!==0?$cmp:strnatcasecmp((string)($a['public_name']??''),(string)($b['public_name']??''));
+});
+
 $profileFilter=trim((string)($_GET['profileId']??''));
 if($profileFilter!=='')$sources=array_values(array_filter($sources,static fn($source)=>(string)$source['profile_id']===$profileFilter));
 $sourceMap=[];foreach($sources as $source)$sourceMap[(string)$source['source_key']]=$source;
@@ -23,7 +37,7 @@ $sourceMap=[];foreach($sources as $source)$sourceMap[(string)$source['source_key
 $mode=strtolower((string)($_GET['mode']??'quick'));
 if(!in_array($mode,['quick','full','profile','status'],true))$mode='quick';
 $force=p50_live_v4_bool_query('force')||in_array($mode,['full','profile'],true);
-$batch=max(1,min(12,(int)($_GET['batch']??8)));
+$batch=max(1,min(12,(int)($_GET['batch']??12)));
 $refresh=45;
 $lastScan=(string)p50_de_get_setting('live_radar_v4_last_scan_at','');
 $lastTs=$lastScan!==''?(strtotime($lastScan)?:0):0;
@@ -44,7 +58,7 @@ if($mode==='full'){
 }
 
 $scanPerformed=false;$busy=false;$foundThisPass=0;$candidatesThisPass=0;$replaysThisPass=0;$diagnostics=[];$platformStats=[];
-foreach(P50_LIVE_V4_PLATFORMS as $platform)$platformStats[$platform]=['known'=>count(array_filter($sources,static fn($source)=>(string)$source['platform']===$platform)),'scanned'=>0,'found'=>0,'candidates'=>0,'replays'=>0];
+foreach(['TikTok','Facebook','YouTube','Instagram'] as $platform)$platformStats[$platform]=['known'=>count(array_filter($sources,static fn($source)=>(string)$source['platform']===$platform)),'scanned'=>0,'found'=>0,'candidates'=>0,'replays'=>0];
 
 $lock=false;
 if($canScan&&$selected){try{$lock=(int)db()->query("SELECT GET_LOCK('pass50_live_radar_v4',0)")->fetchColumn()===1;}catch(Throwable){}}
@@ -109,5 +123,5 @@ json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
     'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,'coveragePercent'=>$coverage,
     'officialSourcesKnown'=>count($sources),'activeAutomaticConfirmed'=>count($automatic),'platforms'=>$platformStats,'health'=>$healthSummary,'lastFullSweep'=>$lastFull,
-    'refreshSeconds'=>$refresh,'graceMinutes'=>P50_LIVE_V4_GRACE_MINUTES,'diagnostics'=>$diagnostics,
+    'refreshSeconds'=>$refresh,'batchSize'=>$batch,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],'graceMinutes'=>P50_LIVE_V4_GRACE_MINUTES,'diagnostics'=>$diagnostics,
 ]]);

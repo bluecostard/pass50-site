@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/http-tools.php';
 
-const P50_DATA_CONFIDENCE_THRESHOLD = 90;
+const P50_DATA_CONFIDENCE_THRESHOLD = 80;
 const P50_PRIORITY_WAVE_V22 = [
     'census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey',
     'census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo',
@@ -17,7 +17,7 @@ function p50_de_is_priority_profile(string $profileId): bool {
 
 function p50_de_threshold(): int {
     global $config;
-    return max(90, min(100, (int)($config['data_engine']['confidence_threshold'] ?? P50_DATA_CONFIDENCE_THRESHOLD)));
+    return max(60, min(P50_DATA_CONFIDENCE_THRESHOLD, (int)($config['data_engine']['confidence_threshold'] ?? P50_DATA_CONFIDENCE_THRESHOLD)));
 }
 
 function p50_de_ensure_schema(): void {
@@ -184,7 +184,7 @@ function p50_de_ensure_schema(): void {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
     ];
     foreach ($sql as $statement) db()->exec($statement);
-    $stmt = db()->prepare("INSERT INTO p50_engine_settings(setting_key,setting_value) VALUES('confidence_threshold',?) ON DUPLICATE KEY UPDATE setting_value=setting_value");
+    $stmt = db()->prepare("INSERT INTO p50_engine_settings(setting_key,setting_value) VALUES('confidence_threshold',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");
     $stmt->execute([(string)p50_de_threshold()]);
     $done = true;
 }

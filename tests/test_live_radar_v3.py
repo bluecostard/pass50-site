@@ -9,12 +9,14 @@ STORAGE = (ROOT / 'api' / 'live-radar-v4-storage.php').read_text(encoding='utf-8
 ENDPOINT = (ROOT / 'api' / 'live-status-v4.php').read_text(encoding='utf-8')
 CLIENT = (ROOT / 'live-radar-v3.js').read_text(encoding='utf-8')
 CONFIG = (ROOT / 'app-config.js').read_text(encoding='utf-8')
+CONFIG_EXAMPLE = (ROOT / 'api' / 'config.example.php').read_text(encoding='utf-8')
+DATA_CORE = (ROOT / 'api' / 'data-engine-core.php').read_text(encoding='utf-8')
 SWEEP = (ROOT / '.github' / 'workflows' / 'live-radar-sweep.yml').read_text(encoding='utf-8')
 
 
 class LiveRadarV4Tests(unittest.TestCase):
     def test_multiplatform_scope(self):
-        for platform in ('TikTok', 'YouTube', 'Instagram', 'Facebook'):
+        for platform in ('TikTok', 'Facebook', 'YouTube', 'Instagram'):
             self.assertIn(platform, SOURCE + PARSERS)
         self.assertIn('p50_live_v4_parse_tiktok', PARSERS)
         self.assertIn('p50_live_v4_parse_youtube', PARSERS)
@@ -53,6 +55,23 @@ class LiveRadarV4Tests(unittest.TestCase):
         self.assertIn("'liveStreams'=>$streams", ENDPOINT)
         self.assertIn('p50_live_v4_health_update', ENDPOINT)
         self.assertIn('p50_live_streams', STORAGE)
+
+    def test_collection_policy_is_broader_but_probable_remains_separate(self):
+        self.assertIn('P50_DATA_CONFIDENCE_THRESHOLD = 80', DATA_CORE)
+        self.assertIn('min(P50_DATA_CONFIDENCE_THRESHOLD', DATA_CORE)
+        self.assertIn('setting_value=VALUES(setting_value)', DATA_CORE)
+        self.assertIn("'confidence_threshold' => 80", CONFIG_EXAMPLE)
+        self.assertIn("elseif($stateValue==='probable'", ENDPOINT)
+        self.assertNotIn("$stateValue==='probable'&&!empty($result['live'])){\n                p50_live_v4_store_live", ENDPOINT)
+
+    def test_scan_priority_and_batch_are_expanded(self):
+        self.assertIn("['TikTok'=>0,'Facebook'=>1,'YouTube'=>2,'Instagram'=>3]", ENDPOINT)
+        self.assertIn("['TikTok','Facebook','YouTube','Instagram']", ENDPOINT)
+        self.assertIn("$_GET['batch']??12", ENDPOINT)
+        self.assertIn("const PLATFORM_PRIORITY=['TikTok','Facebook','YouTube','Instagram']", CLIENT)
+        self.assertIn("const RADAR_BATCH_SIZE='12'", CLIENT)
+        self.assertIn("'batchSize'=>$batch", ENDPOINT)
+        self.assertIn("'confidenceThreshold'=>p50_de_threshold()", ENDPOINT)
 
     def test_client_is_compatibly_loaded_but_uses_v4(self):
         self.assertIn("live-radar-v3.js?v=1.2", CONFIG)
