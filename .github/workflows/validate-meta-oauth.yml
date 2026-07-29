@@ -58,6 +58,8 @@ jobs:
           php -l api/meta-oauth-callback.php
           php -l api/meta-oauth-refresh-assets.php
           php -l api/meta-oauth-status.php
+          php -l api/meta-oauth-mapping-options.php
+          php -l api/meta-oauth-map-asset.php
           php -l api/meta-oauth-disconnect.php
           php -l api/meta-data-deletion.php
           php -l api/meta-data-deletion-status.php

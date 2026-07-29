@@ -150,10 +150,27 @@ function p50mo_discover_authorized_assets(string $userToken): array {
 }
 
 function p50mo_replace_assets_for_user(string $userId,array $assets): void {
-    $pdo=db();$pdo->prepare('DELETE FROM p50_meta_oauth_assets WHERE user_id=?')->execute([$userId]);
+    $pdo=db();
+    $existing=[];$pageMappings=[];
+    $stmt=$pdo->prepare('SELECT platform,asset_id,parent_page_id,profile_id FROM p50_meta_oauth_assets WHERE user_id=?');
+    $stmt->execute([$userId]);
+    foreach($stmt->fetchAll() as $row){
+        $profileId=trim((string)($row['profile_id']??''));
+        if($profileId==='')continue;
+        $key=(string)$row['platform'].'|'.(string)$row['asset_id'];$existing[$key]=$profileId;
+        if((string)$row['platform']==='Facebook')$pageMappings[(string)$row['asset_id']]=$profileId;
+    }
+
+    $pdo->prepare('DELETE FROM p50_meta_oauth_assets WHERE user_id=?')->execute([$userId]);
     $insert=$pdo->prepare("INSERT INTO p50_meta_oauth_assets(user_id,platform,asset_id,profile_id,asset_name,username,profile_url,picture_url,parent_page_id,access_token_encrypted,tasks,status,last_checked_at,last_error,connected_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,'active',NULL,NULL,UTC_TIMESTAMP())");
-    foreach($assets as $asset)$insert->execute([
-        $userId,$asset['platform'],$asset['asset_id'],$asset['profile_id'],$asset['name'],$asset['username'],$asset['url'],$asset['picture'],
-        $asset['parent'],p50mo_encrypt((string)$asset['token']),$asset['tasks'],
-    ]);
+    foreach($assets as $asset){
+        $key=(string)$asset['platform'].'|'.(string)$asset['asset_id'];
+        $profileId=trim((string)($asset['profile_id']??''));
+        if($profileId==='')$profileId=$existing[$key]??'';
+        if($profileId===''&&(string)$asset['platform']==='Instagram')$profileId=$pageMappings[(string)($asset['parent']??'')]??'';
+        $insert->execute([
+            $userId,$asset['platform'],$asset['asset_id'],$profileId!==''?$profileId:null,$asset['name'],$asset['username'],$asset['url'],$asset['picture'],
+            $asset['parent'],p50mo_encrypt((string)$asset['token']),$asset['tasks'],
+        ]);
+    }
 }
