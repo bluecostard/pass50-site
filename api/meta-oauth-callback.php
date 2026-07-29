@@ -2,11 +2,12 @@
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/meta-oauth-core.php';
+require __DIR__.'/meta-oauth-errors.php';
 set_time_limit(45);
 
 $state=trim((string)($_GET['state']??''));$nonce=trim((string)($_COOKIE[P50MO_NONCE_COOKIE]??''));
 try{$sessionHash=p50mo_verify_state($state,$nonce);p50mo_clear_nonce();}catch(Throwable $e){p50mo_clear_nonce();error_log('Meta OAuth state: '.$e->getMessage());p50mo_redirect('error','invalid_state');}
-if(isset($_GET['error']))p50mo_redirect('cancelled',(string)$_GET['error']);
+if(isset($_GET['error'])){$errorCode=p50mo_dialog_error_code($_GET);p50mo_redirect($errorCode==='access_denied'?'cancelled':'error',$errorCode);}
 $code=trim((string)($_GET['code']??''));if($code==='')p50mo_redirect('error','missing_code');
 
 try{
@@ -40,4 +41,4 @@ try{
         foreach($assets as $asset)$insert->execute([$userId,$asset['platform'],$asset['asset_id'],$asset['profile_id'],$asset['name'],$asset['username'],$asset['url'],$asset['picture'],$asset['parent'],p50mo_encrypt($asset['token']),$asset['tasks']]);$pdo->commit();
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
     p50mo_redirect('connected');
-}catch(Throwable $e){error_log('Meta OAuth callback: '.$e->getMessage());p50mo_redirect('error','connection_failed');}
+}catch(Throwable $e){$diagnostic=p50mo_exception_error_code($e);error_log('Meta OAuth callback ['.$diagnostic.']: '.$e->getMessage());p50mo_redirect('error',$diagnostic);}
