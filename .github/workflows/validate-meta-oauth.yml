@@ -1,0 +1,64 @@
+name: Validate Meta OAuth
+
+on:
+  pull_request:
+    paths:
+      - 'api/meta-oauth-*.php'
+      - 'api/meta-live-collect.php'
+      - 'meta-oauth-ui-v1.js'
+      - 'migration-meta-oauth-v1.sql'
+      - 'api/config.example.php'
+      - 'public-copy-fixes.js'
+      - 'api/live-radar-v4-storage.php'
+      - 'tests/meta_oauth_core.php'
+      - 'tests/meta_oauth_mariadb.php'
+      - 'tests/test_meta_oauth_v1.py'
+      - '.github/workflows/validate-meta-oauth.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      P50_TEST_DB_USER: root
+      P50_TEST_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Vérifier la syntaxe PHP
+        run: |
+          php -l api/meta-oauth-core.php
+          php -l api/meta-oauth-start.php
+          php -l api/meta-oauth-callback.php
+          php -l api/meta-oauth-status.php
+          php -l api/meta-oauth-disconnect.php
+          php -l api/meta-live-collect.php
+          php -l api/live-radar-v4-storage.php
+          php -l tests/meta_oauth_core.php
+          php -l tests/meta_oauth_mariadb.php
+      - name: Vérifier la syntaxe JavaScript
+        run: |
+          node --check meta-oauth-ui-v1.js
+          node --check public-copy-fixes.js
+      - name: Exécuter les tests déterministes
+        run: |
+          python3 -m unittest tests/test_meta_oauth_v1.py
+          php tests/meta_oauth_core.php
+      - name: Vérifier la migration MariaDB
+        run: php tests/meta_oauth_mariadb.php
+      - name: Vérifier le diff
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
