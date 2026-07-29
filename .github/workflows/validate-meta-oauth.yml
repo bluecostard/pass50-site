@@ -52,9 +52,11 @@ jobs:
       - name: Vérifier la syntaxe PHP
         run: |
           php -l api/meta-oauth-core.php
+          php -l api/meta-oauth-assets.php
           php -l api/meta-oauth-errors.php
           php -l api/meta-oauth-start.php
           php -l api/meta-oauth-callback.php
+          php -l api/meta-oauth-refresh-assets.php
           php -l api/meta-oauth-status.php
           php -l api/meta-oauth-disconnect.php
           php -l api/meta-data-deletion.php
