@@ -69,7 +69,7 @@
     if(!token()){section.remove();return;}
     if(loading){section.innerHTML='<div class="user-title"><span>Meta · Facebook & Instagram</span><span class="muted">Connexion officielle</span></div><div class="p50-meta-card">Vérification de la connexion Meta…</div>';return;}
     if(!status?.connected){
-      section.innerHTML=`<div class="user-title"><span>Meta · Facebook & Instagram</span><span class="muted">Connexion officielle</span></div><div class="p50-meta-card"><div class="p50-meta-head"><div class="p50-meta-main"><div class="p50-meta-logo">META</div><div><div class="p50-meta-title">Connecter mes comptes professionnels</div><div class="p50-meta-copy">PASS50 lira uniquement les Pages Facebook gérées et les comptes Instagram Business ou Creator liés. Aucune publication automatique.</div></div></div><div class="p50-meta-actions"><button class="btn primary" type="button" data-p50-meta-connect ${connecting?'disabled':''}>${connecting?'Préparation…':'Connecter Meta'}</button></div></div>${configurationWarning()}${errorHtml()}</div>`;
+      section.innerHTML=`<div class="user-title"><span>Meta · Facebook & Instagram</span><span class="muted">Connexion officielle</span></div><div class="p50-meta-card"><div class="p50-meta-head"><div class="p50-meta-main"><div class="p50-meta-logo">META</div><div><div class="p50-meta-title">Connecter mes comptes professionnels</div><div class="p50-meta-copy">PASS50 lira uniquement les Pages Facebook gérées et les comptes Instagram Business ou Creator liés. Aucune publication automatique.</div></div></div><div class="p50-meta-actions"><button class="btn primary" type="button" data-p50-meta-connect ${connecting?'disabled':''}>${connecting?'Redirection vers Meta…':'Connecter Meta'}</button></div></div>${configurationWarning()}${errorHtml()}</div>`;
       return;
     }
     const assets=Array.isArray(status.assets)?status.assets:[],mapped=assets.filter(a=>a.mapped).length;
@@ -87,20 +87,15 @@
   async function connect(){
     if(connecting)return;
     connecting=true;lastError='';render();
-    let popup=null;
     try{
-      popup=window.open('about:blank','pass50_meta_oauth','popup=yes,width=600,height=760,resizable=yes,scrollbars=yes');
-      if(popup){popup.document.write('<!doctype html><html lang="fr"><meta charset="utf-8"><title>PASS50 · Meta</title><body style="background:#050705;color:#fff;font-family:Arial;padding:30px"><h2>PASS50</h2><p>Préparation de la connexion Meta…</p></body></html>');popup.document.close();}
       const data=await api('meta-oauth-start.php',{method:'POST',body:{}});
       const authorizationUrl=String(data.authorizationUrl||'');
       if(!authorizationUrl)throw new Error('Le serveur n’a pas retourné l’adresse d’autorisation Meta.');
       let parsed;try{parsed=new URL(authorizationUrl);}catch{throw new Error('L’adresse d’autorisation Meta reçue est invalide.');}
       if(!/(^|\.)facebook\.com$/i.test(parsed.hostname))throw new Error('Le serveur a retourné une adresse d’autorisation inattendue.');
-      if(popup&&!popup.closed)popup.location.replace(authorizationUrl);else window.location.assign(authorizationUrl);
-      clearInterval(pollTimer);let tries=0;
-      pollTimer=setInterval(async()=>{tries++;await refresh(false);if(status?.connected||tries>45)clearInterval(pollTimer);},2000);
+      sessionStorage.setItem('pass50_meta_oauth_return','1');
+      window.location.assign(authorizationUrl);
     }catch(error){
-      if(popup&&!popup.closed)popup.close();
       lastError=error?.message||'La connexion Meta n’a pas pu démarrer.';
       connecting=false;render();notify(lastError);
     }
@@ -128,6 +123,7 @@
   function consume(){
     const url=new URL(location.href),value=url.searchParams.get('meta_oauth');if(!value)return;
     url.searchParams.delete('meta_oauth');url.searchParams.delete('code');history.replaceState(null,'',url.pathname+url.search+url.hash);
+    sessionStorage.removeItem('pass50_meta_oauth_return');
     setTimeout(()=>{document.getElementById('accountBtn')?.click();result(value);},450);
   }
 
