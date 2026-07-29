@@ -130,3 +130,5 @@ jobs:
           git add api/live-radar-v4-parsers.php api/live-radar-v4-storage.php tests/test_live_radar_v4_static.py
           git commit -m "Stabiliser les LIVE actifs et élargir Facebook public"
           git push origin HEAD:fix/live-radar-confirmed-only
+
+# trigger
