@@ -1,0 +1,41 @@
+name: Validate YouTube OAuth Automatic Eligibility
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      P50_TEST_DB_USER: root
+      P50_TEST_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: |
+          php -l api/youtube-metrics-bridge-core.php
+          php -l api/youtube-metrics-map.php
+          php -l api/metrics-collectors-core.php
+          php -l api/metrics-orchestrator-core.php
+          php -l tests/youtube_oauth_automatic_eligibility_mariadb.php
+      - name: Static tests
+        run: python3 -m unittest tests.test_youtube_oauth_automatic_eligibility
+      - name: MariaDB integration
+        run: php tests/youtube_oauth_automatic_eligibility_mariadb.php
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD

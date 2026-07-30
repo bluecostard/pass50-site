@@ -43,6 +43,26 @@ function p50ym_connection_for_profile(PDO $pdo,string $profileId): ?array {
     return is_array($row)?$row:null;
 }
 
+function p50ym_official_profile(PDO $pdo,string $profileId): ?array {
+    $connection=p50ym_connection_for_profile($pdo,$profileId);
+    if(!$connection)return null;
+    $name='';
+    if(p50_metrics_table_exists($pdo,'p50_profile_registry')){
+        $stmt=$pdo->prepare('SELECT public_name FROM p50_profile_registry WHERE profile_id=? AND alive=1 LIMIT 1');
+        $stmt->execute([$profileId]);
+        $name=trim((string)($stmt->fetchColumn()?:''));
+    }
+    $channelId=trim((string)$connection['channel_id']);
+    if($channelId==='')return null;
+    return [
+        'profile_id'=>$profileId,
+        'public_name'=>$name!==''?$name:(string)$connection['channel_title'],
+        'normalized_url'=>'https://www.youtube.com/channel/'.rawurlencode($channelId),
+        'confidence'=>99,
+        'source_type'=>'youtube_oauth_mapping',
+    ];
+}
+
 function p50ym_public_access(string $profileId=''): array {
     try{
         $pdo=db();
