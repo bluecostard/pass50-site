@@ -1,0 +1,23 @@
+name: Validate Metrics Pipeline Event Chain V1
+
+on:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Static pipeline tests
+        run: python3 -m unittest tests.test_metrics_pipeline_event_chain_v1 tests.test_metrics_ranking_schedule_v1 tests.test_metrics_ranking_publication_history_v1
+      - name: PHP lint
+        run: php -l api/metrics-ranking-publication-history-core.php
+      - name: Workflow guards
+        run: |
+          grep -F '/actions/workflows/metrics-ranking-experimental.yml/dispatches' .github/workflows/metrics-top50-2h.yml
+          grep -F '/actions/workflows/metrics-ranking-publication-simulation.yml/dispatches' .github/workflows/metrics-ranking-experimental.yml
+          grep -F 'publicStateWrites == 0' .github/workflows/metrics-ranking-publication-simulation.yml
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
