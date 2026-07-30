@@ -1,0 +1,39 @@
+name: Temporary metrics control center PR patch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/metrics-control-center-youtube-v1
+          fetch-depth: 0
+      - name: Appliquer les raccordements stricts
+        run: python3 tools/apply_metrics_control_center_patch.py
+      - name: Vérifier avant commit
+        run: |
+          php -l api/metrics-collectors-core.php
+          php -l api/metrics-social-collectors-core.php
+          php -l api/metrics-orchestrator-core.php
+          php -l api/metrics-diagnostic.php
+          php -l api/metrics-control-center-core.php
+          php -l api/youtube-metrics-bridge-core.php
+          php -l api/youtube-metrics-map.php
+          node --check data-engine-ui.js
+          python3 -m unittest tests.test_metrics_control_center_youtube_v1
+      - name: Enregistrer le raccordement
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/metrics-collectors-core.php api/metrics-social-collectors-core.php api/metrics-orchestrator-core.php api/metrics-diagnostic.php data-engine-ui.js v9-tools.js sw.js .github/workflows/validate-metrics-orchestrator-v1.yml tests/test_metrics_control_center_youtube_v1.py
+          git commit -m "Raccorder le centre de contrôle et YouTube OAuth au pipeline métrique"
+          git push origin HEAD:feat/metrics-control-center-youtube-v1
