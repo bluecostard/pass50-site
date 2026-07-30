@@ -79,17 +79,19 @@ function p50_mrp_latest_successful_run(PDO $pdo,string $period): ?array {
 
 function p50_mrp_experimental_rows(PDO $pdo,string $period): array {
     $period=p50_mrp_period($period);
-    if(!p50_metrics_table_exists($pdo,'p50_metric_ranking_current'))return ['rows'=>[],'duplicateIds'=>[],'duplicateRanks'=>[]];
+    if(!p50_metrics_table_exists($pdo,'p50_metric_ranking_current'))return ['rows'=>[],'runUuids'=>[],'duplicateIds'=>[],'duplicateRanks'=>[]];
     $registryAvailable=p50_metrics_table_exists($pdo,'p50_profile_registry');
     $identity=$registryAvailable?"r.public_name,r.handle,r.region":"c.profile_id public_name,'' handle,'' region";
     $join=$registryAvailable?'LEFT JOIN p50_profile_registry r ON r.profile_id=c.profile_id':'';
-    $stmt=$pdo->prepare("SELECT c.profile_id,c.rank_position,c.score,c.confidence,c.coverage,c.classable,c.exclusion_reasons_json,$identity
+    $runColumn=p50_metrics_column_exists($pdo,'p50_metric_ranking_current','run_uuid')?'c.run_uuid':"'' run_uuid";
+    $stmt=$pdo->prepare("SELECT c.profile_id,$runColumn,c.rank_position,c.score,c.confidence,c.coverage,c.classable,c.exclusion_reasons_json,$identity
         FROM p50_metric_ranking_current c $join
         WHERE c.algorithm_version=? AND c.period_key=?
         ORDER BY c.classable DESC,c.rank_position IS NULL,c.rank_position,c.score DESC,c.profile_id");
-    $stmt->execute([P50_MR_ALGORITHM_VERSION,$period]);$rows=[];$seenIds=[];$seenRanks=[];$duplicateIds=[];$duplicateRanks=[];
+    $stmt->execute([P50_MR_ALGORITHM_VERSION,$period]);$rows=[];$seenIds=[];$seenRanks=[];$seenRunUuids=[];$duplicateIds=[];$duplicateRanks=[];
     foreach($stmt->fetchAll() as $row){
-        $profileId=(string)$row['profile_id'];
+        $profileId=(string)$row['profile_id'];$runUuid=trim((string)($row['run_uuid']??''));
+        if($runUuid!=='')$seenRunUuids[$runUuid]=true;
         if(isset($seenIds[$profileId]))$duplicateIds[$profileId]=true;
         $seenIds[$profileId]=true;
         $rank=$row['rank_position']===null?null:(int)$row['rank_position'];
@@ -98,13 +100,13 @@ function p50_mrp_experimental_rows(PDO $pdo,string $period): array {
             $seenRanks[$rank]=true;
         }
         $rows[]=[
-            'profileId'=>$profileId,'name'=>(string)($row['public_name']??$profileId),'handle'=>(string)($row['handle']??''),
+            'profileId'=>$profileId,'runUuid'=>$runUuid,'name'=>(string)($row['public_name']??$profileId),'handle'=>(string)($row['handle']??''),
             'region'=>(string)($row['region']??''),'rank'=>$rank,'score'=>$row['score']===null?null:(float)$row['score'],
             'confidence'=>(float)$row['confidence'],'coverage'=>(float)$row['coverage'],'classable'=>(bool)$row['classable'],
             'exclusionReasons'=>json_decode((string)$row['exclusion_reasons_json'],true)?:[],
         ];
     }
-    return ['rows'=>$rows,'duplicateIds'=>array_keys($duplicateIds),'duplicateRanks'=>array_keys($duplicateRanks)];
+    return ['rows'=>$rows,'runUuids'=>array_keys($seenRunUuids),'duplicateIds'=>array_keys($duplicateIds),'duplicateRanks'=>array_keys($duplicateRanks)];
 }
 
 function p50_mrp_median(array $values): ?float {
@@ -186,9 +188,11 @@ function p50_mrp_simulate(PDO $pdo,string $period='2H',int $limit=200,?DateTimeI
     $gates=[
         p50_mrp_gate('public_state',$publicEnvelope['exists']&&count($public['profileIndex'])>0?'pass':'block','État public lisible et non vide.',count($public['profileIndex'])),
         p50_mrp_gate('public_profile_ids',!$public['duplicateIds']?'pass':'block','Identifiants publics uniques.',$public['duplicateIds']),
+        p50_mrp_gate('public_ranking_non_empty',$comparison['publicCount']>0?'pass':'block','Le classement public contient au moins un profil classable.',$comparison['publicCount']),
         p50_mrp_gate('experimental_profile_ids',!$experimental['duplicateIds']?'pass':'block','Identifiants expérimentaux uniques.',$experimental['duplicateIds']),
         p50_mrp_gate('experimental_ranks',!$experimental['duplicateRanks']?'pass':'block','Rangs expérimentaux uniques.',$experimental['duplicateRanks']),
         p50_mrp_gate('successful_run',$latestRun!==null?'pass':'block','Un cycle MR-V1.0 réussi couvre la période.',$latestRun['runUuid']??null),
+        p50_mrp_gate('candidate_run_consistency',$latestRun!==null&&count($experimental['runUuids'])===1&&$experimental['runUuids'][0]===($latestRun['runUuid']??null)?'pass':'block','Toutes les lignes candidates proviennent du dernier cycle réussi.',$experimental['runUuids']),
         p50_mrp_gate('candidate_non_empty',$comparison['candidateCount']>0?'pass':'block','Le candidat contient au moins un profil classable.',$comparison['candidateCount']),
         p50_mrp_gate('candidate_profiles_exist',!$orphans?'pass':'block','Tous les profils candidats existent dans app_state.',$orphans),
         p50_mrp_gate('run_freshness',$runAgeHours!==null&&$runAgeHours<=P50_MRP_MAX_RUN_AGE_HOURS?'pass':'block','Le calcul expérimental a moins de six heures.',$runAgeHours),
