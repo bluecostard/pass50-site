@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
 require_once __DIR__.'/youtube-metrics-bridge-core.php';
+require_once __DIR__.'/meta-metrics-bridge-core.php';
 
 const P50_METRICS_COLLECTOR_VERSION='1.0.0';
 const P50_METRICS_COLLECTOR_PROFILES_MAX=10;
@@ -58,6 +59,9 @@ function p50_mc_future_metrics(array $values): array {
 }
 
 function p50_mc_official(PDO $pdo,string $profileId,string $platform): array {
+    if(in_array($platform,['Facebook','Instagram'],true)&&function_exists('p50mm_official_profile')){
+        $mapped=p50mm_official_profile($pdo,$profileId,$platform);if($mapped)return $mapped;
+    }
     $threshold=p50_mc_threshold();
     $stmt=$pdo->prepare("SELECT r.profile_id,r.public_name,s.normalized_url,s.confidence
       FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
