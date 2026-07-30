@@ -59,6 +59,16 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('.history.publicStateWrites == 0', WORKFLOW)
         self.assertIn('Écritures app_state : `0`', WORKFLOW)
 
+    def test_workflow_publishes_only_sanitized_commit_status(self):
+        self.assertIn('statuses: write', WORKFLOW)
+        self.assertIn('id: simulation', WORKFLOW)
+        self.assertIn('if: ${{ always() }}', WORKFLOW)
+        self.assertIn('pass50/publication-simulation', WORKFLOW)
+        self.assertIn('audit #${audit_id}', WORKFLOW)
+        self.assertIn('app_state 0', WORKFLOW)
+        self.assertIn('steps.simulation.outputs.distinct_runs', WORKFLOW)
+        self.assertIn('/statuses/${GITHUB_SHA}', WORKFLOW)
+
     def test_full_report_is_archived(self):
         self.assertIn('actions/upload-artifact@v4', WORKFLOW)
         self.assertIn('publication-simulation.json', WORKFLOW)

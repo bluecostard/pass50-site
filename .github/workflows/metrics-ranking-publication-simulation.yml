@@ -12,6 +12,10 @@ on:
       - 'api/metrics-ranking-publication-history-core.php'
       - '.github/workflows/metrics-ranking-publication-simulation.yml'
 
+permissions:
+  contents: read
+  statuses: write
+
 concurrency:
   group: pass50-metrics-ranking-publication-simulation
   cancel-in-progress: false
@@ -25,6 +29,7 @@ jobs:
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
     steps:
       - name: Run production publication simulation
+        id: simulation
         shell: bash
         run: |
           set -euo pipefail
@@ -162,6 +167,51 @@ jobs:
             printf -- '- Publication automatique : `désactivée`\n'
             printf -- '- Durée : %s ms\n' "$duration"
           } >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            printf 'audit_id=%s\n' "$history_id"
+            printf 'stability_state=%s\n' "$stability_state"
+            printf 'observed_reports=%s\n' "$observed_reports"
+            printf 'distinct_runs=%s\n' "$distinct_runs"
+            printf 'controlled_eligible=%s\n' "$controlled_eligible"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish sanitized simulation status
+        if: ${{ always() }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STEP_OUTCOME: ${{ steps.simulation.outcome }}
+          AUDIT_ID: ${{ steps.simulation.outputs.audit_id }}
+          STABILITY_STATE: ${{ steps.simulation.outputs.stability_state }}
+          OBSERVED_REPORTS: ${{ steps.simulation.outputs.observed_reports }}
+          DISTINCT_RUNS: ${{ steps.simulation.outputs.distinct_runs }}
+        run: |
+          set -euo pipefail
+          audit_id="${AUDIT_ID:-—}"
+          stability_state="${STABILITY_STATE:-unavailable}"
+          observed_reports="${OBSERVED_REPORTS:-0}"
+          distinct_runs="${DISTINCT_RUNS:-0}"
+          commit_state="success"
+          description="audit #${audit_id} · ${stability_state} · ${observed_reports} rapports / ${distinct_runs} runs · app_state 0"
+          if [ "$STEP_OUTCOME" != "success" ] || [ -z "${AUDIT_ID:-}" ]; then
+            commit_state="failure"
+            description="simulation non exécutée ou interrompue · app_state non publié"
+          fi
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload="$(jq -nc \
+            --arg state "$commit_state" \
+            --arg target_url "$target_url" \
+            --arg description "$description" \
+            --arg context "pass50/publication-simulation" \
+            '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
 
       - name: Archive full simulation report
         if: ${{ always() }}
