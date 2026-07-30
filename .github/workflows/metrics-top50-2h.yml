@@ -8,6 +8,8 @@ on:
     branches:
       - main
     paths:
+      - 'api/metrics-cron.php'
+      - 'api/metrics-queue-core.php'
       - '.github/workflows/metrics-top50-2h.yml'
 
 permissions:
@@ -22,7 +24,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
@@ -46,26 +48,104 @@ jobs:
               -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" \
               -H "X-P50-Signature: $signature" --data "$body" "$CRON_URL"
           }
+
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            deployed=false
+            for attempt in $(seq 1 20); do
+              probe_body="$(jq -nc --arg id "$dispatch_id" '{action:"queue",cadence:"p1",dispatchId:$id}')"
+              set +e
+              probe_response="$(call_cron "$probe_body" 2>/dev/null)"
+              probe_status=$?
+              set -e
+              if [ "$probe_status" -eq 0 ] && jq -e '.queue.p1Remaining != null' >/dev/null 2>&1 <<<"$probe_response"; then
+                deployed=true
+                break
+              fi
+              echo "Déploiement du contrat de file P1 en attente, tentative $attempt/20."
+              sleep 20
+            done
+            if [ "$deployed" != "true" ]; then
+              echo "::error::Le contrat de file P1 n'est pas disponible après le déploiement."
+              exit 1
+            fi
+          fi
+
           response="$(call_cron "$(jq -nc --arg id "$dispatch_id" '{action:"dispatch",cadence:"p1",dispatchId:$id}')")"
-          remaining="$(jq -r '.remaining // 0' <<<"$response")"
+          p1_remaining="$(jq -r '.queue.p1Remaining // .remaining // 0' <<<"$response")"
+          global_remaining="$(jq -r '.queue.remaining // .remaining // 0' <<<"$response")"
           processed=0
-          for iteration in $(seq 1 180); do
-            [ "$remaining" -eq 0 ] && break
+          completed=0
+          partial=0
+          retried=0
+          skipped=0
+          failed=0
+          iteration=0
+          deadline=$((SECONDS + 4200))
+
+          while [ "$p1_remaining" -gt 0 ] && [ "$iteration" -lt 500 ] && [ "$SECONDS" -lt "$deadline" ]; do
+            iteration=$((iteration + 1))
             response="$(call_cron "$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",cadence:"p1",dispatchId:$id,iteration:$iteration}')")"
-            remaining="$(jq -r '.remaining // 0' <<<"$response")"
-            processed=$((processed + $(jq -r '.processed // 0' <<<"$response")))
+            current_processed="$(jq -r '.processed // 0' <<<"$response")"
+            processed=$((processed + current_processed))
+            completed=$((completed + $(jq -r '.completed // 0' <<<"$response")))
+            partial=$((partial + $(jq -r '.partial // 0' <<<"$response")))
+            retried=$((retried + $(jq -r '.retried // 0' <<<"$response")))
+            skipped=$((skipped + $(jq -r '.skipped // 0' <<<"$response")))
+            failed=$((failed + $(jq -r '.failed // 0' <<<"$response")))
+            p1_remaining="$(jq -r '.queue.p1Remaining // .remaining // 0' <<<"$response")"
+            global_remaining="$(jq -r '.queue.remaining // .remaining // 0' <<<"$response")"
+
+            if [ "$current_processed" -eq 0 ] && [ "$p1_remaining" -gt 0 ]; then
+              wait_seconds="$(jq -r '.queue.p1WaitSeconds // 5' <<<"$response")"
+              if ! [[ "$wait_seconds" =~ ^[0-9]+$ ]]; then wait_seconds=5; fi
+              if [ "$wait_seconds" -lt 5 ]; then wait_seconds=5; fi
+              if [ "$wait_seconds" -gt 300 ]; then wait_seconds=300; fi
+              remaining_runtime=$((deadline - SECONDS))
+              if [ "$remaining_runtime" -le 0 ]; then break; fi
+              if [ "$wait_seconds" -gt "$remaining_runtime" ]; then wait_seconds="$remaining_runtime"; fi
+              echo "File P1 en attente d'un réessai, nouvelle tentative dans ${wait_seconds}s."
+              sleep "$wait_seconds"
+            fi
           done
-          printf '%s\n' "$response" > metrics-p1-result.json
+
+          retry_wait="$(jq -r '.queue.p1RetryWait // 0' <<<"$response")"
+          next_attempt="$(jq -r '.queue.p1NextAttemptAt // "—"' <<<"$response")"
+          next_platform="$(jq -r '.queue.p1NextJob.platform // "—"' <<<"$response")"
+          next_attempts="$(jq -r 'if .queue.p1NextJob == null then "—" else ((.queue.p1NextJob.attempts|tostring) + "/" + (.queue.p1NextJob.maxAttempts|tostring)) end' <<<"$response")"
+
+          jq -nc \
+            --arg dispatchId "$dispatch_id" \
+            --argjson processed "$processed" \
+            --argjson completed "$completed" \
+            --argjson partial "$partial" \
+            --argjson retried "$retried" \
+            --argjson skipped "$skipped" \
+            --argjson failed "$failed" \
+            --argjson iterations "$iteration" \
+            --argjson p1Remaining "$p1_remaining" \
+            --argjson globalRemaining "$global_remaining" \
+            --argjson final "$response" \
+            '{ok:true,dispatchId:$dispatchId,processed:$processed,completed:$completed,partial:$partial,retried:$retried,skipped:$skipped,failed:$failed,iterations:$iterations,p1Remaining:$p1Remaining,globalRemaining:$globalRemaining,final:$final}' \
+            > metrics-p1-result.json
+
           {
             printf '### Metrics Top 50 P1\n'
             printf -- '- Dispatch : `%s`\n' "$dispatch_id"
             printf -- '- Tâches traitées : %s\n' "$processed"
-            printf -- '- File restante : %s\n' "$remaining"
+            printf -- '- Terminées / partielles / ignorées / échouées : %s / %s / %s / %s\n' "$completed" "$partial" "$skipped" "$failed"
+            printf -- '- Réessais programmés : %s\n' "$retried"
+            printf -- '- File P1 restante : %s\n' "$p1_remaining"
+            printf -- '- File globale restante : %s\n' "$global_remaining"
+            printf -- '- P1 en retry_wait : %s\n' "$retry_wait"
+            printf -- '- Prochain réessai P1 : %s\n' "$next_attempt"
+            printf -- '- Plateforme / tentatives de la prochaine tâche : %s / %s\n' "$next_platform" "$next_attempts"
             printf -- '- Écriture app_state : `0`\n'
           } >> "$GITHUB_STEP_SUMMARY"
           {
             printf 'processed=%s\n' "$processed"
-            printf 'remaining=%s\n' "$remaining"
+            printf 'remaining=%s\n' "$p1_remaining"
+            printf 'global_remaining=%s\n' "$global_remaining"
+            printf 'retry_wait=%s\n' "$retry_wait"
             printf 'dispatch_id=%s\n' "$dispatch_id"
           } >> "$GITHUB_OUTPUT"
 
@@ -77,18 +157,20 @@ jobs:
           STEP_OUTCOME: ${{ steps.collection.outcome }}
           PROCESSED: ${{ steps.collection.outputs.processed }}
           REMAINING: ${{ steps.collection.outputs.remaining }}
+          RETRY_WAIT: ${{ steps.collection.outputs.retry_wait }}
         run: |
           set -euo pipefail
           processed="${PROCESSED:-0}"
           remaining="${REMAINING:-0}"
+          retry_wait="${RETRY_WAIT:-0}"
           state="success"
-          description="P1 terminé · ${processed} tâches traitées · ${remaining} restantes · app_state 0"
+          description="P1 terminé · ${processed} traitées · file P1 0 · app_state 0"
           if [ "$STEP_OUTCOME" != "success" ]; then
             state="failure"
             description="P1 interrompu · classement public inchangé"
           elif [ "$remaining" != "0" ]; then
             state="pending"
-            description="P1 incomplet · ${processed} traitées · ${remaining} restantes · app_state 0"
+            description="P1 en attente · ${processed} traitées · ${remaining} restantes (${retry_wait} retry) · app_state 0"
           fi
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context "pass50/metrics-p1" '{state:$state,target_url:$target_url,description:$description,context:$context}')"
