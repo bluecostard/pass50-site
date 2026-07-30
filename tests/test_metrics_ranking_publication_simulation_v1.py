@@ -71,6 +71,8 @@ class MetricsRankingPublicationSimulationV1Tests(unittest.TestCase):
             "experimental_profile_ids",
             "experimental_ranks",
             "successful_run",
+            "candidate_run_consistency",
+            "public_ranking_non_empty",
             "candidate_non_empty",
             "candidate_profiles_exist",
             "run_freshness",
@@ -80,6 +82,7 @@ class MetricsRankingPublicationSimulationV1Tests(unittest.TestCase):
         ):
             self.assertIn(f"'{gate}'", simulate)
         self.assertIn("P50_MRP_MAX_RUN_AGE_HOURS=6", CORE)
+        self.assertIn("$experimental['runUuids'][0]===($latestRun['runUuid']??null)", simulate)
         self.assertIn("$blocked?'blocked':($warnings?'review':'ready')", simulate)
 
     def test_candidate_uses_only_classable_experimental_rows(self):
