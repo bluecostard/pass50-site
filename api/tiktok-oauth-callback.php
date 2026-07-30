@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/tiktok-oauth-core.php';
+require __DIR__ . '/tiktok-oauth-store-v2.php';
 require __DIR__ . '/tiktok-oauth-state-v1.php';
 
 set_time_limit(40);
@@ -60,14 +61,14 @@ try {
     $refreshToken = trim((string)($tokens['refresh_token'] ?? ''));
     if ($accessToken === '' || $refreshToken === '') throw new RuntimeException('Jetons TikTok absents.');
     $issuedAccessToken = $accessToken;
-    $grantedScopes = array_values(array_filter(array_map('trim', explode(',', (string)($tokens['scope'] ?? '')))));
+    $grantedScopes = p50tk_scope_list((string)($tokens['scope'] ?? ''));
     $missingScopes = array_values(array_diff(P50TK_REQUIRED_SCOPES, $grantedScopes));
     if ($missingScopes) {
         throw new RuntimeException('Les autorisations TikTok requises n’ont pas toutes été accordées.');
     }
     $profile = p50tk_fetch_profile($accessToken);
     $videos = p50tk_fetch_videos($accessToken, 10);
-    p50tk_store_snapshot($userId, $tokens, $profile, $videos);
+    p50tk_store_snapshot_v2($userId, $tokens, $profile, $videos);
     $issuedAccessToken = '';
     p50tk_redirect_result('connected');
 } catch (Throwable $e) {
