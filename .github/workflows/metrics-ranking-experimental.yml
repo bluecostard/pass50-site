@@ -4,18 +4,9 @@ on:
   schedule:
     - cron: '57 */2 * * *'
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/metrics-ranking-experimental.yml'
-  workflow_run:
-    workflows:
-      - Metrics Top 50 P1
-    types:
-      - completed
 
 permissions:
+  actions: write
   contents: read
   statuses: write
 
@@ -25,13 +16,12 @@ concurrency:
 
 jobs:
   calculate:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
-      STATUS_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      STATUS_SHA: ${{ github.sha }}
     steps:
       - name: Calculate experimental ranking
         id: ranking
@@ -132,7 +122,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           STEP_OUTCOME: ${{ steps.ranking.outcome }}
-          SKIPPED: ${{ steps.ranking.outputs.skipped }}
           REASON: ${{ steps.ranking.outputs.reason }}
           READINESS_STATE: ${{ steps.ranking.outputs.readiness_state }}
           CLASSABLE: ${{ steps.ranking.outputs.classable }}
@@ -162,3 +151,17 @@ jobs:
           path: ranking-experimental-result.json
           if-no-files-found: ignore
           retention-days: 30
+
+      - name: Dispatch publication simulation
+        if: ${{ steps.ranking.outcome == 'success' && steps.ranking.outputs.reason != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -nc --arg ref "main" '{ref:$ref}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/metrics-ranking-publication-simulation.yml/dispatches"
