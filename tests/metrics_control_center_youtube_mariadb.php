@@ -26,8 +26,8 @@ $pdo->exec("DELETE FROM users WHERE id IN ('yt-user-1','yt-user-2')");
 $pdo->exec("DELETE FROM p50_profile_registry WHERE profile_id IN ('profile-youtube-1','profile-youtube-2')");
 $pdo->prepare('INSERT INTO users(id,email,display_name,role) VALUES(?,?,?,?)')->execute(['yt-user-1','one@example.test','One','owner']);
 $pdo->prepare('INSERT INTO users(id,email,display_name,role) VALUES(?,?,?,?)')->execute(['yt-user-2','two@example.test','Two','admin']);
-$pdo->prepare('INSERT INTO p50_profile_registry(profile_id,public_name,state_hash) VALUES(?,?,?)')->execute(['profile-youtube-1','Profil YouTube 1',str_repeat('a',64)]);
-$pdo->prepare('INSERT INTO p50_profile_registry(profile_id,public_name,state_hash) VALUES(?,?,?)')->execute(['profile-youtube-2','Profil YouTube 2',str_repeat('b',64)]);
+$pdo->prepare('INSERT INTO p50_profile_registry(profile_id,public_name,alive) VALUES(?,?,1)')->execute(['profile-youtube-1','Profil YouTube 1']);
+$pdo->prepare('INSERT INTO p50_profile_registry(profile_id,public_name,alive) VALUES(?,?,1)')->execute(['profile-youtube-2','Profil YouTube 2']);
 
 $insert=$pdo->prepare("INSERT INTO p50_youtube_oauth_connections(user_id,channel_id,channel_title,channel_custom_url,channel_thumbnail_url,access_token_encrypted,refresh_token_encrypted,token_type,scopes,access_expires_at,status) VALUES(?,?,?,?,?,?,?,?,?,?, 'active')");
 $insert->execute(['yt-user-1','UCaaaaaaaaaaaaaaaaaaaa','Chaîne 1','@chaine1','',p50yo_encrypt('access-one'),p50yo_encrypt('refresh-one'),'Bearer',implode(' ',P50YO_REQUIRED_SCOPES),gmdate('Y-m-d H:i:s',time()+3600)]);
