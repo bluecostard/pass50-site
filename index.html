@@ -389,7 +389,7 @@ function coulesResults(){const candidates=coulesCandidates(),counts=coulesVoteCo
 function coulesEvolution(id,shares,key){const prev=db.coulesPoll.previousSharesByPoll[key]?.[id];if(prev===undefined)return '<span class="muted">Nouveau duel</span>';const d=shares[id]-prev;return d>0?`<span class="up">↗ +${d} pt${d>1?'s':''}</span>`:d<0?`<span class="down">↘ ${d} pt${d<-1?'s':''}</span>`:'<span class="flat">— stable</span>'}
 function snapshotCoulesShares(){const r=coulesResults();db.coulesPoll.previousSharesByPoll[r.key]={...r.shares}}
 async function voteCoule(profileId){if(!requireAuth())return;const r=coulesResults(),u=currentUser();if(!r.candidates.some(p=>p.id===profileId))return;const previous=coulesMyVote();if(previous===profileId)return toast('Votre vote est déjà enregistré');snapshotCoulesShares();localCoulesVotes(r.key)[u.id]=profileId;save();renderSunk();toast(previous?'Vote modifié':'Vote enregistré');if(CLOUD.enabled){try{await castCloudCoulesVote(r.key,profileId);await loadCloudCoulesPoll();renderSunk()}catch(err){console.warn(err);toast('Vote sauvegardé localement')}}}
-const VOTE_SHARE={shareId:'',card:null,audioBlob:null,audioUrl:'',recorder:null,stream:null,timer:null,seconds:0,mediaFile:null,mediaUrl:'',images:new Map()};
+const VOTE_SHARE={shareId:'',card:null,audioBlob:null,audioUrl:'',recorder:null,stream:null,timer:null,seconds:0,mediaFile:null,mediaUrl:'',mediaKind:'none',images:new Map()};
 function voteShareAnalytics(event,platform=''){
   if(!VOTE_SHARE.shareId)return;
   apiFetch('vote-share.php',{method:'POST',body:{action:'analytics',shareId:VOTE_SHARE.shareId,event,platform}}).catch(()=>{});
@@ -400,7 +400,7 @@ function voteShareCleanup({keepCard=false}={}){
   clearInterval(VOTE_SHARE.timer);VOTE_SHARE.recorder=null;VOTE_SHARE.stream=null;VOTE_SHARE.timer=null;
   if(VOTE_SHARE.audioUrl)URL.revokeObjectURL(VOTE_SHARE.audioUrl);
   if(VOTE_SHARE.mediaUrl)URL.revokeObjectURL(VOTE_SHARE.mediaUrl);
-  VOTE_SHARE.audioBlob=null;VOTE_SHARE.audioUrl='';VOTE_SHARE.mediaFile=null;VOTE_SHARE.mediaUrl='';
+  VOTE_SHARE.audioBlob=null;VOTE_SHARE.audioUrl='';VOTE_SHARE.mediaFile=null;VOTE_SHARE.mediaUrl='';VOTE_SHARE.mediaKind='none';
   if(!keepCard){VOTE_SHARE.shareId='';VOTE_SHARE.card=null;VOTE_SHARE.images.clear();}
 }
 function voteShareEscape(value){return safeAttr(String(value??''))}
@@ -480,26 +480,30 @@ async function generateVoteShareImage(square=false){
   canvas.height = square ? 1080 : 1350;
   await drawVoteShareCard(canvas,VOTE_SHARE.card);
   const file=await canvasFile(canvas,square?'mon-vote-pass50-carre.png':'mon-vote-pass50.png');
-  setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();return file;
+  setVoteShareMedia(file,'image');voteShareAnalytics('card_generated');voteSharePanel();return file;
 }
 function supportedVoteVideoType(){
   if(!window.MediaRecorder)return '';
   return ['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus'].find(type=>MediaRecorder.isTypeSupported(type))||'';
 }
 async function generateVoteShareVideo(){
-  if(!VOTE_SHARE.audioBlob)return;
+  if(!VOTE_SHARE.audioBlob)return null;
   const type=supportedVoteVideoType();
-  if(!type||!HTMLCanvasElement.prototype.captureStream){await generateVoteShareImage();$('#voteShareStatus').textContent='Vidéo indisponible sur ce navigateur : card PNG prête, audio conservé séparément.';return;}
+  if(!type||!HTMLCanvasElement.prototype.captureStream){toast('Vidéo avec audio indisponible sur ce navigateur. Aucun partage audio n’a été effectué.');return null;}
   const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1920;
   const audioContext=new (window.AudioContext||window.webkitAudioContext)(),buffer=await audioContext.decodeAudioData(await VOTE_SHARE.audioBlob.arrayBuffer()),destination=audioContext.createMediaStreamDestination(),source=audioContext.createBufferSource();source.buffer=buffer;source.connect(destination);
   const duration=Math.min(18,Math.max(3,buffer.duration+3)),videoStream=canvas.captureStream(24),stream=new MediaStream([...videoStream.getVideoTracks(),...destination.stream.getAudioTracks()]),chunks=[],recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:4500000});
   recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};const done=new Promise(resolve=>recorder.onstop=resolve);recorder.start(250);source.start(audioContext.currentTime+.4);
   const started=performance.now();await new Promise(resolve=>{const frame=async now=>{const elapsed=(now-started)/1000,progress=Math.min(1,elapsed/duration);await drawVoteShareCard(canvas,VOTE_SHARE.card,{vertical:true,progress,wave:elapsed>.35&&elapsed<buffer.duration+.5?.85:.12});if(progress<1)requestAnimationFrame(frame);else resolve()};requestAnimationFrame(frame)});
   recorder.stop();await done;stream.getTracks().forEach(track=>track.stop());source.disconnect();await audioContext.close();
-  const ext=type.startsWith('video/mp4')?'mp4':'webm',file=new File(chunks,`pass50-vote-${VOTE_SHARE.card.profileId}.${ext}`,{type:type.split(';')[0]});
-  setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();
+  const videoBlob=new Blob(chunks,{type:type.split(';')[0]});
+  if(videoBlob.size<=0){toast('La vidéo avec audio est vide. Aucun partage audio n’a été effectué.');return null;}
+  const videoFile=type.startsWith('video/webm')
+    ?new File([videoBlob],'mon-vote-pass50.webm',{type:videoBlob.type})
+    :new File([videoBlob],'mon-vote-pass50.mp4',{type:videoBlob.type});
+  setVoteShareMedia(videoFile,'video');voteShareAnalytics('card_generated');voteSharePanel();return videoFile;
 }
-function setVoteShareMedia(file){if(VOTE_SHARE.mediaUrl)URL.revokeObjectURL(VOTE_SHARE.mediaUrl);VOTE_SHARE.mediaFile=file;VOTE_SHARE.mediaUrl=URL.createObjectURL(file)}
+function setVoteShareMedia(file,kind){if(VOTE_SHARE.mediaUrl)URL.revokeObjectURL(VOTE_SHARE.mediaUrl);VOTE_SHARE.mediaFile=file;VOTE_SHARE.mediaKind=kind;VOTE_SHARE.mediaUrl=URL.createObjectURL(file)}
 async function startVoteShareRecording(){
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)return toast('Enregistrement audio indisponible sur ce navigateur');
   try{
@@ -512,20 +516,26 @@ async function startVoteShareRecording(){
 }
 function stopVoteShareRecording(){if(VOTE_SHARE.recorder?.state==='recording')VOTE_SHARE.recorder.stop()}
 async function nativeVoteShare(){
-  const file=VOTE_SHARE.mediaFile;if(!file)return;
+  const wantsVideo=Boolean(VOTE_SHARE.audioBlob);
+  let file=wantsVideo&&VOTE_SHARE.mediaKind!=='video'?await generateVoteShareVideo():VOTE_SHARE.mediaFile;
+  if(!file)return;
   const shareText=voteShareMessage(VOTE_SHARE.card);
   voteShareAnalytics('native_share_triggered');
   if(navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}}
   downloadVoteShare();
+  if(wantsVideo)toast('La vidéo avec audio a été téléchargée. Ajoute-la ensuite dans WhatsApp.');
 }
 async function shareVoteWhatsapp(){
   const shareText=voteShareMessage(VOTE_SHARE.card);
-  let file=VOTE_SHARE.mediaFile;
-  if(!file||file.type!=='image/png')file=await generateVoteShareImage(false);
+  const wantsVideo=Boolean(VOTE_SHARE.audioBlob);
+  let file=wantsVideo?(VOTE_SHARE.mediaKind==='video'?VOTE_SHARE.mediaFile:await generateVoteShareVideo()):VOTE_SHARE.mediaFile;
+  if(!wantsVideo&&(!file||file.type!=='image/png'))file=await generateVoteShareImage(false);
+  if(!file)return;
   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}
   }
   downloadVoteShare();
+  if(wantsVideo)toast('La vidéo avec audio a été téléchargée. Ajoute-la ensuite dans WhatsApp.');
   window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`,'_blank','noopener');
 }
 function downloadVoteShare(){if(!VOTE_SHARE.mediaFile)return;const a=document.createElement('a');a.href=VOTE_SHARE.mediaUrl;a.download=VOTE_SHARE.mediaFile.name;a.click();voteShareAnalytics('download')}
