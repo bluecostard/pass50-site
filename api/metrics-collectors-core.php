@@ -60,7 +60,7 @@ function p50_mc_future_metrics(array $values): array {
 function p50_mc_official(PDO $pdo,string $profileId,string $platform): array {
     $threshold=p50_mc_threshold();
     $stmt=$pdo->prepare("SELECT r.profile_id,r.public_name,s.normalized_url,s.confidence
-      FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id
+      FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
       WHERE r.profile_id=? AND r.alive=1 AND s.platform=? AND s.status='verified' AND s.confidence>=? LIMIT 1");
     $stmt->execute([$profileId,$platform,$threshold]);$row=$stmt->fetch();
     if(!$row&&$platform==='YouTube'&&function_exists('p50ym_official_profile'))$row=p50ym_official_profile($pdo,$profileId);
@@ -250,7 +250,7 @@ function p50_metrics_collect_batch(PDO $pdo,string $platform,int $profileLimit=1
     $platform=p50_mc_platform($platform);if($platform==='')throw new InvalidArgumentException('Plateforme non prise en charge.');
     $profileLimit=max(1,min(P50_METRICS_COLLECTOR_PROFILES_MAX,$profileLimit));$contentLimit=max(1,min(5,$contentLimit));
     $threshold=p50_mc_threshold();
-    $stmt=$pdo->prepare("SELECT r.profile_id FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id WHERE r.alive=1 AND s.platform=? AND s.status='verified' AND s.confidence>=? ORDER BY r.profile_id LIMIT ".$profileLimit);$stmt->execute([$platform,$threshold]);
+    $stmt=$pdo->prepare("SELECT r.profile_id FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id WHERE r.alive=1 AND s.platform=? AND s.status='verified' AND s.confidence>=? ORDER BY r.profile_id LIMIT ".$profileLimit);$stmt->execute([$platform,$threshold]);
     $details=[];foreach($stmt->fetchAll(PDO::FETCH_COLUMN) as $profileId){
         $profileId=(string)$profileId;$lock='pass50_metrics_collect_'.strtolower($platform).'_'.hash('sha256',$profileId);
         if((int)p50_metrics_value($pdo,"SELECT GET_LOCK(?,2)",[$lock])!==1){$details[]=p50_mc_result($platform,$profileId,gmdate('Y-m-d H:i:s'),'');$details[array_key_last($details)]['status']='unavailable_or_blocked';$details[array_key_last($details)]['errors'][]='Une collecte identique est déjà en cours.';continue;}
