@@ -91,9 +91,13 @@ function p50mm_orchestrator_rows(PDO $pdo,array $profileIds): array {
 }
 
 function p50mm_authorized_profile_ids(PDO $pdo): array {
-    if(!p50mm_schema_ready($pdo)||!p50_metrics_table_exists($pdo,'p50_profile_registry'))return [];
-    $stmt=$pdo->query("SELECT DISTINCT a.profile_id FROM p50_meta_oauth_assets a JOIN p50_meta_oauth_connections c ON BINARY c.user_id=BINARY a.user_id JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY a.profile_id WHERE a.profile_id IS NOT NULL AND a.platform IN ('Facebook','Instagram') AND a.status='active' AND c.status='active' AND r.alive=1 AND a.access_token_encrypted<>'' LIMIT 100");
-    return array_values(array_filter(array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN))));
+    $ids=[];
+    if(p50mm_schema_ready($pdo)&&p50_metrics_table_exists($pdo,'p50_profile_registry')){
+        $stmt=$pdo->query("SELECT DISTINCT a.profile_id FROM p50_meta_oauth_assets a JOIN p50_meta_oauth_connections c ON BINARY c.user_id=BINARY a.user_id JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY a.profile_id WHERE a.profile_id IS NOT NULL AND a.platform IN ('Facebook','Instagram') AND a.status='active' AND c.status='active' AND r.alive=1 AND a.access_token_encrypted<>'' LIMIT 100");
+        $ids=array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+    if(function_exists('p50tm_authorized_profile_ids'))$ids=array_merge($ids,p50tm_authorized_profile_ids($pdo));
+    return array_values(array_unique(array_filter($ids)));
 }
 
 function p50mm_safe_status(PDO $pdo): array {
