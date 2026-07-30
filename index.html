@@ -89,7 +89,7 @@
     @keyframes leaderShine{0%,72%{transform:translateX(-65%)}88%,100%{transform:translateX(65%)}}
     .vote-percent[data-target]{transition:opacity .2s}
     .vote-share-trigger{margin-top:10px;width:100%;border-color:var(--lime);color:#071000;background:var(--lime);font-weight:1000}
-    .vote-share-shell{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(280px,1.1fr);gap:18px}.vote-share-preview{background:linear-gradient(145deg,#172019,#0a0f0b 58%,#19240f);border:1px solid rgba(183,255,0,.46);border-radius:22px;padding:8px;display:grid;place-items:center}.vote-share-preview canvas{width:100%;max-height:62vh;object-fit:contain;border-radius:15px;background:linear-gradient(145deg,#172019,#0a0f0b 58%,#19240f)}.vote-share-panel{display:flex;flex-direction:column;gap:12px}.vote-share-facts{border:1px solid var(--line);border-radius:16px;padding:13px;background:#0a0d0a}.vote-share-audio{border:1px solid rgba(183,255,0,.28);border-radius:17px;padding:14px;background:#080b08}.vote-share-audio audio{width:100%;margin-top:10px}.vote-share-actions{display:flex;gap:8px;flex-wrap:wrap}.vote-share-status{min-height:18px;color:var(--muted);font-size:12px}.recording-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);margin-right:6px;animation:livePulse 1s infinite}.share-note{font-size:11px;color:var(--muted);line-height:1.45}
+    .vote-share-shell{max-width:560px;margin:auto;display:flex;flex-direction:column;gap:18px;text-align:center}.vote-share-step{padding:22px;border:1px solid rgba(183,255,0,.3);border-radius:22px;background:linear-gradient(145deg,#172019,#0a0f0b 58%,#19240f)}.vote-share-step h2{margin:0 0 10px;font-size:30px}.vote-share-step p{margin:7px 0;color:#c8d0c5}.vote-share-actions{display:grid;gap:10px;margin-top:20px}.vote-share-actions .btn{width:100%;font-size:17px;padding:15px}.vote-share-status{min-height:24px;color:#dce5d9;font-weight:850}.vote-share-progress{height:13px;margin-top:14px;border-radius:999px;overflow:hidden;background:#263025}.vote-share-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7dff00,#b7ff00);transition:width .18s ease}.recording-dot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--red);margin-right:7px;animation:livePulse 1s infinite}.share-note{font-size:12px;color:var(--muted);line-height:1.45}
     .record-toast{position:fixed;top:92px;left:50%;z-index:90;transform:translate(-50%,-20px);opacity:0;padding:12px 18px;border:1px solid #e8cf4b;border-radius:999px;background:rgba(13,17,13,.96);color:#fff2a8;font-weight:950;box-shadow:0 16px 42px rgba(0,0,0,.45);pointer-events:none}
     .record-toast.show{animation:recordToast 2s ease forwards}
     @keyframes recordToast{0%{opacity:0;transform:translate(-50%,-20px)}15%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-12px)}}
@@ -388,8 +388,8 @@ function coulesMyVote(){const key=coulesPollKey(),u=currentUser();if(!u)return n
 function coulesResults(){const candidates=coulesCandidates(),counts=coulesVoteCounts(),total=Object.values(counts).reduce((a,b)=>a+Number(b||0),0),shares={};candidates.forEach(p=>shares[p.id]=total?Math.round((Number(counts[p.id]||0)/total)*100):0);return {candidates,counts,total,shares,key:coulesPollKey()}}
 function coulesEvolution(id,shares,key){const prev=db.coulesPoll.previousSharesByPoll[key]?.[id];if(prev===undefined)return '<span class="muted">Nouveau duel</span>';const d=shares[id]-prev;return d>0?`<span class="up">↗ +${d} pt${d>1?'s':''}</span>`:d<0?`<span class="down">↘ ${d} pt${d<-1?'s':''}</span>`:'<span class="flat">— stable</span>'}
 function snapshotCoulesShares(){const r=coulesResults();db.coulesPoll.previousSharesByPoll[r.key]={...r.shares}}
-async function voteCoule(profileId){if(!requireAuth())return;const r=coulesResults(),u=currentUser();if(!r.candidates.some(p=>p.id===profileId))return;const previous=coulesMyVote();if(previous===profileId)return toast('Votre vote est déjà enregistré');snapshotCoulesShares();localCoulesVotes(r.key)[u.id]=profileId;save();renderSunk();toast(previous?'Vote modifié':'Vote enregistré');if(CLOUD.enabled){try{await castCloudCoulesVote(r.key,profileId);await loadCloudCoulesPoll();renderSunk()}catch(err){console.warn(err);toast('Vote sauvegardé localement')}}}
-const VOTE_SHARE={shareId:'',card:null,audioBlob:null,audioUrl:'',recorder:null,stream:null,timer:null,seconds:0,mediaFile:null,mediaUrl:'',images:new Map()};
+async function voteCoule(profileId){if(!requireAuth())return;const r=coulesResults(),u=currentUser();if(!r.candidates.some(p=>p.id===profileId))return;const previous=coulesMyVote();if(previous===profileId)return toast('Votre vote est déjà enregistré');snapshotCoulesShares();localCoulesVotes(r.key)[u.id]=profileId;save();renderSunk();toast(previous?'Vote modifié':'Vote enregistré');if(CLOUD.enabled){try{await castCloudCoulesVote(r.key,profileId);await loadCloudCoulesPoll();renderSunk();await openVoteShare(profileId)}catch(err){console.warn(err);toast('Vote sauvegardé localement')}}}
+const VOTE_SHARE={shareId:'',card:null,audioBlob:null,audioUrl:'',recorder:null,stream:null,timer:null,seconds:0,mediaFile:null,mediaUrl:'',mediaKind:'none',step:'choice',progress:0,status:'',images:new Map()};
 function voteShareAnalytics(event,platform=''){
   if(!VOTE_SHARE.shareId)return;
   apiFetch('vote-share.php',{method:'POST',body:{action:'analytics',shareId:VOTE_SHARE.shareId,event,platform}}).catch(()=>{});
@@ -400,7 +400,7 @@ function voteShareCleanup({keepCard=false}={}){
   clearInterval(VOTE_SHARE.timer);VOTE_SHARE.recorder=null;VOTE_SHARE.stream=null;VOTE_SHARE.timer=null;
   if(VOTE_SHARE.audioUrl)URL.revokeObjectURL(VOTE_SHARE.audioUrl);
   if(VOTE_SHARE.mediaUrl)URL.revokeObjectURL(VOTE_SHARE.mediaUrl);
-  VOTE_SHARE.audioBlob=null;VOTE_SHARE.audioUrl='';VOTE_SHARE.mediaFile=null;VOTE_SHARE.mediaUrl='';
+  VOTE_SHARE.audioBlob=null;VOTE_SHARE.audioUrl='';VOTE_SHARE.mediaFile=null;VOTE_SHARE.mediaUrl='';VOTE_SHARE.mediaKind='none';VOTE_SHARE.step='choice';VOTE_SHARE.progress=0;VOTE_SHARE.status='';
   if(!keepCard){VOTE_SHARE.shareId='';VOTE_SHARE.card=null;VOTE_SHARE.images.clear();}
 }
 function voteShareEscape(value){return safeAttr(String(value??''))}
@@ -419,12 +419,16 @@ function voteShareMessage(card){
 }
 function voteSharePanel(){
   const card=VOTE_SHARE.card;if(!card)return;
-  const audio=Boolean(VOTE_SHARE.audioBlob),recording=Boolean(VOTE_SHARE.recorder&&VOTE_SHARE.recorder.state==='recording');
-  const selected=card.candidates.find(candidate=>candidate.profileId===card.selectedProfileId),opponent=card.candidates.find(candidate=>candidate.profileId!==card.selectedProfileId);
-  const result=card.percentagesAvailable?` · ${card.candidates.map(candidate=>`${voteShareEscape(candidate.name)} ${Number(candidate.percentage)} %`).join(' / ')}`:'';
-  const shareText=voteShareMessage(card);
-  $('#voteShareBody').innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1350" aria-label="Aperçu de la card du duel voté"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><h2 style="margin:7px 0">${voteShareEscape(selected?.name)} <span class="muted">VS</span> ${voteShareEscape(opponent?.name)}</h2><div>Mon vote : <strong style="color:var(--lime)">${voteShareEscape(selected?.name)}</strong>${result}</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(card.pass50Url)}</div>${card.snapshotSource==='current_fallback'?`<div class="share-note" style="margin-top:7px">${voteShareEscape(card.fallbackReason)}</div>`:''}</div><div class="vote-share-audio"><strong>Commentaire audio facultatif</strong><div class="share-note">Le micro ne démarre qu’après ton action. Durée maximale : 15 secondes. Aucun commentaire écrit n’est demandé.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s/15s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un commentaire audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer l’audio</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio><button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Confirmer et générer la vidéo</button>`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareGenerateImage">Image portrait</button><button class="btn" id="voteShareGenerateSquare">Image carrée</button><button class="btn" id="voteShareNative" ${VOTE_SHARE.mediaFile?'':'disabled'}>Partager le média</button><button class="btn" id="voteShareDownload" ${VOTE_SHARE.mediaFile?'':'disabled'}>Télécharger</button><button class="btn" id="voteShareCopy">Copier le lien</button><button class="btn" id="voteShareWhatsapp">WhatsApp</button></div><div class="vote-share-status" id="voteShareStatus">${VOTE_SHARE.mediaFile?`${voteShareEscape(VOTE_SHARE.mediaFile.name)} prêt à partager.`:'Choisis une image ou ajoute un commentaire audio.'}</div><div class="share-note">Le partage s’ouvre dans l’application choisie. PASS50 ne publie jamais automatiquement à ta place.</div></div></div>`;
-  drawVoteShareCard($('#voteShareCanvas'),card);
+  const audio=Boolean(VOTE_SHARE.audioBlob),recording=VOTE_SHARE.step==='recording',busy=VOTE_SHARE.step==='generating'||VOTE_SHARE.step==='sharing';
+  const choice=VOTE_SHARE.step==='choice'?`<h2>✅ Vote enregistré !</h2><p>Souhaitez-vous ajouter un commentaire audio ?</p><div class="share-note">(Le commentaire est facultatif)</div><div class="vote-share-actions"><button class="btn primary" id="voteShareRecord">🎤 Ajouter un commentaire</button><button class="btn" id="voteShareSkip">Passer cette étape</button></div>`:'';
+  const record=recording?`<h2><span class="recording-dot"></span>Enregistrement...</h2><div class="vote-share-status" id="voteShareTimer">00:${String(VOTE_SHARE.seconds).padStart(2,'0')} / 00:15</div><div class="vote-share-actions"><button class="btn" id="voteShareStop">Terminer l’enregistrement</button></div>`:'';
+  const ready=!choice&&!record&&!busy?`<h2>${audio?'✅ Audio enregistré':'Aucun commentaire audio'}</h2><div class="vote-share-actions"><button class="btn primary" id="voteShareNow">🚀 PARTAGER</button></div>`:'';
+  const progress=busy?`<h2>${voteShareEscape(VOTE_SHARE.status)}</h2><div class="vote-share-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${VOTE_SHARE.progress}"><i id="voteShareProgressBar" style="width:${VOTE_SHARE.progress}%"></i></div><div class="vote-share-status" id="voteShareProgressText">${VOTE_SHARE.progress} %</div>`:'';
+  $('#voteShareBody').innerHTML=`<div class="vote-share-shell"><section class="vote-share-step">${choice}${record}${ready}${progress}</section><canvas id="voteShareCanvas" width="1080" height="1350" class="hidden" aria-hidden="true"></canvas></div>`;
+}
+function setVoteShareProgress(value,status){
+  VOTE_SHARE.progress=Math.max(0,Math.min(100,Math.round(value)));VOTE_SHARE.status=status;
+  const bar=$('#voteShareProgressBar'),text=$('#voteShareProgressText');if(bar)bar.style.width=VOTE_SHARE.progress+'%';if(text)text.textContent=VOTE_SHARE.progress+' %';
 }
 async function openVoteShare(profileId){
   if(!CLOUD.enabled||!CLOUD.token)return toast('Le partage nécessite un vote confirmé en ligne');
@@ -474,62 +478,68 @@ async function drawVoteShareCard(canvas,card,{vertical=false,progress=0,wave=0}=
   ctx.fillStyle='#fff';ctx.font=`900 ${isStory?30:25}px Arial`;ctx.fillText('VOTE TOI AUSSI',24,h-92);ctx.fillStyle='#b7ff00';ctx.font=`700 ${isStory?25:21}px Arial`;ctx.fillText(String(card.pass50Url).replace(/^https?:\/\//,''),24,h-52);
 }
 function canvasFile(canvas,name='mon-vote-pass50.png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob&&blob.size>0?resolve(new File([blob],name,{type:'image/png'})):reject(new Error('Génération image impossible')),'image/png'))}
-async function generateVoteShareImage(square=false){
-  const canvas=$('#voteShareCanvas');
+async function generateVoteShareImage(){
+  setVoteShareProgress(10,'Création de votre image...');
+  const canvas=document.createElement('canvas');
   canvas.width = 1080;
-  canvas.height = square ? 1080 : 1350;
+  canvas.height = 1350;
+  setVoteShareProgress(30,'Création de votre image...');
   await drawVoteShareCard(canvas,VOTE_SHARE.card);
-  const file=await canvasFile(canvas,square?'mon-vote-pass50-carre.png':'mon-vote-pass50.png');
-  setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();return file;
+  setVoteShareProgress(80,'Création de votre image...');
+  const file=await canvasFile(canvas,'mon-vote-pass50.png');
+  setVoteShareMedia(file,'image');voteShareAnalytics('card_generated');setVoteShareProgress(100,'Création de votre image...');return file;
 }
 function supportedVoteVideoType(){
   if(!window.MediaRecorder)return '';
   return ['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus'].find(type=>MediaRecorder.isTypeSupported(type))||'';
 }
 async function generateVoteShareVideo(){
-  if(!VOTE_SHARE.audioBlob)return;
+  if(!VOTE_SHARE.audioBlob)return null;
   const type=supportedVoteVideoType();
-  if(!type||!HTMLCanvasElement.prototype.captureStream){await generateVoteShareImage();$('#voteShareStatus').textContent='Vidéo indisponible sur ce navigateur : card PNG prête, audio conservé séparément.';return;}
-  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1920;
+  if(!type||!HTMLCanvasElement.prototype.captureStream){toast('Vidéo avec audio indisponible sur ce navigateur. Aucun partage audio n’a été effectué.');return null;}
+  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
   const audioContext=new (window.AudioContext||window.webkitAudioContext)(),buffer=await audioContext.decodeAudioData(await VOTE_SHARE.audioBlob.arrayBuffer()),destination=audioContext.createMediaStreamDestination(),source=audioContext.createBufferSource();source.buffer=buffer;source.connect(destination);
   const duration=Math.min(18,Math.max(3,buffer.duration+3)),videoStream=canvas.captureStream(24),stream=new MediaStream([...videoStream.getVideoTracks(),...destination.stream.getAudioTracks()]),chunks=[],recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:4500000});
   recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};const done=new Promise(resolve=>recorder.onstop=resolve);recorder.start(250);source.start(audioContext.currentTime+.4);
-  const started=performance.now();await new Promise(resolve=>{const frame=async now=>{const elapsed=(now-started)/1000,progress=Math.min(1,elapsed/duration);await drawVoteShareCard(canvas,VOTE_SHARE.card,{vertical:true,progress,wave:elapsed>.35&&elapsed<buffer.duration+.5?.85:.12});if(progress<1)requestAnimationFrame(frame);else resolve()};requestAnimationFrame(frame)});
+  const started=performance.now();await new Promise(resolve=>{const frame=async now=>{const elapsed=(now-started)/1000,progress=Math.min(1,elapsed/duration);setVoteShareProgress(10+progress*80,'Création de votre vidéo...');await drawVoteShareCard(canvas,VOTE_SHARE.card,{vertical:true,progress,wave:elapsed>.35&&elapsed<buffer.duration+.5?.85:.12});if(progress<1)requestAnimationFrame(frame);else resolve()};requestAnimationFrame(frame)});
   recorder.stop();await done;stream.getTracks().forEach(track=>track.stop());source.disconnect();await audioContext.close();
-  const ext=type.startsWith('video/mp4')?'mp4':'webm',file=new File(chunks,`pass50-vote-${VOTE_SHARE.card.profileId}.${ext}`,{type:type.split(';')[0]});
-  setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();
+  const videoBlob=new Blob(chunks,{type:type.split(';')[0]});
+  if(videoBlob.size<=0){toast('La vidéo avec audio est vide. Aucun partage audio n’a été effectué.');return null;}
+  const videoFile=type.startsWith('video/webm')
+    ?new File([videoBlob],'mon-vote-pass50.webm',{type:videoBlob.type})
+    :new File([videoBlob],'mon-vote-pass50.mp4',{type:videoBlob.type});
+  setVoteShareMedia(videoFile,'video');voteShareAnalytics('card_generated');setVoteShareProgress(100,'✅ Vidéo prête');return videoFile;
 }
-function setVoteShareMedia(file){if(VOTE_SHARE.mediaUrl)URL.revokeObjectURL(VOTE_SHARE.mediaUrl);VOTE_SHARE.mediaFile=file;VOTE_SHARE.mediaUrl=URL.createObjectURL(file)}
+function setVoteShareMedia(file,kind){if(VOTE_SHARE.mediaUrl)URL.revokeObjectURL(VOTE_SHARE.mediaUrl);VOTE_SHARE.mediaFile=file;VOTE_SHARE.mediaKind=kind;VOTE_SHARE.mediaUrl=URL.createObjectURL(file)}
 async function startVoteShareRecording(){
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)return toast('Enregistrement audio indisponible sur ce navigateur');
   try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true},video:false});
     const mime=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(type=>MediaRecorder.isTypeSupported(type))||'',chunks=[],recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
-    voteShareCleanup({keepCard:true});VOTE_SHARE.stream=stream;VOTE_SHARE.recorder=recorder;VOTE_SHARE.seconds=0;
-    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});if(blob.size>3*1024*1024){toast('Audio trop volumineux');voteShareCleanup({keepCard:true});voteSharePanel();return;}VOTE_SHARE.audioBlob=blob;VOTE_SHARE.audioUrl=URL.createObjectURL(blob);VOTE_SHARE.recorder=null;VOTE_SHARE.stream=null;stream.getTracks().forEach(track=>track.stop());clearInterval(VOTE_SHARE.timer);voteShareAnalytics('audio_recorded');voteSharePanel();};
-    recorder.start(250);VOTE_SHARE.timer=setInterval(()=>{VOTE_SHARE.seconds++;if(VOTE_SHARE.seconds>=15)stopVoteShareRecording();else voteSharePanel()},1000);voteSharePanel();
+    voteShareCleanup({keepCard:true});VOTE_SHARE.stream=stream;VOTE_SHARE.recorder=recorder;VOTE_SHARE.seconds=0;VOTE_SHARE.step='recording';
+    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});if(blob.size>3*1024*1024){toast('Audio trop volumineux');voteShareCleanup({keepCard:true});VOTE_SHARE.step='ready';voteSharePanel();return;}VOTE_SHARE.audioBlob=blob;VOTE_SHARE.audioUrl=URL.createObjectURL(blob);VOTE_SHARE.recorder=null;VOTE_SHARE.stream=null;stream.getTracks().forEach(track=>track.stop());clearInterval(VOTE_SHARE.timer);VOTE_SHARE.step='ready';voteShareAnalytics('audio_recorded');voteSharePanel();};
+    recorder.start(250);VOTE_SHARE.timer=setInterval(()=>{VOTE_SHARE.seconds++;if(VOTE_SHARE.seconds>=15)stopVoteShareRecording();else{const timer=$('#voteShareTimer');if(timer)timer.textContent=`00:${String(VOTE_SHARE.seconds).padStart(2,'0')} / 00:15`}},1000);voteSharePanel();
   }catch(err){toast(err?.name==='NotAllowedError'?'Autorisation microphone refusée':'Microphone indisponible');}
 }
 function stopVoteShareRecording(){if(VOTE_SHARE.recorder?.state==='recording')VOTE_SHARE.recorder.stop()}
-async function nativeVoteShare(){
-  const file=VOTE_SHARE.mediaFile;if(!file)return;
+async function shareVoteNow(){
   const shareText=voteShareMessage(VOTE_SHARE.card);
+  const wantsVideo=Boolean(VOTE_SHARE.audioBlob);
+  VOTE_SHARE.step='generating';VOTE_SHARE.progress=0;VOTE_SHARE.status=wantsVideo?'Création de votre vidéo...':'Création de votre image...';voteSharePanel();
+  const file=wantsVideo?await generateVoteShareVideo():await generateVoteShareImage();
+  if(!file){VOTE_SHARE.step='ready';voteSharePanel();return;}
+  if(wantsVideo){VOTE_SHARE.status='✅ Vidéo prête';voteSharePanel();await new Promise(resolve=>setTimeout(resolve,350));}
+  VOTE_SHARE.step='sharing';VOTE_SHARE.progress=100;VOTE_SHARE.status='Ouverture du partage...';voteSharePanel();
   voteShareAnalytics('native_share_triggered');
-  if(navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}}
-  downloadVoteShare();
-}
-async function shareVoteWhatsapp(){
-  const shareText=voteShareMessage(VOTE_SHARE.card);
-  let file=VOTE_SHARE.mediaFile;
-  if(!file||file.type!=='image/png')file=await generateVoteShareImage(false);
   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-    try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}
+    try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});VOTE_SHARE.step='ready';voteSharePanel();return}catch(err){if(err?.name==='AbortError'){VOTE_SHARE.step='ready';voteSharePanel();return;}}
   }
   downloadVoteShare();
+  if(wantsVideo)toast('La vidéo avec audio a été téléchargée. Ajoute-la ensuite dans WhatsApp.');
   window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`,'_blank','noopener');
+  VOTE_SHARE.step='ready';voteSharePanel();
 }
 function downloadVoteShare(){if(!VOTE_SHARE.mediaFile)return;const a=document.createElement('a');a.href=VOTE_SHARE.mediaUrl;a.download=VOTE_SHARE.mediaFile.name;a.click();voteShareAnalytics('download')}
-async function copyVoteShareLink(){try{await navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card));voteShareAnalytics('link_copied');toast('Message copié')}catch{toast('Copie impossible')}}
 function formatTrendScore(s){return `${Math.round(Number(s)||0)}/100`}
 function arrow(p){return p.delta>0?`<span class="motion-up">↑</span> +${p.delta}`:p.delta<0?`<span class="motion-down">↓</span> ${p.delta}`:'—';}
 function arrowClass(p){return p.delta>0?'up':p.delta<0?'down':'flat'}
@@ -753,9 +763,7 @@ function resetDemo(){if(!confirm('Réinitialiser toutes les données locales ?')
 document.addEventListener('click',async e=>{
   const profileEl=e.target.closest('[data-profile]');if(profileEl&&!e.target.closest('button,a'))openProfile(profileEl.dataset.profile);
   if(e.target.matches('.fav'))toggleFavorite(e.target.dataset.id);if(e.target.matches('.follow'))toggleFollow(e.target.dataset.id);if(e.target.matches('.coule-vote'))voteCoule(e.target.dataset.id);if(e.target.matches('[data-share-vote]'))openVoteShare(e.target.dataset.shareVote);
-  if(e.target.id==='voteShareRecord')startVoteShareRecording();if(e.target.id==='voteShareStop')stopVoteShareRecording();if(e.target.id==='voteShareDeleteAudio'){voteShareCleanup({keepCard:true});voteSharePanel();}
-  if(e.target.id==='voteShareGenerateImage')generateVoteShareImage(false);if(e.target.id==='voteShareGenerateSquare')generateVoteShareImage(true);if(e.target.id==='voteShareConfirmVideo')generateVoteShareVideo();
-  if(e.target.id==='voteShareNative')nativeVoteShare();if(e.target.id==='voteShareDownload')downloadVoteShare();if(e.target.id==='voteShareCopy')copyVoteShareLink();if(e.target.id==='voteShareWhatsapp'){voteShareAnalytics('platform_selected','whatsapp');shareVoteWhatsapp();}
+  if(e.target.id==='voteShareRecord')startVoteShareRecording();if(e.target.id==='voteShareStop')stopVoteShareRecording();if(e.target.id==='voteShareSkip'){VOTE_SHARE.step='ready';voteSharePanel();}if(e.target.id==='voteShareNow')shareVoteNow();
   if(e.target.matches('[data-close]'))close(e.target.dataset.close);
   if(e.target.matches('[data-auth-tab]'))openAuth(e.target.dataset.authTab);
   if(e.target.matches('[data-scroll]'))document.getElementById(e.target.dataset.scroll)?.scrollIntoView({behavior:'smooth'});
