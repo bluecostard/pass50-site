@@ -126,33 +126,48 @@ function p50_mrph_recent(PDO $pdo,string $period='2H',int $limit=24): array {
     return $rows;
 }
 
+function p50_mrph_distinct_recent(array $history,int $sampleSize): array {
+    $sampleSize=max(1,min(24,$sampleSize));$selected=[];$seen=[];
+    foreach($history as $row){
+        if(!is_array($row))continue;
+        $runUuid=trim((string)($row['experimentalRunUuid']??''));
+        $key=$runUuid!==''?'run:'.$runUuid:'simulation:'.(string)($row['simulationUuid']??count($selected));
+        if(isset($seen[$key]))continue;
+        $seen[$key]=true;$selected[]=$row;
+        if(count($selected)>=$sampleSize)break;
+    }
+    return $selected;
+}
+
 function p50_mrph_stability(PDO $pdo,string $period='2H',int $sampleSize=3,?DateTimeImmutable $now=null): array {
     $period=p50_mrp_period($period);$sampleSize=max(P50_MRPH_MIN_DISTINCT_CYCLES,min(24,$sampleSize));$now=$now??new DateTimeImmutable('now',new DateTimeZone('UTC'));
-    $rows=p50_mrph_recent($pdo,$period,$sampleSize);$runUuids=[];$revisions=[];$publicFingerprints=[];$blockedReports=0;$reviewReports=0;$writeAnomalies=0;
+    $history=p50_mrph_recent($pdo,$period,max(24,min(100,$sampleSize*8)));$rows=p50_mrph_distinct_recent($history,$sampleSize);
+    $runUuids=[];$revisions=[];$publicFingerprints=[];$blockedReports=0;$reviewReports=0;$writeAnomalies=0;
     foreach($rows as $row){
         if($row['experimentalRunUuid'])$runUuids[(string)$row['experimentalRunUuid']]=true;
         $revisions[(string)$row['publicStateRevision']]=true;$publicFingerprints[(string)$row['publicFingerprint']]=true;
         if($row['status']==='blocked')$blockedReports++;elseif($row['status']==='review')$reviewReports++;
         if((int)$row['publicStateWrites']!==0)$writeAnomalies++;
     }
-    $latestAgeHours=null;
-    if($rows){$latest=new DateTimeImmutable((string)$rows[0]['generatedAt'],new DateTimeZone('UTC'));$latestAgeHours=max(0,($now->getTimestamp()-$latest->getTimestamp())/3600);}
+    $latestAgeHours=null;$latest=$history[0]??null;
+    if($latest){$latestDate=new DateTimeImmutable((string)$latest['generatedAt'],new DateTimeZone('UTC'));$latestAgeHours=max(0,($now->getTimestamp()-$latestDate->getTimestamp())/3600);}
     $enoughReports=count($rows)>=$sampleSize;$enoughRuns=count($runUuids)>=P50_MRPH_MIN_DISTINCT_CYCLES;$publicStable=count($revisions)<=1&&count($publicFingerprints)<=1;
+    $freshStatus=$latestAgeHours===null?'wait':($latestAgeHours<=P50_MRPH_MAX_LATEST_AGE_HOURS?'pass':'block');
     $gates=[
-        ['key'=>'minimum_reports','status'=>$enoughReports?'pass':'wait','message'=>'Nombre minimal de rapports récents.','value'=>count($rows)],
+        ['key'=>'minimum_reports','status'=>$enoughReports?'pass':'wait','message'=>'Nombre minimal de recalculs distincts récents.','value'=>count($rows)],
         ['key'=>'distinct_experimental_runs','status'=>$enoughRuns?'pass':'wait','message'=>'Au moins trois recalculs MR-V1.0 distincts.','value'=>count($runUuids)],
         ['key'=>'public_baseline_stable','status'=>$publicStable?'pass':'wait','message'=>'Révision et empreinte publiques stables pendant l’observation.','value'=>['revisions'=>array_keys($revisions),'fingerprints'=>count($publicFingerprints)]],
-        ['key'=>'no_blocked_reports','status'=>$blockedReports===0?'pass':'block','message'=>'Aucun rapport bloqué dans l’échantillon.','value'=>$blockedReports],
-        ['key'=>'latest_report_fresh','status'=>$latestAgeHours!==null&&$latestAgeHours<=P50_MRPH_MAX_LATEST_AGE_HOURS?'pass':'block','message'=>'Dernier rapport âgé de moins de six heures.','value'=>$latestAgeHours],
+        ['key'=>'no_blocked_reports','status'=>$blockedReports===0?'pass':'block','message'=>'Aucun rapport bloqué dans l’échantillon distinct.','value'=>$blockedReports],
+        ['key'=>'latest_report_fresh','status'=>$freshStatus,'message'=>'Dernier rapport âgé de moins de six heures.','value'=>$latestAgeHours],
         ['key'=>'read_only_history','status'=>$writeAnomalies===0?'pass':'block','message'=>'Aucune anomalie d’écriture publique dans l’historique.','value'=>$writeAnomalies],
         ['key'=>'warnings','status'=>$reviewReports===0?'pass':'warn','message'=>'Rapports nécessitant une revue.','value'=>$reviewReports],
     ];
     $blocked=(bool)array_filter($gates,static fn($gate)=>$gate['status']==='block');$waiting=(bool)array_filter($gates,static fn($gate)=>$gate['status']==='wait');$warnings=(bool)array_filter($gates,static fn($gate)=>$gate['status']==='warn');
     $state=$blocked?'blocked':($waiting?'collecting':($warnings?'review':'ready'));
     return [
-        'historyVersion'=>P50_MRPH_HISTORY_VERSION,'period'=>$period,'sampleSize'=>$sampleSize,'observedReports'=>count($rows),'distinctExperimentalRuns'=>count($runUuids),
+        'historyVersion'=>P50_MRPH_HISTORY_VERSION,'period'=>$period,'sampleSize'=>$sampleSize,'observedReports'=>count($rows),'rawObservedReports'=>count($history),'distinctExperimentalRuns'=>count($runUuids),
         'state'=>$state,'controlledPublicationEligible'=>$state==='ready','automaticPublicationEligible'=>false,
         'latestReportAgeHours'=>$latestAgeHours,'publicStateRevisions'=>array_map('intval',array_keys($revisions)),
-        'latest'=>$rows[0]??null,'gates'=>$gates,'recent'=>$rows,
+        'latest'=>$latest,'gates'=>$gates,'recent'=>$rows,
     ];
 }
