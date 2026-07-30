@@ -4,6 +4,7 @@ declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/metrics-ranking-core.php';
+require __DIR__.'/metrics-ranking-readiness-core.php';
 
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
@@ -34,18 +35,25 @@ if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',
 
 $started=microtime(true);
 try{
-    $result=p50_mr_calculate_if_due(
-        db(),
-        new DateTimeImmutable('now',new DateTimeZone('UTC')),
-        90,
-        $dispatchId
-    );
+    $pdo=db();
+    $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $readiness=p50_mrr_readiness($pdo,$now);
     $response=[
-        'ok'=>true,'skipped'=>(bool)($result['skipped']??false),'dispatchId'=>$dispatchId,
+        'ok'=>true,'skipped'=>false,'dispatchId'=>$dispatchId,
         'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'periods'=>array_keys(p50_mr_periods()),
+        'readiness'=>$readiness,
     ];
+    if(empty($readiness['ready'])){
+        $response['skipped']=true;
+        $response['reason']=(string)($readiness['reason']??'data_not_ready');
+        $response['durationMs']=(int)round((microtime(true)-$started)*1000);
+        json_response($response);
+    }
+
+    $result=p50_mr_calculate_if_due($pdo,$now,90,$dispatchId);
+    $response['skipped']=(bool)($result['skipped']??false);
     if($response['skipped']){
-        $response['reason']='recent_success';
+        $response['reason']=(string)($result['reason']??'recent_success');
         $response['latestFinishedAt']=$result['latestFinishedAt']??null;
     }else{
         $response['runUuid']=(string)$result['runUuid'];
