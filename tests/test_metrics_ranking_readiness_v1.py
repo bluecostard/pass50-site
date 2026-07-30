@@ -3,6 +3,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+BOOTSTRAP = (ROOT / 'api' / 'bootstrap.php').read_text(encoding='utf-8')
 READINESS = (ROOT / 'api' / 'metrics-ranking-readiness-core.php').read_text(encoding='utf-8')
 CRON = (ROOT / 'api' / 'metrics-ranking-cron.php').read_text(encoding='utf-8')
 DIAGNOSTIC = (ROOT / 'api' / 'metrics-diagnostic.php').read_text(encoding='utf-8')
@@ -10,9 +11,15 @@ WORKFLOW = (ROOT / '.github' / 'workflows' / 'metrics-ranking-experimental.yml')
 
 
 class MetricsRankingReadinessV1Tests(unittest.TestCase):
+    def test_database_session_and_readiness_use_utc(self):
+        self.assertIn("SET SESSION time_zone = '+00:00'", BOOTSTRAP)
+        self.assertIn('P50_MR_READINESS_FUTURE_TOLERANCE_MINUTES', READINESS)
+        self.assertIn('finished_at<=?', READINESS)
+        self.assertIn('futureRunsIgnored', READINESS)
+
     def test_gate_covers_collection_and_data_states(self):
         for reason in (
-            'schema_missing', 'p1_not_observed', 'p1_stale', 'collection_pending',
+            'schema_missing', 'p1_not_observed', 'p1_future_timestamp', 'p1_stale', 'collection_pending',
             'no_usable_captures', 'no_new_captures', 'ready_with_partial_failures',
         ):
             self.assertIn(reason, READINESS)
