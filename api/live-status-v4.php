@@ -7,9 +7,6 @@ require __DIR__.'/live-radar-v4-core.php';
 require_method('GET');
 set_time_limit(60);
 
-// Les DATETIME du Radar sont échangés comme des dates UTC. Sans ce réglage,
-// certains hébergements IONOS renvoient des confirmations plusieurs heures
-// dans le futur et le navigateur les retire immédiatement.
 try { db()->exec("SET time_zone = '+00:00'"); } catch (Throwable) {}
 
 p50_live_v4_ensure_schema();
@@ -17,9 +14,6 @@ p50_de_sync_registry_from_state();
 $state=p50_de_load_public_state();
 $sources=p50_live_v4_sources($state);
 
-// Priorité demandée : TikTok, Facebook, YouTube, Instagram. Les sources jamais
-// contrôlées et les directs récents conservent leur priorité interne avant ce
-// classement par plateforme afin de ne pas bloquer la rotation générale.
 $platformPriority=['TikTok'=>0,'Facebook'=>1,'YouTube'=>2,'Instagram'=>3];
 usort($sources,static function(array $a,array $b) use($platformPriority): int {
     $cmp=((int)($a['priority']??3))<=>((int)($b['priority']??3));
@@ -42,7 +36,7 @@ $refresh=45;
 $lastScan=(string)p50_de_get_setting('live_radar_v4_last_scan_at','');
 $lastTs=$lastScan!==''?(strtotime($lastScan)?:0):0;
 $canScan=$mode!=='status'&&($force||(time()-$lastTs)>=$refresh);
-$cycleId=null;$cycleComplete=true;$cycleScanned=0;$cycleFound=0;$cycleCandidates=0;$cycleTotal=count($sources);$selected=[];$manifest=null;$keys=[];
+$cycleId=null;$cycleComplete=true;$cycleScanned=0;$cycleFound=0;$cycleCandidates=0;$cycleTotal=count($sources);$selected=[];$manifest=null;$keys=[];$discoveryQuota=0;
 
 if($mode==='full'){
     $cycleId=p50_live_v4_cycle_id();$cycleKey=p50_live_v4_cycle_key($cycleId);$manifest=p50_de_get_setting($cycleKey,null);
@@ -53,6 +47,13 @@ if($mode==='full'){
     $cycleScanned=(int)$manifest['scanned'];$cycleFound=(int)$manifest['found'];$cycleCandidates=(int)($manifest['candidates']??0);$cycleComplete=$cursor>=$cycleTotal;
 }elseif($mode==='profile'){
     $selected=array_slice($sources,0,$batch);$cycleTotal=count($sources);
+}elseif($mode==='quick'){
+    $discoveryQuota=min(4,$batch);$priorityLimit=max(0,$batch-$discoveryQuota);$priority=array_slice($sources,0,$priorityLimit);$used=[];
+    foreach($priority as $source)$used[(string)$source['source_key']]=true;
+    $discovery=array_values(array_filter($sources,static fn($source)=>!isset($used[(string)$source['source_key']])&&(int)($source['priority']??3)>=2));
+    usort($discovery,static function(array $a,array $b): int {$ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);});
+    $selected=array_merge($priority,array_slice($discovery,0,$discoveryQuota));foreach($selected as $source)$used[(string)$source['source_key']]=true;
+    if(count($selected)<$batch)foreach($sources as $source){$key=(string)$source['source_key'];if(isset($used[$key]))continue;$selected[]=$source;$used[$key]=true;if(count($selected)>=$batch)break;}
 }else{
     $selected=array_slice($sources,0,$batch);
 }
@@ -84,7 +85,7 @@ if($canScan&&$selected&&$lock){
                 'profileId'=>$profileId,'name'=>(string)$source['public_name'],'platform'=>$platform,'state'=>$stateValue,
                 'publicState'=>$stateValue==='probable'?'unconfirmed':$stateValue,
                 'lastCheckedAt'=>gmdate(DATE_ATOM),'lastConfirmedAt'=>$stateValue==='live'?gmdate(DATE_ATOM):null,
-                'continuityPreserved'=>$stateValue==='unknown'&&in_array((string)($health['previousState']??''),['live','probable'],true),
+                'continuityPreserved'=>false,
                 'withdrawalReason'=>in_array($stateValue,['live','probable'],true)?'':(string)($result['error']??$stateValue),
                 'confidence'=>(int)($result['confidence']??0),'error'=>(string)($result['error']??''),'evidence'=>$result['evidence']??[],'probes'=>$result['probes']??[],
             ];
@@ -107,9 +108,6 @@ $officialKeys=[];foreach($sources as $source)$officialKeys[strtolower((string)$s
 $automatic=array_values(array_filter(p50_live_v4_active_rows(),static function(array $stream) use($officialKeys): bool {
     $profileId=trim((string)($stream['profileId']??''));
     if($profileId==='')return false;
-    // Une connexion Meta autorisée et explicitement associée à une fiche est déjà
-    // une source officielle. Elle ne doit pas être supprimée parce que la fiche ne
-    // possède pas encore de lien Facebook/Instagram saisi manuellement.
     if((string)($stream['source']??'')==='meta_authorized')return true;
     $key=strtolower((string)($stream['platform']??'')).'|'.$profileId;
     return isset($officialKeys[$key]);
@@ -118,10 +116,10 @@ $manual=p50_live_v4_manual_streams($state);$streams=p50_live_v4_dedup($automatic
 $coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;$lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
 
 json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
-    'version'=>4,'mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
+    'version'=>'4.1','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
     'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
     'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,'coveragePercent'=>$coverage,
     'officialSourcesKnown'=>count($sources),'activeAutomaticConfirmed'=>count($automatic),'platforms'=>$platformStats,'health'=>$healthSummary,'lastFullSweep'=>$lastFull,
-    'refreshSeconds'=>$refresh,'batchSize'=>$batch,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],'graceMinutes'=>P50_LIVE_V4_GRACE_MINUTES,'diagnostics'=>$diagnostics,
+    'refreshSeconds'=>$refresh,'batchSize'=>$batch,'discoveryQuota'=>$discoveryQuota,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],'graceMinutes'=>array_replace(P50_LIVE_V4_GRACE_MINUTES,['TikTok'=>2]),'diagnostics'=>$diagnostics,
 ]]);
