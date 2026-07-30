@@ -34,11 +34,17 @@ $noP1=p50_mrr_readiness($pdo,$now);
 readiness_must($noP1['reason']==='p1_not_observed','P1 absent détecté');
 
 $pdo->exec("INSERT INTO p50_metric_runs(run_uuid,collector,trigger_type,status,started_at,finished_at) VALUES(
+    '99999999-9999-4999-8999-999999999999','metrics_orchestrator_v1','dispatch_p1','success','2026-07-30 13:50:00','2026-07-30 14:00:00'
+)");
+$future=p50_mrr_readiness($pdo,$now);
+readiness_must($future['reason']==='p1_future_timestamp'&&$future['p1']['futureRunsIgnored']===1,'Run P1 futur non isolé');
+
+$pdo->exec("INSERT INTO p50_metric_runs(run_uuid,collector,trigger_type,status,started_at,finished_at) VALUES(
     '11111111-1111-4111-8111-111111111111','metrics_orchestrator_v1','dispatch_p1','success','2026-07-30 11:35:00','2026-07-30 11:45:00'
 )");
 $pdo->exec("INSERT INTO p50_metric_jobs(priority,status,updated_at) VALUES(50,'pending','2026-07-30 11:46:00')");
 $pending=p50_mrr_readiness($pdo,$now);
-readiness_must($pending['reason']==='collection_pending'&&$pending['state']==='waiting'&&$pending['p1']['activeJobs']===1,'File P1 active détectée');
+readiness_must($pending['reason']==='collection_pending'&&$pending['state']==='waiting'&&$pending['p1']['activeJobs']===1&&$pending['p1']['futureRunsIgnored']===1,'File P1 active détectée');
 
 $pdo->exec("DELETE FROM p50_metric_jobs");
 $noCapture=p50_mrr_readiness($pdo,$now);
@@ -62,5 +68,5 @@ $stale=p50_mrr_readiness($pdo,$now);
 readiness_must($stale['reason']==='p1_stale'&&!$stale['ready'],'P1 ancien bloqué');
 
 fwrite(STDOUT,json_encode(['ok'=>true,'states'=>[
-    $missing['reason'],$noP1['reason'],$pending['reason'],$noCapture['reason'],$ready['reason'],$unchanged['reason'],$degraded['reason'],$stale['reason'],
+    $missing['reason'],$noP1['reason'],$future['reason'],$pending['reason'],$noCapture['reason'],$ready['reason'],$unchanged['reason'],$degraded['reason'],$stale['reason'],
 ]],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n");
