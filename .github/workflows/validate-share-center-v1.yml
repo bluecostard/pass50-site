@@ -1,0 +1,34 @@
+name: Validate Share Center V1
+
+on:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: |
+          php -l partage.php
+          php -l partage-image.php
+          php -l api/vote-share.php
+      - name: JavaScript syntax
+        run: |
+          node --check share-center-v1.js
+          node --check live-experience-v4-1.js
+          node --check app-config.js
+      - name: Static sharing tests
+        run: python3 -m unittest tests.test_share_center_v1
+      - name: Runtime metadata smoke tests
+        run: |
+          php -r '$_GET=["type"=>"site"]; include "partage.php";' > /tmp/share-site.html
+          grep -F 'PASS50 — Qui fait le buzz maintenant ?' /tmp/share-site.html
+          grep -F 'property="og:title"' /tmp/share-site.html
+          php -r '$_GET=["type"=>"profile","id"=>"demo"]; include "partage.php";' > /tmp/share-profile.html
+          grep -F 'Fiche influenceur PASS50' /tmp/share-profile.html
+          if grep -F 'Qui est le plus coulé des 2' /tmp/share-profile.html; then exit 1; fi
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
