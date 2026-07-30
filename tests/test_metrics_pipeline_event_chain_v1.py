@@ -12,6 +12,7 @@ class MetricsPipelineEventChainV1Tests(unittest.TestCase):
         self.assertIn("cron: '7 */2 * * *'", P1)
         self.assertIn('workflow_dispatch:', P1)
         self.assertIn("- '.github/workflows/metrics-top50-2h.yml'", P1)
+        self.assertIn("- '.github/workflows/metrics-ranking-experimental.yml'", P1)
         self.assertIn('actions: write', P1)
         self.assertIn('statuses: write', P1)
 
