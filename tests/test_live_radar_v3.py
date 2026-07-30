@@ -53,6 +53,12 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('confirmation_grace_expired', active)
         self.assertIn("array_replace(P50_LIVE_V4_GRACE_MINUTES,['TikTok'=>2])", ENDPOINT)
 
+    def test_dismissed_stream_never_returns(self):
+        self.assertIn('p50_live_dismissals', STORAGE)
+        self.assertIn('p50_live_v4_is_dismissed', STORAGE)
+        self.assertIn('LEFT JOIN p50_live_dismissals', STORAGE)
+        self.assertIn('d.stream_key IS NULL', STORAGE)
+
     def test_replay_is_separate_from_live(self):
         self.assertIn("'state'=>'replay'", PARSERS)
         self.assertIn("elseif($stateValue==='replay')", ENDPOINT)
@@ -86,7 +92,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("const ENDPOINT='./api/live-status-v4.php'", CLIENT)
         self.assertIn('RADAR LIVE V4', CLIENT)
         self.assertIn('PASS50_LIVE_EXPERIENCE_VERSION', EXPERIENCE)
-        self.assertIn('live-experience-v4-1.js?v=1.0', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
+        self.assertIn('live-experience-v4-1.js?v=1.1', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
 
     def test_server_sweep_uses_v4(self):
         self.assertIn('*/10 * * * *', SWEEP)
