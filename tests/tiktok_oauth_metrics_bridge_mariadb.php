@@ -23,6 +23,7 @@ $pdo->exec("INSERT INTO p50_social_links(profile_id,platform,normalized_url,conf
 require __DIR__.'/../api/metrics-schema-core.php';
 require __DIR__.'/../api/tiktok-oauth-core.php';
 require __DIR__.'/../api/tiktok-metrics-bridge-core.php';
+require __DIR__.'/../api/meta-metrics-bridge-core.php';
 p50tk_ensure_schema();
 
 $insert=$pdo->prepare("INSERT INTO p50_tiktok_oauth_connections
@@ -40,6 +41,8 @@ $access=p50tm_public_access('papa-ado');
 if(empty($access['configured'])||empty($access['authorized'])||($access['mode']??'')!=='authorized_display')throw new RuntimeException('Accès OAuth TikTok non activé.');
 $ids=p50tm_authorized_profile_ids($pdo);
 if($ids!==['papa-ado'])throw new RuntimeException('Profil TikTok autorisé absent de la priorité OAuth.');
+$orchestratorIds=p50mm_authorized_profile_ids($pdo);
+if($orchestratorIds!==['papa-ado'])throw new RuntimeException('Profil TikTok OAuth absent de la sélection prioritaire P0.');
 
 $pdo->exec("UPDATE p50_social_links SET status='candidate' WHERE profile_id='papa-ado' AND platform='TikTok'");
 if(p50tm_connection_for_profile($pdo,'papa-ado',true)!==null)throw new RuntimeException('Lien TikTok non validé accepté.');
@@ -50,5 +53,6 @@ if(p50tm_connection_for_profile($pdo,'papa-ado',true)!==null)throw new RuntimeEx
 $pdo->exec("UPDATE p50_tiktok_oauth_connections SET username='CKNG12',status='reauthorization_required' WHERE open_id='open-papa-ado'");
 $access=p50tm_public_access('papa-ado');
 if(empty($access['configured'])||!empty($access['authorized'])||empty($access['authorizationRequired']))throw new RuntimeException('Réautorisation TikTok mal signalée.');
+if(p50mm_authorized_profile_ids($pdo)!==[])throw new RuntimeException('Profil TikTok à réautoriser maintenu en priorité P0.');
 
 echo "TikTok OAuth metrics bridge: OK\n";
