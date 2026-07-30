@@ -12,7 +12,7 @@ foreach(['p50_metric_ranking_current','p50_metric_ranking_runs','p50_profile_reg
 $pdo->exec("CREATE TABLE app_state(id VARCHAR(32) PRIMARY KEY,data LONGTEXT NOT NULL,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 $pdo->exec("CREATE TABLE p50_profile_registry(profile_id VARCHAR(100) PRIMARY KEY,public_name VARCHAR(190) NOT NULL,handle VARCHAR(190) NOT NULL DEFAULT '',region VARCHAR(32) NOT NULL DEFAULT 'CI')");
 $pdo->exec("CREATE TABLE p50_metric_ranking_runs(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,run_uuid CHAR(36) NOT NULL,algorithm_version VARCHAR(24) NOT NULL,trigger_type VARCHAR(32) NOT NULL,status VARCHAR(24) NOT NULL,periods_json LONGTEXT NOT NULL,finished_at DATETIME NULL)");
-$pdo->exec("CREATE TABLE p50_metric_ranking_current(algorithm_version VARCHAR(24) NOT NULL,period_key VARCHAR(8) NOT NULL,profile_id VARCHAR(100) NOT NULL,rank_position INT NULL,score DECIMAL(7,3) NULL,confidence DECIMAL(7,3) NOT NULL,coverage DECIMAL(7,3) NOT NULL,classable TINYINT(1) NOT NULL,exclusion_reasons_json LONGTEXT NOT NULL,PRIMARY KEY(algorithm_version,period_key,profile_id))");
+$pdo->exec("CREATE TABLE p50_metric_ranking_current(algorithm_version VARCHAR(24) NOT NULL,period_key VARCHAR(8) NOT NULL,profile_id VARCHAR(100) NOT NULL,run_uuid CHAR(36) NOT NULL,rank_position INT NULL,score DECIMAL(7,3) NULL,confidence DECIMAL(7,3) NOT NULL,coverage DECIMAL(7,3) NOT NULL,classable TINYINT(1) NOT NULL,exclusion_reasons_json LONGTEXT NOT NULL,PRIMARY KEY(algorithm_version,period_key,profile_id))");
 
 $state=['stateRevision'=>7,'profiles'=>[
     ['id'=>'A','name'=>'Alpha','alive'=>true,'eligible'=>true,'classable'=>true,'scores'=>['2H'=>90]],
@@ -26,12 +26,12 @@ $stmt=$pdo->prepare("INSERT INTO p50_profile_registry(profile_id,public_name,han
 foreach([['A','Alpha','@alpha','CI'],['B','Bravo','@bravo','CI'],['C','Charlie','@charlie','CI'],['D','Delta','@delta','CI']] as $row)$stmt->execute($row);
 $pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,trigger_type,status,periods_json,finished_at) VALUES(?,?,?,?,?,UTC_TIMESTAMP())")
     ->execute(['11111111-1111-4111-8111-111111111111',P50_MR_ALGORITHM_VERSION,'cron_2h','success','[\"2H\"]']);
-$stmt=$pdo->prepare("INSERT INTO p50_metric_ranking_current(algorithm_version,period_key,profile_id,rank_position,score,confidence,coverage,classable,exclusion_reasons_json) VALUES(?,?,?,?,?,?,?,?,?)");
+$stmt=$pdo->prepare("INSERT INTO p50_metric_ranking_current(algorithm_version,period_key,profile_id,run_uuid,rank_position,score,confidence,coverage,classable,exclusion_reasons_json) VALUES(?,?,?,?,?,?,?,?,?,?)");
 foreach([
-    [P50_MR_ALGORITHM_VERSION,'2H','B',1,88,85,80,1,'[]'],
-    [P50_MR_ALGORITHM_VERSION,'2H','D',2,85,82,78,1,'[]'],
-    [P50_MR_ALGORITHM_VERSION,'2H','A',3,82,80,75,1,'[]'],
-    [P50_MR_ALGORITHM_VERSION,'2H','C',null,65,40,35,0,'[\"coverage_below_45\"]'],
+    [P50_MR_ALGORITHM_VERSION,'2H','B','11111111-1111-4111-8111-111111111111',1,88,85,80,1,'[]'],
+    [P50_MR_ALGORITHM_VERSION,'2H','D','11111111-1111-4111-8111-111111111111',2,85,82,78,1,'[]'],
+    [P50_MR_ALGORITHM_VERSION,'2H','A','11111111-1111-4111-8111-111111111111',3,82,80,75,1,'[]'],
+    [P50_MR_ALGORITHM_VERSION,'2H','C','11111111-1111-4111-8111-111111111111',null,65,40,35,0,'[\"coverage_below_45\"]'],
 ] as $row)$stmt->execute($row);
 
 $before=(string)$pdo->query("SELECT data FROM app_state WHERE id='public'")->fetchColumn();
