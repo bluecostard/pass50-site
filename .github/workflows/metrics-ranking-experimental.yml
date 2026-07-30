@@ -72,20 +72,22 @@ jobs:
           failed_jobs="$(jq -r '.readiness.p1.failedJobs // 0' <<<"$response")"
           latest_capture="$(jq -r '.readiness.latestUsableCaptureAt // "—"' <<<"$response")"
           p1_finished="$(jq -r '.readiness.p1.finishedAt // "—"' <<<"$response")"
-          run_uuid="$(jq -r '.runUuid // "—"' <<<"$response")"
+          run_uuid="$(jq -r '.runUuid // ""' <<<"$response")"
           algorithm="$(jq -r '.algorithmVersion // "—"' <<<"$response")"
           periods="$(jq -r '(.periods // []) | join(", ")' <<<"$response")"
           classable="$(jq -r '.classableCount // 0' <<<"$response")"
           scores="$(jq -r '.scoresWritten // 0' <<<"$response")"
           duration="$(jq -r '.durationMs // 0' <<<"$response")"
+          refresh_p1=false
 
           case "$reason" in
             executed) result="exécuté" ;;
             recent_success) result="reporté : succès récent" ;;
             collection_pending) result="reporté : collecte P1 encore en cours" ;;
             no_new_captures) result="reporté : aucune nouvelle capture" ;;
-            p1_not_observed) result="reporté : aucun cycle P1 observé" ;;
-            p1_stale) result="reporté : cycle P1 trop ancien" ;;
+            p1_not_observed) result="reporté : aucun cycle P1 observé"; refresh_p1=true ;;
+            p1_stale) result="reporté : cycle P1 trop ancien"; refresh_p1=true ;;
+            p1_future_timestamp) result="reporté : horodatage P1 invalide"; refresh_p1=true ;;
             no_usable_captures) result="reporté : aucune capture exploitable" ;;
             schema_missing) result="reporté : schéma métrique incomplet" ;;
             *) result="$([ "$skipped" = "true" ] && printf 'reporté : %s' "$reason" || printf 'exécuté')" ;;
@@ -99,11 +101,12 @@ jobs:
             printf -- '- Fin du dernier P1 : %s\n' "$p1_finished"
             printf -- '- Jobs P1 actifs / échoués : %s / %s\n' "$active_jobs" "$failed_jobs"
             printf -- '- Dernière capture exploitable : %s\n' "$latest_capture"
-            printf -- '- runUuid : `%s`\n' "$run_uuid"
+            printf -- '- runUuid : `%s`\n' "${run_uuid:-—}"
             printf -- '- Algorithme : `%s`\n' "$algorithm"
             printf -- '- Périodes : %s\n' "${periods:-—}"
             printf -- '- Profils classables : %s\n' "$classable"
             printf -- '- Scores écrits : %s\n' "$scores"
+            printf -- '- Rafraîchissement P1 requis : `%s`\n' "$refresh_p1"
             printf -- '- Écriture app_state : `0`\n'
             printf -- '- Durée : %s ms\n' "$duration"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -114,7 +117,24 @@ jobs:
             printf 'run_uuid=%s\n' "$run_uuid"
             printf 'classable=%s\n' "$classable"
             printf 'scores=%s\n' "$scores"
+            printf 'refresh_p1=%s\n' "$refresh_p1"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch fresh P1 when readiness expired
+        id: refresh_p1
+        if: ${{ steps.ranking.outcome == 'success' && steps.ranking.outputs.refresh_p1 == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -nc --arg ref "main" '{ref:$ref}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/metrics-top50-2h.yml/dispatches"
+          printf '### Auto-récupération P1\n- Un nouveau cycle P1 a été déclenché avant tout nouveau calcul MR-V1.0.\n- Aucune simulation de publication n’est lancée sur le calcul périmé.\n' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish sanitized experimental status
         if: ${{ always() }}
@@ -122,19 +142,38 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           STEP_OUTCOME: ${{ steps.ranking.outcome }}
+          REFRESH_OUTCOME: ${{ steps.refresh_p1.outcome }}
+          SKIPPED: ${{ steps.ranking.outputs.skipped }}
           REASON: ${{ steps.ranking.outputs.reason }}
           READINESS_STATE: ${{ steps.ranking.outputs.readiness_state }}
           CLASSABLE: ${{ steps.ranking.outputs.classable }}
+          REFRESH_P1: ${{ steps.ranking.outputs.refresh_p1 }}
         run: |
           set -euo pipefail
           state="success"
           reason="${REASON:-unavailable}"
           readiness="${READINESS_STATE:-unknown}"
           classable="${CLASSABLE:-0}"
+          skipped="${SKIPPED:-true}"
+          refresh_p1="${REFRESH_P1:-false}"
           description="MR-V1.0 ${reason} · ${readiness} · ${classable} classables · app_state 0"
           if [ "$STEP_OUTCOME" != "success" ] || [ -z "${REASON:-}" ]; then
             state="failure"
             description="MR-V1.0 interrompu · classement public inchangé"
+          elif [ "$refresh_p1" = "true" ]; then
+            if [ "${REFRESH_OUTCOME:-failure}" = "success" ]; then
+              state="pending"
+              description="MR-V1.0 ${reason} · nouveau P1 déclenché · app_state 0"
+            else
+              state="failure"
+              description="MR-V1.0 ${reason} · relance P1 impossible · app_state 0"
+            fi
+          elif [ "$skipped" = "true" ] && [ "$reason" = "collection_pending" ]; then
+            state="pending"
+            description="MR-V1.0 en attente de P1 · classement public inchangé"
+          elif [ "$reason" = "schema_missing" ]; then
+            state="failure"
+            description="MR-V1.0 schéma incomplet · classement public inchangé"
           fi
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context "pass50/experimental-ranking" '{state:$state,target_url:$target_url,description:$description,context:$context}')"
@@ -153,7 +192,7 @@ jobs:
           retention-days: 30
 
       - name: Dispatch publication simulation
-        if: ${{ steps.ranking.outcome == 'success' && steps.ranking.outputs.reason != '' }}
+        if: ${{ steps.ranking.outcome == 'success' && steps.ranking.outputs.skipped == 'false' && steps.ranking.outputs.run_uuid != '' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
