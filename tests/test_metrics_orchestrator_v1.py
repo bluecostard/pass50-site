@@ -2,8 +2,10 @@ import re
 import unittest
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
 CORE = (ROOT / "api/metrics-orchestrator-core.php").read_text()
+QUEUE = (ROOT / "api/metrics-queue-core.php").read_text()
 CRON = (ROOT / "api/metrics-cron.php").read_text()
 ADMIN = (ROOT / "api/metrics-orchestrator.php").read_text()
 COLLECTORS = (ROOT / "api/metrics-collectors-core.php").read_text()
@@ -83,9 +85,21 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
         self.assertIn('timestamp."\\n".$raw', CORE)
         self.assertIn("strlen($secret)<32", CORE)
         self.assertIn(">300", CORE)
-        self.assertIn("['dispatch','work']", CRON)
+        self.assertIn("['dispatch','work','queue']", CRON)
         for cadence in ("'p0'=>", "'p1'=>", "'p2'=>"):
             self.assertIn(cadence, CORE)
+
+    def test_queue_contract_is_read_only_and_p1_scoped(self):
+        self.assertIn("function p50_moq_snapshot", QUEUE)
+        self.assertIn("priority=50", QUEUE)
+        self.assertIn("'p1Remaining'", QUEUE)
+        self.assertIn("'p1RetryWait'", QUEUE)
+        self.assertIn("'p1WaitSeconds'", QUEUE)
+        self.assertIn("p50_metrics_safe_error", QUEUE)
+        self.assertIn("$response['queue']=p50_moq_snapshot($pdo)", CRON)
+        for forbidden in ("UPDATE app_state", "INSERT INTO app_state", "DELETE FROM app_state", "REPLACE INTO app_state"):
+            self.assertNotIn(forbidden, QUEUE)
+            self.assertNotIn(forbidden, CRON)
 
     def test_admin_is_restricted_and_safe(self):
         self.assertIn("require_role($user,'owner','admin')", ADMIN)
@@ -102,7 +116,7 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
     def test_observability_and_ui(self):
         self.assertIn("'metricsOrchestrator'=>$metricsOrchestrator", OBS)
         self.assertIn("automationObservedRecently", OBS)
-        self.assertIn("metadata_json LIKE '%\\\"source\\\":\\\"cron_hmac\\\"%'", CORE)
+        self.assertIn("metadata_json LIKE '%\"source\":\"cron_hmac\"%'", CORE)
         self.assertIn("p50_metrics_table_exists($pdo,'p50_metric_jobs')", CORE)
         self.assertIn("AUTOMATISATION DES MÉTRIQUES", UI)
         self.assertIn("INSTALLER LE SCHÉMA CANONIQUE", UI)
@@ -123,7 +137,7 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
     def test_workflows_are_bounded_and_do_not_publish(self):
         expected = {
             "metrics-priority-15m.yml": ("*/15 * * * *", "timeout-minutes: 10", "p0"),
-            "metrics-top50-2h.yml": ("7 */2 * * *", "timeout-minutes: 45", "p1"),
+            "metrics-top50-2h.yml": ("7 */2 * * *", "timeout-minutes: 75", "p1"),
             "metrics-census-12h.yml": ("23 */12 * * *", "timeout-minutes: 120", "p2"),
         }
         for name, (schedule, timeout, cadence) in expected.items():
@@ -142,7 +156,7 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
                 self.assertNotIn(forbidden, text)
 
     def test_no_ranking_or_app_state_mutation(self):
-        combined = CORE + CRON + ADMIN
+        combined = CORE + QUEUE + CRON + ADMIN
         for forbidden in ("p50_de_publish_score_pipeline", "p50_de_publish_profile",
                           "p50_de_15c_window", "data-publish.php",
                           "UPDATE app_state", "INSERT INTO app_state",
