@@ -116,7 +116,7 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
     def test_observability_and_ui(self):
         self.assertIn("'metricsOrchestrator'=>$metricsOrchestrator", OBS)
         self.assertIn("automationObservedRecently", OBS)
-        self.assertIn("metadata_json LIKE '%\"source\":\"cron_hmac\"%'", CORE)
+        self.assertIn('metadata_json LIKE \'%\\"source\\":\\"cron_hmac\\"%\'', CORE)
         self.assertIn("p50_metrics_table_exists($pdo,'p50_metric_jobs')", CORE)
         self.assertIn("AUTOMATISATION DES MÉTRIQUES", UI)
         self.assertIn("INSTALLER LE SCHÉMA CANONIQUE", UI)
