@@ -5,6 +5,7 @@ require_once __DIR__.'/metrics-schema-core.php';
 
 const P50_MR_READINESS_VERSION='1.0.0';
 const P50_MR_READINESS_MAX_P1_AGE_MINUTES=180;
+const P50_MR_READINESS_FUTURE_TOLERANCE_MINUTES=5;
 
 function p50_mrr_date(?string $value): ?DateTimeImmutable {
     if($value===null||trim($value)==='')return null;
@@ -23,17 +24,25 @@ function p50_mrr_readiness(PDO $pdo,DateTimeImmutable $now): array {
     $base=[
         'version'=>P50_MR_READINESS_VERSION,'ready'=>false,'state'=>'blocked','reason'=>'schema_missing',
         'checkedAt'=>$now->format(DATE_ATOM),'missingTables'=>$missing,
-        'p1'=>['runUuid'=>null,'startedAt'=>null,'finishedAt'=>null,'ageMinutes'=>null,'activeJobs'=>0,'failedJobs'=>0],
+        'p1'=>['runUuid'=>null,'startedAt'=>null,'finishedAt'=>null,'ageMinutes'=>null,'activeJobs'=>0,'failedJobs'=>0,'futureRunsIgnored'=>0],
         'latestUsableCaptureAt'=>null,'latestRankingFinishedAt'=>null,
     ];
     if($missing)return $base;
 
+    $futureCutoff=$now->modify('+'.P50_MR_READINESS_FUTURE_TOLERANCE_MINUTES.' minutes')->format('Y-m-d H:i:s');
+    $futureStmt=$pdo->prepare("SELECT COUNT(*) FROM p50_metric_runs
+        WHERE collector='metrics_orchestrator_v1' AND trigger_type='dispatch_p1'
+          AND status='success' AND finished_at IS NOT NULL AND finished_at>?");
+    $futureStmt->execute([$futureCutoff]);
+    $futureRunsIgnored=(int)$futureStmt->fetchColumn();
+    $base['p1']['futureRunsIgnored']=$futureRunsIgnored;
+
     $stmt=$pdo->prepare("SELECT run_uuid,started_at,finished_at FROM p50_metric_runs
         WHERE collector='metrics_orchestrator_v1' AND trigger_type='dispatch_p1'
-          AND status='success' AND finished_at IS NOT NULL
+          AND status='success' AND finished_at IS NOT NULL AND finished_at<=?
         ORDER BY finished_at DESC,id DESC LIMIT 1");
-    $stmt->execute();$p1=$stmt->fetch();
-    if(!is_array($p1))return array_replace($base,['reason'=>'p1_not_observed','missingTables'=>[]]);
+    $stmt->execute([$futureCutoff]);$p1=$stmt->fetch();
+    if(!is_array($p1))return array_replace($base,['reason'=>$futureRunsIgnored>0?'p1_future_timestamp':'p1_not_observed','missingTables'=>[]]);
 
     $finishedAt=p50_mrr_date((string)$p1['finished_at']);
     if(!$finishedAt)return array_replace($base,['reason'=>'p1_invalid_timestamp','missingTables'=>[]]);
@@ -41,7 +50,7 @@ function p50_mrr_readiness(PDO $pdo,DateTimeImmutable $now): array {
     $p1State=[
         'runUuid'=>(string)$p1['run_uuid'],'startedAt'=>p50_mrr_iso((string)$p1['started_at']),
         'finishedAt'=>$finishedAt->format(DATE_ATOM),'ageMinutes'=>$ageMinutes,
-        'activeJobs'=>0,'failedJobs'=>0,
+        'activeJobs'=>0,'failedJobs'=>0,'futureRunsIgnored'=>$futureRunsIgnored,
     ];
     $base['p1']=$p1State;$base['missingTables']=[];
     if($ageMinutes>P50_MR_READINESS_MAX_P1_AGE_MINUTES)return array_replace($base,['reason'=>'p1_stale']);
