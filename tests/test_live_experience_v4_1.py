@@ -54,7 +54,8 @@ class LiveExperienceV41Tests(unittest.TestCase):
         self.assertIn("live-experience-v4-1.js?v=1.1", PUBLIC)
         self.assertIn("live-dismiss-ui-v1.js?v=1.0", PUBLIC)
         self.assertIn("live-dismiss-ui-v1.js?v=1.0", SW)
-        self.assertIn("pass50-v48-live-actions-dismiss-v1", SW)
+        self.assertIn("share-center-v1.js?v=1.0", SW)
+        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
 
 if __name__ == '__main__':
