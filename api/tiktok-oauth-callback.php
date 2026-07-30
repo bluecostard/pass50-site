@@ -24,6 +24,8 @@ if (isset($_GET['error'])) {
 $code = trim((string)($_GET['code'] ?? ''));
 if ($code === '') p50tk_redirect_result('error', 'missing_code');
 
+$issuedAccessToken = '';
+$oauth = null;
 try {
     try { db()->exec('SET SESSION lock_wait_timeout=5'); } catch (Throwable) {}
     try { db()->exec('SET SESSION max_statement_time=5'); } catch (Throwable) {}
@@ -57,22 +59,34 @@ try {
     $accessToken = trim((string)($tokens['access_token'] ?? ''));
     $refreshToken = trim((string)($tokens['refresh_token'] ?? ''));
     if ($accessToken === '' || $refreshToken === '') throw new RuntimeException('Jetons TikTok absents.');
+    $issuedAccessToken = $accessToken;
     $grantedScopes = array_values(array_filter(array_map('trim', explode(',', (string)($tokens['scope'] ?? '')))));
     $missingScopes = array_values(array_diff(P50TK_REQUIRED_SCOPES, $grantedScopes));
     if ($missingScopes) {
-        p50tk_http(
-            'https://open.tiktokapis.com/v2/oauth/revoke/',
-            'POST',
-            ['Content-Type: application/x-www-form-urlencoded'],
-            ['client_key' => $oauth['client_key'], 'client_secret' => $oauth['client_secret'], 'token' => $accessToken]
-        );
         throw new RuntimeException('Les autorisations TikTok requises n’ont pas toutes été accordées.');
     }
     $profile = p50tk_fetch_profile($accessToken);
     $videos = p50tk_fetch_videos($accessToken, 10);
     p50tk_store_snapshot($userId, $tokens, $profile, $videos);
+    $issuedAccessToken = '';
     p50tk_redirect_result('connected');
 } catch (Throwable $e) {
+    if ($issuedAccessToken !== '' && is_array($oauth)) {
+        try {
+            p50tk_http(
+                'https://open.tiktokapis.com/v2/oauth/revoke/',
+                'POST',
+                ['Content-Type: application/x-www-form-urlencoded', 'Accept: application/json'],
+                [
+                    'client_key' => $oauth['client_key'],
+                    'client_secret' => $oauth['client_secret'],
+                    'token' => $issuedAccessToken,
+                ]
+            );
+        } catch (Throwable $revokeError) {
+            error_log('TikTok OAuth cleanup: ' . $revokeError->getMessage());
+        }
+    }
     error_log('TikTok OAuth callback: ' . $e->getMessage());
     p50tk_redirect_result('error', 'connection_failed');
 }
