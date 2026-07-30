@@ -1,6 +1,9 @@
 name: Validate TikTok OAuth V1
 
 on:
+  push:
+    branches:
+      - feat/tiktok-oauth-sandbox-v1
   pull_request:
   workflow_dispatch:
 
@@ -45,4 +48,4 @@ jobs:
       - name: MariaDB integration
         run: php tests/tiktok_oauth_mariadb.php
       - name: Diff check
-        run: git diff --check origin/${{ github.base_ref }}...HEAD
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
