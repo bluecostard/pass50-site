@@ -31,9 +31,10 @@ queue_must($waiting['p1Remaining']===1,'Une seule tâche P1 active attendue.');
 queue_must($waiting['p1Pending']===0&&$waiting['p1Running']===0&&$waiting['p1RetryWait']===1,'La tâche P1 doit être en retry_wait.');
 queue_must($waiting['p1WaitSeconds']>=60&&$waiting['p1WaitSeconds']<=125,'Le délai P1 doit refléter le prochain réessai.');
 queue_must(is_array($waiting['p1NextJob']),'La prochaine tâche P1 doit être décrite.');
-queue_must(array_keys($waiting['p1NextJob'])===['platform','profileId','status','attempts','maxAttempts','nextAttemptAt','message'],'Contrat assaini exact de la prochaine tâche.');
+queue_must(array_keys($waiting['p1NextJob'])===['platform','profileId','status','attempts','maxAttempts','nextAttemptAt'],'Contrat minimal exact de la prochaine tâche.');
 queue_must($waiting['p1NextJob']['profileId']==='p1-profile'&&$waiting['p1NextJob']['attempts']===1,'Profil et tentative P1 attendus.');
-queue_must(!str_contains(json_encode($waiting['p1NextJob'],JSON_UNESCAPED_SLASHES),'token=fixture'),'Le message P1 doit être nettoyé.');
+queue_must(!str_contains(json_encode($waiting['p1NextJob'],JSON_UNESCAPED_SLASHES),'private.example.test'),'Aucun message d’erreur ne doit être exposé.');
+queue_must(!str_contains(json_encode($waiting['p1NextJob'],JSON_UNESCAPED_SLASHES),'token=fixture'),'Aucun secret d’erreur ne doit être exposé.');
 
 $pdo->prepare("UPDATE p50_metric_jobs SET status='completed',next_attempt_at=NULL,last_error=NULL WHERE id=?")->execute([$p1['id']]);
 $ready=p50_moq_snapshot($pdo);
