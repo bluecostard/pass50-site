@@ -3,6 +3,16 @@ window.PASS50_API = {
   baseUrl: './api'
 };
 
+// Centre de partage unifié : doit être chargé avant les anciens gestionnaires.
+(function () {
+  if (document.querySelector('script[data-pass50-share-center]')) return;
+  var script = document.createElement('script');
+  script.src = './share-center-v1.js?v=1.0';
+  script.async = false;
+  script.dataset.pass50ShareCenter = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Les anciennes sauvegardes lançaient plusieurs écritures concurrentes et pouvaient
 // réécrire l'état avec une version incomplète. Le module transactionnel V3 les remplace.
 try {
