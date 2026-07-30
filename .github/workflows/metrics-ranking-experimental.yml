@@ -57,19 +57,39 @@ jobs:
           )"
 
           skipped="$(jq -r '.skipped // false' <<<"$response")"
+          reason="$(jq -r '.reason // "executed"' <<<"$response")"
+          readiness_state="$(jq -r '.readiness.state // "unknown"' <<<"$response")"
+          active_jobs="$(jq -r '.readiness.p1.activeJobs // 0' <<<"$response")"
+          failed_jobs="$(jq -r '.readiness.p1.failedJobs // 0' <<<"$response")"
+          latest_capture="$(jq -r '.readiness.latestUsableCaptureAt // "—"' <<<"$response")"
+          p1_finished="$(jq -r '.readiness.p1.finishedAt // "—"' <<<"$response")"
           run_uuid="$(jq -r '.runUuid // "—"' <<<"$response")"
           algorithm="$(jq -r '.algorithmVersion // "—"' <<<"$response")"
           periods="$(jq -r '(.periods // []) | join(", ")' <<<"$response")"
           classable="$(jq -r '.classableCount // 0' <<<"$response")"
           scores="$(jq -r '.scoresWritten // 0' <<<"$response")"
           duration="$(jq -r '.durationMs // 0' <<<"$response")"
-          result="exécuté"
-          [ "$skipped" = "true" ] && result="ignoré (succès récent)"
+
+          case "$reason" in
+            executed) result="exécuté" ;;
+            recent_success) result="reporté : succès récent" ;;
+            collection_pending) result="reporté : collecte P1 encore en cours" ;;
+            no_new_captures) result="reporté : aucune nouvelle capture" ;;
+            p1_not_observed) result="reporté : aucun cycle P1 observé" ;;
+            p1_stale) result="reporté : cycle P1 trop ancien" ;;
+            no_usable_captures) result="reporté : aucune capture exploitable" ;;
+            schema_missing) result="reporté : schéma métrique incomplet" ;;
+            *) result="$([ "$skipped" = "true" ] && printf 'reporté : %s' "$reason" || printf 'exécuté')" ;;
+          esac
 
           {
             printf '### Classement métrique expérimental\n'
             printf -- '- dispatchId : `%s`\n' "$dispatch_id"
             printf -- '- Calcul : %s\n' "$result"
+            printf -- '- Disponibilité : `%s`\n' "$readiness_state"
+            printf -- '- Fin du dernier P1 : %s\n' "$p1_finished"
+            printf -- '- Jobs P1 actifs / échoués : %s / %s\n' "$active_jobs" "$failed_jobs"
+            printf -- '- Dernière capture exploitable : %s\n' "$latest_capture"
             printf -- '- runUuid : `%s`\n' "$run_uuid"
             printf -- '- Algorithme : `%s`\n' "$algorithm"
             printf -- '- Périodes : %s\n' "${periods:-—}"

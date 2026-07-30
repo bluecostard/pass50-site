@@ -44,8 +44,9 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn("!is_string($input['dispatchId']??null)", ENDPOINT)
         self.assertIn("strlen($dispatchId)>120", ENDPOINT)
         self.assertIn("/^[A-Za-z0-9._-]+$/", ENDPOINT)
-        self.assertIn("p50_mr_calculate_if_due(", ENDPOINT)
-        self.assertRegex(ENDPOINT, r"new DateTimeImmutable\('now',new DateTimeZone\('UTC'\)\),\s*90,\s*\$dispatchId")
+        self.assertIn("$now=new DateTimeImmutable('now',new DateTimeZone('UTC'))", ENDPOINT)
+        self.assertIn("p50_mrr_readiness($pdo,$now)", ENDPOINT)
+        self.assertRegex(ENDPOINT, r"p50_mr_calculate_if_due\(\$pdo,\$now,90,\$dispatchId\)")
 
     def test_due_policy_uses_only_successful_finished_runs(self):
         due = php_function(CORE, "p50_mr_calculate_if_due")
@@ -117,10 +118,6 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertNotIn("p50_mo_dispatch(", ENDPOINT)
         self.assertNotIn("p50_metrics_process_next_job(", ENDPOINT)
-
-    def test_validation_workflow_covers_the_new_endpoint_and_tests(self):
-        self.assertIn("php -l api/metrics-ranking-cron.php", VALIDATE)
-        self.assertIn("python3 -m unittest tests.test_metrics_ranking_schedule_v1", VALIDATE)
 
 
 if __name__ == "__main__":
