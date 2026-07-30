@@ -32,6 +32,7 @@ jobs:
       - name: PHP lint
         run: |
           php -l api/tiktok-oauth-core.php
+          php -l api/tiktok-oauth-store-v2.php
           php -l api/tiktok-oauth-state-v1.php
           php -l api/tiktok-oauth-start.php
           php -l api/tiktok-oauth-callback.php
