@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - 'api/metrics-ranking-publication-simulate-cron.php'
+      - 'api/metrics-ranking-publication-history-core.php'
       - '.github/workflows/metrics-ranking-publication-simulation.yml'
 
 concurrency:
@@ -100,9 +101,11 @@ jobs:
             .publication.publicationEnabled == false and
             .publication.automaticPublicationEnabled == false and
             .publication.appStateWriteAttempted == false and
-            .scope.publicStateWrites == 0
+            .scope.publicStateWrites == 0 and
+            .history.publicStateWrites == 0 and
+            .stability.automaticPublicationEligible == false
           ' "$response_file" >/dev/null || {
-            echo "::error::Le rapport ne garantit pas strictement l'absence d'écriture publique."
+            echo "::error::Le rapport ou son historique ne garantit pas strictement l'absence d'écriture publique."
             exit 1
           }
 
@@ -122,6 +125,11 @@ jobs:
           maximum_move="$(jq -r '.summary.maximumAbsoluteRankMovement // 0' "$response_file")"
           median_move="$(jq -r '.summary.medianAbsoluteRankMovement // 0' "$response_file")"
           top10="$(jq -r 'if .summary.top10Retention == null then "—" else ((.summary.top10Retention * 100 | round) / 100 | tostring) + "%" end' "$response_file")"
+          history_id="$(jq -r '.history.id // "—"' "$response_file")"
+          stability_state="$(jq -r '.stability.state // "unknown"' "$response_file")"
+          observed_reports="$(jq -r '.stability.observedReports // 0' "$response_file")"
+          distinct_runs="$(jq -r '.stability.distinctExperimentalRuns // 0' "$response_file")"
+          controlled_eligible="$(jq -r '.stability.controlledPublicationEligible // false' "$response_file")"
           duration="$(jq -r '.durationMs // 0' "$response_file")"
 
           if [ "$status" = "blocked" ]; then
@@ -129,13 +137,19 @@ jobs:
           elif [ "$status" = "review" ]; then
             echo "::warning::La simulation demande une revue ($warnings avertissement(s)). Aucune publication n'a été tentée."
           fi
+          if [ "$controlled_eligible" = "true" ]; then
+            echo "::notice::Trois recalculs distincts et cohérents sont observés. Seule une publication contrôlée peut désormais être préparée."
+          fi
 
           {
             printf '### Simulation de publication MR-V1.0 → app_state\n'
-            printf -- '- État : `%s`\n' "$status"
+            printf -- '- État du passage : `%s`\n' "$status"
+            printf -- '- État de stabilité : `%s`\n' "$stability_state"
             printf -- '- Générée : %s\n' "$generated_at"
             printf -- '- dispatchId : `%s`\n' "$dispatch_id"
+            printf -- '- Audit enregistré : `#%s`\n' "$history_id"
             printf -- '- runUuid expérimental : `%s`\n' "$run_uuid"
+            printf -- '- Cycles observés / recalculs distincts : %s / %s\n' "$observed_reports" "$distinct_runs"
             printf -- '- Révision publique : `%s`\n' "$public_revision"
             printf -- '- Public / candidat : %s / %s\n' "$public_count" "$candidate_count"
             printf -- '- Entrées / sorties : %s / %s\n' "$entries" "$exits"
@@ -143,6 +157,7 @@ jobs:
             printf -- '- Mouvement médian / maximal : %s / %s places\n' "$median_move" "$maximum_move"
             printf -- '- Conservation Top 10 : %s\n' "$top10"
             printf -- '- Garde-fous bloquants / avertissements : %s / %s\n' "$blocked" "$warnings"
+            printf -- '- Éligible au passage public contrôlé : `%s`\n' "$controlled_eligible"
             printf -- '- Écritures app_state : `0`\n'
             printf -- '- Publication automatique : `désactivée`\n'
             printf -- '- Durée : %s ms\n' "$duration"

@@ -17,7 +17,8 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('array_key_exists($period,p50_mr_periods())', ENDPOINT)
 
     def test_endpoint_only_runs_read_only_simulation(self):
-        self.assertIn('p50_mrp_simulate(db(),$period,100)', ENDPOINT)
+        self.assertIn('p50_mrp_simulate($pdo,$period,100)', ENDPOINT)
+        self.assertIn('p50_mrph_store($pdo,$result,$dispatchId)', ENDPOINT)
         forbidden = (
             'INSERT INTO app_state',
             'UPDATE app_state',
@@ -55,6 +56,7 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('.publication.automaticPublicationEnabled == false', WORKFLOW)
         self.assertIn('.publication.appStateWriteAttempted == false', WORKFLOW)
         self.assertIn('.scope.publicStateWrites == 0', WORKFLOW)
+        self.assertIn('.history.publicStateWrites == 0', WORKFLOW)
         self.assertIn('Écritures app_state : `0`', WORKFLOW)
 
     def test_full_report_is_archived(self):

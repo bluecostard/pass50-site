@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
-require __DIR__.'/metrics-ranking-publication-core.php';
+require __DIR__.'/metrics-ranking-publication-history-core.php';
 
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
@@ -37,7 +37,10 @@ if(!array_key_exists($period,p50_mr_periods()))json_response(['error'=>'Période
 
 $started=microtime(true);
 try{
-    $result=p50_mrp_simulate(db(),$period,100);
+    $pdo=db();
+    $result=p50_mrp_simulate($pdo,$period,100);
+    $result['history']=p50_mrph_store($pdo,$result,$dispatchId);
+    $result['stability']=p50_mrph_stability($pdo,$period,P50_MRPH_MIN_DISTINCT_CYCLES);
     $result['ok']=true;
     $result['dispatchId']=$dispatchId;
     $result['durationMs']=(int)round((microtime(true)-$started)*1000);
