@@ -5,6 +5,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BRIDGE = (ROOT / 'api' / 'tiktok-metrics-bridge-core.php').read_text(encoding='utf-8')
 SOCIAL = (ROOT / 'api' / 'metrics-social-collectors-core.php').read_text(encoding='utf-8')
 COLLECTOR = (ROOT / 'api' / 'metrics-collector-tiktok.php').read_text(encoding='utf-8')
+META = (ROOT / 'api' / 'meta-metrics-bridge-core.php').read_text(encoding='utf-8')
+ORCHESTRATOR = (ROOT / 'api' / 'metrics-orchestrator-core.php').read_text(encoding='utf-8')
 
 
 class TikTokOauthMetricsBridgeV1Tests(unittest.TestCase):
@@ -38,14 +40,18 @@ class TikTokOauthMetricsBridgeV1Tests(unittest.TestCase):
         self.assertIn('official_link_mismatch', COLLECTOR)
         self.assertIn("'username'", COLLECTOR)
 
-    def test_authorized_profiles_can_feed_priority_cycles(self):
+    def test_authorized_profiles_feed_existing_oauth_priority_selection(self):
         self.assertIn('function p50tm_authorized_profile_ids', BRIDGE)
         self.assertIn("status='active'", BRIDGE)
         self.assertIn('access_token_encrypted', BRIDGE)
         self.assertIn('refresh_token_encrypted', BRIDGE)
+        self.assertIn("function_exists('p50tm_authorized_profile_ids')", META)
+        self.assertIn('p50tm_authorized_profile_ids($pdo)', META)
+        self.assertIn('p50mm_authorized_profile_ids($pdo)', ORCHESTRATOR)
+        self.assertIn('p50_mo_authorized_oauth_profiles($pdo)', ORCHESTRATOR)
 
     def test_no_public_ranking_write(self):
-        combined = BRIDGE + SOCIAL + COLLECTOR
+        combined = BRIDGE + SOCIAL + COLLECTOR + META
         for forbidden in (
             'UPDATE app_state', 'INSERT INTO app_state', 'DELETE FROM app_state',
             'REPLACE INTO app_state', 'data-publish.php', 'p50_mr_calculate',
