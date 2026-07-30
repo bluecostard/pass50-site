@@ -42,6 +42,7 @@ function p50_moq_snapshot(PDO $pdo): array {
         if($nextTimestamp!==false)$waitSeconds=max(0,$nextTimestamp-time());
     }
 
+    // p50_metrics_safe_error n’est pas nécessaire : last_error n’est ni sélectionné ni retourné.
     $nextStmt=$pdo->query("SELECT platform,scope_id,status,attempts,max_attempts,next_attempt_at
       FROM p50_metric_jobs
       WHERE priority=50 AND status IN ('pending','running','retry_wait')
