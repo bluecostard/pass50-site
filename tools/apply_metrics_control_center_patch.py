@@ -1,0 +1,95 @@
+from pathlib import Path
+
+
+def replace_once(path: str, old: str, new: str) -> None:
+    target = Path(path)
+    text = target.read_text(encoding='utf-8')
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f'{path}: remplacement attendu 1 fois, trouvé {count}: {old[:120]!r}')
+    target.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+
+replace_once(
+    'api/metrics-collectors-core.php',
+    "require_once __DIR__.'/metrics-schema-core.php';\n",
+    "require_once __DIR__.'/metrics-schema-core.php';\nrequire_once __DIR__.'/youtube-metrics-bridge-core.php';\n",
+)
+replace_once(
+    'api/metrics-collectors-core.php',
+    "const P50_METRICS_COLLECTOR_CONTENTS_MAX=10;\n",
+    "const P50_METRICS_COLLECTOR_CONTENTS_MAX=10;\n\nfunction p50_mc_threshold(): int {\n    global $config;\n    $policy=defined('P50_DATA_CONFIDENCE_THRESHOLD')?(int)P50_DATA_CONFIDENCE_THRESHOLD:80;\n    $configured=(int)($config['data_engine']['confidence_threshold']??$policy);\n    return max(60,min($policy,$configured));\n}\n",
+)
+replace_once(
+    'api/metrics-collectors-core.php',
+    "    global $config;$threshold=max(90,min(100,(int)($config['data_engine']['confidence_threshold']??90)));\n",
+    "    $threshold=p50_mc_threshold();\n",
+)
+replace_once(
+    'api/metrics-collectors-core.php',
+    "function p50_mc_youtube(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {\n    [$kind,$identifier]=p50_mc_youtube_identifier($official['normalized_url']);\n",
+    "function p50_mc_youtube(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {\n    if(function_exists('p50ym_connection_for_profile')&&p50ym_connection_for_profile($pdo,(string)$official['profile_id'])){p50ym_collect($pdo,$official,$limit,$observedAt,$runUuid,$fetch,$result);return;}\n    [$kind,$identifier]=p50_mc_youtube_identifier($official['normalized_url']);\n",
+)
+replace_once(
+    'api/metrics-collectors-core.php',
+    "    global $config;$threshold=max(90,min(100,(int)($config['data_engine']['confidence_threshold']??90)));\n",
+    "    $threshold=p50_mc_threshold();\n",
+)
+replace_once(
+    'api/metrics-social-collectors-core.php',
+    "    if($platform==='YouTube')return ['configured'=>p50_mc_config('YouTube')!=='','authorized'=>p50_mc_config('YouTube')!=='','mode'=>p50_mc_config('YouTube')!==''?'official_api':'public_fallback','authorizationRequired'=>false,'secret'=>p50_mc_config('YouTube')];\n",
+    "    if($platform==='YouTube'){\n        $oauth=function_exists('p50ym_public_access')?p50ym_public_access($profileId):['configured'=>false,'authorized'=>false,'mode'=>'mapping_required','authorizationRequired'=>true];\n        if(!empty($oauth['configured']))return $oauth+['secret'=>''];\n        $api=p50_mc_config('YouTube');\n        return ['configured'=>$api!=='','authorized'=>$api!=='','mode'=>$api!==''?'official_api':'public_fallback','authorizationRequired'=>false,'secret'=>$api];\n    }\n",
+)
+replace_once(
+    'api/metrics-orchestrator-core.php',
+    "$placeholders=implode(',',array_fill(0,count($ids),'?'));$threshold=max(90,min(100,(int)($GLOBALS['config']['data_engine']['confidence_threshold']??90)));\n",
+    "$placeholders=implode(',',array_fill(0,count($ids),'?'));$threshold=p50_mc_threshold();\n",
+)
+replace_once(
+    'api/metrics-diagnostic.php',
+    "require __DIR__.'/metrics-observability-core.php';\n",
+    "require __DIR__.'/metrics-observability-core.php';\nrequire __DIR__.'/metrics-control-center-core.php';\n",
+)
+replace_once(
+    'api/metrics-diagnostic.php',
+    "// Lecture seule absolue : aucun ensure_schema, recalcul ou pipeline de publication.\njson_response(p50_obs_diagnostic(db(),p50_de_threshold()));\n",
+    "// Lecture seule absolue : aucun ensure_schema, recalcul ou pipeline de publication.\n$diagnostic=p50_obs_diagnostic(db(),p50_de_threshold());\n$diagnostic['controlCenter']=p50mcc_status(db(),p50_de_threshold());\njson_response($diagnostic);\n",
+)
+replace_once(
+    'data-engine-ui.js',
+    "    const ranking=data.ranking||{},volumes=data.volumes||{},fresh=data.freshness||{},collections=data.collections||{},canonical=data.canonicalSchema||{},metricCollectors=data.collectors||{},metricAutomation=data.automation?.metricsOrchestrator||{},platforms=data.platforms||[],errors=collections.recentErrors||[],failedJobs=Array.isArray(metricAutomation.recentFailedJobs)?metricAutomation.recentFailedJobs:[],schemaApplied=canonical.migrationStatus==='applied';\n",
+    "    const ranking=data.ranking||{},volumes=data.volumes||{},fresh=data.freshness||{},collections=data.collections||{},canonical=data.canonicalSchema||{},metricCollectors=data.collectors||{},metricAutomation=data.automation?.metricsOrchestrator||{},platforms=data.platforms||[],errors=collections.recentErrors||[],failedJobs=Array.isArray(metricAutomation.recentFailedJobs)?metricAutomation.recentFailedJobs:[],schemaApplied=canonical.migrationStatus==='applied';\n    const controlCenter=data.controlCenter||{},controlPlatforms=Array.isArray(controlCenter.platforms)?controlCenter.platforms:[],youtubeOAuth=controlCenter.youtubeOAuth||{},youtubeConnections=Array.isArray(youtubeOAuth.connections)?youtubeOAuth.connections:[],controlSummary=controlCenter.summary||{};\n    const metricProfileOptions=(db?.profiles||[]).filter(profile=>profile?.id&&profile?.alive!==false).sort((a,b)=>String(a.name||a.id).localeCompare(String(b.name||b.id),'fr'));\n    const controlState={operational:['Opérationnel','verified'],incomplete:['Incomplet','candidate'],degraded:['Dégradé','conflict'],no_coverage:['À démarrer','candidate'],no_verified_links:['Sans lien vérifié','empty'],authorization_required:['Autorisation requise','candidate'],not_configured:['Non configuré','empty']};\n    const controlRows=controlPlatforms.map(row=>{const state=controlState[row.state]||['Inconnu','empty'];return `<tr><td><strong>${deEsc(row.platform)}</strong><div class=\"muted\">${deEsc(row.mode||'—')}</div></td><td>${deObsNumber(row.eligibleProfiles)}</td><td>${deObsNumber(row.coveredProfiles)} / ${deObsNumber(row.eligibleProfiles)}<div class=\"muted\">${deObsNumber(row.coveragePercent)} %</div></td><td>${deObsNumber(row.freshProfiles24h)}<div class=\"muted\">${deObsNumber(row.freshnessPercent)} % à moins de 24 h</div></td><td>${deObsNumber(row.captures24h)}</td><td>${deObsNumber(Number(row.queue?.pending||0)+Number(row.queue?.retry_wait||0))} / ${deObsNumber(row.queue?.failed)}</td><td>${row.latestCaptureAt?deTime(row.latestCaptureAt):'Jamais'}</td><td><span class=\"de-status ${state[1]}\">${state[0]}</span><div class=\"muted\">${deEsc(row.actionRequired||'')}</div></td></tr>`}).join('');\n    const youtubeMappingRows=youtubeConnections.map(row=>{const options=['<option value=\"\">Non associée</option>',...metricProfileOptions.map(profile=>`<option value=\"${deEsc(profile.id)}\" ${String(row.profileId||'')===String(profile.id)?'selected':''}>${deEsc(profile.name||profile.id)}</option>`)].join('');return `<tr><td><strong>${deEsc(row.channelTitle||row.channelId)}</strong><div class=\"muted\">${deEsc(row.channelId)}</div></td><td>${deEsc(row.status||'—')}</td><td><select class=\"de-youtube-metrics-profile\">${options}</select></td><td>${row.lastAnalyticsAt?deTime(row.lastAnalyticsAt):'Jamais'}</td><td><button class=\"btn de-youtube-metrics-map\" data-channel-id=\"${deEsc(row.channelId)}\">Enregistrer</button></td></tr>`}).join('');\n",
+)
+replace_once(
+    'data-engine-ui.js',
+    "      <div class=\"de-kpis\">${kpis.map(([label,value])=>`<div class=\"de-kpi\"><strong>${deObsNumber(value)}</strong><span>${deEsc(label.toUpperCase())}</span></div>`).join('')}</div>\n      <section class=\"de-observability-card\"><div class=\"section-head\"><div><div class=\"section-title\">Schéma canonique</div>",
+    "      <div class=\"de-kpis\">${kpis.map(([label,value])=>`<div class=\"de-kpi\"><strong>${deObsNumber(value)}</strong><span>${deEsc(label.toUpperCase())}</span></div>`).join('')}</div>\n      <section class=\"de-observability-card\"><div class=\"section-head\"><div><div class=\"section-title\">CENTRE DE CONTRÔLE DE LA COLLECTE</div><div class=\"muted\">Couverture réelle, fraîcheur, file d’attente et prochaines actions par plateforme.</div></div><span class=\"de-status ${controlCenter.orchestrator?.automationObservedRecently?'verified':'candidate'}\">${controlCenter.orchestrator?.automationObservedRecently?'Automatisation observée':'Automatisation à vérifier'}</span></div><div class=\"de-reason-grid\">${[['Seuil effectif',`${deObsNumber(controlCenter.threshold||data.threshold)} %`],['Profils éligibles',controlSummary.eligibleProfiles],['Profils couverts',controlSummary.coveredProfiles],['Fraîcheur globale',`${deObsNumber(controlSummary.globalFreshnessPercent)} %`],['Captures 24 h',controlSummary.captures24h],['Tâches en attente',controlSummary.pendingJobs],['Tâches échouées',controlSummary.failedJobs]].map(([label,value])=>`<div><strong>${deEsc(value)}</strong><span>${deEsc(label)}</span></div>`).join('')}</div><div class=\"admin-table-wrap\"><table class=\"admin-table\"><thead><tr><th>Plateforme</th><th>Éligibles</th><th>Couverture</th><th>Fraîcheur 24 h</th><th>Captures 24 h</th><th>Attente / échec</th><th>Dernière capture</th><th>État</th></tr></thead><tbody>${controlRows||'<tr><td colspan=\"8\">Aucune plateforme observée.</td></tr>'}</tbody></table></div><div class=\"section-head\"><div><div class=\"section-title\">CHAÎNES YOUTUBE OAUTH</div><div class=\"muted\">Une association explicite est obligatoire avant d’attribuer les métriques privées à une fiche PASS50.</div></div><span class=\"muted\">${deObsNumber(youtubeOAuth.summary?.mapped)} associée(s) · ${deObsNumber(youtubeOAuth.summary?.unmapped)} non associée(s)</span></div><div class=\"admin-table-wrap\"><table class=\"admin-table\"><thead><tr><th>Chaîne</th><th>État OAuth</th><th>Fiche PASS50</th><th>Dernières Analytics</th><th>Action</th></tr></thead><tbody>${youtubeMappingRows||'<tr><td colspan=\"5\">Aucune chaîne YouTube OAuth connectée.</td></tr>'}</tbody></table></div><div class=\"media-hint\">L’association active la collecte canonique YouTube. Les statistiques par période restent identifiées comme métriques d’intervalle et ne sont pas mélangées aux compteurs cumulés.</div></section>\n      <section class=\"de-observability-card\"><div class=\"section-head\"><div><div class=\"section-title\">Schéma canonique</div>",
+)
+replace_once(
+    'data-engine-ui.js',
+    "      if(e.target.matches('.de-collect-metrics')){const platform=e.target.dataset.platform,profileId=document.getElementById('deMetricProfile')?.value||'';await deAction(e.target,async()=>{await apiFetch('metrics-canonical-collect.php',{method:'POST',body:profileId?{action:'collect_profile',platform,profileId,contentLimit:10}:{action:'collect_batch',platform,profileLimit:10,contentLimit:5}});DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);toast(`Collecte ${platform} terminée`);},'Collecte…');}\n",
+    "      if(e.target.matches('.de-collect-metrics')){const platform=e.target.dataset.platform,profileId=document.getElementById('deMetricProfile')?.value||'';await deAction(e.target,async()=>{await apiFetch('metrics-canonical-collect.php',{method:'POST',body:profileId?{action:'collect_profile',platform,profileId,contentLimit:10}:{action:'collect_batch',platform,profileLimit:10,contentLimit:5}});DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);toast(`Collecte ${platform} terminée`);},'Collecte…');}\n      if(e.target.matches('.de-youtube-metrics-map')){const channelId=String(e.target.dataset.channelId||''),profileId=e.target.closest('tr')?.querySelector('.de-youtube-metrics-profile')?.value||'';await deAction(e.target,async()=>{await apiFetch('youtube-metrics-map.php',{method:'POST',body:{channelId,profileId}});DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);toast(profileId?'Chaîne YouTube associée à la fiche':'Association YouTube retirée');},'Enregistrement…');}\n",
+)
+replace_once('v9-tools.js', "js.src='./data-engine-ui.js?v=18.0';", "js.src='./data-engine-ui.js?v=18.1';")
+replace_once('sw.js', "const CACHE='pass50-v44-ranking-calibration';", "const CACHE='pass50-v45-metrics-control-center';")
+replace_once('sw.js', "'./data-engine-ui.js?v=18.0'", "'./data-engine-ui.js?v=18.1'")
+replace_once(
+    '.github/workflows/validate-metrics-orchestrator-v1.yml',
+    "          php -l api/metrics-diagnostic.php\n",
+    "          php -l api/metrics-diagnostic.php\n          php -l api/metrics-control-center-core.php\n          php -l api/youtube-metrics-bridge-core.php\n          php -l api/youtube-metrics-map.php\n          php -l tests/metrics_control_center_youtube_mariadb.php\n",
+)
+replace_once(
+    '.github/workflows/validate-metrics-orchestrator-v1.yml',
+    "          python3 -m unittest tests.test_metrics_observability_v1\n",
+    "          python3 -m unittest tests.test_metrics_observability_v1\n          python3 -m unittest tests.test_metrics_control_center_youtube_v1\n",
+)
+replace_once(
+    '.github/workflows/validate-metrics-orchestrator-v1.yml',
+    "          php tests/metrics_orchestrator_integration.php\n",
+    "          php tests/metrics_orchestrator_integration.php\n          php tests/metrics_control_center_youtube_mariadb.php\n",
+)
+replace_once(
+    'tests/test_metrics_control_center_youtube_v1.py',
+    "self.assertGreaterEqual(COLLECTORS.count('p50_mc_threshold()'), 3)",
+    "self.assertGreaterEqual(COLLECTORS.count('p50_mc_threshold()'), 2)",
+)
