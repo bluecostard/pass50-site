@@ -61,13 +61,14 @@ function p50_share_duel_payload(string $pollKey,string $selectedId,string $voteD
         $percentagesAvailable=false;$snapshotSource='current_fallback';$stateRevision=$snapshot['state']['stateRevision']??null;
     }
     $base=rtrim((string)$config['app']['base_url'],'/');
-    $campaign=$base.'/?'.http_build_query(['profile'=>$selectedId,'source'=>'vote_share','medium'=>'social']);
+    $campaign=$base.'/partage.php?'.http_build_query(['type'=>'coules','id'=>$selectedId,'choice'=>$selectedId]);
+    $campaignAudio=$base.'/partage.php?'.http_build_query(['type'=>'coules-audio','id'=>$selectedId,'choice'=>$selectedId]);
     return [
         'profileId'=>$selectedId,'selectedProfileId'=>$selectedId,'candidates'=>$candidates,
         'percentagesAvailable'=>$percentagesAvailable,'voteDate'=>gmdate('c',strtotime($voteDate)),
         'snapshotSource'=>$snapshotSource,'stateRevision'=>$stateRevision,
         'fallbackReason'=>$history?null:'Historique absent : profils actuels affichés sans résultat.',
-        'pass50Url'=>$base,'campaignUrl'=>$campaign,
+        'pass50Url'=>$base,'campaignUrl'=>$campaign,'campaignAudioUrl'=>$campaignAudio,
     ];
 }
 
