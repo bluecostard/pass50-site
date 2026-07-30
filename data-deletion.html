@@ -14,15 +14,22 @@
 </head>
 <body>
 <main>
-  <p class="muted">PASS50 · Version du 29 juillet 2026</p>
-  <h1>Suppression des données Meta</h1>
-  <p>Vous pouvez retirer l’autorisation Facebook et Instagram accordée à PASS50 et supprimer les données de connexion associées.</p>
+  <p class="muted">PASS50 · Version du 30 juillet 2026</p>
+  <h1>Suppression des données connectées</h1>
+  <p>Vous pouvez retirer les autorisations Meta ou TikTok accordées à PASS50 et supprimer les données de connexion associées.</p>
 
   <h2>Depuis PASS50</h2>
   <div class="step"><strong>1.</strong> Connectez-vous à votre compte PASS50.</div>
   <div class="step"><strong>2.</strong> Ouvrez « Mon espace ».</div>
-  <div class="step"><strong>3.</strong> Dans « Meta · Facebook & Instagram », cliquez sur « Déconnecter » et confirmez.</div>
-  <p>PASS50 supprime alors les jetons chiffrés, les Pages et comptes Instagram professionnels associés à cette autorisation ainsi que les lignes LIVE créées par le connecteur Meta.</p>
+  <div class="step"><strong>3.</strong> Dans le connecteur concerné, cliquez sur « Déconnecter » et confirmez.</div>
+  <p>PASS50 tente d’abord de révoquer l’autorisation auprès de la plateforme, puis supprime localement les jetons chiffrés et les données privées associées à cette connexion.</p>
+
+  <h2>TikTok</h2>
+  <p>La déconnexion TikTok supprime de PASS50 les jetons d’accès et d’actualisation chiffrés, les informations de profil autorisées, les statistiques du compte et la copie privée des vidéos publiques récentes récupérées avec votre consentement.</p>
+  <p>PASS50 ne publie, ne modifie et ne supprime aucun contenu sur votre compte TikTok. Vous pouvez également retirer PASS50 depuis les paramètres de sécurité et d’autorisations de votre compte TikTok.</p>
+
+  <h2>Meta · Facebook et Instagram</h2>
+  <p>La déconnexion Meta supprime les jetons chiffrés, les Pages Facebook et comptes Instagram professionnels associés à l’autorisation ainsi que les lignes LIVE créées par le connecteur Meta.</p>
 
   <h2>Depuis Facebook</h2>
   <div class="step"><strong>1.</strong> Ouvrez les paramètres de votre compte Facebook.</div>
@@ -32,14 +39,17 @@
 
   <h2>Données concernées</h2>
   <ul>
-    <li>connexion entre le compte PASS50 et le compte Meta ;</li>
-    <li>jetons d’accès Meta chiffrés ;</li>
-    <li>Pages Facebook et comptes Instagram professionnels découverts grâce à cette connexion ;</li>
-    <li>données LIVE stockées avec la provenance <code>meta_authorized</code>.</li>
+    <li>liaison entre le compte PASS50 et le compte social autorisé ;</li>
+    <li>jetons d’accès et d’actualisation conservés uniquement sous forme chiffrée côté serveur ;</li>
+    <li>profil, statistiques et vidéos publiques TikTok récupérés avec consentement ;</li>
+    <li>Pages Facebook, comptes Instagram professionnels et données LIVE issus de la connexion Meta.</li>
   </ul>
 
   <h2>Délai</h2>
-  <p>Le callback automatique traite normalement la demande immédiatement. En cas d’incident technique, le statut du code de confirmation permet de vérifier l’avancement.</p>
+  <p>La suppression locale est normalement immédiate après confirmation. Si la plateforme ne confirme pas la révocation, PASS50 supprime tout de même la connexion locale et affiche un avertissement.</p>
+
+  <h2>Demande manuelle</h2>
+  <p>Une demande complémentaire peut être envoyée à <a href="mailto:contact@pass50.com">contact@pass50.com</a> depuis l’adresse utilisée pour le compte PASS50.</p>
 
   <nav><a href="./">Retour à PASS50</a><a href="./privacy.html">Politique de confidentialité</a><a href="./terms.html">Conditions d’utilisation</a></nav>
 </main>
