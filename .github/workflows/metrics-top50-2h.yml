@@ -11,6 +11,7 @@ on:
       - 'api/metrics-cron.php'
       - 'api/metrics-queue-core.php'
       - '.github/workflows/metrics-top50-2h.yml'
+      - '.github/workflows/metrics-ranking-experimental.yml'
 
 permissions:
   actions: write

@@ -12,25 +12,40 @@ class MetricsPipelineEventChainV1Tests(unittest.TestCase):
         self.assertIn("cron: '7 */2 * * *'", P1)
         self.assertIn('workflow_dispatch:', P1)
         self.assertIn("- '.github/workflows/metrics-top50-2h.yml'", P1)
+        self.assertIn("- '.github/workflows/metrics-ranking-experimental.yml'", P1)
         self.assertIn('actions: write', P1)
         self.assertIn('statuses: write', P1)
 
     def test_p1_dispatches_ranking_only_after_an_empty_queue(self):
         self.assertIn("steps.collection.outputs.remaining == '0'", P1)
         self.assertIn('/actions/workflows/metrics-ranking-experimental.yml/dispatches', P1)
-        self.assertIn("--arg ref \"main\"", P1)
+        self.assertIn('--arg ref "main"', P1)
         self.assertIn('pass50/metrics-p1', P1)
         self.assertIn('app_state 0', P1)
 
-    def test_ranking_keeps_schedule_and_dispatches_simulation(self):
+    def test_ranking_keeps_schedule_and_self_heals_stale_p1(self):
         self.assertIn("cron: '57 */2 * * *'", RANKING)
         self.assertIn('workflow_dispatch:', RANKING)
         self.assertIn('actions: write', RANKING)
         self.assertIn('statuses: write', RANKING)
-        self.assertIn("steps.ranking.outputs.reason != ''", RANKING)
-        self.assertIn('/actions/workflows/metrics-ranking-publication-simulation.yml/dispatches', RANKING)
+        self.assertIn('Dispatch fresh P1 when readiness expired', RANKING)
+        self.assertIn("steps.ranking.outputs.refresh_p1 == 'true'", RANKING)
+        self.assertIn('/actions/workflows/metrics-top50-2h.yml/dispatches', RANKING)
+        for reason in ('p1_not_observed', 'p1_stale', 'p1_future_timestamp'):
+            self.assertIn(reason, RANKING)
+        self.assertIn('nouveau P1 déclenché', RANKING)
         self.assertIn('pass50/experimental-ranking', RANKING)
         self.assertIn('ranking-experimental-result.json', RANKING)
+
+    def test_simulation_requires_a_new_experimental_run(self):
+        self.assertIn("steps.ranking.outputs.skipped == 'false'", RANKING)
+        self.assertIn("steps.ranking.outputs.run_uuid != ''", RANKING)
+        self.assertNotIn("steps.ranking.outputs.reason != ''", RANKING)
+        self.assertIn('/actions/workflows/metrics-ranking-publication-simulation.yml/dispatches', RANKING)
+        self.assertLess(
+            RANKING.index("steps.ranking.outputs.run_uuid != ''"),
+            RANKING.index('/actions/workflows/metrics-ranking-publication-simulation.yml/dispatches'),
+        )
 
     def test_technical_results_are_archived_for_thirty_days(self):
         self.assertIn('metrics-p1-result.json', P1)

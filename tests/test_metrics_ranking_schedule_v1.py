@@ -5,8 +5,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CORE = (ROOT / "api" / "metrics-ranking-core.php").read_text(encoding="utf-8")
-ENDPOINT = (ROOT / "api" / "metrics-ranking-cron.php").read_text(encoding="utf-8")
+CORE = (ROOT / "api/metrics-ranking-core.php").read_text(encoding="utf-8")
+ENDPOINT = (ROOT / "api/metrics-ranking-cron.php").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github" / "workflows" / "metrics-ranking-experimental.yml").read_text(encoding="utf-8")
 VALIDATE = (ROOT / ".github" / "workflows" / "validate-metrics-ranking-experimental-v1.yml").read_text(encoding="utf-8")
 
@@ -93,6 +93,15 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn('${CRON_URL%/metrics-cron.php}/metrics-ranking-cron.php', WORKFLOW)
         self.assertIn("dispatch_id=\"${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-ranking\"", WORKFLOW)
 
+    def test_stale_readiness_dispatches_p1_without_dispatching_simulation(self):
+        for reason in ("p1_not_observed", "p1_stale", "p1_future_timestamp"):
+            self.assertRegex(WORKFLOW, rf'{reason}\).*refresh_p1=true')
+        self.assertIn("steps.ranking.outputs.refresh_p1 == 'true'", WORKFLOW)
+        self.assertIn('/actions/workflows/metrics-top50-2h.yml/dispatches', WORKFLOW)
+        self.assertIn("steps.ranking.outputs.skipped == 'false'", WORKFLOW)
+        self.assertIn("steps.ranking.outputs.run_uuid != ''", WORKFLOW)
+        self.assertNotIn("steps.ranking.outputs.reason != ''", WORKFLOW)
+
     def test_workflow_uses_hmac_post_without_exposing_credentials(self):
         self.assertIn("jq -nc", WORKFLOW)
         self.assertIn("printf '%s\\n%s' \"$timestamp\" \"$body\"", WORKFLOW)
@@ -101,7 +110,8 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn('-H "X-P50-Signature: $signature"', WORKFLOW)
         self.assertIn('--data "$body"', WORKFLOW)
         self.assertNotIn("?signature", WORKFLOW.lower())
-        self.assertNotIn("$CRON_SECRET\"", WORKFLOW[WORKFLOW.index('"$RANKING_URL"') :])
+        ranking_call_end = WORKFLOW.index('"$RANKING_URL"')
+        self.assertNotIn("$CRON_SECRET\"", WORKFLOW[ranking_call_end:])
         for field in ("dispatchId", "runUuid", "Algorithme", "Périodes", "Profils classables", "Scores écrits", "Durée"):
             self.assertIn(field, WORKFLOW)
 
