@@ -42,7 +42,7 @@ function p50_moq_snapshot(PDO $pdo): array {
         if($nextTimestamp!==false)$waitSeconds=max(0,$nextTimestamp-time());
     }
 
-    $nextStmt=$pdo->query("SELECT platform,scope_id,status,attempts,max_attempts,next_attempt_at,last_error
+    $nextStmt=$pdo->query("SELECT platform,scope_id,status,attempts,max_attempts,next_attempt_at
       FROM p50_metric_jobs
       WHERE priority=50 AND status IN ('pending','running','retry_wait')
       ORDER BY CASE status WHEN 'running' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
@@ -55,7 +55,6 @@ function p50_moq_snapshot(PDO $pdo): array {
         'attempts'=>(int)$next['attempts'],
         'maxAttempts'=>(int)$next['max_attempts'],
         'nextAttemptAt'=>$next['next_attempt_at']?:null,
-        'message'=>p50_metrics_safe_error((string)($next['last_error']??''))?:null,
     ];
 
     return [
