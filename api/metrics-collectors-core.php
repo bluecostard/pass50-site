@@ -2,10 +2,18 @@
 declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
+require_once __DIR__.'/youtube-metrics-bridge-core.php';
 
 const P50_METRICS_COLLECTOR_VERSION='1.0.0';
 const P50_METRICS_COLLECTOR_PROFILES_MAX=10;
 const P50_METRICS_COLLECTOR_CONTENTS_MAX=10;
+
+function p50_mc_threshold(): int {
+    global $config;
+    $policy=defined('P50_DATA_CONFIDENCE_THRESHOLD')?(int)P50_DATA_CONFIDENCE_THRESHOLD:80;
+    $configured=(int)($config['data_engine']['confidence_threshold']??$policy);
+    return max(60,min($policy,$configured));
+}
 
 function p50_mc_platform(string $value): string {
     return match(strtolower(trim($value))){'youtube'=>'YouTube','x','twitter'=>'X','tiktok'=>'TikTok','instagram'=>'Instagram','facebook'=>'Facebook','snapchat'=>'Snapchat',default=>''};
@@ -50,7 +58,7 @@ function p50_mc_future_metrics(array $values): array {
 }
 
 function p50_mc_official(PDO $pdo,string $profileId,string $platform): array {
-    global $config;$threshold=max(90,min(100,(int)($config['data_engine']['confidence_threshold']??90)));
+    $threshold=p50_mc_threshold();
     $stmt=$pdo->prepare("SELECT r.profile_id,r.public_name,s.normalized_url,s.confidence
       FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id
       WHERE r.profile_id=? AND r.alive=1 AND s.platform=? AND s.status='verified' AND s.confidence>=? LIMIT 1");
@@ -114,6 +122,7 @@ function p50_mc_youtube_content_type(array $video,?string $demonstratedUrl=null)
 }
 
 function p50_mc_youtube(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {
+    if(function_exists('p50ym_connection_for_profile')&&p50ym_connection_for_profile($pdo,(string)$official['profile_id'])){p50ym_collect($pdo,$official,$limit,$observedAt,$runUuid,$fetch,$result);return;}
     [$kind,$identifier]=p50_mc_youtube_identifier($official['normalized_url']);
     if($identifier==='')throw new InvalidArgumentException('Lien YouTube officiel non reconnu.');
     $key=p50_mc_config('YouTube');
@@ -239,7 +248,7 @@ function p50_metrics_collect_profile(PDO $pdo,string $profileId,string $platform
 function p50_metrics_collect_batch(PDO $pdo,string $platform,int $profileLimit=10,int $contentLimit=5,?callable $fetch=null): array {
     $platform=p50_mc_platform($platform);if($platform==='')throw new InvalidArgumentException('Plateforme non prise en charge.');
     $profileLimit=max(1,min(P50_METRICS_COLLECTOR_PROFILES_MAX,$profileLimit));$contentLimit=max(1,min(5,$contentLimit));
-    global $config;$threshold=max(90,min(100,(int)($config['data_engine']['confidence_threshold']??90)));
+    $threshold=p50_mc_threshold();
     $stmt=$pdo->prepare("SELECT r.profile_id FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id WHERE r.alive=1 AND s.platform=? AND s.status='verified' AND s.confidence>=? ORDER BY r.profile_id LIMIT ".$profileLimit);$stmt->execute([$platform,$threshold]);
     $details=[];foreach($stmt->fetchAll(PDO::FETCH_COLUMN) as $profileId){
         $profileId=(string)$profileId;$lock='pass50_metrics_collect_'.strtolower($platform).'_'.hash('sha256',$profileId);

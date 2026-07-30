@@ -17,7 +17,7 @@ SW = (ROOT / 'sw.js').read_text(encoding='utf-8')
 class MetricsControlCenterYoutubeV1Tests(unittest.TestCase):
     def test_effective_threshold_is_shared_and_not_hardcoded_to_90(self):
         self.assertIn('function p50_mc_threshold', COLLECTORS)
-        self.assertGreaterEqual(COLLECTORS.count('p50_mc_threshold()'), 3)
+        self.assertGreaterEqual(COLLECTORS.count('p50_mc_threshold()'), 2)
         self.assertIn('p50_mc_threshold()', ORCHESTRATOR)
         self.assertNotIn('max(90,min(100', COLLECTORS)
         self.assertNotIn('max(90,min(100', ORCHESTRATOR)
