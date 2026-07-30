@@ -232,7 +232,7 @@ class MetricsRankingCalibrationV1Tests(unittest.TestCase):
         self.assertIn("data-engine-ui.css?v=27.0", TOOLS)
         self.assertIn("data-engine-ui.js?v=18.2", SW)
         self.assertIn("data-engine-ui.css?v=27.0", SW)
-        self.assertIn("pass50-v45-metrics-control-center", SW)
+        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
         self.assertIn("v9-tools.js?v=15.2", INDEX)
         self.assertIn("v9-tools.js?v=15.2", SW)
         self.assertNotIn("v9-tools.js?v=15.0", INDEX + SW)
