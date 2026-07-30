@@ -4,7 +4,7 @@
 if(window.__pass50LiveExperienceV41)return;
 window.__pass50LiveExperienceV41=true;
 
-const VERSION='4.1.0';
+const VERSION='4.1.1';
 let currentShare=null;
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -144,7 +144,15 @@ window.addEventListener('click',event=>{
   const watch=target.closest('.live-watch-link');
   if(watch){event.preventDefault();event.stopImmediatePropagation();const live=liveFor(watch.dataset.liveProfile,watch.dataset.livePlatform)||{profileId:watch.dataset.liveProfile,platform:watch.dataset.livePlatform,url:watch.href};openNewTab(watch.href);backgroundVerify(live);return;}
   const share=target.closest('.p50-share-live');
-  if(share){event.preventDefault();event.stopImmediatePropagation();const live=liveFor(share.dataset.liveProfile,share.dataset.livePlatform);if(live)renderShareModal(live);return;}
+  if(share){
+    event.preventDefault();event.stopImmediatePropagation();
+    const profileId=share.dataset.liveProfile||share.dataset.id||'';
+    const platform=share.dataset.livePlatform||share.dataset.platform||'';
+    const live=liveFor(profileId,platform);
+    if(window.PASS50_SHARE_CENTER?.openLive){window.PASS50_SHARE_CENTER.openLive({profileId,platform,directUrl:live?.url||''});}
+    else if(live)renderShareModal(live);
+    return;
+  }
   const badge=target.closest('.badge.live-badge[data-live-clickable="1"]');
   if(badge){event.preventDefault();event.stopImmediatePropagation();const owner=badge.closest('[data-profile]'),live=owner?liveFor(owner.dataset.profile):null;if(live){openNewTab(live.url);backgroundVerify(live);}return;}
   if(target.closest('.p50-live-share-close')||target.id==='p50LiveShareModal'){event.preventDefault();closeShare();return;}
