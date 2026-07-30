@@ -20,6 +20,7 @@ function p50_mrph_schema_sql(): string {
       entries_count INT UNSIGNED NOT NULL DEFAULT 0,exits_count INT UNSIGNED NOT NULL DEFAULT 0,
       up_count INT UNSIGNED NOT NULL DEFAULT 0,down_count INT UNSIGNED NOT NULL DEFAULT 0,stable_count INT UNSIGNED NOT NULL DEFAULT 0,
       blocked_gate_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,warning_gate_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+      public_state_writes SMALLINT UNSIGNED NOT NULL DEFAULT 0,
       median_rank_movement DECIMAL(10,3) NULL,maximum_rank_movement INT UNSIGNED NULL,top10_retention DECIMAL(7,3) NULL,
       report_json LONGTEXT NOT NULL,generated_at DATETIME NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uq_p50_mrph_simulation_uuid(simulation_uuid),UNIQUE KEY uq_p50_mrph_dispatch_id(dispatch_id),
@@ -42,7 +43,7 @@ function p50_mrph_assert_read_only_report(array $report): void {
 
 function p50_mrph_report_values(array $report): array {
     p50_mrph_assert_read_only_report($report);
-    $summary=(array)($report['summary']??[]);$counts=(array)($summary['counts']??[]);$source=(array)($report['source']??[]);
+    $summary=(array)($report['summary']??[]);$counts=(array)($summary['counts']??[]);$source=(array)($report['source']??[]);$scope=(array)($report['scope']??[]);
     $gates=(array)($report['gates']??[]);$blocked=0;$warnings=0;
     foreach($gates as $gate){
         if(!is_array($gate))continue;
@@ -59,7 +60,7 @@ function p50_mrph_report_values(array $report): array {
         'publicCount'=>max(0,(int)($summary['publicCount']??0)),'candidateCount'=>max(0,(int)($summary['candidateCount']??0)),
         'entries'=>max(0,(int)($counts['entries']??0)),'exits'=>max(0,(int)($counts['exits']??0)),
         'up'=>max(0,(int)($counts['up']??0)),'down'=>max(0,(int)($counts['down']??0)),'stable'=>max(0,(int)($counts['stable']??0)),
-        'blockedGates'=>$blocked,'warningGates'=>$warnings,
+        'blockedGates'=>$blocked,'warningGates'=>$warnings,'publicStateWrites'=>max(0,(int)($scope['publicStateWrites']??0)),
         'medianMovement'=>isset($summary['medianAbsoluteRankMovement'])&&is_numeric($summary['medianAbsoluteRankMovement'])?(float)$summary['medianAbsoluteRankMovement']:null,
         'maximumMovement'=>isset($summary['maximumAbsoluteRankMovement'])&&is_numeric($summary['maximumAbsoluteRankMovement'])?max(0,(int)$summary['maximumAbsoluteRankMovement']):null,
         'top10Retention'=>isset($summary['top10Retention'])&&is_numeric($summary['top10Retention'])?(float)$summary['top10Retention']:null,
@@ -78,33 +79,35 @@ function p50_mrph_store(PDO $pdo,array $report,string $dispatchId): array {
       simulation_uuid,dispatch_id,history_version,simulation_version,algorithm_version,period_key,status,
       experimental_run_uuid,public_state_revision,public_fingerprint,candidate_fingerprint,
       public_count,candidate_count,entries_count,exits_count,up_count,down_count,stable_count,
-      blocked_gate_count,warning_gate_count,median_rank_movement,maximum_rank_movement,top10_retention,report_json,generated_at
-    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      blocked_gate_count,warning_gate_count,public_state_writes,median_rank_movement,maximum_rank_movement,top10_retention,report_json,generated_at
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)";
     $stmt=$pdo->prepare($sql);
     $stmt->execute([
         $simulationUuid,$dispatchId,P50_MRPH_HISTORY_VERSION,$values['simulationVersion'],$values['algorithmVersion'],$values['period'],$values['status'],
         $values['experimentalRunUuid'],$values['publicStateRevision'],$values['publicFingerprint'],$values['candidateFingerprint'],
         $values['publicCount'],$values['candidateCount'],$values['entries'],$values['exits'],$values['up'],$values['down'],$values['stable'],
-        $values['blockedGates'],$values['warningGates'],$values['medianMovement'],$values['maximumMovement'],$values['top10Retention'],$reportJson,$values['generatedAt'],
+        $values['blockedGates'],$values['warningGates'],$values['publicStateWrites'],$values['medianMovement'],$values['maximumMovement'],$values['top10Retention'],$reportJson,$values['generatedAt'],
     ]);
     $id=(int)$pdo->lastInsertId();
     if($id<=0){$lookup=$pdo->prepare('SELECT id FROM p50_metric_publication_simulations WHERE dispatch_id=? LIMIT 1');$lookup->execute([$dispatchId]);$id=(int)$lookup->fetchColumn();}
-    $lookup=$pdo->prepare('SELECT id,simulation_uuid,dispatch_id,period_key,status,experimental_run_uuid,public_state_revision,public_fingerprint,candidate_fingerprint,generated_at,created_at FROM p50_metric_publication_simulations WHERE id=? LIMIT 1');
+    $lookup=$pdo->prepare('SELECT id,simulation_uuid,dispatch_id,period_key,status,experimental_run_uuid,public_state_revision,public_fingerprint,candidate_fingerprint,public_state_writes,generated_at,created_at FROM p50_metric_publication_simulations WHERE id=? LIMIT 1');
     $lookup->execute([$id]);$stored=$lookup->fetch();
     if(!$stored)throw new RuntimeException('Simulation non historisée.');
     if(!hash_equals((string)$stored['public_fingerprint'],$values['publicFingerprint'])||!hash_equals((string)$stored['candidate_fingerprint'],$values['candidateFingerprint']))throw new RuntimeException('Collision d’idempotence de simulation.');
+    if((int)$stored['public_state_writes']!==0)throw new RuntimeException('Historique contenant une écriture publique.');
     return [
         'id'=>(int)$stored['id'],'simulationUuid'=>(string)$stored['simulation_uuid'],'dispatchId'=>(string)$stored['dispatch_id'],
         'period'=>(string)$stored['period_key'],'status'=>(string)$stored['status'],'experimentalRunUuid'=>$stored['experimental_run_uuid']?:null,
-        'publicStateRevision'=>(int)$stored['public_state_revision'],'generatedAt'=>(string)$stored['generated_at'],'createdAt'=>(string)$stored['created_at'],
+        'publicStateRevision'=>(int)$stored['public_state_revision'],'publicStateWrites'=>(int)$stored['public_state_writes'],
+        'generatedAt'=>(string)$stored['generated_at'],'createdAt'=>(string)$stored['created_at'],
     ];
 }
 
 function p50_mrph_recent(PDO $pdo,string $period='2H',int $limit=24): array {
     p50_mrph_ensure_schema($pdo);$period=p50_mrp_period($period);$limit=max(1,min(100,$limit));
     $stmt=$pdo->prepare("SELECT id,simulation_uuid,dispatch_id,status,experimental_run_uuid,public_state_revision,public_fingerprint,candidate_fingerprint,
-      public_count,candidate_count,entries_count,exits_count,up_count,down_count,stable_count,blocked_gate_count,warning_gate_count,
+      public_count,candidate_count,entries_count,exits_count,up_count,down_count,stable_count,blocked_gate_count,warning_gate_count,public_state_writes,
       median_rank_movement,maximum_rank_movement,top10_retention,generated_at,created_at
       FROM p50_metric_publication_simulations WHERE period_key=? ORDER BY generated_at DESC,id DESC LIMIT $limit");
     $stmt->execute([$period]);$rows=[];
@@ -114,7 +117,7 @@ function p50_mrph_recent(PDO $pdo,string $period='2H',int $limit=24): array {
         'publicFingerprint'=>(string)$row['public_fingerprint'],'candidateFingerprint'=>(string)$row['candidate_fingerprint'],
         'publicCount'=>(int)$row['public_count'],'candidateCount'=>(int)$row['candidate_count'],
         'counts'=>['entries'=>(int)$row['entries_count'],'exits'=>(int)$row['exits_count'],'up'=>(int)$row['up_count'],'down'=>(int)$row['down_count'],'stable'=>(int)$row['stable_count']],
-        'blockedGateCount'=>(int)$row['blocked_gate_count'],'warningGateCount'=>(int)$row['warning_gate_count'],
+        'blockedGateCount'=>(int)$row['blocked_gate_count'],'warningGateCount'=>(int)$row['warning_gate_count'],'publicStateWrites'=>(int)$row['public_state_writes'],
         'medianRankMovement'=>$row['median_rank_movement']===null?null:(float)$row['median_rank_movement'],
         'maximumRankMovement'=>$row['maximum_rank_movement']===null?null:(int)$row['maximum_rank_movement'],
         'top10Retention'=>$row['top10_retention']===null?null:(float)$row['top10_retention'],
@@ -130,7 +133,7 @@ function p50_mrph_stability(PDO $pdo,string $period='2H',int $sampleSize=3,?Date
         if($row['experimentalRunUuid'])$runUuids[(string)$row['experimentalRunUuid']]=true;
         $revisions[(string)$row['publicStateRevision']]=true;$publicFingerprints[(string)$row['publicFingerprint']]=true;
         if($row['status']==='blocked')$blockedReports++;elseif($row['status']==='review')$reviewReports++;
-        if($row['blockedGateCount']<0)$writeAnomalies++;
+        if((int)$row['publicStateWrites']!==0)$writeAnomalies++;
     }
     $latestAgeHours=null;
     if($rows){$latest=new DateTimeImmutable((string)$rows[0]['generatedAt'],new DateTimeZone('UTC'));$latestAgeHours=max(0,($now->getTimestamp()-$latest->getTimestamp())/3600);}
