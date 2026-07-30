@@ -32,10 +32,9 @@ jobs:
           last_final=''
 
           for attempt in $(seq 1 30); do
-            rm -f response.txt headers.txt
+            rm -f response.txt
             meta=$(curl --connect-timeout 15 --max-time 30 --location --silent --show-error \
-              --dump-header headers.txt --output response.txt \
-              --write-out '%{http_code}|%{url_effective}' "$url" 2>/dev/null || true)
+              --output response.txt --write-out '%{http_code}|%{url_effective}' "$url" 2>/dev/null || true)
             last_http="${meta%%|*}"
             last_final="${meta#*|}"
             body=$(tr -d '\r\n' < response.txt 2>/dev/null || true)
@@ -58,7 +57,6 @@ jobs:
           SHA: ${{ github.sha }}
           SUCCESS: ${{ steps.verify.outputs.success }}
           HTTP: ${{ steps.verify.outputs.http }}
-          FINAL_URL: ${{ steps.verify.outputs.final }}
         shell: bash
         run: |
           if [[ "$SUCCESS" == '1' ]]; then
@@ -69,6 +67,7 @@ jobs:
             description="Signature absente après attente (HTTP ${HTTP})"
           fi
 
+          export STATE="$state" DESCRIPTION="$description"
           python3 - <<'PY' > status.json
           import json, os
           print(json.dumps({
@@ -78,15 +77,7 @@ jobs:
               "target_url": "https://www.pass50.store/tiktok4WQb6SCLRKsLqMRbeXzqT3T06c0mW1la.txt",
           }))
           PY
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.sha }}
-          SUCCESS: ${{ steps.verify.outputs.success }}
-          HTTP: ${{ steps.verify.outputs.http }}
-          FINAL_URL: ${{ steps.verify.outputs.final }}
-          STATE: ${{ steps.verify.outputs.success == '1' && 'success' || 'failure' }}
-          DESCRIPTION: ${{ steps.verify.outputs.success == '1' && format('TikTok signature visible (HTTP {0})', steps.verify.outputs.http) || format('Signature absente après attente (HTTP {0})', steps.verify.outputs.http) }}
-        run: |
+
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Authorization: Bearer ${GH_TOKEN}" \
