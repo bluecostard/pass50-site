@@ -44,6 +44,12 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('[ "$http_code" = "404" ]', WORKFLOW)
         self.assertIn('[ "$http_code" = "503" ]', WORKFLOW)
 
+    def test_workflow_normalizes_transport_failures(self):
+        self.assertIn('set +e', WORKFLOW)
+        self.assertIn('curl_status=$?', WORKFLOW)
+        self.assertIn('if [ "$curl_status" -ne 0 ]', WORKFLOW)
+        self.assertIn('http_code="000"', WORKFLOW)
+
     def test_workflow_enforces_zero_public_writes(self):
         self.assertIn('.publication.publicationEnabled == false', WORKFLOW)
         self.assertIn('.publication.automaticPublicationEnabled == false', WORKFLOW)
