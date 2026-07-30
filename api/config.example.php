@@ -46,6 +46,15 @@ return [
         // Peut réutiliser la même clé de chiffrement de 32 octets que YouTube.
         'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
     ],
+    'tiktok_oauth' => [
+        // Utiliser d’abord les identifiants du Bac à sable. Ne jamais écrire le secret dans GitHub.
+        'client_key' => getenv('TIKTOK_CLIENT_KEY') ?: '',
+        'client_secret' => getenv('TIKTOK_CLIENT_SECRET') ?: '',
+        'redirect_uri' => getenv('TIKTOK_REDIRECT_URI') ?: 'https://www.pass50.store/api/tiktok-oauth-callback.php',
+        'environment' => getenv('TIKTOK_ENVIRONMENT') ?: 'sandbox',
+        // Peut réutiliser la même clé de chiffrement AES-256-GCM que YouTube et Meta.
+        'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
+    ],
     'data_engine' => [
         // Politique actuelle : collecter et publier les données à partir de 80 % de confiance.
         'confidence_threshold' => 80,
