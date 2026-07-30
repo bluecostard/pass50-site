@@ -10,15 +10,23 @@ function p50_mc_tiktok_video(PDO $pdo,array $official,array $account,array $vide
       ['views'=>p50_mc_int($video,'view_count'),'likes'=>p50_mc_int($video,'like_count'),'comments'=>p50_mc_int($video,'comment_count'),'shares'=>p50_mc_int($video,'share_count'),'saves'=>p50_mc_int($video,'favorites_count')],[],$httpStatus,$rawHash);
 }
 
-function p50_mc_tiktok_display(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result,array $credentials): void {
+function p50_mc_tiktok_display(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result,array $credentials,?array $expectedConnection=null): void {
     $headers=['Authorization: Bearer '.$credentials['secret']];
-    $userFields='open_id,union_id,avatar_url,display_name,bio_description,profile_deep_link,is_verified,follower_count,following_count,likes_count,video_count';
+    $userFields='open_id,union_id,avatar_url,display_name,bio_description,profile_deep_link,is_verified,username,follower_count,following_count,likes_count,video_count';
     $userResponse=p50_mc_request($fetch,p50_msc_query_url('https://open.tiktokapis.com/v2/user/info/',['fields'=>$userFields]),$headers,$result);
     if(!p50_msc_response($userResponse,'TikTok user/info',$result))return;
     $user=(array)(p50_mc_json($userResponse)['data']['user']??[]);
     if(!$user){$result['status']='unavailable_or_blocked';return;}
+    if($expectedConnection!==null){
+        $expectedOpenId=trim((string)($expectedConnection['open_id']??''));$actualOpenId=trim((string)($user['open_id']??''));
+        if($expectedOpenId===''||$actualOpenId===''||!hash_equals($expectedOpenId,$actualOpenId))throw new RuntimeException('TikTok OAuth identity_mismatch.');
+        $expectedUsername=strtolower(trim((string)($expectedConnection['username']??'')));$actualUsername=strtolower(trim((string)($user['username']??'')));
+        if($expectedUsername===''||$actualUsername===''||!hash_equals($expectedUsername,$actualUsername))throw new RuntimeException('TikTok OAuth username_mismatch.');
+        $officialUsername=p50_msc_username('TikTok',(string)$official['normalized_url']);
+        if($officialUsername===''||!hash_equals($officialUsername,$actualUsername))throw new RuntimeException('TikTok OAuth official_link_mismatch.');
+    }
     $userHash=hash('sha256',(string)$userResponse['body']);
-    $account=p50_msc_store_account($pdo,$official,'TikTok',['id'=>$user['open_id']??null,'username'=>p50_msc_username('TikTok',$official['normalized_url']),'followers'=>$user['follower_count']??null],
+    $account=p50_msc_store_account($pdo,$official,'TikTok',['id'=>$user['open_id']??null,'username'=>$user['username']??p50_msc_username('TikTok',$official['normalized_url']),'followers'=>$user['follower_count']??null],
       'tiktok_display_api','user/info',$credentials['mode'],$observedAt,$runUuid,$result,
       ['following'=>p50_mc_int($user,'following_count'),'totalLikes'=>p50_mc_int($user,'likes_count'),'videoCount'=>p50_mc_int($user,'video_count')],(int)$userResponse['status'],$userHash);
 
@@ -63,6 +71,7 @@ function p50_mc_tiktok_research(PDO $pdo,array $official,string $username,int $l
 
 function p50_mc_tiktok(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {
     $username=p50_msc_username('TikTok',$official['normalized_url']);if($username==='')throw new InvalidArgumentException('Lien TikTok officiel non reconnu.');
+    if(function_exists('p50tm_connection_for_profile')&&p50tm_connection_for_profile($pdo,(string)$official['profile_id'],true)){p50tm_collect($pdo,$official,$limit,$observedAt,$runUuid,$fetch,$result);return;}
     $credentials=p50_mc_credentials('TikTok',(string)$official['profile_id']);if(!p50_msc_access_or_status($credentials,$result))return;
     if($credentials['mode']==='authorized_display'){p50_mc_tiktok_display($pdo,$official,$limit,$observedAt,$runUuid,$fetch,$result,$credentials);return;}
     if($credentials['mode']==='approved_research'&&!empty($credentials['approved'])){p50_mc_tiktok_research($pdo,$official,$username,$limit,$observedAt,$runUuid,$fetch,$result,$credentials);return;}

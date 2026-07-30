@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__.'/tiktok-metrics-bridge-core.php';
 require_once __DIR__.'/metrics-collector-tiktok.php';
 require_once __DIR__.'/metrics-collector-instagram.php';
 require_once __DIR__.'/metrics-collector-facebook.php';
@@ -19,6 +20,8 @@ function p50_mc_credentials(string $platform,string $profileId): array {
     }
     if($platform==='X')return ['configured'=>p50_mc_config('X')!=='','authorized'=>p50_mc_config('X')!=='','mode'=>'official_api','authorizationRequired'=>false,'secret'=>p50_mc_config('X')];
     if($platform==='TikTok'){
+        $oauth=function_exists('p50tm_public_access')?p50tm_public_access($profileId):['configured'=>false,'authorized'=>false,'mode'=>'mapping_required','authorizationRequired'=>true];
+        if(!empty($oauth['configured']))return $oauth+['secret'=>''];
         $mode=(string)($perProfile['mode']??$metrics['tiktok_mode']??'none');
         $approved=(bool)($perProfile['research_approved']??$metrics['tiktok_research_approved']??false);
         $secret=$mode==='approved_research'?$read('tiktok_research_token','PASS50_TIKTOK_RESEARCH_TOKEN'):$read('tiktok_access_token','PASS50_TIKTOK_ACCESS_TOKEN');
