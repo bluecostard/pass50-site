@@ -46,7 +46,7 @@ orchestrator_must(in_array('live',$p0Ids,true)&&in_array('priority',$p0Ids,true)
 $p1=p50_mo_select($pdo,'p1');$p1Ids=array_column($p1['candidates'],'profileId');
 orchestrator_must(in_array('live',$p1Ids,true)&&in_array('priority',$p1Ids,true)&&in_array('near',$p1Ids,true),'P1 couvre rangs 1 à 70');
 $p2=p50_mo_select($pdo,'p2');$p2Ids=array_column($p2['candidates'],'profileId');
-orchestrator_must(!in_array('dead',$p2Ids,true)&&!in_array('low',$p2Ids,true)&&!in_array('candidate',$p2Ids,true),'Census filtre morts, confiance et liens non vérifiés');
+orchestrator_must(!in_array('dead',$p2Ids,true)&&in_array('low',$p2Ids,true)&&!in_array('candidate',$p2Ids,true),'Census filtre les morts et liens non vérifiés mais accepte la confiance supérieure à 80');
 orchestrator_must($p2['summary']['skippedConfiguration']>0&&$p2['summary']['skippedAuthRequired']>0&&$p2['summary']['skippedUnsupported']>0,'Plateformes non configurées, non autorisées et incompatibles exclues');
 p50_metrics_assert_safe(['skippedAuthRequired'=>$p2['summary']['skippedAuthRequired']],'metadata');
 foreach(['authorization','Authorization','token','secret','password','cookie'] as $sensitive){
