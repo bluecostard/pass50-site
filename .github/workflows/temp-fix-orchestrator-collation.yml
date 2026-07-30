@@ -1,0 +1,40 @@
+name: Temporary fix orchestrator collation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/youtube-oauth-automatic-eligibility
+          fetch-depth: 0
+      - name: Apply collation-safe orchestrator join
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('api/metrics-orchestrator-core.php')
+          text=path.read_text(encoding='utf-8')
+          old='FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id'
+          new='FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id'
+          if text.count(old)!=1:
+              raise SystemExit(f'ancre attendue une fois, trouvée {text.count(old)}')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+          php -l api/metrics-orchestrator-core.php
+          python3 -m unittest tests.test_youtube_oauth_automatic_eligibility
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/metrics-orchestrator-core.php
+          git commit -m "Rendre la jointure de l’orchestrateur indépendante des collations"
+          git push origin HEAD:feat/youtube-oauth-automatic-eligibility
