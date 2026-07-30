@@ -95,7 +95,8 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
         self.assertIn("'p1Remaining'", QUEUE)
         self.assertIn("'p1RetryWait'", QUEUE)
         self.assertIn("'p1WaitSeconds'", QUEUE)
-        self.assertIn("p50_metrics_safe_error", QUEUE)
+        self.assertNotIn("last_error", QUEUE)
+        self.assertNotIn("payload_json", QUEUE)
         self.assertIn("$response['queue']=p50_moq_snapshot($pdo)", CRON)
         for forbidden in ("UPDATE app_state", "INSERT INTO app_state", "DELETE FROM app_state", "REPLACE INTO app_state"):
             self.assertNotIn(forbidden, QUEUE)
