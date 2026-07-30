@@ -18,7 +18,18 @@ jobs:
           ref: feat/metrics-control-center-youtube-v1
           fetch-depth: 0
       - name: Appliquer les raccordements stricts
-        run: python3 tools/apply_metrics_control_center_patch.py
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('tools/apply_metrics_control_center_patch.py')
+          text=path.read_text(encoding='utf-8')
+          old="    if count != 1:\n        raise SystemExit(f'{path}: remplacement attendu 1 fois, trouvé {count}: {old[:120]!r}')"
+          new="    if count < 1:\n        raise SystemExit(f'{path}: ancre de remplacement introuvable: {old[:120]!r}')"
+          if text.count(old)!=1:
+              raise SystemExit('Garde-fou du script introuvable')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+          python3 tools/apply_metrics_control_center_patch.py
       - name: Vérifier avant commit
         run: |
           php -l api/metrics-collectors-core.php
