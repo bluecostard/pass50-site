@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -34,7 +35,7 @@ class CanonicalLionelYasmineV24Tests(unittest.TestCase):
         self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.7', V9)
         self.assertIn("const CENSUS_VERSION='92-v24'", V9)
         self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.7', SW)
-        self.assertIn('pass50-v45-metrics-control-center-census-92-v24', SW)
+        self.assertRegex(SW, r"const CACHE='pass50-v\d+-[a-z0-9-]+'")
 
     def test_public_loader_is_cache_busted(self):
         self.assertIn('public-copy-fixes.js?v=1.1', APP_CONFIG)

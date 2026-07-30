@@ -17,6 +17,7 @@
   if(!document.querySelector('script[data-pass50-youtube-analytics-ui]')){const script=document.createElement('script');script.src='./youtube-analytics-ui-v1.js?v=1.0';script.dataset.pass50YoutubeAnalyticsUi='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-meta-oauth-ui]')){const script=document.createElement('script');script.src='./meta-oauth-ui-v1.js?v=1.5';script.dataset.pass50MetaOauthUi='1.5';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-tiktok-oauth-ui]')){const script=document.createElement('script');script.src='./tiktok-oauth-ui-v1.js?v=1.0';script.dataset.pass50TiktokOauthUi='1.0';document.head.appendChild(script);}
+  if(!document.querySelector('script[data-pass50-live-experience-v41]')){const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.0';script.dataset.pass50LiveExperienceV41='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-profile-lionel-pcs]')){const script=document.createElement('script');script.src='./profile-lionel-pcs.js?v=1.0';script.dataset.pass50ProfileLionelPcs='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-profile-yasmine-fofana]')){const script=document.createElement('script');script.src='./profile-yasmine-fofana.js?v=1.0';script.dataset.pass50ProfileYasmineFofana='1.0';document.head.appendChild(script);}
 })();

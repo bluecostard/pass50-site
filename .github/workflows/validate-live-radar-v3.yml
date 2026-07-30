@@ -10,8 +10,12 @@ on:
       - 'api/live-status-v4.php'
       - 'api/live-status.php'
       - 'live-radar-v3.js'
+      - 'live-experience-v4-1.js'
+      - 'public-copy-fixes.js'
+      - 'sw.js'
       - 'LIVE_RADAR_V4_NOTES.md'
       - 'tests/test_live_radar_v3.py'
+      - 'tests/test_live_experience_v4_1.py'
       - 'tests/test_live_radar_v4_static.py'
       - 'tests/test_live_radar_v4_docs.py'
       - 'tests/test_live_radar_runtime_v4.py'
@@ -55,10 +59,14 @@ jobs:
           php -l tests/live_radar_v4_core.php
           php -l tests/live_radar_v4_mariadb.php
       - name: Vérifier la syntaxe JavaScript
-        run: node --check live-radar-v3.js
+        run: |
+          node --check live-radar-v3.js
+          node --check live-experience-v4-1.js
+          node --check public-copy-fixes.js
       - name: Exécuter les tests déterministes
         run: |
           python3 -m unittest tests/test_live_radar_v3.py
+          python3 -m unittest tests/test_live_experience_v4_1.py
           python3 -m unittest tests/test_live_radar_v4_static.py
           python3 -m unittest tests/test_live_radar_v4_docs.py
           python3 -m unittest tests/test_live_radar_runtime_v4.py
