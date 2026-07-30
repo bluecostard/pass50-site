@@ -6,18 +6,23 @@ require_once __DIR__.'/metrics-schema-core.php';
 const P50_MR_READINESS_VERSION='1.0.0';
 const P50_MR_READINESS_MAX_P1_AGE_MINUTES=180;
 
-function p50_mrr_iso(?string $value): ?string {
+function p50_mrr_date(?string $value): ?DateTimeImmutable {
     if($value===null||trim($value)==='')return null;
-    $timestamp=strtotime($value);
-    return $timestamp===false?null:gmdate(DATE_ATOM,$timestamp);
+    try{return new DateTimeImmutable(trim($value),new DateTimeZone('UTC'));}catch(Throwable){return null;}
+}
+
+function p50_mrr_iso(?string $value): ?string {
+    $date=p50_mrr_date($value);
+    return $date?$date->setTimezone(new DateTimeZone('UTC'))->format(DATE_ATOM):null;
 }
 
 function p50_mrr_readiness(PDO $pdo,DateTimeImmutable $now): array {
+    $now=$now->setTimezone(new DateTimeZone('UTC'));
     $required=['p50_metric_runs','p50_metric_jobs','p50_metric_captures'];
     $missing=array_values(array_filter($required,static fn(string $table): bool=>!p50_metrics_table_exists($pdo,$table)));
     $base=[
         'version'=>P50_MR_READINESS_VERSION,'ready'=>false,'state'=>'blocked','reason'=>'schema_missing',
-        'checkedAt'=>$now->setTimezone(new DateTimeZone('UTC'))->format(DATE_ATOM),'missingTables'=>$missing,
+        'checkedAt'=>$now->format(DATE_ATOM),'missingTables'=>$missing,
         'p1'=>['runUuid'=>null,'startedAt'=>null,'finishedAt'=>null,'ageMinutes'=>null,'activeJobs'=>0,'failedJobs'=>0],
         'latestUsableCaptureAt'=>null,'latestRankingFinishedAt'=>null,
     ];
@@ -30,11 +35,12 @@ function p50_mrr_readiness(PDO $pdo,DateTimeImmutable $now): array {
     $stmt->execute();$p1=$stmt->fetch();
     if(!is_array($p1))return array_replace($base,['reason'=>'p1_not_observed','missingTables'=>[]]);
 
-    $finishedAt=new DateTimeImmutable((string)$p1['finished_at'],new DateTimeZone('UTC'));
+    $finishedAt=p50_mrr_date((string)$p1['finished_at']);
+    if(!$finishedAt)return array_replace($base,['reason'=>'p1_invalid_timestamp','missingTables'=>[]]);
     $ageMinutes=max(0,(int)floor(($now->getTimestamp()-$finishedAt->getTimestamp())/60));
     $p1State=[
         'runUuid'=>(string)$p1['run_uuid'],'startedAt'=>p50_mrr_iso((string)$p1['started_at']),
-        'finishedAt'=>p50_mrr_iso((string)$p1['finished_at']),'ageMinutes'=>$ageMinutes,
+        'finishedAt'=>$finishedAt->format(DATE_ATOM),'ageMinutes'=>$ageMinutes,
         'activeJobs'=>0,'failedJobs'=>0,
     ];
     $base['p1']=$p1State;$base['missingTables']=[];
@@ -48,8 +54,9 @@ function p50_mrr_readiness(PDO $pdo,DateTimeImmutable $now): array {
     if($activeJobs>0)return array_replace($base,['state'=>'waiting','reason'=>'collection_pending']);
 
     $latestCapture=$pdo->query("SELECT MAX(captured_at) FROM p50_metric_captures WHERE quality_status='usable'")->fetchColumn();
-    $base['latestUsableCaptureAt']=$latestCapture?p50_mrr_iso((string)$latestCapture):null;
-    if(!$latestCapture)return array_replace($base,['reason'=>'no_usable_captures']);
+    $latestCaptureDate=$latestCapture?p50_mrr_date((string)$latestCapture):null;
+    $base['latestUsableCaptureAt']=$latestCaptureDate?$latestCaptureDate->format(DATE_ATOM):null;
+    if(!$latestCaptureDate)return array_replace($base,['reason'=>'no_usable_captures']);
 
     $latestRanking=null;
     if(p50_metrics_table_exists($pdo,'p50_metric_ranking_runs')){
@@ -59,8 +66,9 @@ function p50_mrr_readiness(PDO $pdo,DateTimeImmutable $now): array {
         $rankingStmt->execute([defined('P50_MR_ALGORITHM_VERSION')?P50_MR_ALGORITHM_VERSION:'MR-V1.0']);
         $latestRanking=$rankingStmt->fetchColumn()?:null;
     }
-    $base['latestRankingFinishedAt']=$latestRanking?p50_mrr_iso((string)$latestRanking):null;
-    if($latestRanking&&strtotime((string)$latestCapture)<=strtotime((string)$latestRanking))return array_replace($base,['state'=>'idle','reason'=>'no_new_captures']);
+    $latestRankingDate=$latestRanking?p50_mrr_date((string)$latestRanking):null;
+    $base['latestRankingFinishedAt']=$latestRankingDate?$latestRankingDate->format(DATE_ATOM):null;
+    if($latestRankingDate&&$latestCaptureDate<=$latestRankingDate)return array_replace($base,['state'=>'idle','reason'=>'no_new_captures']);
 
     return array_replace($base,[
         'ready'=>true,'state'=>$failedJobs>0?'ready_degraded':'ready',
