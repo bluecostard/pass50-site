@@ -55,6 +55,17 @@
     return new Intl.NumberFormat('fr-FR', { notation: Number(value) >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(Number(value));
   }
 
+  function safeHttpsUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const url = new URL(raw);
+      return url.protocol === 'https:' ? url.href : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
   function injectStyles() {
     if (document.getElementById('p50TiktokOauthStyles')) return;
     const style = document.createElement('style');
@@ -122,15 +133,19 @@
     }
     const p = currentStatus.profile || {};
     const videos = Array.isArray(currentStatus.videos) ? currentStatus.videos : [];
-    const avatar = p.avatarUrl
-      ? `<div class="p50-tt-avatar"><img src="${escapeHtml(p.avatarUrl)}" alt="" referrerpolicy="no-referrer"></div>`
+    const avatarUrl = safeHttpsUrl(p.avatarUrl);
+    const profileUrl = safeHttpsUrl(p.profileUrl);
+    const avatar = avatarUrl
+      ? `<div class="p50-tt-avatar"><img src="${escapeHtml(avatarUrl)}" alt="" referrerpolicy="no-referrer"></div>`
       : '<div class="p50-tt-logo">♪</div>';
     const username = p.username ? `@${p.username}` : 'Compte autorisé';
     const videoHtml = videos.slice(0, 10).map(video => {
-      const url = video.shareUrl || video.embedLink || '#';
-      const cover = video.coverImageUrl ? `<img src="${escapeHtml(video.coverImageUrl)}" alt="" referrerpolicy="no-referrer">` : '';
-      return `<a class="p50-tt-video" href="${escapeHtml(url)}" target="_blank" rel="noopener">${cover}<span>${formatNumber(video.viewCount)} vues</span></a>`;
-    }).join('');
+      const url = safeHttpsUrl(video.shareUrl || video.embedLink);
+      if (!url) return '';
+      const coverUrl = safeHttpsUrl(video.coverImageUrl);
+      const cover = coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="" referrerpolicy="no-referrer">` : '';
+      return `<a class="p50-tt-video" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${cover}<span>${formatNumber(video.viewCount)} vues</span></a>`;
+    }).filter(Boolean).join('');
     section.innerHTML = `
       <div class="user-title"><span>♪ TikTok</span><span class="muted">Lecture seule · ${escapeHtml(currentStatus.environment || 'sandbox')}</span></div>
       <div class="p50-tt-card">
@@ -140,7 +155,8 @@
             <div class="p50-tt-meta">${escapeHtml(username)}${p.bio ? ` · ${escapeHtml(p.bio)}` : ''}</div>
           </div></div>
           <div class="p50-tt-actions">
-            ${p.profileUrl ? `<a class="btn" href="${escapeHtml(p.profileUrl)}" target="_blank" rel="noopener">Voir le profil</a>` : ''}
+            ${profileUrl ? `<a class="btn" href="${escapeHtml(profileUrl)}" target="_blank" rel="noopener noreferrer">Voir le profil</a>` : ''}
+            ${currentStatus.requiresReauthorization ? '<button class="btn primary" type="button" data-p50-tiktok-connect>Reconnecter</button>' : ''}
             <button class="btn danger" type="button" data-p50-tiktok-disconnect>Déconnecter</button>
           </div>
         </div>
