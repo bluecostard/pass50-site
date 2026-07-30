@@ -26,10 +26,18 @@ class MetricsRankingPublicationHistoryV1Tests(unittest.TestCase):
 
     def test_stability_requires_three_distinct_runs(self):
         self.assertIn('P50_MRPH_MIN_DISTINCT_CYCLES=3', CORE)
+        self.assertIn('function p50_mrph_distinct_recent', CORE)
+        self.assertIn("'run:'.$runUuid", CORE)
+        self.assertIn("p50_mrph_distinct_recent($history,$sampleSize)", CORE)
+        self.assertIn("'rawObservedReports'=>count($history)", CORE)
         self.assertIn("'distinct_experimental_runs'", CORE)
         self.assertIn("'state'=>$state", CORE)
         self.assertIn("'controlledPublicationEligible'=>$state==='ready'", CORE)
         self.assertIn("'automaticPublicationEligible'=>false", CORE)
+
+    def test_empty_history_is_collecting_not_failed(self):
+        self.assertIn("$freshStatus=$latestAgeHours===null?'wait'", CORE)
+        self.assertIn("$state=$blocked?'blocked':($waiting?'collecting'", CORE)
 
     def test_cron_stores_then_evaluates(self):
         self.assertIn("require __DIR__.'/metrics-ranking-publication-history-core.php'", CRON)
