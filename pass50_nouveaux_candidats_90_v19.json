@@ -2284,5 +2284,105 @@
       "url": ""
     },
     "notes": "Ajout approuvé PASS50."
+  },
+  {
+    "id": "census-lionel-pcs",
+    "name": "Lionel PCS",
+    "known_alias": "Lionel Akobé / @lionel_pcs",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Football / Pronostics sportifs / Divertissement",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@lionel_pcs",
+      "Instagram": "https://www.instagram.com/lionel_pcs/",
+      "Facebook": "https://www.facebook.com/lionelpcs225"
+    },
+    "source": {
+      "publisher": "Linktree public — LIONEL PCS",
+      "date": "2026-07-30",
+      "url": "https://linktr.ee/lionelpcsofficiel"
+    },
+    "notes": "Ajout approuvé PASS50. Identité et comptes directs recoupés depuis le hub public lionelpcsofficiel. Profil non classable jusqu’à validation des métriques récentes.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@lionel_pcs",
+        "source_name": "Linktree public — LIONEL PCS",
+        "source_url": "https://linktr.ee/lionelpcsofficiel",
+        "confidence": 96
+      },
+      "Instagram": {
+        "url": "https://www.instagram.com/lionel_pcs/",
+        "source_name": "Linktree public — LIONEL PCS",
+        "source_url": "https://linktr.ee/lionelpcsofficiel",
+        "confidence": 96
+      },
+      "Facebook": {
+        "url": "https://www.facebook.com/lionelpcs225",
+        "source_name": "Linktree public — LIONEL PCS",
+        "source_url": "https://linktr.ee/lionelpcsofficiel",
+        "confidence": 96
+      }
+    }
+  },
+  {
+    "id": "census-yasmine-fofana",
+    "name": "Yasmine Fofana",
+    "known_alias": "Afrofoodie / @afrofoodie",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Gastronomie / Tourisme culinaire / Lifestyle",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P1",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "Instagram": "https://www.instagram.com/afrofoodie/",
+      "Facebook": "https://www.facebook.com/Afrofoodie.ci/",
+      "YouTube": "https://www.youtube.com/@YasmineAfrofoodie",
+      "LinkedIn": "https://www.linkedin.com/in/yasminefofana/",
+      "X": "https://x.com/afro_foodie"
+    },
+    "source": {
+      "publisher": "Afrofoodie — site officiel de Yasmine Fofana",
+      "date": "2026-07-30",
+      "url": "https://afrofoodie.ci/"
+    },
+    "notes": "Ajout approuvé PASS50. Yasmine Fofana est connue publiquement sous le nom Afrofoodie. Identité et réseaux recoupés entre son site officiel et sa fiche IGCAT. Profil non classable jusqu’à validation des métriques récentes.",
+    "curated_social_sources": {
+      "Instagram": {
+        "url": "https://www.instagram.com/afrofoodie/",
+        "source_name": "IGCAT — Yasmine Fofana",
+        "source_url": "https://igcat.org/fr/team/yasmine-fofana-cote-divoire/",
+        "confidence": 96
+      },
+      "Facebook": {
+        "url": "https://www.facebook.com/Afrofoodie.ci/",
+        "source_name": "IGCAT — Yasmine Fofana",
+        "source_url": "https://igcat.org/fr/team/yasmine-fofana-cote-divoire/",
+        "confidence": 96
+      },
+      "YouTube": {
+        "url": "https://www.youtube.com/@YasmineAfrofoodie",
+        "source_name": "IGCAT — Yasmine Fofana",
+        "source_url": "https://igcat.org/fr/team/yasmine-fofana-cote-divoire/",
+        "confidence": 96
+      },
+      "LinkedIn": {
+        "url": "https://www.linkedin.com/in/yasminefofana/",
+        "source_name": "IGCAT — Yasmine Fofana",
+        "source_url": "https://igcat.org/fr/team/yasmine-fofana-cote-divoire/",
+        "confidence": 96
+      },
+      "X": {
+        "url": "https://x.com/afro_foodie",
+        "source_name": "IGCAT — Yasmine Fofana",
+        "source_url": "https://igcat.org/fr/team/yasmine-fofana-cote-divoire/",
+        "confidence": 96
+      }
+    }
   }
 ]
