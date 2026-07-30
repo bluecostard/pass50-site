@@ -1,0 +1,39 @@
+name: Temporary fix YouTube collation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/metrics-control-center-youtube-v1
+          fetch-depth: 0
+      - name: Imposer une collation commune dans le diagnostic
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('api/youtube-metrics-bridge-core.php')
+          text=path.read_text(encoding='utf-8')
+          old="$join=$ready&&p50_metrics_table_exists($pdo,'p50_profile_registry')?'LEFT JOIN p50_profile_registry r ON r.profile_id=c.profile_id':'';"
+          new="$join=$ready&&p50_metrics_table_exists($pdo,'p50_profile_registry')?\"LEFT JOIN p50_profile_registry r ON r.profile_id COLLATE utf8mb4_unicode_ci=c.profile_id COLLATE utf8mb4_unicode_ci\":'';"
+          if text.count(old)!=1: raise SystemExit('Jointure YouTube introuvable')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Vérifier PHP
+        run: php -l api/youtube-metrics-bridge-core.php
+      - name: Enregistrer la correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/youtube-metrics-bridge-core.php
+          git commit -m "Normaliser la collation du mapping YouTube"
+          git push origin HEAD:feat/metrics-control-center-youtube-v1
