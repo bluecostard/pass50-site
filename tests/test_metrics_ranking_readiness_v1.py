@@ -39,7 +39,18 @@ class MetricsRankingReadinessV1Tests(unittest.TestCase):
         for token in ('readiness.state', 'readiness.p1.activeJobs', 'readiness.p1.failedJobs', 'no_new_captures', 'collection_pending'):
             self.assertIn(token, WORKFLOW)
         self.assertIn("cron: '57 */2 * * *'", WORKFLOW)
-        self.assertNotIn('publish', WORKFLOW.lower())
+        self.assertIn('pass50/experimental-ranking', WORKFLOW)
+        self.assertIn('app_state 0', WORKFLOW)
+        for forbidden in (
+            'UPDATE app_state',
+            'INSERT INTO app_state',
+            'DELETE FROM app_state',
+            'REPLACE INTO app_state',
+            'data-publish.php',
+            'p50_de_publish_score_pipeline',
+            'publicPublication\'=>true',
+        ):
+            self.assertNotIn(forbidden, WORKFLOW)
 
 
 if __name__ == '__main__':
