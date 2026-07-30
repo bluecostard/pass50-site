@@ -9,8 +9,10 @@ on:
       - 'api/live-radar-v4-storage.php'
       - 'api/live-status-v4.php'
       - 'api/live-status.php'
+      - 'api/live-dismiss.php'
       - 'live-radar-v3.js'
       - 'live-experience-v4-1.js'
+      - 'live-dismiss-ui-v1.js'
       - 'public-copy-fixes.js'
       - 'sw.js'
       - 'LIVE_RADAR_V4_NOTES.md'
@@ -56,12 +58,14 @@ jobs:
           php -l api/live-radar-v4-storage.php
           php -l api/live-status-v4.php
           php -l api/live-status.php
+          php -l api/live-dismiss.php
           php -l tests/live_radar_v4_core.php
           php -l tests/live_radar_v4_mariadb.php
       - name: Vérifier la syntaxe JavaScript
         run: |
           node --check live-radar-v3.js
           node --check live-experience-v4-1.js
+          node --check live-dismiss-ui-v1.js
           node --check public-copy-fixes.js
       - name: Exécuter les tests déterministes
         run: |

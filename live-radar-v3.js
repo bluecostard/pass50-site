@@ -4,7 +4,7 @@
 const ENDPOINT='./api/live-status-v4.php';
 const QUICK_INTERVAL=45_000;
 const FULL_CYCLE_KEY='pass50_live_radar_v4_cycle';
-const DEFAULT_GRACE_MINUTES={TikTok:20,Facebook:15,YouTube:15,Instagram:15};
+const DEFAULT_GRACE_MINUTES={TikTok:2,Facebook:15,YouTube:15,Instagram:15};
 const PLATFORM_PRIORITY=['TikTok','Facebook','YouTube','Instagram'];
 const RADAR_BATCH_SIZE='12';
 let runningMode='';
@@ -34,8 +34,6 @@ function installLiveNormalizerV4(){
         let confirmedAt=new Date(item.lastConfirmedAt||item.lastSeenAt||'').getTime();
         if(!Number.isFinite(confirmedAt))return false;
         const futureSkew=confirmedAt-now;
-        // Anciennes lignes IONOS pouvaient être sérialisées avec le fuseau local
-        // mais marquées UTC. Une avance raisonnable est ramenée à l'heure serveur.
         if(futureSkew>5*60_000&&futureSkew<=6*60*60_000){
           confirmedAt=now;
           const fixed=new Date(now).toISOString();
@@ -190,25 +188,29 @@ async function verifyProfile(profileId){
   finally{runningMode='';renderStatus();}
 }
 
-async function waitForRadarIdle(maxWait=3000){
-  const deadline=Date.now()+maxWait;while(runningMode&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,100));return !runningMode;
+function openExternal(url){
+  if(!/^https?:\/\//i.test(String(url||'')))return false;
+  const opened=window.open(String(url),'_blank');
+  if(opened){try{opened.opener=null}catch{}return true;}
+  const anchor=document.createElement('a');anchor.href=String(url);anchor.target='_blank';anchor.rel='noopener noreferrer';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();anchor.remove();return true;
 }
 
-async function verifyWatchLink(link){
-  const profileId=String(link.dataset.liveProfile||''),platform=String(link.dataset.livePlatform||'');
-  const current=(db.liveStreams||[]).find(item=>item.profileId===profileId&&item.platform===platform&&item.status==='live');
-  if(current?.source==='manual'){window.open(link.href,'_blank','noopener');return;}
-  const pendingWindow=window.open('about:blank','_blank');if(pendingWindow)pendingWindow.opener=null;
-  const confirmedAt=new Date(link.dataset.liveConfirmedAt||'').getTime();const grace=graceMinutes(platform)*60_000;
-  if(Number.isFinite(confirmedAt)&&Date.now()-confirmedAt<=grace){if(pendingWindow)pendingWindow.location.replace(link.href);return;}
-  if(!await waitForRadarIdle()){if(pendingWindow)pendingWindow.close();if(typeof toast==='function')toast('Vérification du direct en cours. Réessayez dans un instant.');return;}
-  const data=await verifyProfile(profileId);const confirmed=(data?.liveStreams||[]).find(item=>item.profileId===profileId&&item.platform===platform&&item.status==='live');
-  if(confirmed&&pendingWindow){pendingWindow.location.replace(String(confirmed.url||link.href));return;}
-  if(pendingWindow)pendingWindow.close();if(typeof openLives==='function')openLives();if(typeof toast==='function')toast('Ce direct vient de se terminer ou ne peut plus être confirmé.');
+function badgeProfileId(badge){
+  const owner=badge.closest?.('[data-profile]');if(owner?.dataset?.profile)return String(owner.dataset.profile);
+  if(badge.closest?.('#profileBody')){
+    const name=String(document.querySelector('#profileBody h2')?.textContent||'').trim();
+    try{return String((db.profiles||[]).find(item=>String(item.name||'').trim()===name)?.id||'')}catch{}
+  }
+  return '';
+}
+
+function ensureLiveExperience(){
+  if(document.querySelector('script[data-pass50-live-experience-v41]'))return;
+  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.1';script.dataset.pass50LiveExperienceV41='1.1';document.head.appendChild(script);
 }
 
 function bind(){
-  installLiveNormalizerV4();
+  installLiveNormalizerV4();ensureLiveExperience();
   const button=document.getElementById('liveRadarRefresh');
   if(button&&!button.dataset.liveRadarV4){button.dataset.liveRadarV4='1';button.textContent='🔴 LANCER LE RADAR COMPLET';}
   renderStatus();
@@ -217,7 +219,17 @@ function bind(){
 if(typeof normalizeLiveStreams==='function')installLiveNormalizerV4();
 document.addEventListener('click',event=>{
   const watchLink=event.target.closest?.('.live-watch-link[data-live-profile][data-live-platform]');
-  if(watchLink){event.preventDefault();event.stopImmediatePropagation();verifyWatchLink(watchLink);return;}
+  if(watchLink){
+    const profileId=String(watchLink.dataset.liveProfile||'');
+    setTimeout(()=>{if(profileId)verifyProfile(profileId);},0);
+    return;
+  }
+  const liveBadge=event.target.closest?.('.badge.live-badge');
+  if(liveBadge){
+    const profileId=badgeProfileId(liveBadge);
+    let live=null;try{live=(db.liveStreams||[]).find(item=>String(item.profileId)===profileId&&item.status==='live')||null}catch{}
+    if(live?.url){event.preventDefault();event.stopImmediatePropagation();openExternal(live.url);setTimeout(()=>verifyProfile(profileId),0);return;}
+  }
   const radarButton=event.target.closest?.('#liveRadarRefresh');
   if(radarButton){event.preventDefault();event.stopImmediatePropagation();runFullSweep();return;}
   if(event.target.closest?.('#liveBtn'))setTimeout(runQuick,0);
@@ -225,7 +237,7 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('p50:official-links-saved',event=>{const id=String(event.detail?.profileId||'');if(id)setTimeout(()=>verifyProfile(id),300);});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)runQuick();});
-document.addEventListener('DOMContentLoaded',()=>{installLiveNormalizerV4();bind();setTimeout(runQuick,3000);autoTimer=setInterval(runQuick,QUICK_INTERVAL);try{refreshLiveStatus=runQuick}catch{}});
+document.addEventListener('DOMContentLoaded',()=>{installLiveNormalizerV4();ensureLiveExperience();bind();setTimeout(runQuick,3000);autoTimer=setInterval(runQuick,QUICK_INTERVAL);try{refreshLiveStatus=runQuick}catch{}});
 const observer=new MutationObserver(()=>requestAnimationFrame(bind));observer.observe(document.documentElement,{subtree:true,childList:true});
 window.addEventListener('beforeunload',()=>{if(autoTimer)clearInterval(autoTimer);},{once:true});
 window.PASS50_RUN_LIVE_RADAR=force=>force?runFullSweep():runQuick();
