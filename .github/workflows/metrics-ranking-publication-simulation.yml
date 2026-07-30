@@ -58,6 +58,7 @@ jobs:
                 openssl dgst -sha256 -hmac "$CRON_SECRET" -r |
                 awk '{print $1}'
             )"
+            set +e
             http_code="$(
               curl --silent --show-error --max-time 55 \
                 --output "$response_file" \
@@ -66,8 +67,13 @@ jobs:
                 -H "X-P50-Timestamp: $timestamp" \
                 -H "X-P50-Signature: $signature" \
                 --data "$body" \
-                "$SIMULATION_URL" || printf '000'
+                "$SIMULATION_URL"
             )"
+            curl_status=$?
+            set -e
+            if [ "$curl_status" -ne 0 ]; then
+              http_code="000"
+            fi
 
             if [ "$http_code" = "200" ]; then
               break
