@@ -1,0 +1,59 @@
+name: Bump Census Loader Cache V24 Once
+
+on:
+  push:
+    branches:
+      - fix/census-loader-cache-v24
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/census-loader-cache-v24
+          fetch-depth: 0
+      - name: Remplacer la version du chargeur
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          old = 'v9-tools.js?v=15.1'
+          new = 'v9-tools.js?v=15.2'
+          changed = []
+          allowed = {'.html', '.js', '.py', '.php', '.yml', '.yaml', '.md'}
+          for path in Path('.').rglob('*'):
+              if not path.is_file() or '.git' in path.parts or path.suffix.lower() not in allowed:
+                  continue
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  continue
+              path.write_text(text.replace(old, new), encoding='utf-8')
+              changed.append(path.as_posix())
+          required = {'index.html', 'sw.js'}
+          if not required.issubset(changed):
+              raise SystemExit(f'Fichiers requis non modifiés : {sorted(required - set(changed))}; modifiés={changed}')
+          print('Fichiers modifiés :', ', '.join(changed))
+          PY
+      - name: Vérifier la cohérence
+        run: |
+          ! grep -R --exclude-dir=.git --exclude='bump-census-loader-cache-v24-once.yml' 'v9-tools.js?v=15.1' .
+          grep -q 'v9-tools.js?v=15.2' index.html
+          grep -q 'v9-tools.js?v=15.2' sw.js
+          grep -q 'pass50_nouveaux_candidats_90_v19.json?v=22.7' v9-tools.js
+          grep -q "const CENSUS_VERSION='92-v24'" v9-tools.js
+          node --check v9-tools.js
+          node --check sw.js
+          python3 -m unittest tests.test_canonical_lionel_yasmine_v24
+      - name: Publier la correction finale
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/bump-census-loader-cache-v24-once.yml
+          git add -A
+          git commit -m "Forcer le rechargement du recensement canonique 92-v24"
+          git push origin HEAD:fix/census-loader-cache-v24
