@@ -23,6 +23,8 @@ class TikTokOauthV1Tests(unittest.TestCase):
         self.assertIn('https://open.tiktokapis.com/v2/video/list/', CORE)
         for scope in ('user.info.basic', 'user.info.profile', 'user.info.stats', 'video.list'):
             self.assertIn(scope, CORE)
+        for forbidden_scope in ('video.publish', 'video.upload', 'portability.all'):
+            self.assertNotIn(forbidden_scope, CORE + START)
 
     def test_start_is_database_free_and_state_is_signed(self):
         self.assertNotIn('db()', START)
