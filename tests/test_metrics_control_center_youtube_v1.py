@@ -57,8 +57,8 @@ class MetricsControlCenterYoutubeV1Tests(unittest.TestCase):
             self.assertNotIn(forbidden, joined)
 
     def test_ui_cache_is_bumped(self):
-        self.assertIn('data-engine-ui.js?v=18.1', TOOLS)
-        self.assertIn('data-engine-ui.js?v=18.1', SW)
+        self.assertIn('data-engine-ui.js?v=18.2', TOOLS)
+        self.assertIn('data-engine-ui.js?v=18.2', SW)
         self.assertIn('pass50-v45-metrics-control-center', SW)
 
 
