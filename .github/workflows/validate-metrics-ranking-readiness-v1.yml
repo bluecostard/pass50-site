@@ -28,6 +28,7 @@ jobs:
           fetch-depth: 0
       - name: PHP lint
         run: |
+          php -l api/bootstrap.php
           php -l api/metrics-ranking-readiness-core.php
           php -l api/metrics-ranking-cron.php
           php -l api/metrics-diagnostic.php
