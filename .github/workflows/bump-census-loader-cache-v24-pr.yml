@@ -59,7 +59,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/bump-census-loader-cache-v24-once.yml .github/workflows/bump-census-loader-cache-v24-pr.yml
+          git rm -f .github/workflows/bump-census-loader-cache-v24-once.yml .github/workflows/bump-census-loader-cache-v24-pr.yml
           git add -A
           git commit -m "Forcer le rechargement du recensement canonique 92-v24"
           git push origin HEAD:fix/census-loader-cache-v24
