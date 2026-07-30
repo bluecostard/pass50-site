@@ -3,6 +3,7 @@ declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/meta-oauth-core.php';
 require __DIR__.'/data-engine-core.php';
+require __DIR__.'/metrics-orchestrator-core.php';
 require_method('POST');
 
 $user=auth_user();
@@ -53,11 +54,30 @@ try{
         }
     }
     $pdo->commit();
+
+    $queue=['platforms'=>[],'jobsCreated'=>0,'duplicateJobs'=>0,'error'=>null];
+    if($value!==null){
+        try{
+            $platformStmt=$pdo->prepare("SELECT DISTINCT platform FROM p50_meta_oauth_assets WHERE user_id=? AND BINARY profile_id=BINARY ? AND platform IN ('Facebook','Instagram') AND status='active'");
+            $platformStmt->execute([$userId,$value]);
+            foreach(array_map('strval',$platformStmt->fetchAll(PDO::FETCH_COLUMN)) as $mappedPlatform){
+                $job=p50_mo_enqueue_profile($pdo,$value,$mappedPlatform,'p0',['reason'=>'meta_oauth_mapping','priorityOverride'=>10,'contentLimit'=>5,'dispatchId'=>'meta-map-'.substr($assetId,0,80)]);
+                $queue['platforms'][]=$mappedPlatform;
+                $queue[$job['created']?'jobsCreated':'duplicateJobs']++;
+            }
+            $queue['platforms']=array_values(array_unique($queue['platforms']));
+        }catch(Throwable $queueError){
+            $queue['error']='La collecte automatique sera reprise par le prochain cycle.';
+            error_log('Meta metric enqueue: '.p50_metrics_safe_error($queueError->getMessage()));
+        }
+    }
+
     json_response([
         'ok'=>true,
         'profileId'=>$value,
         'profileName'=>$profile?(string)$profile['public_name']:null,
         'updatedAssets'=>$updated,
+        'metricQueue'=>$queue,
     ]);
 }catch(Throwable $e){
     if($pdo->inTransaction())$pdo->rollBack();

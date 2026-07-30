@@ -25,6 +25,10 @@ function p50_mc_credentials(string $platform,string $profileId): array {
         $configured=$mode==='authorized_display'?true:($mode==='approved_research'&&$approved);
         return ['configured'=>$configured,'authorized'=>$secret!=='','mode'=>$mode,'authorizationRequired'=>$mode==='authorized_display'&&$secret==='','secret'=>$secret,'approved'=>$approved];
     }
+    if(in_array($platform,['Facebook','Instagram'],true)&&function_exists('p50mm_credentials')){
+        $oauth=p50mm_credentials($platform,$profileId);
+        if(is_array($oauth))return $oauth;
+    }
     $prefix=strtolower($platform);$secret=$read($prefix.'_access_token','PASS50_'.strtoupper($prefix).'_ACCESS_TOKEN');
     $mode=(string)($perProfile['mode']??$metrics[$prefix.'_mode']??'official_api');
     $configured=(bool)($perProfile['enabled']??$metrics[$prefix.'_enabled']??($secret!==''));
@@ -32,7 +36,9 @@ function p50_mc_credentials(string $platform,string $profileId): array {
       'accountId'=>$read($prefix.'_account_id','PASS50_'.strtoupper($prefix).'_ACCOUNT_ID'),
       'pageId'=>$read('facebook_page_id','PASS50_FACEBOOK_PAGE_ID'),
       'discoveryAccountId'=>$read('instagram_discovery_account_id','PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID'),
-      'storiesAuthorized'=>(bool)($perProfile['stories_authorized']??$metrics[$prefix.'_stories_authorized']??false)];
+      'storiesAuthorized'=>(bool)($perProfile['stories_authorized']??$metrics[$prefix.'_stories_authorized']??false),
+      'insightsAuthorized'=>(bool)($perProfile['insights_authorized']??$metrics[$prefix.'_insights_authorized']??true),
+      'graphVersion'=>trim((string)($perProfile['graph_version']??$metrics['meta_graph_version']??'v22.0'))?:'v22.0'];
 }
 
 function p50_mc_public_access(string $platform,string $profileId): array {
@@ -83,6 +89,12 @@ function p50_msc_time($value): ?string {
 
 function p50_msc_query_url(string $base,array $query): string {
     return $base.(str_contains($base,'?')?'&':'?').http_build_query($query);
+}
+
+function p50_msc_graph_root(array $credentials): string {
+    $version=trim((string)($credentials['graphVersion']??'v22.0'));
+    if(!preg_match('/^v\d+\.\d+$/',$version))$version='v22.0';
+    return 'https://graph.facebook.com/'.$version.'/';
 }
 
 function p50_msc_graph_insights(array $payload): array {

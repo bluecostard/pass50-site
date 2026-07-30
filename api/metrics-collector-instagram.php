@@ -15,10 +15,10 @@ function p50_mc_instagram_insight_groups(string $type): array {
     };
 }
 
-function p50_mc_instagram_insights(callable $fetch,array $headers,string $mediaId,string $type,array &$result): array {
+function p50_mc_instagram_insights(callable $fetch,array $headers,string $graph,string $mediaId,string $type,array &$result): array {
     [$preferred,$fallback]=p50_mc_instagram_insight_groups($type);$bodies=[];
     foreach([$preferred,$fallback] as $index=>$metrics){
-        $response=p50_mc_request($fetch,p50_msc_query_url('https://graph.facebook.com/v22.0/'.rawurlencode($mediaId).'/insights',['metric'=>implode(',',$metrics)]),$headers,$result);
+        $response=p50_mc_request($fetch,p50_msc_query_url($graph.rawurlencode($mediaId).'/insights',['metric'=>implode(',',$metrics)]),$headers,$result);
         $bodies[]=(string)($response['body']??'');
         if((int)$response['status']>=200&&(int)$response['status']<300)return [p50_msc_graph_insights(p50_mc_json($response)),hash('sha256',implode('|',$bodies))];
         if($index===0&&$fallback===$preferred)break;
@@ -35,16 +35,18 @@ function p50_mc_instagram_media(PDO $pdo,array $official,array $account,array $m
       ['reach'=>p50_mc_int($insights,'reach'),'plays'=>p50_mc_int($insights,'plays'),'totalInteractions'=>p50_mc_int($insights,'total_interactions'),'profileActivity'=>p50_mc_int($insights,'profile_activity'),'accountsEngaged'=>p50_mc_int($insights,'accounts_engaged')],$httpStatus,$rawHash);
 }
 
-function p50_mc_instagram_edge(PDO $pdo,array $official,array $account,string $accountId,string $edge,int $limit,string $mode,string $observedAt,string $runUuid,callable $fetch,array &$result,array $headers): int {
+function p50_mc_instagram_edge(PDO $pdo,array $official,array $account,string $accountId,string $edge,int $limit,string $mode,string $observedAt,string $runUuid,callable $fetch,array &$result,array $headers,string $graph,bool $insightsAuthorized=true): int {
     $after=null;$collected=0;$mediaFields='id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count';
     do{
         $query=['fields'=>$mediaFields,'limit'=>min(100,$limit-$collected)];if($after!==null)$query['after']=$after;
-        $mediaResponse=p50_mc_request($fetch,p50_msc_query_url('https://graph.facebook.com/v22.0/'.rawurlencode($accountId).'/'.$edge,$query),$headers,$result);
+        $mediaResponse=p50_mc_request($fetch,p50_msc_query_url($graph.rawurlencode($accountId).'/'.$edge,$query),$headers,$result);
         if(!p50_msc_response($mediaResponse,'Instagram '.$edge,$result,true))return $collected;$mediaPayload=p50_mc_json($mediaResponse);
         foreach((array)($mediaPayload['data']??[]) as $media){
             if($collected++>=$limit)break;$media=(array)$media;
             if($edge==='stories'){$media['media_product_type']='STORY';$media['story_authorized']=true;}
-            $type=p50_mc_instagram_type($media);[$insights,$insightHash]=p50_mc_instagram_insights($fetch,$headers,(string)$media['id'],$type,$result);
+            $type=p50_mc_instagram_type($media);$insights=[];$insightHash=hash('sha256','insights_not_authorized');
+            if($insightsAuthorized)[$insights,$insightHash]=p50_mc_instagram_insights($fetch,$headers,$graph,(string)$media['id'],$type,$result);
+            else $result['unavailableMetrics']+=5;
             p50_mc_instagram_media($pdo,$official,$account,$media,$insights,$mode,$observedAt,$runUuid,$result,(int)$mediaResponse['status'],hash('sha256',(string)$mediaResponse['body'].'|'.$insightHash));
         }
         $next=$mediaPayload['paging']['cursors']['after']??null;$hasMore=is_string($next)&&$next!==''&&$next!==$after;$after=$hasMore?$next:null;
@@ -55,20 +57,20 @@ function p50_mc_instagram_edge(PDO $pdo,array $official,array $account,string $a
 function p50_mc_instagram(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {
     $username=p50_msc_username('Instagram',$official['normalized_url']);if($username==='')throw new InvalidArgumentException('Lien Instagram officiel non reconnu.');
     $credentials=p50_mc_credentials('Instagram',(string)$official['profile_id']);if(!p50_msc_access_or_status($credentials,$result))return;
-    $headers=['Authorization: Bearer '.$credentials['secret']];$accountId=(string)$credentials['accountId'];$discoveryId=(string)$credentials['discoveryAccountId'];
+    $headers=['Authorization: Bearer '.$credentials['secret']];$accountId=(string)$credentials['accountId'];$discoveryId=(string)$credentials['discoveryAccountId'];$graph=p50_msc_graph_root($credentials);
     $fields='id,username,account_type,followers_count,follows_count,media_count';
     $prefetchedMedia=[];
     if($credentials['mode']==='business_discovery'){
         if($discoveryId===''){$result['status']='configuration_missing';return;}
         $mediaFields='id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count';
         $discovery='business_discovery.username('.$username.'){'.$fields.',media.limit('.min(100,$limit).'){'.$mediaFields.'}}';
-        $response=p50_mc_request($fetch,p50_msc_query_url('https://graph.facebook.com/v22.0/'.rawurlencode($discoveryId),['fields'=>$discovery]),$headers,$result);
+        $response=p50_mc_request($fetch,p50_msc_query_url($graph.rawurlencode($discoveryId),['fields'=>$discovery]),$headers,$result);
         if(!p50_msc_response($response,'Instagram business_discovery',$result))return;
         $root=p50_mc_json($response);$data=(array)($root['business_discovery']??[]);
         $prefetchedMedia=(array)($data['media']['data']??[]);
     }else{
         if($accountId===''){$result['status']='configuration_missing';return;}
-        $response=p50_mc_request($fetch,p50_msc_query_url('https://graph.facebook.com/v22.0/'.rawurlencode($accountId),['fields'=>$fields]),$headers,$result);
+        $response=p50_mc_request($fetch,p50_msc_query_url($graph.rawurlencode($accountId),['fields'=>$fields]),$headers,$result);
         if(!p50_msc_response($response,'Instagram account',$result))return;$data=p50_mc_json($response);
     }
     if(!$data){$result['status']='unavailable_or_blocked';return;}
@@ -81,7 +83,7 @@ function p50_mc_instagram(PDO $pdo,array $official,int $limit,string $observedAt
         return;
     }
     $storyCount=0;
-    if(!empty($credentials['storiesAuthorized']))$storyCount=p50_mc_instagram_edge($pdo,$official,$account,$accountId,'stories',$limit,$credentials['mode'],$observedAt,$runUuid,$fetch,$result,$headers);
+    if(!empty($credentials['storiesAuthorized']))$storyCount=p50_mc_instagram_edge($pdo,$official,$account,$accountId,'stories',$limit,$credentials['mode'],$observedAt,$runUuid,$fetch,$result,$headers,$graph,!empty($credentials['insightsAuthorized']));
     else $result['unavailableMetrics']++;
-    if($storyCount<$limit)p50_mc_instagram_edge($pdo,$official,$account,$accountId,'media',$limit-$storyCount,$credentials['mode'],$observedAt,$runUuid,$fetch,$result,$headers);
+    if($storyCount<$limit)p50_mc_instagram_edge($pdo,$official,$account,$accountId,'media',$limit-$storyCount,$credentials['mode'],$observedAt,$runUuid,$fetch,$result,$headers,$graph,!empty($credentials['insightsAuthorized']));
 }

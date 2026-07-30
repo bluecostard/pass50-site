@@ -67,8 +67,18 @@ function p50_mo_viral_profiles(PDO $pdo): array {
     }return array_keys($ids);
 }
 
+function p50_mo_authorized_oauth_profiles(PDO $pdo): array {
+    $ids=[];
+    if(p50_metrics_table_exists($pdo,'p50_youtube_oauth_connections')&&p50_metrics_column_exists($pdo,'p50_youtube_oauth_connections','profile_id')){
+        $stmt=$pdo->query("SELECT DISTINCT y.profile_id FROM p50_youtube_oauth_connections y JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY y.profile_id WHERE y.profile_id IS NOT NULL AND y.status='active' AND r.alive=1 LIMIT 100");
+        $ids=array_merge($ids,array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN)));
+    }
+    if(function_exists('p50mm_authorized_profile_ids'))$ids=array_merge($ids,p50mm_authorized_profile_ids($pdo));
+    return array_values(array_unique(array_filter($ids)));
+}
+
 function p50_mo_candidate_ids(PDO $pdo,array $cadence,array $live,array $cfg): array {
-    if($cadence['key']==='p0')return array_values(array_unique(array_merge($live['profileIds'],p50_mo_viral_profiles($pdo),$cfg['priorityIds'])));
+    if($cadence['key']==='p0')return array_values(array_unique(array_merge($live['profileIds'],p50_mo_viral_profiles($pdo),$cfg['priorityIds'],p50_mo_authorized_oauth_profiles($pdo))));
     if($cadence['key']==='p1'){
         if(p50_metrics_table_exists($pdo,'p50_ranking_snapshots')){
             $stmt=$pdo->prepare("SELECT r.profile_id FROM p50_profile_registry r JOIN p50_ranking_snapshots s ON s.profile_id=r.profile_id
@@ -102,6 +112,10 @@ function p50_mo_oauth_youtube_rows(PDO $pdo,array $profileIds): array {
     return $stmt->fetchAll();
 }
 
+function p50_mo_oauth_meta_rows(PDO $pdo,array $profileIds): array {
+    return function_exists('p50mm_orchestrator_rows')?p50mm_orchestrator_rows($pdo,$profileIds):[];
+}
+
 function p50_mo_enqueue_profile(PDO $pdo,string $profileId,string $platform,string $cadenceKey='p0',array $options=[]): array {
     $profileId=trim($profileId);$platform=p50_mc_platform($platform);
     if($profileId===''||$platform==='')throw new InvalidArgumentException('Profil ou plateforme métrique invalide.');
@@ -123,7 +137,7 @@ function p50_mo_select(PDO $pdo,string $cadenceKey,array $options=[]): array {
     $stmt=$pdo->prepare("SELECT r.profile_id,s.platform FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
       WHERE r.alive=1 AND r.profile_id IN ($placeholders) AND s.status='verified' AND s.confidence>=?
       AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat') ORDER BY r.profile_id,s.platform LIMIT 3000");
-    $stmt->execute([...$ids,$threshold]);$rows=p50_mo_unique_candidate_rows(array_merge($stmt->fetchAll(),p50_mo_oauth_youtube_rows($pdo,$ids)));$summary['eligibleProfiles']=count(array_unique(array_column($rows,'profile_id')));$summary['eligibleLinks']=count($rows);$candidates=[];$liveSet=array_fill_keys($live['profileIds'],true);
+    $stmt->execute([...$ids,$threshold]);$rows=p50_mo_unique_candidate_rows(array_merge($stmt->fetchAll(),p50_mo_oauth_youtube_rows($pdo,$ids),p50_mo_oauth_meta_rows($pdo,$ids)));$summary['eligibleProfiles']=count(array_unique(array_column($rows,'profile_id')));$summary['eligibleLinks']=count($rows);$candidates=[];$liveSet=array_fill_keys($live['profileIds'],true);
     $selectionTime=strtotime((string)($options['now']??'now'));if($selectionTime===false)$selectionTime=time();
     foreach($rows as $row){$profileId=(string)$row['profile_id'];$platform=(string)$row['platform'];$access=p50_mc_public_access($platform,$profileId);
         if(!$access['configured']){$summary['skippedConfiguration']++;continue;}if(!$access['authorized']){$summary['skippedAuthRequired']++;continue;}

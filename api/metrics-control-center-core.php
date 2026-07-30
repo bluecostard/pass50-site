@@ -2,8 +2,9 @@
 declare(strict_types=1);
 
 require_once __DIR__.'/youtube-metrics-bridge-core.php';
+require_once __DIR__.'/meta-metrics-bridge-core.php';
 
-const P50_METRICS_CONTROL_CENTER_VERSION='1.0.0';
+const P50_METRICS_CONTROL_CENTER_VERSION='1.1.0';
 
 function p50mcc_age(?string $value): ?array {
     if($value===null||trim($value)==='')return null;
@@ -26,10 +27,21 @@ function p50mcc_status(PDO $pdo,int $threshold): array {
     $platformNames=['YouTube','Facebook','Instagram','TikTok','X','Snapchat'];$platforms=[];
     foreach($platformNames as $platform)$platforms[$platform]=p50mcc_platform_row($platform);
 
+    $eligibleQueries=[];$eligibleParams=[];
     if(p50_metrics_table_exists($pdo,'p50_social_links')){
-        $stmt=$pdo->prepare("SELECT platform,COUNT(*) links,COUNT(DISTINCT profile_id) profiles FROM p50_social_links WHERE status='verified' AND confidence>=? AND platform IN ('YouTube','Facebook','Instagram','TikTok','X','Snapchat') GROUP BY platform");
-        $stmt->execute([$threshold]);
-        foreach($stmt->fetchAll() as $row){$platform=(string)$row['platform'];if(!isset($platforms[$platform]))continue;$platforms[$platform]['eligibleLinks']=(int)$row['links'];$platforms[$platform]['eligibleProfiles']=(int)$row['profiles'];}
+        $eligibleQueries[]="SELECT DISTINCT platform,profile_id FROM p50_social_links WHERE status='verified' AND confidence>=? AND platform IN ('YouTube','Facebook','Instagram','TikTok','X','Snapchat')";
+        $eligibleParams[]=$threshold;
+    }
+    if(p50_metrics_table_exists($pdo,'p50_youtube_oauth_connections')&&p50_metrics_column_exists($pdo,'p50_youtube_oauth_connections','profile_id')){
+        $eligibleQueries[]="SELECT DISTINCT 'YouTube' platform,profile_id FROM p50_youtube_oauth_connections WHERE profile_id IS NOT NULL AND status='active'";
+    }
+    if(p50mm_schema_ready($pdo)){
+        $eligibleQueries[]="SELECT DISTINCT a.platform,a.profile_id FROM p50_meta_oauth_assets a JOIN p50_meta_oauth_connections c ON BINARY c.user_id=BINARY a.user_id WHERE a.profile_id IS NOT NULL AND a.platform IN ('Facebook','Instagram') AND a.status='active' AND c.status='active' AND a.access_token_encrypted<>''";
+    }
+    if($eligibleQueries){
+        $stmt=$pdo->prepare('SELECT platform,COUNT(*) profiles FROM ('.implode(' UNION ',$eligibleQueries).') eligible GROUP BY platform');
+        $stmt->execute($eligibleParams);
+        foreach($stmt->fetchAll() as $row){$platform=(string)$row['platform'];if(!isset($platforms[$platform]))continue;$platforms[$platform]['eligibleProfiles']=(int)$row['profiles'];$platforms[$platform]['eligibleLinks']=(int)$row['profiles'];}
     }
     if(p50_metrics_table_exists($pdo,'p50_metric_accounts')){
         foreach($pdo->query("SELECT platform,COUNT(*) accounts,COUNT(DISTINCT profile_id) profiles FROM p50_metric_accounts WHERE status='active' GROUP BY platform")->fetchAll() as $row){$platform=(string)$row['platform'];if(!isset($platforms[$platform]))continue;$platforms[$platform]['canonicalAccounts']=(int)$row['accounts'];$platforms[$platform]['coveredProfiles']=(int)$row['profiles'];}
@@ -62,19 +74,19 @@ function p50mcc_status(PDO $pdo,int $threshold): array {
         $row['missingProfiles']=max(0,$eligible-$covered);$row['staleProfiles']=max(0,$covered-$fresh);$row['nextExpectedAt']=$next['p1']??null;
         if(!$row['configured']){$row['state']='not_configured';$row['actionRequired']='Configurer l’API ou connecter un compte développeur officiel.';}
         elseif(!$row['authorized']){$row['state']='authorization_required';$row['actionRequired']='Autoriser la plateforme ou renouveler son jeton.';}
-        elseif($eligible===0){$row['state']='no_verified_links';$row['actionRequired']='Ajouter ou vérifier des liens officiels.';}
-        elseif($covered===0){$row['state']='no_coverage';$row['actionRequired']='Lancer la première collecte canonique.';}
+        elseif($eligible===0){$row['state']='no_verified_links';$row['actionRequired']='Ajouter un lien officiel ou associer un compte OAuth.';}
+        elseif($covered===0){$row['state']='no_coverage';$row['actionRequired']='Attendre ou lancer la première collecte canonique.';}
         elseif($fresh<$eligible){$row['state']='incomplete';$row['actionRequired']='Collecter les profils manquants ou trop anciens.';}
         elseif(($row['queue']['failed']??0)>0){$row['state']='degraded';$row['actionRequired']='Examiner les tâches échouées.';}
         else{$row['state']='operational';$row['actionRequired']='Aucune action urgente.';}
     }
     unset($row);
 
-    $youtube=p50ym_safe_connections($pdo);
+    $youtube=p50ym_safe_connections($pdo);$meta=p50mm_safe_status($pdo);
     $summary=['eligibleProfiles'=>0,'coveredProfiles'=>0,'freshProfiles24h'=>0,'captures24h'=>0,'pendingJobs'=>0,'failedJobs'=>0,'operationalPlatforms'=>0];
     foreach($platforms as $row){foreach(['eligibleProfiles','coveredProfiles','freshProfiles24h','captures24h'] as $key)$summary[$key]+=(int)$row[$key];$summary['pendingJobs']+=(int)$row['queue']['pending']+(int)$row['queue']['retry_wait'];$summary['failedJobs']+=(int)$row['queue']['failed'];$summary['operationalPlatforms']+=(int)($row['state']==='operational');}
     $summary['globalCoveragePercent']=$summary['eligibleProfiles']>0?(int)round(min($summary['eligibleProfiles'],$summary['coveredProfiles'])*100/$summary['eligibleProfiles']):0;
     $summary['globalFreshnessPercent']=$summary['eligibleProfiles']>0?(int)round(min($summary['eligibleProfiles'],$summary['freshProfiles24h'])*100/$summary['eligibleProfiles']):0;
 
-    return ['version'=>P50_METRICS_CONTROL_CENTER_VERSION,'threshold'=>$threshold,'generatedAt'=>gmdate('c'),'summary'=>$summary,'platforms'=>array_values($platforms),'youtubeOAuth'=>$youtube,'orchestrator'=>['enabled'=>!empty($orchestrator['enabled']),'automationObservedRecently'=>!empty($orchestrator['automationObservedRecently']),'lastWorkerRun'=>$orchestrator['lastWorkerRun']??null,'nextExpectedAt'=>$next]];
+    return ['version'=>P50_METRICS_CONTROL_CENTER_VERSION,'threshold'=>$threshold,'generatedAt'=>gmdate('c'),'summary'=>$summary,'platforms'=>array_values($platforms),'youtubeOAuth'=>$youtube,'metaOAuth'=>$meta,'orchestrator'=>['enabled'=>!empty($orchestrator['enabled']),'automationObservedRecently'=>!empty($orchestrator['automationObservedRecently']),'lastWorkerRun'=>$orchestrator['lastWorkerRun']??null,'nextExpectedAt'=>$next]];
 }
