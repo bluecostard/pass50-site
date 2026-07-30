@@ -49,24 +49,31 @@ $report=static function(string $runUuid,string $generatedAt,string $status='read
 $assert=static function(bool $condition,string $message): void {if(!$condition)throw new RuntimeException($message);};
 $before=(string)$pdo->query("SELECT data FROM app_state WHERE id='public'")->fetchColumn();
 
-$reports=[
-    ['11111111-1111-4111-8111-111111111111','2026-07-30T08:00:00+00:00','dispatch-history-1'],
-    ['22222222-2222-4222-8222-222222222222','2026-07-30T10:00:00+00:00','dispatch-history-2'],
-    ['33333333-3333-4333-8333-333333333333','2026-07-30T12:00:00+00:00','dispatch-history-3'],
-];
-$stored=[];
-foreach($reports as [$runUuid,$at,$dispatchId])$stored[]=p50_mrph_store($pdo,$report($runUuid,$at),$dispatchId);
-$duplicate=p50_mrph_store($pdo,$report($reports[2][0],$reports[2][1]),$reports[2][2]);
+$empty=p50_mrph_stability($pdo,'2H',3,new DateTimeImmutable('2026-07-30T07:00:00+00:00'));
+$assert($empty['state']==='collecting','Un historique vide doit attendre les premiers cycles sans être déclaré en anomalie.');
+$assert($empty['controlledPublicationEligible']===false,'Un historique vide ne doit jamais autoriser un passage public.');
 
-$assert($stored[2]['id']===$duplicate['id'],'Le même dispatchId doit rester idempotent.');
-$assert((int)$pdo->query('SELECT COUNT(*) FROM p50_metric_publication_simulations')->fetchColumn()===3,'Trois audits uniques attendus.');
+$run1='11111111-1111-4111-8111-111111111111';
+$run2='22222222-2222-4222-8222-222222222222';
+$run3='33333333-3333-4333-8333-333333333333';
+$first=p50_mrph_store($pdo,$report($run1,'2026-07-30T08:00:00+00:00'),'dispatch-history-1');
+$second=p50_mrph_store($pdo,$report($run2,'2026-07-30T09:00:00+00:00'),'dispatch-history-2');
+$secondAudit=p50_mrph_store($pdo,$report($run2,'2026-07-30T10:00:00+00:00'),'dispatch-history-2-fallback');
+$third=p50_mrph_store($pdo,$report($run3,'2026-07-30T12:00:00+00:00'),'dispatch-history-3');
+$idempotent=p50_mrph_store($pdo,$report($run3,'2026-07-30T12:00:00+00:00'),'dispatch-history-3');
+
+$assert($third['id']===$idempotent['id'],'Le même dispatchId doit rester idempotent.');
+$assert($second['id']!==$secondAudit['id'],'Deux audits du même runUuid restent conservés.');
+$assert((int)$pdo->query('SELECT COUNT(*) FROM p50_metric_publication_simulations')->fetchColumn()===4,'Quatre audits uniques attendus.');
 $assert((int)$pdo->query('SELECT SUM(public_state_writes) FROM p50_metric_publication_simulations')->fetchColumn()===0,'Aucune écriture publique ne doit être historisée.');
 
 $stability=p50_mrph_stability($pdo,'2H',3,new DateTimeImmutable('2026-07-30T12:05:00+00:00'));
-$assert($stability['state']==='ready','Trois recalculs distincts et cohérents doivent être prêts.');
+$assert($stability['state']==='ready','Trois recalculs distincts et cohérents doivent être prêts malgré un audit de secours dupliqué.');
 $assert($stability['controlledPublicationEligible']===true,'Le passage contrôlé doit devenir éligible.');
 $assert($stability['automaticPublicationEligible']===false,'La publication automatique doit rester interdite.');
 $assert($stability['distinctExperimentalRuns']===3,'Trois runUuid distincts attendus.');
+$assert($stability['observedReports']===3,'L’échantillon doit contenir trois recalculs distincts.');
+$assert($stability['rawObservedReports']===4,'Les quatre audits bruts doivent rester observables.');
 
 $rejected=false;
 try{p50_mrph_store($pdo,$report('44444444-4444-4444-8444-444444444444','2026-07-30T12:06:00+00:00','ready',false,1),'dispatch-write-refused');}
