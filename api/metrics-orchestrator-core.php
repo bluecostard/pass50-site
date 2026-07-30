@@ -89,7 +89,7 @@ function p50_mo_select(PDO $pdo,string $cadenceKey,array $options=[]): array {
     $ids=p50_mo_candidate_ids($pdo,$cadence,$live,$cfg);$max=$cadence['key']==='p0'?$cfg['p0Max']:($cadence['key']==='p1'?$cfg['p1Max']:$cfg['p2Max']);$ids=array_slice($ids,0,$max);
     $summary=['eligibleProfiles'=>0,'eligibleLinks'=>0,'jobsCreated'=>0,'duplicateJobs'=>0,'skippedFresh'=>0,'skippedConfiguration'=>0,'skippedAuthRequired'=>0,'skippedUnsupported'=>0];
     if(!$ids)return compact('cadence','bucket','live','summary')+['candidates'=>[]];
-    $placeholders=implode(',',array_fill(0,count($ids),'?'));$threshold=max(90,min(100,(int)($GLOBALS['config']['data_engine']['confidence_threshold']??90)));
+    $placeholders=implode(',',array_fill(0,count($ids),'?'));$threshold=p50_mc_threshold();
     $stmt=$pdo->prepare("SELECT r.profile_id,s.platform FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id
       WHERE r.alive=1 AND r.profile_id IN ($placeholders) AND s.status='verified' AND s.confidence>=?
       AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat') ORDER BY r.profile_id,s.platform LIMIT 3000");

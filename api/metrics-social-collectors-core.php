@@ -11,7 +11,12 @@ function p50_mc_credentials(string $platform,string $profileId): array {
     $read=static function(string $key,string $env='') use($metrics,$perProfile): string {
         $value=$perProfile[$key]??$metrics[$key]??($env!==''?getenv($env):'');return trim((string)$value);
     };
-    if($platform==='YouTube')return ['configured'=>p50_mc_config('YouTube')!=='','authorized'=>p50_mc_config('YouTube')!=='','mode'=>p50_mc_config('YouTube')!==''?'official_api':'public_fallback','authorizationRequired'=>false,'secret'=>p50_mc_config('YouTube')];
+    if($platform==='YouTube'){
+        $oauth=function_exists('p50ym_public_access')?p50ym_public_access($profileId):['configured'=>false,'authorized'=>false,'mode'=>'mapping_required','authorizationRequired'=>true];
+        if(!empty($oauth['configured']))return $oauth+['secret'=>''];
+        $api=p50_mc_config('YouTube');
+        return ['configured'=>$api!=='','authorized'=>$api!=='','mode'=>$api!==''?'official_api':'public_fallback','authorizationRequired'=>false,'secret'=>$api];
+    }
     if($platform==='X')return ['configured'=>p50_mc_config('X')!=='','authorized'=>p50_mc_config('X')!=='','mode'=>'official_api','authorizationRequired'=>false,'secret'=>p50_mc_config('X')];
     if($platform==='TikTok'){
         $mode=(string)($perProfile['mode']??$metrics['tiktok_mode']??'none');
