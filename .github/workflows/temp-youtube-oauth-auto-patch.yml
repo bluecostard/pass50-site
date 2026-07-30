@@ -1,0 +1,35 @@
+name: Temporary YouTube OAuth automatic eligibility patch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/youtube-oauth-automatic-eligibility
+          fetch-depth: 0
+      - name: Apply strict patch
+        run: python3 tools/apply_youtube_oauth_auto_patch.py
+      - name: Verify before commit
+        run: |
+          php -l api/youtube-metrics-bridge-core.php
+          php -l api/metrics-collectors-core.php
+          php -l api/metrics-orchestrator-core.php
+          php -l api/youtube-metrics-map.php
+          python3 -m unittest tests.test_youtube_oauth_automatic_eligibility
+      - name: Commit application changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/youtube-metrics-bridge-core.php api/metrics-collectors-core.php api/metrics-orchestrator-core.php api/youtube-metrics-map.php
+          git commit -m "Rendre les chaînes YouTube OAuth automatiquement collectables"
+          git push origin HEAD:feat/youtube-oauth-automatic-eligibility
