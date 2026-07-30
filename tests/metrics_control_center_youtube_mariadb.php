@@ -18,7 +18,7 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS users (id CHAR(36) PRIMARY KEY,email VARC
 $pdo->exec("CREATE TABLE IF NOT EXISTS p50_profile_registry (profile_id VARCHAR(100) PRIMARY KEY,public_name VARCHAR(190) NOT NULL,handle VARCHAR(190) NOT NULL DEFAULT '',region VARCHAR(32) NOT NULL DEFAULT 'CI',category VARCHAR(100) NOT NULL DEFAULT '',alive TINYINT(1) NOT NULL DEFAULT 1,eligible TINYINT(1) NOT NULL DEFAULT 1,state_hash CHAR(64) NOT NULL,last_state_sync_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 require dirname(__DIR__).'/api/youtube-metrics-bridge-core.php';
-p50ym_ensure_schema($pdo);p50ym_ensure_schema($pdo);
+p50ym_ensure_schema($pdo);p50ym_ensure_schema($pdo);p50ya_ensure_schema();
 
 $pdo->exec('DELETE FROM p50_youtube_analytics_snapshots');
 $pdo->exec('DELETE FROM p50_youtube_oauth_connections');
