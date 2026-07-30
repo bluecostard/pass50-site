@@ -9,9 +9,10 @@ function p50_mc_facebook_type(array $post): string {
 }
 
 function p50_mc_facebook(PDO $pdo,array $official,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {
-    [$kind,$identity]=p50_msc_facebook_identity($official['normalized_url']);if($identity==='')throw new InvalidArgumentException('Lien Facebook officiel non reconnu.');
     $credentials=p50_mc_credentials('Facebook',(string)$official['profile_id']);if(!p50_msc_access_or_status($credentials,$result))return;
     $headers=['Authorization: Bearer '.$credentials['secret']];$pageId=(string)$credentials['pageId'];$graph=p50_msc_graph_root($credentials);
+    [$kind,$identity]=p50_msc_facebook_identity($official['normalized_url']);
+    if($pageId===''&&$identity==='')throw new InvalidArgumentException('Lien Facebook officiel non reconnu.');
     if($pageId===''&&$kind==='id')$pageId=$identity;
     if($pageId===''){
         $resolve=p50_mc_request($fetch,p50_msc_query_url($graph.rawurlencode($identity),['fields'=>'id']),$headers,$result);
