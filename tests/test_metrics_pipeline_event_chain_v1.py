@@ -32,6 +32,13 @@ class MetricsPipelineEventChainV1Tests(unittest.TestCase):
         self.assertIn('pass50/experimental-ranking', RANKING)
         self.assertIn('ranking-experimental-result.json', RANKING)
 
+    def test_technical_results_are_archived_for_thirty_days(self):
+        self.assertIn('metrics-p1-result.json', P1)
+        self.assertIn('ranking-experimental-result.json', RANKING)
+        self.assertIn('retention-days: 30', P1)
+        self.assertIn('retention-days: 30', RANKING)
+        self.assertIn('retention-days: 30', SIMULATION)
+
     def test_simulation_remains_read_only_and_dispatchable(self):
         self.assertIn('workflow_dispatch:', SIMULATION)
         self.assertIn('.publication.publicationEnabled == false', SIMULATION)
