@@ -17,7 +17,7 @@ jobs:
         with:
           ref: feat/youtube-oauth-automatic-eligibility
           fetch-depth: 0
-      - name: Apply collation-safe join
+      - name: Apply collation-safe joins
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -25,9 +25,9 @@ jobs:
           text=path.read_text(encoding='utf-8')
           old='FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id'
           new='FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id'
-          if text.count(old)!=1:
-              raise SystemExit(f'ancre attendue une fois, trouvée {text.count(old)}')
-          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          if text.count(old)!=2:
+              raise SystemExit(f'ancres attendues deux fois, trouvées {text.count(old)}')
+          path.write_text(text.replace(old,new),encoding='utf-8')
           PY
           php -l api/metrics-collectors-core.php
           python3 -m unittest tests.test_youtube_oauth_automatic_eligibility
@@ -36,5 +36,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add api/metrics-collectors-core.php
-          git commit -m "Rendre la jointure des liens métriques indépendante des collations"
+          git commit -m "Rendre les jointures des liens métriques indépendantes des collations"
           git push origin HEAD:feat/youtube-oauth-automatic-eligibility
