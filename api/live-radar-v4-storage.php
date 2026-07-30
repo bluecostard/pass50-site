@@ -1,18 +1,34 @@
 <?php
 declare(strict_types=1);
 
+function p50_live_v4_ensure_dismissals(): void {
+    db()->exec("CREATE TABLE IF NOT EXISTS p50_live_dismissals (
+        stream_key CHAR(64) CHARACTER SET ascii PRIMARY KEY,
+        profile_id VARCHAR(100) NOT NULL,
+        platform VARCHAR(32) NOT NULL,
+        url_hash CHAR(64) CHARACTER SET ascii NOT NULL,
+        dismissed_by VARCHAR(100) NULL,
+        reason VARCHAR(120) NOT NULL DEFAULT 'false_positive',
+        dismissed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_p50_live_dismissals_profile (profile_id,platform,dismissed_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
 function p50_live_v4_stream_key(array $live): string {
     return hash('sha256',strtolower((string)$live['profileId'].'|'.(string)$live['platform'].'|'.rtrim((string)$live['url'],'/')));
 }
+function p50_live_v4_is_dismissed(string $key): bool {
+    p50_live_v4_ensure_dismissals();$stmt=db()->prepare('SELECT 1 FROM p50_live_dismissals WHERE stream_key=? LIMIT 1');$stmt->execute([$key]);return (bool)$stmt->fetchColumn();
+}
 function p50_live_v4_store_live(array $live): void {
     $key=p50_live_v4_stream_key($live);$profileId=(string)$live['profileId'];$platform=(string)$live['platform'];
+    if(p50_live_v4_is_dismissed($key)){$stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()),metadata=JSON_SET(COALESCE(metadata,'{}'),'$.endReason','manually_dismissed') WHERE stream_key=?");$stmt->execute([$key]);return;}
     $end=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed') AND stream_key<>?");$end->execute([$profileId,$platform,$key]);
     $title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata) VALUES(?,?,?,?,?,?,'live','automatic',?,?,?,UTC_TIMESTAMP(),NULL,?) ON DUPLICATE KEY UPDATE title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='live',confidence=VALUES(confidence),viewers=VALUES(viewers),started_at=COALESCE(started_at,VALUES(started_at)),last_seen_at=UTC_TIMESTAMP(),ended_at=NULL,metadata=VALUES(metadata)");
     $stmt->execute([$key,$profileId,$platform,$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($live['metadata']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
 }
 function p50_live_v4_store_candidate(array $live,string $reason): void {
-    $key=p50_live_v4_stream_key($live);$title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);$metadata=(array)($live['metadata']??[]);$metadata['candidateReason']=$reason;$metadata['candidateSeenAt']=gmdate(DATE_ATOM);
+    $key=p50_live_v4_stream_key($live);if(p50_live_v4_is_dismissed($key))return;$title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);$metadata=(array)($live['metadata']??[]);$metadata['candidateReason']=$reason;$metadata['candidateSeenAt']=gmdate(DATE_ATOM);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata) VALUES(?,?,?,?,?,?,'unconfirmed','automatic',?,?,?,UTC_TIMESTAMP(),NULL,?) ON DUPLICATE KEY UPDATE title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='unconfirmed',confidence=VALUES(confidence),viewers=COALESCE(VALUES(viewers),viewers),last_seen_at=UTC_TIMESTAMP(),metadata=VALUES(metadata),ended_at=NULL");
     $stmt->execute([$key,(string)$live['profileId'],(string)$live['platform'],$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
 }
@@ -29,6 +45,7 @@ function p50_live_v4_mark_ended(string $profileId,string $platform,string $reaso
     $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()),metadata=JSON_MERGE_PATCH(COALESCE(metadata,'{}'),?) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed')");$stmt->execute([$metadata,$profileId,$platform]);
 }
 function p50_live_v4_active_rows(): array {
+    p50_live_v4_ensure_dismissals();
     db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='automatic' AND status='unconfirmed' AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR)");
     db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='meta_authorized' AND status='live' AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE)");
     db()->exec("UPDATE p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform SET s.status='unconfirmed',s.metadata=JSON_SET(COALESCE(s.metadata,'{}'),'$.withdrawalReason','latest_probe_not_live') WHERE s.source='automatic' AND s.status='live' AND (h.last_state IS NULL OR h.last_state<>'live')");
@@ -36,7 +53,7 @@ function p50_live_v4_active_rows(): array {
     $conditions=[];$params=[];
     foreach(P50_LIVE_V4_GRACE_MINUTES as $platform=>$configured){$minutes=$platform==='TikTok'?2:max(1,(int)$configured);$conditions[]="(s.source='automatic' AND s.platform=? AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$minutes} MINUTE) AND h.last_state='live')";$params[]=$platform;}
     $conditions[]="(s.source='meta_authorized' AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE))";
-    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform WHERE s.source IN ('automatic','meta_authorized') AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY (s.source='meta_authorized') DESC,s.last_seen_at DESC");$stmt->execute($params);$out=[];
+    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform LEFT JOIN p50_live_dismissals d ON d.stream_key=s.stream_key WHERE d.stream_key IS NULL AND s.source IN ('automatic','meta_authorized') AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY (s.source='meta_authorized') DESC,s.last_seen_at DESC");$stmt->execute($params);$out=[];
     foreach($stmt->fetchAll() as $row){$source=(string)$row['source'];$out[]=['id'=>($source==='meta_authorized'?'meta_':'auto_').substr((string)$row['stream_key'],0,18),'profileId'=>(string)$row['profile_id'],'platform'=>(string)$row['platform'],'title'=>(string)$row['title'],'url'=>(string)$row['url'],'thumbnail'=>(string)($row['thumbnail_url']??''),'status'=>'live','source'=>$source,'confidence'=>(int)$row['confidence'],'viewers'=>$row['viewers']!==null?(int)$row['viewers']:null,'startedAt'=>p50_live_v4_iso($row['started_at']??null),'lastSeenAt'=>p50_live_v4_iso($row['last_seen_at']??null),'lastConfirmedAt'=>p50_live_v4_iso($row['last_seen_at']??null),'lastCheckState'=>$source==='meta_authorized'?'live':(string)($row['last_state']??'unknown'),'endsAt'=>null];}
     return $out;
 }
