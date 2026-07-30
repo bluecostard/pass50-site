@@ -1,0 +1,100 @@
+name: Verify TikTok domain signature
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tiktok4WQb6SCLRKsLqMRbeXzqT3T06c0mW1la.txt'
+      - '.github/workflows/tiktok-domain-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: tiktok-domain-verification
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the public signature
+        id: verify
+        shell: bash
+        run: |
+          set -u
+          expected='tiktok-developers-site-verification=4WQb6SCLRKsLqMRbeXzqT3T06c0mW1la'
+          url='https://www.pass50.store/tiktok4WQb6SCLRKsLqMRbeXzqT3T06c0mW1la.txt'
+          success=0
+          last_http='000'
+          last_final=''
+
+          for attempt in $(seq 1 30); do
+            rm -f response.txt headers.txt
+            meta=$(curl --connect-timeout 15 --max-time 30 --location --silent --show-error \
+              --dump-header headers.txt --output response.txt \
+              --write-out '%{http_code}|%{url_effective}' "$url" 2>/dev/null || true)
+            last_http="${meta%%|*}"
+            last_final="${meta#*|}"
+            body=$(tr -d '\r\n' < response.txt 2>/dev/null || true)
+
+            echo "Attempt ${attempt}: HTTP ${last_http}; final ${last_final}; body=${body}"
+            if [[ "$last_http" == '200' && "$body" == "$expected" ]]; then
+              success=1
+              break
+            fi
+            sleep 20
+          done
+
+          echo "success=${success}" >> "$GITHUB_OUTPUT"
+          echo "http=${last_http}" >> "$GITHUB_OUTPUT"
+          echo "final=${last_final}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish verification status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          SUCCESS: ${{ steps.verify.outputs.success }}
+          HTTP: ${{ steps.verify.outputs.http }}
+          FINAL_URL: ${{ steps.verify.outputs.final }}
+        shell: bash
+        run: |
+          if [[ "$SUCCESS" == '1' ]]; then
+            state='success'
+            description="TikTok signature visible (HTTP ${HTTP})"
+          else
+            state='failure'
+            description="Signature absente après attente (HTTP ${HTTP})"
+          fi
+
+          python3 - <<'PY' > status.json
+          import json, os
+          print(json.dumps({
+              "state": os.environ["STATE"],
+              "context": "pass50/tiktok-domain-verification",
+              "description": os.environ["DESCRIPTION"][:140],
+              "target_url": "https://www.pass50.store/tiktok4WQb6SCLRKsLqMRbeXzqT3T06c0mW1la.txt",
+          }))
+          PY
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          SUCCESS: ${{ steps.verify.outputs.success }}
+          HTTP: ${{ steps.verify.outputs.http }}
+          FINAL_URL: ${{ steps.verify.outputs.final }}
+          STATE: ${{ steps.verify.outputs.success == '1' && 'success' || 'failure' }}
+          DESCRIPTION: ${{ steps.verify.outputs.success == '1' && format('TikTok signature visible (HTTP {0})', steps.verify.outputs.http) || format('Signature absente après attente (HTTP {0})', steps.verify.outputs.http) }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
+            --data @status.json
+
+          if [[ "$SUCCESS" != '1' ]]; then
+            exit 1
+          fi
