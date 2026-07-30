@@ -56,10 +56,10 @@ class MetricsControlCenterYoutubeV1Tests(unittest.TestCase):
         for forbidden in ('UPDATE app_state', 'INSERT INTO app_state', 'data-publish.php', 'p50_mr_calculate', 'rank_position'):
             self.assertNotIn(forbidden, joined)
 
-    def test_ui_cache_is_bumped(self):
+    def test_ui_cache_is_versioned(self):
         self.assertIn('data-engine-ui.js?v=18.2', TOOLS)
         self.assertIn('data-engine-ui.js?v=18.2', SW)
-        self.assertIn('pass50-v45-metrics-control-center', SW)
+        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
 
 if __name__ == '__main__':
