@@ -14,11 +14,19 @@ Ajouter uniquement dans `api/config.php` sur le serveur, jamais dans GitHub :
     'client_secret' => 'SECRET_CLIENT_DU_BAC_A_SABLE',
     'redirect_uri' => 'https://www.pass50.store/api/tiktok-oauth-callback.php',
     'environment' => 'sandbox',
-    'token_encryption_key' => $config['google_oauth']['token_encryption_key'] ?? '',
+    'token_encryption_key' => 'COPIER_ICI_LA_MEME_VALEUR_QUE_DANS_GOOGLE_OAUTH',
 ],
 ```
 
-La clé de chiffrement peut être la même clé AES-256-GCM déjà utilisée par les connecteurs YouTube et Meta.
+La valeur de `token_encryption_key` doit être copiée à l’identique depuis le bloc `google_oauth` ou `meta_oauth` déjà présent dans le même fichier. Ne pas utiliser une référence comme `$config['google_oauth']` pendant la construction du tableau de configuration : `$config` n’est pas encore disponible à cet endroit.
+
+Lorsque la configuration existante utilise une variable d’environnement, conserver exactement la même expression :
+
+```php
+'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
+```
+
+La clé AES-256-GCM ne doit jamais être envoyée dans le chat, enregistrée dans GitHub ou remplacée par la clé client TikTok.
 
 ## Portées attendues
 
