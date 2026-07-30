@@ -1,0 +1,49 @@
+name: Validate TikTok OAuth V1
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      P50_TEST_DB_USER: root
+      P50_TEST_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: |
+          php -l api/tiktok-oauth-core.php
+          php -l api/tiktok-oauth-store-v2.php
+          php -l api/tiktok-oauth-state-v1.php
+          php -l api/tiktok-oauth-start.php
+          php -l api/tiktok-oauth-callback.php
+          php -l api/tiktok-oauth-status.php
+          php -l api/tiktok-oauth-disconnect.php
+          php -l tests/tiktok_oauth_state_test.php
+          php -l tests/tiktok_oauth_mariadb.php
+      - name: JavaScript syntax
+        run: node --check tiktok-oauth-ui-v1.js
+      - name: Static tests
+        run: python3 -m unittest tests.test_tiktok_oauth_v1
+      - name: State and encryption
+        run: php tests/tiktok_oauth_state_test.php
+      - name: MariaDB integration
+        run: php tests/tiktok_oauth_mariadb.php
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
