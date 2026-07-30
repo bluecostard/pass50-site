@@ -3,6 +3,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = (ROOT / 'api' / 'tiktok-oauth-core.php').read_text(encoding='utf-8')
+STORE = (ROOT / 'api' / 'tiktok-oauth-store-v2.php').read_text(encoding='utf-8')
 STATE = (ROOT / 'api' / 'tiktok-oauth-state-v1.php').read_text(encoding='utf-8')
 START = (ROOT / 'api' / 'tiktok-oauth-start.php').read_text(encoding='utf-8')
 CALLBACK = (ROOT / 'api' / 'tiktok-oauth-callback.php').read_text(encoding='utf-8')
@@ -12,6 +13,8 @@ UI = (ROOT / 'tiktok-oauth-ui-v1.js').read_text(encoding='utf-8')
 CONFIG = (ROOT / 'api' / 'config.example.php').read_text(encoding='utf-8')
 PUBLIC = (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8')
 SW = (ROOT / 'sw.js').read_text(encoding='utf-8')
+PRIVACY = (ROOT / 'privacy.html').read_text(encoding='utf-8')
+DELETION = (ROOT / 'data-deletion.html').read_text(encoding='utf-8')
 
 
 class TikTokOauthV1Tests(unittest.TestCase):
@@ -47,7 +50,16 @@ class TikTokOauthV1Tests(unittest.TestCase):
         self.assertIn('sessions s JOIN users u', CALLBACK)
         self.assertIn('p50tk_fetch_profile', CALLBACK)
         self.assertIn('p50tk_fetch_videos', CALLBACK)
-        self.assertIn('p50tk_store_snapshot', CALLBACK)
+        self.assertIn('p50tk_store_snapshot_v2', CALLBACK)
+        self.assertIn('p50tk_scope_list', CALLBACK)
+        self.assertIn('tiktok-oauth-store-v2.php', CALLBACK)
+
+    def test_store_locks_the_unique_tiktok_identity(self):
+        self.assertIn('WHERE open_id=? FOR UPDATE', STORE)
+        self.assertIn('WHERE user_id=? FOR UPDATE', STORE)
+        self.assertIn('beginTransaction()', STORE)
+        self.assertIn('rollBack()', STORE)
+        self.assertNotIn('ON DUPLICATE KEY UPDATE', STORE)
 
     def test_ui_is_read_only_and_loaded(self):
         self.assertIn('Connecter TikTok', UI)
@@ -63,10 +75,17 @@ class TikTokOauthV1Tests(unittest.TestCase):
         self.assertIn('TIKTOK_CLIENT_KEY', CONFIG)
         self.assertIn('TIKTOK_CLIENT_SECRET', CONFIG)
         self.assertIn('tiktok-oauth-callback.php', CONFIG)
-        self.assertNotRegex(CONFIG, r"tiktok_oauth.*(?:act\\.|rft\\.)")
+        self.assertNotRegex(CONFIG, r"tiktok_oauth.*(?:act\.|rft\.)")
+
+    def test_privacy_and_deletion_cover_tiktok(self):
+        for document in (PRIVACY, DELETION):
+            self.assertIn('TikTok', document)
+            self.assertIn('jetons', document)
+        self.assertIn('lecture seule', PRIVACY)
+        self.assertIn('Déconnecter', DELETION)
 
     def test_public_ranking_is_out_of_scope(self):
-        combined = CORE + STATE + START + CALLBACK + STATUS + DISCONNECT + UI
+        combined = CORE + STORE + STATE + START + CALLBACK + STATUS + DISCONNECT + UI
         self.assertNotIn('app_state', combined)
         self.assertNotIn('p50_metric_ranking_current', combined)
         self.assertNotIn('rank_position', combined)
