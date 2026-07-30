@@ -62,7 +62,7 @@ function p50ym_safe_connections(PDO $pdo): array {
     if(!p50_metrics_table_exists($pdo,'p50_youtube_oauth_connections'))return ['schemaReady'=>false,'connections'=>[],'summary'=>['total'=>0,'active'=>0,'mapped'=>0,'unmapped'=>0,'reauthorizationRequired'=>0]];
     $ready=p50ym_schema_ready($pdo);
     $profileSelect=$ready?'c.profile_id':'NULL profile_id';
-    $join=$ready&&p50_metrics_table_exists($pdo,'p50_profile_registry')?'LEFT JOIN p50_profile_registry r ON r.profile_id=c.profile_id':'';
+    $join=$ready&&p50_metrics_table_exists($pdo,'p50_profile_registry')?"LEFT JOIN p50_profile_registry r ON r.profile_id COLLATE utf8mb4_unicode_ci=c.profile_id COLLATE utf8mb4_unicode_ci":'';
     $profileName=$join!==''?'r.public_name':'NULL';
     $analytics=p50_metrics_table_exists($pdo,'p50_youtube_analytics_snapshots')
         ?"(SELECT MAX(s.fetched_at) FROM p50_youtube_analytics_snapshots s WHERE s.channel_id=c.channel_id)"
