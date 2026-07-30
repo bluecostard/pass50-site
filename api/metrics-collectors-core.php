@@ -63,7 +63,8 @@ function p50_mc_official(PDO $pdo,string $profileId,string $platform): array {
       FROM p50_profile_registry r JOIN p50_social_links s ON s.profile_id=r.profile_id
       WHERE r.profile_id=? AND r.alive=1 AND s.platform=? AND s.status='verified' AND s.confidence>=? LIMIT 1");
     $stmt->execute([$profileId,$platform,$threshold]);$row=$stmt->fetch();
-    if(!$row)throw new InvalidArgumentException('Profil actif ou lien officiel vérifié introuvable.');
+    if(!$row&&$platform==='YouTube'&&function_exists('p50ym_official_profile'))$row=p50ym_official_profile($pdo,$profileId);
+    if(!$row)throw new InvalidArgumentException('Profil actif ou source officielle vérifiée introuvable.');
     return $row;
 }
 
