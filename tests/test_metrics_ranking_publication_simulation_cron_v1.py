@@ -4,6 +4,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 ENDPOINT = (ROOT / 'api' / 'metrics-ranking-publication-simulate-cron.php').read_text(encoding='utf-8')
 WORKFLOW = (ROOT / '.github' / 'workflows' / 'metrics-ranking-publication-simulation.yml').read_text(encoding='utf-8')
+DEPLOYMENT_WORKFLOW = (ROOT / '.github' / 'workflows' / 'metrics-publication-period-deployment.yml').read_text(encoding='utf-8')
 PERIOD_CORE = (ROOT / 'api' / 'metrics-ranking-publication-period-core.php').read_text(encoding='utf-8')
 
 
@@ -13,9 +14,18 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('HTTP_X_P50_TIMESTAMP', ENDPOINT)
         self.assertIn('HTTP_X_P50_SIGNATURE', ENDPOINT)
         self.assertIn('p50_mo_verify_cron_signature', ENDPOINT)
+        self.assertIn("in_array($action,['probe','simulate'],true)", ENDPOINT)
+        self.assertIn("$keys!==['action','dispatchId']", ENDPOINT)
         self.assertIn("$keys!==['action','dispatchId','period']", ENDPOINT)
-        self.assertIn("($input['action']??null)!=='simulate'", ENDPOINT)
         self.assertIn("$period!=='AUTO'&&!array_key_exists($period,p50_mr_periods())", ENDPOINT)
+
+    def test_probe_is_read_only_and_exposes_exact_contract(self):
+        self.assertIn("if($action==='probe')", ENDPOINT)
+        self.assertIn("'contract'=>P50_MRPA_PERIOD_SELECTION_VERSION", ENDPOINT)
+        self.assertIn("'readOnly'=>true,'publicStateWrites'=>0", ENDPOINT)
+        probe_block = ENDPOINT[ENDPOINT.index("if($action==='probe')"):ENDPOINT.index("if($keys!==['action','dispatchId','period'])")]
+        self.assertNotIn('db()', probe_block)
+        self.assertNotIn('p50_mrph_store', probe_block)
 
     def test_endpoint_only_runs_read_only_simulation(self):
         self.assertIn('p50_mrpa_simulate($pdo,$period,100)', ENDPOINT)
@@ -40,6 +50,15 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn("p50_mrp_simulate($pdo,(string)$selection['selectedPeriod']", PERIOD_CORE)
         self.assertNotIn('coverage_below_45', PERIOD_CORE)
         self.assertNotIn('confidence_below_55', PERIOD_CORE)
+
+    def test_deployment_workflow_waits_for_exact_contract_before_dispatch(self):
+        self.assertIn("'{action:\"probe\",dispatchId:$dispatchId}'", DEPLOYMENT_WORKFLOW)
+        self.assertIn('.contract == "PUBSIM-PERIOD-V1.0"', DEPLOYMENT_WORKFLOW)
+        self.assertIn('.readOnly == true', DEPLOYMENT_WORKFLOW)
+        self.assertIn('.publicStateWrites == 0', DEPLOYMENT_WORKFLOW)
+        self.assertIn('tentative $attempt/30', DEPLOYMENT_WORKFLOW)
+        self.assertIn('metrics-ranking-publication-simulation.yml/dispatches', DEPLOYMENT_WORKFLOW)
+        self.assertIn('pass50/publication-period-deployment', DEPLOYMENT_WORKFLOW)
 
     def test_workflow_runs_after_experimental_cycle_and_can_be_dispatched(self):
         self.assertIn("cron: '12 1-23/2 * * *'", WORKFLOW)
