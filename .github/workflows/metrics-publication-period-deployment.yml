@@ -28,15 +28,12 @@ jobs:
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
       STATUS_SHA: ${{ github.sha }}
     steps:
-      - name: Wait for period-selection contract
+      - name: Wait for period-selection and exit-diagnostics contracts
         id: deployment
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then
-            echo "::error::Les secrets du cron métrique sont incomplets."
-            exit 1
-          fi
+          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then echo "::error::Les secrets du cron métrique sont incomplets."; exit 1; fi
           case "$CRON_URL" in
             */metrics-cron.php) SIMULATION_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-simulate-cron.php" ;;
             *) echo "::error::PASS50_METRICS_CRON_URL invalide."; exit 1 ;;
@@ -50,23 +47,17 @@ jobs:
             set +e
             http_code="$(curl --silent --show-error --max-time 55 --output period-contract.json --write-out '%{http_code}' \
               -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
-              --data "$body" "$SIMULATION_URL")"
-            curl_status=$?
+              --data "$body" "$SIMULATION_URL")"; curl_status=$?
             set -e
             if [ "$curl_status" -eq 0 ] && [ "$http_code" = "200" ] && \
-              jq -e '.ok == true and .action == "probe" and .contract == "PUBSIM-PERIOD-V1.0" and .readOnly == true and .publicStateWrites == 0' period-contract.json >/dev/null 2>&1; then
-              deployed=true
-              break
+              jq -e '.ok == true and .action == "probe" and .contract == "PUBSIM-PERIOD-V1.0" and .exitDiagnosticsContract == "PUBSIM-EXIT-DIAG-V1.0" and .readOnly == true and .publicStateWrites == 0' period-contract.json >/dev/null 2>&1; then
+              deployed=true; break
             fi
-            echo "Contrat PUBSIM-PERIOD-V1.0 en attente, tentative $attempt/30 (HTTP ${http_code:-000})."
+            echo "Contrats PUBSIM-PERIOD-V1.0 et PUBSIM-EXIT-DIAG-V1.0 en attente, tentative $attempt/30 (HTTP ${http_code:-000})."
             sleep 20
           done
-          if [ "$deployed" != "true" ]; then
-            echo "::error::Le contrat PUBSIM-PERIOD-V1.0 n'est pas disponible après le délai de déploiement."
-            cat period-contract.json 2>/dev/null || true
-            exit 1
-          fi
-          echo 'contract=PUBSIM-PERIOD-V1.0' >> "$GITHUB_OUTPUT"
+          if [ "$deployed" != "true" ]; then echo "::error::Les contrats de simulation ne sont pas disponibles après le délai de déploiement."; cat period-contract.json 2>/dev/null || true; exit 1; fi
+          printf 'period_contract=PUBSIM-PERIOD-V1.0\nexit_contract=PUBSIM-EXIT-DIAG-V1.0\n' >> "$GITHUB_OUTPUT"
 
       - name: Dispatch corrected publication simulation
         id: dispatch
@@ -76,10 +67,8 @@ jobs:
         run: |
           set -euo pipefail
           payload="$(jq -nc --arg ref "main" '{ref:$ref}')"
-          curl --fail-with-body --silent --show-error \
-            -X POST -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data "$payload" \
+          curl --fail-with-body --silent --show-error -X POST -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" --data "$payload" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/metrics-ranking-publication-simulation.yml/dispatches"
 
       - name: Publish deployment status
@@ -91,26 +80,22 @@ jobs:
           DISPATCH_OUTCOME: ${{ steps.dispatch.outcome }}
         run: |
           set -euo pipefail
-          state="success"
-          description="PUBSIM-PERIOD-V1.0 déployé · simulation corrigée dispatchée"
-          if [ "$DEPLOYMENT_OUTCOME" != "success" ] || [ "$DISPATCH_OUTCOME" != "success" ]; then
-            state="failure"
-            description="Déploiement ou relance de la simulation corrigée en échec"
-          fi
+          state="success"; description="Période + diagnostic des sorties déployés · simulation dispatchée"
+          if [ "$DEPLOYMENT_OUTCOME" != "success" ] || [ "$DISPATCH_OUTCOME" != "success" ]; then state="failure"; description="Déploiement ou relance de la simulation corrigée en échec"; fi
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context "pass50/publication-period-deployment" '{state:$state,target_url:$target_url,description:$description,context:$context}')"
-          curl --fail-with-body --silent --show-error \
-            -X POST -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${STATUS_SHA}"
+          curl --fail-with-body --silent --show-error -X POST -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${STATUS_SHA}"
 
       - name: Write deployment summary
         if: ${{ always() }}
         shell: bash
         run: |
           {
-            printf '### Déploiement du correctif de période\n'
-            printf -- '- Contrat attendu : `PUBSIM-PERIOD-V1.0`\n'
+            printf '### Déploiement de la simulation diagnostiquée\n'
+            printf -- '- Contrat de période : `PUBSIM-PERIOD-V1.0`\n'
+            printf -- '- Contrat des sorties : `PUBSIM-EXIT-DIAG-V1.0`\n'
             printf -- '- Simulation relancée après vérification : `%s`\n' "${{ steps.dispatch.outcome }}"
             printf -- '- Publication publique : `aucune`\n'
             printf -- '- Écriture app_state : `0`\n'
