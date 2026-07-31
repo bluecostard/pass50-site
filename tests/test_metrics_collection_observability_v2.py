@@ -25,7 +25,7 @@ class MetricsCollectionObservabilityV2Tests(unittest.TestCase):
     def test_cron_exposes_only_the_sanitized_diagnostic(self):
         self.assertIn("require __DIR__.'/metrics-cron-diagnostics-core.php'", CRON)
         self.assertIn("'diagnostic'=>p50_mcd_work($pdo,$work)", CRON)
-        self.assertIn("'diagnosticsVersion'=>P50_METRICS_WORK_DIAGNOSTICS_VERSION", CRON)
+        self.assertIn("$response['diagnosticsVersion']=P50_METRICS_WORK_DIAGNOSTICS_VERSION", CRON)
         self.assertNotIn("'result'=>$work['result']", CRON)
 
     def test_p1_archives_capture_quality_and_platform_breakdown(self):
