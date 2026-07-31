@@ -13,7 +13,8 @@ function p50_mopb_public_profile_ids(PDO $pdo,int $limit=100): array {
     if(empty($public['exists']))return [];
     $ids=[];
     foreach(['2H','24H','48H','7J','15J'] as $period){
-        foreach(p50_mrp_public_rows((array)$public['state'],$period) as $row){
+        $ranked=p50_mrp_public_rows((array)$public['state'],$period);
+        foreach((array)($ranked['rows']??[]) as $row){
             $id=trim((string)($row['profileId']??''));
             if($id!=='')$ids[$id]=true;
             if(count($ids)>=$limit)break 2;
