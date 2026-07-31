@@ -6,6 +6,8 @@ require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/metrics-ranking-publication-history-core.php';
 require __DIR__.'/metrics-ranking-publication-period-core.php';
 
+const P50_MRPA_EXIT_ROWS_CONTRACT='PUBSIM-EXIT-ROWS-V1.0';
+
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $contentType=strtolower(trim((string)($_SERVER['CONTENT_TYPE']??'')));
@@ -30,6 +32,7 @@ if($action==='probe'){
         'ok'=>true,'action'=>'probe','dispatchId'=>$dispatchId,
         'contract'=>P50_MRPA_PERIOD_SELECTION_VERSION,
         'exitDiagnosticsContract'=>P50_MRPA_EXIT_DIAGNOSTICS_VERSION,
+        'exitRowsContract'=>P50_MRPA_EXIT_ROWS_CONTRACT,
         'simulationVersion'=>P50_MRP_SIMULATION_VERSION,
         'readOnly'=>true,'publicStateWrites'=>0,
     ]);
@@ -41,6 +44,9 @@ $period=strtoupper(trim($input['period']));if($period!=='AUTO'&&!array_key_exist
 $started=microtime(true);
 try{
     $pdo=db();$result=p50_mrpa_simulate($pdo,$period,100);$selectedPeriod=(string)($result['selectedPeriod']??'2H');
+    $experimental=p50_mrp_experimental_rows($pdo,$selectedPeriod);
+    $result['exitDiagnostics']=p50_mrpa_exit_diagnostics($result,(array)($experimental['rows']??[]),100);
+    $result['exitDiagnostics']['rowsContract']=P50_MRPA_EXIT_ROWS_CONTRACT;
     $result['history']=p50_mrph_store($pdo,$result,$dispatchId);
     $result['stability']=p50_mrph_stability($pdo,$selectedPeriod,P50_MRPH_MIN_DISTINCT_CYCLES);
     $result['ok']=true;$result['dispatchId']=$dispatchId;$result['durationMs']=(int)round((microtime(true)-$started)*1000);
