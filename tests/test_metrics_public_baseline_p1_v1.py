@@ -30,6 +30,22 @@ class MetricsPublicBaselineP1V1Tests(unittest.TestCase):
         self.assertIn('skippedAuthRequired', CORE)
         self.assertIn('skippedUnsupported', CORE)
 
+    def test_coverage_is_explained_by_platform_and_profile(self):
+        for token in (
+            'PUBLIC-BASELINE-P1-V1.1',
+            'publicProfilesWithoutVerifiedSources',
+            'eligibleLinksByPlatform',
+            'selectedByPlatform',
+            'jobsCreatedByPlatform',
+            'duplicateJobsByPlatform',
+            'skippedConfigurationByPlatform',
+            'skippedAuthRequiredByPlatform',
+            'skippedUnsupportedByPlatform',
+        ):
+            self.assertIn(token, CORE)
+        self.assertIn('Liens non configurés par plateforme', WORKFLOW)
+        self.assertIn('Sources retenues dans ce cycle', WORKFLOW)
+
     def test_endpoint_is_hmac_strict_and_bounded(self):
         self.assertIn("$_SERVER['REQUEST_METHOD']!=='POST'", ENDPOINT)
         self.assertIn('HTTP_X_P50_TIMESTAMP', ENDPOINT)
@@ -41,7 +57,7 @@ class MetricsPublicBaselineP1V1Tests(unittest.TestCase):
 
     def test_workflow_runs_before_regular_p1_and_dispatches_it_on_push(self):
         self.assertIn("cron: '2 */2 * * *'", WORKFLOW)
-        self.assertIn('PUBLIC-BASELINE-P1-V1.0', WORKFLOW)
+        self.assertIn('PUBLIC-BASELINE-P1-V1.1', WORKFLOW)
         self.assertIn('metrics-top50-2h.yml/dispatches', WORKFLOW)
         self.assertIn("github.event_name != 'schedule'", WORKFLOW)
         self.assertIn('pass50/metrics-public-baseline-p1', WORKFLOW)
