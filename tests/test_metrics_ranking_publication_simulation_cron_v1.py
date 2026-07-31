@@ -47,7 +47,9 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('requested_period_classable', PERIOD_CORE)
         self.assertIn('requested_period_empty_fallback', PERIOD_CORE)
         self.assertIn('classable=1 AND rank_position IS NOT NULL AND score IS NOT NULL', PERIOD_CORE)
-        self.assertIn("p50_mrp_simulate($pdo,(string)$selection['selectedPeriod']", PERIOD_CORE)
+        self.assertIn("$selectedPeriod=(string)$selection['selectedPeriod']", PERIOD_CORE)
+        self.assertIn('p50_mrp_simulate($pdo,$selectedPeriod', PERIOD_CORE)
+        self.assertIn('p50_mrp_experimental_rows($pdo,$selectedPeriod)', PERIOD_CORE)
         self.assertNotIn('coverage_below_45', PERIOD_CORE)
         self.assertNotIn('confidence_below_55', PERIOD_CORE)
 
