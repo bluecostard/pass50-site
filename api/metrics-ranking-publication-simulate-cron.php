@@ -26,12 +26,24 @@ if(!p50_mo_verify_cron_signature($secret,$timestamp,$raw,$signature))json_respon
 
 $input=json_decode($raw,true);
 if(!is_array($input))json_response(['error'=>'JSON invalide.'],422);
-$keys=array_keys($input);sort($keys);
-if($keys!==['action','dispatchId','period'])json_response(['error'=>'Corps JSON invalide.'],422);
-if(($input['action']??null)!=='simulate')json_response(['error'=>'Action invalide.'],422);
+$action=$input['action']??null;
+if(!is_string($action)||!in_array($action,['probe','simulate'],true))json_response(['error'=>'Action invalide.'],422);
 if(!is_string($input['dispatchId']??null))json_response(['error'=>'dispatchId invalide.'],422);
 $dispatchId=trim($input['dispatchId']);
 if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))json_response(['error'=>'dispatchId invalide.'],422);
+$keys=array_keys($input);sort($keys);
+
+if($action==='probe'){
+    if($keys!==['action','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
+    json_response([
+        'ok'=>true,'action'=>'probe','dispatchId'=>$dispatchId,
+        'contract'=>P50_MRPA_PERIOD_SELECTION_VERSION,
+        'simulationVersion'=>P50_MRP_SIMULATION_VERSION,
+        'readOnly'=>true,'publicStateWrites'=>0,
+    ]);
+}
+
+if($keys!==['action','dispatchId','period'])json_response(['error'=>'Corps JSON invalide.'],422);
 if(!is_string($input['period']??null))json_response(['error'=>'Période invalide.'],422);
 $period=strtoupper(trim($input['period']));
 if($period!=='AUTO'&&!array_key_exists($period,p50_mr_periods()))json_response(['error'=>'Période invalide.'],422);
