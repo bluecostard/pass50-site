@@ -19,9 +19,10 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn("$keys!==['action','dispatchId','period']", ENDPOINT)
         self.assertIn("$period!=='AUTO'&&!array_key_exists($period,p50_mr_periods())", ENDPOINT)
 
-    def test_probe_is_read_only_and_exposes_exact_contract(self):
+    def test_probe_is_read_only_and_exposes_exact_contracts(self):
         self.assertIn("if($action==='probe')", ENDPOINT)
         self.assertIn("'contract'=>P50_MRPA_PERIOD_SELECTION_VERSION", ENDPOINT)
+        self.assertIn("'exitDiagnosticsContract'=>P50_MRPA_EXIT_DIAGNOSTICS_VERSION", ENDPOINT)
         self.assertIn("'readOnly'=>true,'publicStateWrites'=>0", ENDPOINT)
         probe_block = ENDPOINT[ENDPOINT.index("if($action==='probe')"):ENDPOINT.index("if($keys!==['action','dispatchId','period'])")]
         self.assertNotIn('db()', probe_block)
@@ -31,16 +32,8 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('p50_mrpa_simulate($pdo,$period,100)', ENDPOINT)
         self.assertIn('p50_mrph_store($pdo,$result,$dispatchId)', ENDPOINT)
         self.assertIn("p50_mrph_stability($pdo,$selectedPeriod", ENDPOINT)
-        forbidden = (
-            'INSERT INTO app_state',
-            'UPDATE app_state',
-            'DELETE FROM app_state',
-            'REPLACE INTO app_state',
-            'p50_de_save_public_state',
-            'p50_de_save_state',
-        )
-        for token in forbidden:
-            self.assertNotIn(token, ENDPOINT + PERIOD_CORE)
+        forbidden = ('INSERT INTO app_state','UPDATE app_state','DELETE FROM app_state','REPLACE INTO app_state','p50_de_save_public_state','p50_de_save_state')
+        for token in forbidden:self.assertNotIn(token, ENDPOINT + PERIOD_CORE)
 
     def test_period_selection_keeps_thresholds_and_falls_back_only_when_empty(self):
         self.assertIn("return ['2H','24H','48H','7J','15J']", PERIOD_CORE)
@@ -53,9 +46,10 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertNotIn('coverage_below_45', PERIOD_CORE)
         self.assertNotIn('confidence_below_55', PERIOD_CORE)
 
-    def test_deployment_workflow_waits_for_exact_contract_before_dispatch(self):
+    def test_deployment_workflow_waits_for_both_contracts_before_dispatch(self):
         self.assertIn("'{action:\"probe\",dispatchId:$dispatchId}'", DEPLOYMENT_WORKFLOW)
         self.assertIn('.contract == "PUBSIM-PERIOD-V1.0"', DEPLOYMENT_WORKFLOW)
+        self.assertIn('.exitDiagnosticsContract == "PUBSIM-EXIT-DIAG-V1.0"', DEPLOYMENT_WORKFLOW)
         self.assertIn('.readOnly == true', DEPLOYMENT_WORKFLOW)
         self.assertIn('.publicStateWrites == 0', DEPLOYMENT_WORKFLOW)
         self.assertIn('tentative $attempt/30', DEPLOYMENT_WORKFLOW)
@@ -107,5 +101,4 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('retention-days: 30', WORKFLOW)
 
 
-if __name__ == '__main__':
-    unittest.main()
+if __name__ == '__main__':unittest.main()
