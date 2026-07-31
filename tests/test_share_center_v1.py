@@ -92,9 +92,9 @@ class ShareCenterV1Tests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, combined)
 
-    def test_service_worker_moves_to_share_center_cache(self):
-        self.assertIn("pass50-v49-share-center-v1", SW)
+    def test_service_worker_keeps_share_center_and_versioned_cache(self):
         self.assertIn("./share-center-v1.js?v=1.0", SW)
+        self.assertIn("./coules-share-simple-v1.js?v=1.0", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
 
