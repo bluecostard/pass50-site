@@ -4,6 +4,7 @@ declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/metrics-ranking-publication-history-core.php';
+require __DIR__.'/metrics-ranking-publication-period-core.php';
 
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
@@ -32,15 +33,16 @@ if(!is_string($input['dispatchId']??null))json_response(['error'=>'dispatchId in
 $dispatchId=trim($input['dispatchId']);
 if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))json_response(['error'=>'dispatchId invalide.'],422);
 if(!is_string($input['period']??null))json_response(['error'=>'Période invalide.'],422);
-$period=trim($input['period']);
-if(!array_key_exists($period,p50_mr_periods()))json_response(['error'=>'Période invalide.'],422);
+$period=strtoupper(trim($input['period']));
+if($period!=='AUTO'&&!array_key_exists($period,p50_mr_periods()))json_response(['error'=>'Période invalide.'],422);
 
 $started=microtime(true);
 try{
     $pdo=db();
-    $result=p50_mrp_simulate($pdo,$period,100);
+    $result=p50_mrpa_simulate($pdo,$period,100);
+    $selectedPeriod=(string)($result['selectedPeriod']??'2H');
     $result['history']=p50_mrph_store($pdo,$result,$dispatchId);
-    $result['stability']=p50_mrph_stability($pdo,$period,P50_MRPH_MIN_DISTINCT_CYCLES);
+    $result['stability']=p50_mrph_stability($pdo,$selectedPeriod,P50_MRPH_MIN_DISTINCT_CYCLES);
     $result['ok']=true;
     $result['dispatchId']=$dispatchId;
     $result['durationMs']=(int)round((microtime(true)-$started)*1000);
