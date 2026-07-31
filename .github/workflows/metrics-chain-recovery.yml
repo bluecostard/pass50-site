@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 5
     env:
       STATUS_SHA: ${{ github.sha }}
+      RECOVERY_REASON: publication-period-fallback-v1
     steps:
       - name: Dispatch Metrics Top 50 P1
         id: dispatch
@@ -73,6 +74,7 @@ jobs:
             printf '### Récupération de la chaîne métrique\n'
             printf -- '- Branche ciblée : `main`\n'
             printf -- '- Workflow demandé : `Metrics Top 50 P1`\n'
+            printf -- '- Motif : `%s`\n' "$RECOVERY_REASON"
             printf -- '- Publication publique : `aucune`\n'
             printf -- '- Écriture app_state : `0`\n'
           } >> "$GITHUB_STEP_SUMMARY"
