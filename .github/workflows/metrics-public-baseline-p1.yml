@@ -1,0 +1,130 @@
+name: Metrics Public Baseline P1
+
+on:
+  schedule:
+    - cron: '2 */2 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/metrics-public-baseline-core.php'
+      - 'api/metrics-public-baseline-cron.php'
+      - '.github/workflows/metrics-public-baseline-p1.yml'
+
+permissions:
+  actions: write
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-metrics-public-baseline-p1
+  cancel-in-progress: false
+
+jobs:
+  supplement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+      STATUS_SHA: ${{ github.sha }}
+    steps:
+      - name: Wait for public-baseline contract
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then echo "::error::Secrets métriques incomplets."; exit 1; fi
+          case "$CRON_URL" in
+            */metrics-cron.php) BASELINE_URL="${CRON_URL%/metrics-cron.php}/metrics-public-baseline-cron.php" ;;
+            *) echo "::error::PASS50_METRICS_CRON_URL invalide."; exit 1 ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-baseline-probe"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
+          deployed=false
+          for attempt in $(seq 1 30); do
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            set +e
+            code="$(curl --silent --show-error --max-time 55 --output baseline-probe.json --write-out '%{http_code}' \
+              -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+              --data "$body" "$BASELINE_URL")"; curl_status=$?
+            set -e
+            if [ "$curl_status" -eq 0 ] && [ "$code" = "200" ] && jq -e '.contract == "PUBLIC-BASELINE-P1-V1.0" and .readOnly == true and .publicStateWrites == 0' baseline-probe.json >/dev/null 2>&1; then deployed=true; break; fi
+            echo "Contrat PUBLIC-BASELINE-P1-V1.0 en attente, tentative $attempt/30 (HTTP ${code:-000})."
+            sleep 20
+          done
+          if [ "$deployed" != "true" ]; then echo "::error::Contrat de couverture P1 non déployé."; cat baseline-probe.json 2>/dev/null || true; exit 1; fi
+
+      - name: Supplement P1 with current public ranking
+        id: baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then echo "::error::Secrets métriques incomplets."; exit 1; fi
+          case "$CRON_URL" in
+            */metrics-cron.php) BASELINE_URL="${CRON_URL%/metrics-cron.php}/metrics-public-baseline-cron.php" ;;
+            *) echo "::error::PASS50_METRICS_CRON_URL invalide."; exit 1 ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-public-baseline"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"dispatch",dispatchId:$dispatchId}')"
+          timestamp="$(date +%s)"
+          signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+          curl --fail-with-body --silent --show-error --max-time 55 \
+            -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+            --data "$body" "$BASELINE_URL" > public-baseline-result.json
+          jq -e '.ok == true and .version == "PUBLIC-BASELINE-P1-V1.0" and .publicStateWrites == 0' public-baseline-result.json >/dev/null
+          public_profiles="$(jq -r '.summary.publicProfiles // 0' public-baseline-result.json)"
+          eligible_profiles="$(jq -r '.summary.eligibleProfiles // 0' public-baseline-result.json)"
+          jobs_created="$(jq -r '.summary.jobsCreated // 0' public-baseline-result.json)"
+          duplicates="$(jq -r '.summary.duplicateJobs // 0' public-baseline-result.json)"
+          remaining="$(jq -r '.remaining // 0' public-baseline-result.json)"
+          {
+            printf '### Couverture P1 du classement public\n'
+            printf -- '- Profils publics détectés : %s\n' "$public_profiles"
+            printf -- '- Profils avec source éligible : %s\n' "$eligible_profiles"
+            printf -- '- Tâches créées / déjà présentes : %s / %s\n' "$jobs_created" "$duplicates"
+            printf -- '- File P1 après complément : %s\n' "$remaining"
+            printf -- '- Écriture app_state : `0`\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf 'jobs_created=%s\nremaining=%s\n' "$jobs_created" "$remaining" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch P1 immediately outside schedule
+        if: ${{ github.event_name != 'schedule' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -nc --arg ref "main" '{ref:$ref}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/metrics-top50-2h.yml/dispatches"
+
+      - name: Publish sanitized public-baseline status
+        if: ${{ always() }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STEP_OUTCOME: ${{ steps.baseline.outcome }}
+          JOBS_CREATED: ${{ steps.baseline.outputs.jobs_created }}
+          REMAINING: ${{ steps.baseline.outputs.remaining }}
+        run: |
+          set -euo pipefail
+          state="success"; description="Couverture publique P1 · ${JOBS_CREATED:-0} tâches · file ${REMAINING:-0} · app_state 0"
+          if [ "$STEP_OUTCOME" != "success" ]; then state="failure"; description="Couverture publique P1 interrompue · app_state inchangé"; fi
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context "pass50/metrics-public-baseline-p1" '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${STATUS_SHA}"
+
+      - name: Archive baseline result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-baseline-p1-${{ github.run_id }}-${{ github.run_attempt }}
+          path: public-baseline-result.json
+          if-no-files-found: ignore
+          retention-days: 30
