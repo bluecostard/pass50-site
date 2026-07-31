@@ -39,10 +39,11 @@ class MetricsRankingPublicationHistoryV1Tests(unittest.TestCase):
         self.assertIn("$freshStatus=$latestAgeHours===null?'wait'", CORE)
         self.assertIn("$state=$blocked?'blocked':($waiting?'collecting'", CORE)
 
-    def test_cron_stores_then_evaluates(self):
+    def test_cron_stores_then_evaluates_selected_period(self):
         self.assertIn("require __DIR__.'/metrics-ranking-publication-history-core.php'", CRON)
         self.assertIn("p50_mrph_store($pdo,$result,$dispatchId)", CRON)
-        self.assertIn("p50_mrph_stability($pdo,$period,P50_MRPH_MIN_DISTINCT_CYCLES)", CRON)
+        self.assertIn("$selectedPeriod=(string)($result['selectedPeriod']??'2H')", CRON)
+        self.assertIn("p50_mrph_stability($pdo,$selectedPeriod,P50_MRPH_MIN_DISTINCT_CYCLES)", CRON)
 
     def test_admin_history_requires_privileged_session(self):
         self.assertIn("require_method('GET')", ADMIN)
