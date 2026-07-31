@@ -1,0 +1,33 @@
+name: Validate Coules Share Simple V1
+
+on:
+  pull_request:
+    paths:
+      - 'coules-share-simple-v1.js'
+      - 'app-config.js'
+      - 'sw.js'
+      - 'tests/test_coules_share_simple_v1.py'
+      - '.github/workflows/validate-coules-share-simple-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: JavaScript syntax
+        run: |
+          node --check coules-share-simple-v1.js
+          node --check app-config.js
+          node --check sw.js
+      - name: Deterministic tests
+        run: python3 -m unittest tests/test_coules_share_simple_v1.py
+      - name: Diff check
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
