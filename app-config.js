@@ -13,6 +13,16 @@ window.PASS50_API = {
   document.head.appendChild(script);
 })();
 
+// Interface simplifiée du partage « Les Coulés ».
+(function () {
+  if (document.querySelector('script[data-pass50-coules-share-simple]')) return;
+  var script = document.createElement('script');
+  script.src = './coules-share-simple-v1.js?v=1.0';
+  script.async = false;
+  script.dataset.pass50CoulesShareSimple = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Les anciennes sauvegardes lançaient plusieurs écritures concurrentes et pouvaient
 // réécrire l'état avec une version incomplète. Le module transactionnel V3 les remplace.
 try {
