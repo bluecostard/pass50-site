@@ -51,8 +51,8 @@ jobs:
               -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
               --data "$body" "$BASELINE_URL")"; curl_status=$?
             set -e
-            if [ "$curl_status" -eq 0 ] && [ "$code" = "200" ] && jq -e '.contract == "PUBLIC-BASELINE-P1-V1.0" and .readOnly == true and .publicStateWrites == 0' baseline-probe.json >/dev/null 2>&1; then deployed=true; break; fi
-            echo "Contrat PUBLIC-BASELINE-P1-V1.0 en attente, tentative $attempt/30 (HTTP ${code:-000})."
+            if [ "$curl_status" -eq 0 ] && [ "$code" = "200" ] && jq -e '.contract == "PUBLIC-BASELINE-P1-V1.1" and .readOnly == true and .publicStateWrites == 0' baseline-probe.json >/dev/null 2>&1; then deployed=true; break; fi
+            echo "Contrat PUBLIC-BASELINE-P1-V1.1 en attente, tentative $attempt/30 (HTTP ${code:-000})."
             sleep 20
           done
           if [ "$deployed" != "true" ]; then echo "::error::Contrat de couverture P1 non déployé."; cat baseline-probe.json 2>/dev/null || true; exit 1; fi
@@ -74,16 +74,23 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 55 \
             -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
             --data "$body" "$BASELINE_URL" > public-baseline-result.json
-          jq -e '.ok == true and .version == "PUBLIC-BASELINE-P1-V1.0" and .publicStateWrites == 0' public-baseline-result.json >/dev/null
+          jq -e '.ok == true and .version == "PUBLIC-BASELINE-P1-V1.1" and .publicStateWrites == 0' public-baseline-result.json >/dev/null
           public_profiles="$(jq -r '.summary.publicProfiles // 0' public-baseline-result.json)"
           eligible_profiles="$(jq -r '.summary.eligibleProfiles // 0' public-baseline-result.json)"
+          missing_sources="$(jq -r '.summary.publicProfilesWithoutVerifiedSources | length' public-baseline-result.json)"
           jobs_created="$(jq -r '.summary.jobsCreated // 0' public-baseline-result.json)"
           duplicates="$(jq -r '.summary.duplicateJobs // 0' public-baseline-result.json)"
           remaining="$(jq -r '.remaining // 0' public-baseline-result.json)"
+          eligible_by_platform="$(jq -c '.summary.eligibleLinksByPlatform' public-baseline-result.json)"
+          configured_missing_by_platform="$(jq -c '.summary.skippedConfigurationByPlatform' public-baseline-result.json)"
+          selected_by_platform="$(jq -c '.summary.selectedByPlatform' public-baseline-result.json)"
           {
             printf '### Couverture P1 du classement public\n'
             printf -- '- Profils publics détectés : %s\n' "$public_profiles"
-            printf -- '- Profils avec source éligible : %s\n' "$eligible_profiles"
+            printf -- '- Profils avec source vérifiée / sans source vérifiée : %s / %s\n' "$eligible_profiles" "$missing_sources"
+            printf -- '- Liens vérifiés par plateforme : `%s`\n' "$eligible_by_platform"
+            printf -- '- Liens non configurés par plateforme : `%s`\n' "$configured_missing_by_platform"
+            printf -- '- Sources retenues dans ce cycle : `%s`\n' "$selected_by_platform"
             printf -- '- Tâches créées / déjà présentes : %s / %s\n' "$jobs_created" "$duplicates"
             printf -- '- File P1 après complément : %s\n' "$remaining"
             printf -- '- Écriture app_state : `0`\n'

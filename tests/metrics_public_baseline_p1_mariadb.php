@@ -35,25 +35,25 @@ $pdo->prepare("INSERT INTO p50_ranking_snapshots(profile_id,period_key,rank_posi
 p50_metrics_ensure_schema($pdo);
 
 $before=(string)$pdo->query("SELECT data FROM app_state WHERE id='public'")->fetchColumn();
-$ids=p50_mopb_public_profile_ids($pdo,100);
-baseline_must($ids===['A','B','C'],'La couverture doit reprendre les trois profils réellement classés.');
-$now='2026-07-31T08:00:00Z';
-$first=p50_mopb_dispatch($pdo,'baseline-fixture-1',$now);
+$ids=p50_mopb_public_profile_ids($pdo,100);baseline_must($ids===['A','B','C'],'La couverture doit reprendre les trois profils réellement classés.');
+$now='2026-07-31T08:00:00Z';$first=p50_mopb_dispatch($pdo,'baseline-fixture-1',$now);
+baseline_must($first['version']==='PUBLIC-BASELINE-P1-V1.1','Version de couverture attendue.');
 baseline_must($first['summary']['publicProfiles']===3,'Trois profils publics attendus.');
-baseline_must($first['summary']['jobsCreated']===3,'Une tâche YouTube attendue pour chaque profil public.');
+baseline_must($first['summary']['eligibleLinksByPlatform']['YouTube']===3,'Trois liens YouTube vérifiés attendus.');
+baseline_must($first['summary']['selectedByPlatform']['YouTube']===3,'Trois sources YouTube doivent être retenues.');
+baseline_must($first['summary']['jobsCreated']===3&&$first['summary']['jobsCreatedByPlatform']['YouTube']===3,'Une tâche YouTube attendue pour chaque profil public.');
+baseline_must($first['summary']['publicProfilesWithoutVerifiedSources']===[],'Aucun profil public ne doit manquer de source vérifiée.');
 baseline_must($first['publicStateWrites']===0,'Aucune écriture publique ne doit être annoncée.');
 $second=p50_mopb_dispatch($pdo,'baseline-fixture-2',$now);
 baseline_must($second['summary']['jobsCreated']===0&&$second['summary']['duplicateJobs']===3,'Le même bucket doit être idempotent.');
+baseline_must($second['summary']['duplicateJobsByPlatform']['YouTube']===3,'Les doublons doivent être ventilés par plateforme.');
 
 $regular=p50_mo_dispatch($pdo,'p1','regular-p1-fixture',['now'=>$now]);
 $jobCount=(int)$pdo->query("SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=50")->fetchColumn();
 baseline_must($jobCount===3,'Le P1 normal ne doit pas dupliquer Alpha après le complément public.');
 baseline_must($regular['summary']['duplicateJobs']>=1,'Le doublon P1 doit être reconnu par la clé canonique.');
-$after=(string)$pdo->query("SELECT data FROM app_state WHERE id='public'")->fetchColumn();
-baseline_must($before===$after,'La couverture P1 a modifié app_state.');
-
+$after=(string)$pdo->query("SELECT data FROM app_state WHERE id='public'")->fetchColumn();baseline_must($before===$after,'La couverture P1 a modifié app_state.');
 $payloads=(string)$pdo->query("SELECT GROUP_CONCAT(payload_json SEPARATOR ' ') FROM p50_metric_jobs")->fetchColumn();
 baseline_must(str_contains($payloads,'public_baseline'),'Le motif de couverture doit être traçable.');
 baseline_must(!str_contains($payloads,(string)$config['metrics']['cron_secret']),'Le secret cron ne doit jamais être stocké.');
-
 echo "Metrics public baseline P1 MariaDB: OK\n";
