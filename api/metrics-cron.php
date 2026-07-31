@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-queue-core.php';
+require __DIR__.'/metrics-cron-diagnostics-core.php';
 
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
@@ -23,13 +24,14 @@ try{
     $pdo=db();
     if($action==='dispatch'){
         $run=p50_mo_dispatch($pdo,$cadence,$dispatchId,['source'=>'cron_hmac']);
-        $response=['ok'=>true,'cadence'=>$cadence,'dispatchId'=>$dispatchId,'enqueued'=>$run['enqueued'],'processed'=>0,'completed'=>0,'partial'=>0,'retried'=>0,'skipped'=>0,'failed'=>0];
+        $response=['ok'=>true,'cadence'=>$cadence,'dispatchId'=>$dispatchId,'enqueued'=>$run['enqueued'],'processed'=>0,'completed'=>0,'partial'=>0,'retried'=>0,'skipped'=>0,'failed'=>0,'diagnostic'=>null];
     }elseif($action==='work'){
         $work=p50_metrics_process_next_job($pdo);
-        $response=['ok'=>true,'cadence'=>$cadence,'dispatchId'=>$dispatchId,'enqueued'=>0,'processed'=>$work['processed'],'completed'=>$work['completed']??0,'partial'=>$work['partial']??0,'retried'=>$work['retried']??0,'skipped'=>$work['skipped']??0,'failed'=>$work['failed']??0];
+        $response=['ok'=>true,'cadence'=>$cadence,'dispatchId'=>$dispatchId,'enqueued'=>0,'processed'=>$work['processed'],'completed'=>$work['completed']??0,'partial'=>$work['partial']??0,'retried'=>$work['retried']??0,'skipped'=>$work['skipped']??0,'failed'=>$work['failed']??0,'diagnostic'=>p50_mcd_work($pdo,$work)];
     }else{
-        $response=['ok'=>true,'cadence'=>$cadence,'dispatchId'=>$dispatchId,'enqueued'=>0,'processed'=>0,'completed'=>0,'partial'=>0,'retried'=>0,'skipped'=>0,'failed'=>0];
+        $response=['ok'=>true,'cadence'=>$cadence,'dispatchId'=>$dispatchId,'enqueued'=>0,'processed'=>0,'completed'=>0,'partial'=>0,'retried'=>0,'skipped'=>0,'failed'=>0,'diagnostic'=>null];
     }
+    $response['diagnosticsVersion']=P50_METRICS_WORK_DIAGNOSTICS_VERSION;
     $response['queue']=p50_moq_snapshot($pdo);
     $response['remaining']=$response['queue']['remaining'];
     $response['durationMs']=(int)round((microtime(true)-$started)*1000);
