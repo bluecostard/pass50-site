@@ -31,10 +31,12 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('proofFamilies', parser)
         self.assertIn('strictApiLabels', parser)
         self.assertIn('freshApiLabels', parser)
+        self.assertIn('apiLiveStructureLabels', parser)
         self.assertIn('tiktok_confirmation_incomplete', parser)
         self.assertIn('roomEvidence', parser)
         self.assertIn('$strictApiActive', parser)
         self.assertIn('$freshApiActive', parser)
+        self.assertIn('$apiLiveStructure', parser)
 
     def test_tiktok_end_only_beats_unconfirmed_or_stale_signals(self):
         parser = re.search(r'function p50_live_v4_parse_tiktok\(.*?\n}', PARSERS, re.S).group(0)
@@ -45,7 +47,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("!$currentApiActive", parser)
         self.assertIn('Le LIVE est terminé', CORE_TESTS)
         self.assertIn('ancienne trace HTML de fin', CORE_TESTS)
-        self.assertIn('salle fraîche et active', CORE_TESTS)
+        self.assertIn('structure LiveRoom fraîche', CORE_TESTS)
         self.assertIn("['state']==='live'", CORE_TESTS)
 
     def test_unknown_and_probable_withdraw_public_live_immediately(self):
@@ -66,6 +68,7 @@ class LiveRadarV41Tests(unittest.TestCase):
     def test_dismissed_stream_never_returns(self):
         self.assertIn('p50_live_dismissals', STORAGE)
         self.assertIn('p50_live_v4_is_dismissed', STORAGE)
+        self.assertIn('p50_live_v4_event_identity', STORAGE)
         self.assertIn('LEFT JOIN p50_live_dismissals', STORAGE)
         self.assertIn('d.stream_key IS NULL', STORAGE)
 
@@ -109,6 +112,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('api/live-status-v4.php', SWEEP)
         self.assertIn('mode=full', SWEEP)
         self.assertIn('live-radar-audit.json', SWEEP)
+        self.assertIn('publishedStreams', SWEEP)
         self.assertIn('pass50/live-radar', SWEEP)
 
 
