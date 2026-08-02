@@ -8,6 +8,7 @@ FILES = {
     'parsers': (ROOT / 'api' / 'live-radar-v4-parsers.php').read_text(encoding='utf-8'),
     'storage': (ROOT / 'api' / 'live-radar-v4-storage.php').read_text(encoding='utf-8'),
     'endpoint': (ROOT / 'api' / 'live-status-v4.php').read_text(encoding='utf-8'),
+    'dismiss': (ROOT / 'api' / 'live-dismiss.php').read_text(encoding='utf-8'),
     'contract': (ROOT / 'api' / 'live-radar-contract.php').read_text(encoding='utf-8'),
     'workflow': (ROOT / '.github' / 'workflows' / 'live-radar-sweep.yml').read_text(encoding='utf-8'),
     'client': (ROOT / 'live-radar-v3.js').read_text(encoding='utf-8'),
@@ -16,7 +17,7 @@ FILES = {
 
 class LiveRadarV41StaticTests(unittest.TestCase):
     def test_no_public_ranking_write(self):
-        runtime = '\n'.join(FILES[name] for name in ('source', 'parsers', 'storage', 'endpoint', 'contract'))
+        runtime = '\n'.join(FILES[name] for name in ('source', 'parsers', 'storage', 'endpoint', 'dismiss', 'contract'))
         write_patterns = (
             r'\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+app_state\b',
             r'\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+p50_metric_captures\b',
@@ -37,17 +38,29 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("latest_probe_not_live", FILES['storage'])
         self.assertIn("h.last_state<>'live'", FILES['storage'])
 
-    def test_tiktok_fresh_room_beats_stale_html_without_reviving_old_rooms(self):
+    def test_tiktok_fresh_live_room_beats_stale_html(self):
         parser = FILES['parsers']
-        self.assertIn('LIVE-RADAR-FRESH-TIKTOK-ROOMS-2026-08-02-2', parser)
+        self.assertIn('LIVE-RADAR-EVENT-IDENTITY-2026-08-02-3', parser)
         self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 43200', parser)
         self.assertIn('p50_live_v4_tiktok_room_timestamp', parser)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', parser)
+        self.assertIn('$apiLiveStructure', parser)
         self.assertIn('$freshApiActive', parser)
         self.assertIn('$currentApiActive', parser)
         self.assertIn("!$currentApiActive", parser)
-        self.assertIn("'freshApiLabels'", parser)
+        self.assertIn("'apiLiveStructureLabels'", parser)
         self.assertIn("$freshApi?96", parser)
+
+    def test_each_live_event_has_its_own_stream_key(self):
+        storage = FILES['storage']
+        self.assertIn('function p50_live_v4_event_identity', storage)
+        self.assertIn("['roomId','videoId','broadcastId','broadcast_id']", storage)
+        self.assertIn("'event:'.$eventId", storage)
+        self.assertIn("'url:'.rtrim", storage)
+        dismiss = FILES['dismiss']
+        self.assertIn('SELECT stream_key,url FROM p50_live_streams', dismiss)
+        self.assertIn("ORDER BY (url=?) DESC,last_seen_at DESC LIMIT 1", dismiss)
+        self.assertIn("(string)$row['stream_key']", dismiss)
 
     def test_operational_contract_and_complete_sweep(self):
         self.assertIn("'contract'=>P50_LIVE_V4_LOGIC_REVISION", FILES['contract'])
