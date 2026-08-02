@@ -127,9 +127,23 @@
     if(DE.rankingLabLoading&&!DE.rankingLab){pane.innerHTML='<div class="de-ranking-lab"><div class="de-loading">Chargement du classement expérimental…</div></div>';return;}
     if(DE.rankingLabView!=='current'&&DE.rankingCalibrationLoading&&!DE.rankingCalibration){pane.innerHTML='<div class="de-ranking-lab"><div class="de-loading">Chargement de l’historique…</div></div>';return;}
     const content=DE.rankingLabView==='history'?deRankingHistoryHtml():DE.rankingLabView==='calibration'?deRankingCalibrationHtml():deRankingCurrentHtml();
-    pane.innerHTML=`<div class="de-ranking-lab"><div class="section-head"><div><div class="section-title">CLASSEMENT MÉTRIQUE EXPÉRIMENTAL</div><div class="de-ranking-warning">Ce calcul n’a aucun effet sur le classement public.</div></div><div class="de-ranking-actions"><button class="btn primary de-ranking-calculate">Calculer les 5 périodes</button><button class="btn de-ranking-refresh">Actualiser</button><select id="deRankingLabPeriod">${periods.map(period=>`<option ${period===DE.rankingLabPeriod?'selected':''}>${period}</option>`).join('')}</select></div></div><nav class="de-ranking-subnav" aria-label="Vues du classement expérimental"><button class="btn ${DE.rankingLabView==='current'?'primary':''}" data-ranking-view="current">Classement actuel</button><button class="btn ${DE.rankingLabView==='history'?'primary':''}" data-ranking-view="history">Historique des cycles</button><button class="btn ${DE.rankingLabView==='calibration'?'primary':''}" data-ranking-view="calibration">Calibration</button></nav>${content}</div>`;
+    pane.innerHTML=`<div class="de-ranking-lab"><div class="section-head"><div><div class="section-title">CLASSEMENT MÉTRIQUE MR‑V1.0</div><div class="de-ranking-warning">Calcul expérimental → publication publique via le bouton ci‑dessous (backup + garde‑fous).</div></div><div class="de-ranking-actions"><button class="btn primary de-ranking-calculate">Calculer les 5 périodes</button><button class="btn primary de-ranking-publish">Publier vers le classement public</button><button class="btn de-ranking-refresh">Actualiser</button><select id="deRankingLabPeriod">${periods.map(period=>`<option ${period===DE.rankingLabPeriod?'selected':''}>${period}</option>`).join('')}</select></div></div><nav class="de-ranking-subnav" aria-label="Vues du classement expérimental"><button class="btn ${DE.rankingLabView==='current'?'primary':''}" data-ranking-view="current">Classement actuel</button><button class="btn ${DE.rankingLabView==='history'?'primary':''}" data-ranking-view="history">Historique des cycles</button><button class="btn ${DE.rankingLabView==='calibration'?'primary':''}" data-ranking-view="calibration">Calibration</button></nav>${content}</div>`;
   }
   async function deCalculateRankingLab(button){await deAction(button,async()=>{await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});DE.rankingLab=null;DE.rankingCalibration=null;await deLoadRankingLab(true);if(DE.rankingLabView!=='current')await deLoadRankingCalibration(true);toast('Classements expérimentaux calculés');},'Calcul…');}
+  async function dePublishRankingLab(button){await deAction(button,async()=>{
+    const preview=await apiFetch('metrics-ranking-publication-apply.php');
+    if(!preview.publicationEligible){
+      const blocked=(preview.summary?.blockedPeriods||[]).join(', ')||preview.status||'bloqué';
+      throw new Error(`Publication non éligible (${blocked}). Activez ranking_publication_enabled ou corrigez les garde-fous.`);
+    }
+    const msg=preview.bootstrap
+      ?`BOOTSTRAP : 1er passage autorisé (${preview.summary?.entries||0} entrées / ${preview.summary?.exits||0} sorties). Publier MR‑V1.0 vers le classement public ?`
+      :`Publier MR‑V1.0 vers le classement public (${preview.summary?.mutations||0} scores) ? Un backup sera créé.`;
+    if(!confirm(msg))return;
+    const result=await apiFetch('metrics-ranking-publication-apply.php',{method:'POST',body:{action:'apply',confirm:true,bootstrap:!!preview.bootstrap,dispatchId:'admin-'+Date.now()}});
+    await loadCloudState?.();render?.();
+    toast(`Classement public mis à jour · révision ${result.publicStateRevision} · ${result.scoresWritten||0} scores`);
+  },'Publication…');}
   async function deLoadMetricsDiagnostic(force=false){
     if(DE.metricsDiagnosticLoading||(!force&&DE.metricsDiagnostic))return;
     DE.metricsDiagnosticLoading=true;
@@ -488,6 +502,7 @@
       if(e.target.matches('.de-metrics-refresh')){DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);}
       if(e.target.matches('.de-ranking-refresh')){DE.rankingLab=null;DE.rankingCalibration=null;await Promise.all([deLoadRankingLab(true),deLoadRankingCalibration(true)]);}
       if(e.target.matches('.de-ranking-calculate'))await deCalculateRankingLab(e.target);
+      if(e.target.matches('.de-ranking-publish'))await dePublishRankingLab(e.target);
       if(e.target.matches('[data-ranking-view]')){DE.rankingLabView=e.target.dataset.rankingView;if(DE.rankingLabView!=='current'&&!DE.rankingCalibration)await deLoadRankingCalibration();else deDrawRankingLab($('#adminPane'));}
       if(e.target.matches('.de-install-metrics-schema'))await deInstallMetricsSchema(e.target);
       if(e.target.matches('.de-collect-metrics')){const platform=e.target.dataset.platform,profileId=document.getElementById('deMetricProfile')?.value||'';await deAction(e.target,async()=>{await apiFetch('metrics-canonical-collect.php',{method:'POST',body:profileId?{action:'collect_profile',platform,profileId,contentLimit:10}:{action:'collect_batch',platform,profileLimit:10,contentLimit:5}});DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);toast(`Collecte ${platform} terminée`);},'Collecte…');}

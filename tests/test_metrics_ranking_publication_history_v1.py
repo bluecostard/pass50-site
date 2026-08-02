@@ -33,7 +33,7 @@ class MetricsRankingPublicationHistoryV1Tests(unittest.TestCase):
         self.assertIn("'distinct_experimental_runs'", CORE)
         self.assertIn("'state'=>$state", CORE)
         self.assertIn("'controlledPublicationEligible'=>$state==='ready'", CORE)
-        self.assertIn("'automaticPublicationEligible'=>false", CORE)
+        self.assertIn("'automaticPublicationEligible'=>$state==='ready'&&$publicationEnabled&&$automaticEnabled", CORE)
 
     def test_empty_history_is_collecting_not_failed(self):
         self.assertIn("$freshStatus=$latestAgeHours===null?'wait'", CORE)
@@ -50,12 +50,12 @@ class MetricsRankingPublicationHistoryV1Tests(unittest.TestCase):
         self.assertIn("require_role($user,'owner','admin')", ADMIN)
         self.assertIn("'publicStateWrites'=>0", ADMIN)
 
-    def test_workflow_reports_history_without_enabling_automatic_publication(self):
+    def test_workflow_reports_history_without_writing_public_state(self):
         self.assertIn('.history.publicStateWrites == 0', WORKFLOW)
-        self.assertIn('.stability.automaticPublicationEligible == false', WORKFLOW)
+        self.assertIn('.scope.publicStateWrites == 0', WORKFLOW)
         self.assertIn('.stability.distinctExperimentalRuns', WORKFLOW)
         self.assertIn('Éligible au passage public contrôlé', WORKFLOW)
-        self.assertIn('Publication automatique : `désactivée`', WORKFLOW)
+        self.assertIn('Écritures app_state (simulation) : `0`', WORKFLOW)
 
 
 if __name__ == '__main__':

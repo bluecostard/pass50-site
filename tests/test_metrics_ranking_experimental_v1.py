@@ -148,9 +148,9 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$limit=max(1,min(200,$limit))", read)
 
     def test_cache_and_workflow_versions(self):
-        self.assertIn("data-engine-ui.js?v=18.2", TOOLS)
+        self.assertIn("data-engine-ui.js?v=18.3", TOOLS)
         self.assertIn("data-engine-ui.css?v=27.0", TOOLS)
-        self.assertIn("data-engine-ui.js?v=18.2", SW)
+        self.assertIn("data-engine-ui.js?v=18.3", SW)
         self.assertIn("data-engine-ui.css?v=27.0", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
         self.assertIn("mariadb:11.4", WORKFLOW)

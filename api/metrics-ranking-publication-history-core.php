@@ -164,9 +164,12 @@ function p50_mrph_stability(PDO $pdo,string $period='2H',int $sampleSize=3,?Date
     ];
     $blocked=(bool)array_filter($gates,static fn($gate)=>$gate['status']==='block');$waiting=(bool)array_filter($gates,static fn($gate)=>$gate['status']==='wait');$warnings=(bool)array_filter($gates,static fn($gate)=>$gate['status']==='warn');
     $state=$blocked?'blocked':($waiting?'collecting':($warnings?'review':'ready'));
+    global $config;$m=(array)(($config??[])['metrics']??[]);
+    $automaticEnabled=filter_var($m['ranking_automatic_publication_enabled']??(getenv('PASS50_RANKING_AUTOMATIC_PUBLICATION_ENABLED')?:false),FILTER_VALIDATE_BOOLEAN);
+    $publicationEnabled=filter_var($m['ranking_publication_enabled']??(getenv('PASS50_RANKING_PUBLICATION_ENABLED')?:false),FILTER_VALIDATE_BOOLEAN);
     return [
         'historyVersion'=>P50_MRPH_HISTORY_VERSION,'period'=>$period,'sampleSize'=>$sampleSize,'observedReports'=>count($rows),'rawObservedReports'=>count($history),'distinctExperimentalRuns'=>count($runUuids),
-        'state'=>$state,'controlledPublicationEligible'=>$state==='ready','automaticPublicationEligible'=>false,
+        'state'=>$state,'controlledPublicationEligible'=>$state==='ready','automaticPublicationEligible'=>$state==='ready'&&$publicationEnabled&&$automaticEnabled,
         'latestReportAgeHours'=>$latestAgeHours,'publicStateRevisions'=>array_map('intval',array_keys($revisions)),
         'latest'=>$latest,'gates'=>$gates,'recent'=>$rows,
     ];
