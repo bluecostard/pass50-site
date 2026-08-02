@@ -4,7 +4,8 @@ declare(strict_types=1);
 require_once __DIR__.'/metrics-orchestrator-core.php';
 require_once __DIR__.'/metrics-ranking-publication-core.php';
 
-const P50_METRICS_PUBLIC_BASELINE_VERSION='PUBLIC-BASELINE-P1-V1.1';
+const P50_METRICS_PUBLIC_BASELINE_PREVIOUS_VERSION='PUBLIC-BASELINE-P1-V1.1';
+const P50_METRICS_PUBLIC_BASELINE_VERSION='PUBLIC-BASELINE-P1-V1.2';
 
 function p50_mopb_platforms(): array {return ['YouTube','X','TikTok','Instagram','Facebook','Snapchat'];}
 function p50_mopb_platform_map(): array {return array_fill_keys(p50_mopb_platforms(),0);}

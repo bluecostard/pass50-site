@@ -7,10 +7,18 @@ require_once __DIR__.'/metrics-collector-instagram.php';
 require_once __DIR__.'/metrics-collector-facebook.php';
 require_once __DIR__.'/metrics-collector-snapchat.php';
 
+function p50_mc_env_bool(string $name,bool $fallback=false): bool {
+    $value=getenv($name);if($value===false||trim((string)$value)==='')return $fallback;
+    return filter_var($value,FILTER_VALIDATE_BOOLEAN,FILTER_NULL_ON_FAILURE)??$fallback;
+}
+
 function p50_mc_credentials(string $platform,string $profileId): array {
     global $config;$metrics=(array)($config['metrics']??[]);$perProfile=(array)($metrics['social_credentials'][$platform][$profileId]??[]);
     $read=static function(string $key,string $env='') use($metrics,$perProfile): string {
-        $value=$perProfile[$key]??$metrics[$key]??($env!==''?getenv($env):'');return trim((string)$value);
+        foreach([$perProfile[$key]??null,$metrics[$key]??null,$env!==''?getenv($env):null] as $candidate){
+            $value=trim((string)($candidate??''));if($value!=='')return $value;
+        }
+        return '';
     };
     if($platform==='YouTube'){
         $oauth=function_exists('p50ym_public_access')?p50ym_public_access($profileId):['configured'=>false,'authorized'=>false,'mode'=>'mapping_required','authorizationRequired'=>true];
@@ -18,30 +26,42 @@ function p50_mc_credentials(string $platform,string $profileId): array {
         $api=p50_mc_config('YouTube');
         return ['configured'=>$api!=='','authorized'=>$api!=='','mode'=>$api!==''?'official_api':'public_fallback','authorizationRequired'=>false,'secret'=>$api];
     }
-    if($platform==='X')return ['configured'=>p50_mc_config('X')!=='','authorized'=>p50_mc_config('X')!=='','mode'=>'official_api','authorizationRequired'=>false,'secret'=>p50_mc_config('X')];
+    if($platform==='X'){
+        $secret=p50_mc_config('X');if($secret==='')$secret=trim((string)(getenv('PASS50_X_BEARER_TOKEN')?:''));
+        return ['configured'=>$secret!=='','authorized'=>$secret!=='','mode'=>'official_api','authorizationRequired'=>false,'secret'=>$secret];
+    }
     if($platform==='TikTok'){
         $oauth=function_exists('p50tm_public_access')?p50tm_public_access($profileId):['configured'=>false,'authorized'=>false,'mode'=>'mapping_required','authorizationRequired'=>true];
         if(!empty($oauth['configured']))return $oauth+['secret'=>''];
-        $mode=(string)($perProfile['mode']??$metrics['tiktok_mode']??'none');
-        $approved=(bool)($perProfile['research_approved']??$metrics['tiktok_research_approved']??false);
-        $secret=$mode==='approved_research'?$read('tiktok_research_token','PASS50_TIKTOK_RESEARCH_TOKEN'):$read('tiktok_access_token','PASS50_TIKTOK_ACCESS_TOKEN');
+        $displayToken=$read('tiktok_access_token','PASS50_TIKTOK_ACCESS_TOKEN');
+        $researchToken=$read('tiktok_research_token','PASS50_TIKTOK_RESEARCH_TOKEN');
+        $approved=(bool)($perProfile['research_approved']??$metrics['tiktok_research_approved']??false)||p50_mc_env_bool('PASS50_TIKTOK_RESEARCH_APPROVED',false);
+        $mode=trim((string)($perProfile['mode']??$metrics['tiktok_mode']??'none'))?:'none';
+        $envMode=trim((string)(getenv('PASS50_TIKTOK_MODE')?:''));if($mode==='none'&&$envMode!=='')$mode=$envMode;
+        if($mode==='none'&&$researchToken!==''&&$approved)$mode='approved_research';
+        $secret=$mode==='approved_research'?$researchToken:$displayToken;
         $configured=$mode==='authorized_display'?true:($mode==='approved_research'&&$approved);
-        return ['configured'=>$configured,'authorized'=>$secret!=='','mode'=>$mode,'authorizationRequired'=>$mode==='authorized_display'&&$secret==='','secret'=>$secret,'approved'=>$approved];
+        return ['configured'=>$configured,'authorized'=>$secret!=='','mode'=>$mode,'authorizationRequired'=>$configured&&$secret==='','secret'=>$secret,'approved'=>$approved];
     }
     if(in_array($platform,['Facebook','Instagram'],true)&&function_exists('p50mm_credentials')){
         $oauth=p50mm_credentials($platform,$profileId);
         if(is_array($oauth))return $oauth;
     }
     $prefix=strtolower($platform);$secret=$read($prefix.'_access_token','PASS50_'.strtoupper($prefix).'_ACCESS_TOKEN');
+    $accountId=$read($prefix.'_account_id','PASS50_'.strtoupper($prefix).'_ACCOUNT_ID');
+    $pageId=$read('facebook_page_id','PASS50_FACEBOOK_PAGE_ID');
+    $discoveryAccountId=$read('instagram_discovery_account_id','PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID');
     $mode=(string)($perProfile['mode']??$metrics[$prefix.'_mode']??'official_api');
-    $configured=(bool)($perProfile['enabled']??$metrics[$prefix.'_enabled']??($secret!==''));
+    if($platform==='Instagram'&&$mode==='professional_authorized'&&$accountId===''&&$discoveryAccountId!=='')$mode='business_discovery';
+    $explicitEnabled=$perProfile['enabled']??$metrics[$prefix.'_enabled']??null;
+    $configured=$secret!==''||(bool)$explicitEnabled;
+    $graphVersion=trim((string)($perProfile['graph_version']??$metrics['meta_graph_version']??$config['meta_oauth']['graph_version']??''));
+    if($graphVersion==='')$graphVersion=trim((string)(getenv('META_GRAPH_VERSION')?:'v22.0'))?:'v22.0';
     return ['configured'=>$configured,'authorized'=>$secret!=='','mode'=>$mode,'authorizationRequired'=>$configured&&$secret==='','secret'=>$secret,
-      'accountId'=>$read($prefix.'_account_id','PASS50_'.strtoupper($prefix).'_ACCOUNT_ID'),
-      'pageId'=>$read('facebook_page_id','PASS50_FACEBOOK_PAGE_ID'),
-      'discoveryAccountId'=>$read('instagram_discovery_account_id','PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID'),
+      'accountId'=>$accountId,'pageId'=>$pageId,'discoveryAccountId'=>$discoveryAccountId,
       'storiesAuthorized'=>(bool)($perProfile['stories_authorized']??$metrics[$prefix.'_stories_authorized']??false),
       'insightsAuthorized'=>(bool)($perProfile['insights_authorized']??$metrics[$prefix.'_insights_authorized']??true),
-      'graphVersion'=>trim((string)($perProfile['graph_version']??$metrics['meta_graph_version']??'v22.0'))?:'v22.0'];
+      'graphVersion'=>$graphVersion];
 }
 
 function p50_mc_public_access(string $platform,string $profileId): array {
