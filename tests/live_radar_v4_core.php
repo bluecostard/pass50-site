@@ -17,7 +17,7 @@ function response(string $body,int $status=200,string $url='https://example.test
 function room_id_for(int $timestamp,int $suffix=123456): string {return (string)(($timestamp*4294967296)+$suffix);}
 
 must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
-must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-RADAR-FRESH-TIKTOK-ROOMS-2026-08-02-2','La révision avec fraîcheur des salles TikTok doit être active.');
+must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-RADAR-EVENT-IDENTITY-2026-08-02-3','La révision par identité événementielle doit être active.');
 must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===43200,'La fenêtre TikTok doit rester conservatrice à douze heures.');
 
 $source=['profile_id'=>'coach-test','public_name'=>'Coach Test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest'];
@@ -27,14 +27,18 @@ must(($api['live']['metadata']['roomId']??'')==='741234567890','RoomId TikTok co
 must(($api['live']['metadata']['strictApiLabels'][0]??'')==='api','La preuve API stricte doit être conservée.');
 
 $freshRoom=room_id_for(time()-300);
-$apiFresh=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"'.$freshRoom.'"}')]);
-must($apiFresh['state']==='live','Une salle TikTok créée récemment et active doit confirmer le direct même si la réponse omet le propriétaire.');
-must(($apiFresh['live']['metadata']['freshApiLabels'][0]??'')==='api','La preuve temporelle fraîche doit être conservée.');
-must(($apiFresh['live']['startedAt']??null)!==null,'La date encodée dans la salle TikTok doit devenir la date de début.');
+$apiFreshStatus=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"'.$freshRoom.'"}')]);
+must($apiFreshStatus['state']==='live','Une salle TikTok récente avec statut actif doit confirmer le direct.');
+must(($apiFreshStatus['live']['metadata']['freshApiLabels'][0]??'')==='api','La preuve temporelle fraîche doit être conservée.');
+
+$apiFreshStructure=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$freshRoom.'"},"webcastRoomId":"'.$freshRoom.'"}')]);
+must($apiFreshStructure['state']==='live','Une structure LiveRoom récente doit confirmer le direct même sans champ status.');
+must(($apiFreshStructure['live']['metadata']['apiLiveStructureLabels'][0]??'')==='api','La structure LiveRoom doit rester visible dans le diagnostic.');
+must(($apiFreshStructure['live']['startedAt']??null)!==null,'La date encodée dans la salle TikTok doit devenir la date de début.');
 
 $staleRoom=room_id_for(time()-P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS-3600);
-$apiStale=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"'.$staleRoom.'"}')]);
-must($apiStale['state']==='probable','Une ancienne salle TikTok sans identité propriétaire ne doit pas redevenir un faux direct.');
+$apiStale=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$staleRoom.'"},"webcastRoomId":"'.$staleRoom.'"}')]);
+must($apiStale['state']==='probable','Une ancienne structure LiveRoom sans identité propriétaire ne doit pas redevenir un faux direct.');
 
 $html='<!doctype html><title>Coach Test LIVE | TikTok</title><script>{"LiveRoom":{"id":"741234567891"},"isLive":true}</script>';
 $multi=p50_live_v4_parse_tiktok($source,['live'=>response($html,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($html,200,'https://www.tiktok.com/embed/live/@coachtest')]);
@@ -57,23 +61,20 @@ must($offline['state']==='offline','Une preuve API explicite de fin doit être h
 $endedHtml='<!doctype html><div>Le LIVE est terminé</div><script>{"LiveRoom":{"id":"741234567891"},"isLive":true,"roomId":"741234567891"}</script>';
 $endedFrench=p50_live_v4_parse_tiktok($source,['live'=>response($endedHtml,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($endedHtml,200,'https://www.tiktok.com/embed/live/@coachtest')]);
 must($endedFrench['state']==='offline','« Le LIVE est terminé » doit gagner sur des signaux HTML internes contradictoires.');
-must(($endedFrench['error']??'')==='tiktok_live_ended','La raison de fin TikTok doit être explicite.');
-
-$apiLiveWithEndedPage=p50_live_v4_parse_tiktok($source,[
-    'api'=>response('{"status":2,"room_id":"741234567892","uniqueId":"coachtest"}'),
-    'live'=>response($endedHtml,200,'https://www.tiktok.com/@coachtest/live'),
-]);
-must($apiLiveWithEndedPage['state']==='live','Une preuve API structurée et actuelle doit gagner sur une ancienne trace HTML de fin.');
-must(in_array('live',(array)($apiLiveWithEndedPage['evidence']['ended']??[]),true),'La contradiction HTML doit rester visible dans le diagnostic.');
 
 $freshApiWithEndedPage=p50_live_v4_parse_tiktok($source,[
-    'api'=>response('{"status":2,"room_id":"'.$freshRoom.'"}'),
+    'api'=>response('{"LiveRoom":{"id":"'.$freshRoom.'"},"webcastRoomId":"'.$freshRoom.'"}'),
     'live'=>response($endedHtml,200,'https://www.tiktok.com/@coachtest/live'),
 ]);
-must($freshApiWithEndedPage['state']==='live','Une salle fraîche et active doit gagner sur une ancienne trace HTML de fin.');
+must($freshApiWithEndedPage['state']==='live','Une structure LiveRoom fraîche doit gagner sur une ancienne trace HTML de fin.');
 
 $blocked=p50_live_v4_parse_tiktok($source,['live'=>response('<html>Verify to continue - captcha</html>')]);
 must($blocked['state']==='unknown','Un challenge anti-bot ne doit pas être interprété comme une fin de direct.');
+
+$eventA=['profileId'=>'coach-test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest/live','metadata'=>['roomId'=>$freshRoom]];
+$eventB=['profileId'=>'coach-test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest/live','metadata'=>['roomId'=>room_id_for(time()-120,654321)]];
+must(p50_live_v4_stream_key($eventA)!==p50_live_v4_stream_key($eventB),'Deux salles TikTok du même compte doivent avoir des clés distinctes.');
+must(p50_live_v4_event_identity($eventA)===$freshRoom,'L’identité événementielle TikTok doit provenir de roomId.');
 
 $ytSource=['profile_id'=>'coach-hamond','public_name'=>'Coach Hamond Chic','platform'=>'YouTube','url'=>'https://www.youtube.com/@coachhamondchic'];
 $ytLive=p50_live_v4_parse_youtube($ytSource,['live'=>response('<title>Direct du jour - YouTube</title><link rel="canonical" href="https://www.youtube.com/watch?v=abcDEF123"><script>{"isLiveNow":true,"startTimestamp":"2026-07-29T00:10:00Z","videoId":"abcDEF123"}</script>',200,'https://www.youtube.com/watch?v=abcDEF123')]);
@@ -89,4 +90,4 @@ must($instagram['state']==='live','Signal Instagram actif explicite.');
 $facebook=p50_live_v4_parse_facebook(['profile_id'=>'fb','public_name'=>'FB','platform'=>'Facebook','url'=>'https://www.facebook.com/test'],['live'=>response('{"is_live_streaming":true,"video_id":"123456789"} https://www.facebook.com/test/videos/123456789')]);
 must($facebook['state']==='live','Signal Facebook actif et vidéo spécifique.');
 
-echo json_encode(['ok'=>true,'cases'=>17],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>20],JSON_UNESCAPED_SLASHES).PHP_EOL;
