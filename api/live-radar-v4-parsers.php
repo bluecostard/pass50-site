@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-TRUST-BALANCED-2026-08-03-1';
+const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-PROBE-RECOVERY-2026-08-03-1';
 const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800;
 
 function p50_live_v4_unescape(string $value): string {
@@ -119,9 +119,9 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
         $roomId='';$confirmed=false;$strictApi=false;$freshApi=false;$crossFamily=false;$bestRank=-1;$bestTotal=-1;
         foreach($roomEvidence as $candidate=>$families){
             $apiCount=count($families['api']);$htmlCount=count($families['html']);$strictCount=count($families['strictApi']);$freshCount=count($families['freshApi']);$cross=$apiCount>0&&$htmlCount>0;
-            // Trust Gate : une salle « fraîche » seule ne suffit plus — il faut une API stricte ou une preuve croisée API+HTML.
-            // Fresh API room suffit pour confirmer ; le Trust Gate public coupe les fantômes ensuite.
-            $candidateConfirmed=$strictCount>0||$cross||$freshCount>0;$rank=$strictCount>0?3:($cross?2:($freshCount>0?1:0));$total=$apiCount+$htmlCount;
+            // Fresh API, croisement API+HTML, ou 2 pages HTML sur la même salle fraîche.
+            $htmlFresh=$htmlCount>=2&&p50_live_v4_tiktok_room_is_fresh((string)$candidate);
+            $candidateConfirmed=$strictCount>0||$cross||$freshCount>0||$htmlFresh;$rank=$strictCount>0?3:($cross?2:(($freshCount>0||$htmlFresh)?1:0));$total=$apiCount+$htmlCount;
             if($rank>$bestRank||($rank===$bestRank&&$candidateConfirmed&&!$confirmed)||($rank===$bestRank&&$candidateConfirmed===$confirmed&&$total>$bestTotal)){$roomId=(string)$candidate;$strictApi=$strictCount>0;$freshApi=$freshCount>0;$crossFamily=$cross;$confirmed=$candidateConfirmed;$bestRank=$rank;$bestTotal=$total;}
         }
         if(!$confirmed&&$endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
@@ -135,6 +135,8 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
         return ['state'=>$state,'confidence'=>$confidence,'responseMs'=>$maxMs,'error'=>$state==='probable'?'tiktok_confirmation_incomplete':'','live'=>$live,'evidence'=>['positive'=>array_keys($positive),'ended'=>$endedLabels,'blocked'=>$blocked,'rooms'=>$roomEvidence,'freshRoomSeconds'=>P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS]];
     }
     if($endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>[],'rooms'=>[]]];
+    // Pages lisibles sans signal live → hors ligne. unknown réservé aux blocages / échecs réseau.
+    if($bodies)return ['state'=>'offline','error'=>'tiktok_no_live_signal','confidence'=>90,'responseMs'=>$maxMs,'evidence'=>['ended'=>[],'blocked'=>$blocked,'positive'=>[],'readable'=>array_keys($bodies)]];
     return ['state'=>'unknown','error'=>$blocked>0?'tiktok_blocked_or_challenged':($errors?implode(';',$errors):'tiktok_no_live_signal'),'confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>[],'blocked'=>$blocked,'positive'=>[]]];
 }
 
@@ -168,7 +170,8 @@ function p50_live_v4_parse_instagram(array $source,array $responses): array {
         ],'evidence'=>['positive'=>$probeLabels,'blocked'=>$blocked]];
     }
     if($offline)return ['state'=>'offline','error'=>'instagram_explicit_offline','confidence'=>96,'responseMs'=>$maxMs,'evidence'=>['blocked'=>$blocked]];
-    return ['state'=>'unknown','error'=>$blocked>0?'instagram_blocked_or_challenged':'instagram_no_public_live_signal','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['blocked'=>$blocked,'errors'=>$errors]];
+    // Profil lisible sans indicateur live → hors ligne (plus unknown).
+    return ['state'=>'offline','error'=>'instagram_no_public_live_signal','confidence'=>88,'responseMs'=>$maxMs,'evidence'=>['blocked'=>$blocked,'errors'=>$errors,'readable'=>$probeLabels]];
 }
 
 function p50_live_v4_parse_facebook(array $source,array $responses): array {
@@ -176,8 +179,9 @@ function p50_live_v4_parse_facebook(array $source,array $responses): array {
     foreach($responses as $label=>$r){
         $maxMs=max($maxMs,(int)($r['timeMs']??0));
         if(empty($r['ok'])){$errors[]=$label.':http_'.($r['status']??0);continue;}
-        $ok++;$body=p50_live_v4_unescape((string)($r['body']??''));$probe=$body."\n".(string)($r['finalUrl']??'');$bodies[$label]=$body;
+        $body=p50_live_v4_unescape((string)($r['body']??''));$probe=$body."\n".(string)($r['finalUrl']??'');
         if($body===''||p50_live_v4_block_page($probe)){$blocked++;continue;}
+        $ok++;$bodies[$label]=$body;
         $structuredActive=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live|isLive)"\s*:\s*true|"broadcast_status"\s*:\s*"(?:LIVE|ACTIVE)"/i',$probe);
         $textActive=(bool)preg_match('/\b(?:est\s+en\s+direct|en\s+direct\s+maintenant|is\s+live(?:\s+now)?|currently\s+live|live\s+now|diffusion\s+en\s+direct)\b/iu',$probe);
         $ended=(bool)preg_match('/"(?:is_live_streaming|isLiveStreaming|is_live|isLive)"\s*:\s*false|"broadcast_status"\s*:\s*"(?:VOD|ENDED|FINISHED)"|live video has ended|\bwas live\b|\bétait en direct\b|\bdirect (?:est )?termin(?:é|e)\b/iu',$probe);
@@ -209,7 +213,8 @@ function p50_live_v4_parse_facebook(array $source,array $responses): array {
     }
     if($activeWithoutVideo)return ['state'=>'probable','error'=>'facebook_active_without_specific_video','confidence'=>74,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'Facebook','title'=>trim((string)($source['public_name']??'Facebook')).' semble être en direct','url'=>$identity['liveUrl'],'thumbnail'=>'','confidence'=>74,'startedAt'=>null,'viewers'=>p50_live_v4_viewers(implode("\n",$bodies)),'metadata'=>['profileUrl'=>$identity['profileUrl'],'classification'=>'probable','probeLabels'=>$activeWithoutVideo]],'evidence'=>['positive'=>[],'ended'=>$endedLabels,'blocked'=>$blocked]];
     if($endedLabels)return ['state'=>'offline','error'=>'facebook_explicit_offline','confidence'=>96,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked]];
-    return ['state'=>'unknown','error'=>$blocked>0?'facebook_blocked_or_challenged':'facebook_no_public_live_signal','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'errors'=>$errors]];
+    if($ok>0)return ['state'=>'offline','error'=>'facebook_no_public_live_signal','confidence'=>88,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'errors'=>$errors]];
+    return ['state'=>'unknown','error'=>$blocked>0?'facebook_blocked_or_challenged':implode(';',$errors),'confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'errors'=>$errors]];
 }
 
 function p50_live_v4_parse_source(array $source,array $responses): array {

@@ -7,7 +7,7 @@ declare(strict_types=1);
  * - Anti-fantômes : unknown / offline / replay ne maintiennent PAS la liste publique
  * - Détection : ne pas exiger une reconfirmation toutes les 90s (sinon liste vide)
  */
-const P50_LIVE_V4_TRUST_REVISION = 'LIVE-TRUST-BALANCED-2026-08-03-1';
+const P50_LIVE_V4_TRUST_REVISION = 'LIVE-PROBE-RECOVERY-2026-08-03-1';
 
 /**
  * Âge max depuis la dernière confirmation live positive pour rester visible.

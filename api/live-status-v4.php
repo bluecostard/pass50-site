@@ -48,7 +48,7 @@ if($mode==='full'){
 }elseif($mode==='profile'){
     $selected=array_slice($sources,0,$batch);$cycleTotal=count($sources);
 }elseif($mode==='quick'){
-    // Trust Gate : reconfirmer d'abord tous les directs encore marqués live en base.
+    // Reconfirmer les lives actifs, mais réserver toujours des slots de découverte.
     $activeKeys=[];
     try{
         foreach(db()->query("SELECT profile_id,platform FROM p50_live_streams WHERE source IN ('automatic','meta_authorized') AND status='live'")->fetchAll() as $row){
@@ -58,7 +58,7 @@ if($mode==='full'){
     $reconfirm=[];$discovery=[];$used=[];
     foreach($sources as $source){
         $key=strtolower((string)$source['platform']).'|'.trim((string)$source['profile_id']);
-        if(isset($activeKeys[$key])||(int)($source['priority']??3)<=1){$reconfirm[]=$source;$used[(string)$source['source_key']]=true;}
+        if(isset($activeKeys[$key])){$reconfirm[]=$source;$used[(string)$source['source_key']]=true;}
         else $discovery[]=$source;
     }
     usort($reconfirm,static function(array $a,array $b): int {
@@ -71,7 +71,10 @@ if($mode==='full'){
         if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
         if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);
     });
-    $discoveryQuota=min(4,max(0,$batch-count($reconfirm)));
+    $discoveryFloor=min(6,max(4,(int)floor($batch/2)));
+    $reconfirmCap=max(0,$batch-$discoveryFloor);
+    $reconfirm=array_slice($reconfirm,0,$reconfirmCap);
+    $discoveryQuota=min($discoveryFloor,max(0,$batch-count($reconfirm)));
     $selected=array_merge($reconfirm,array_slice($discovery,0,$discoveryQuota));
     foreach($selected as $source)$used[(string)$source['source_key']]=true;
     if(count($selected)<$batch)foreach($sources as $source){$key=(string)$source['source_key'];if(isset($used[$key]))continue;$selected[]=$source;$used[$key]=true;if(count($selected)>=$batch)break;}
@@ -145,7 +148,7 @@ $healthSummary=p50_live_v4_health_summary($sources,$automatic);
 $coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;$lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
 
 json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
-    'version'=>'4.3','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
+    'version'=>'4.4','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
     'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
     'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,'coveragePercent'=>$coverage,

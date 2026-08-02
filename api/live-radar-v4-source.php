@@ -6,8 +6,8 @@ const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verif
 /** @deprecated Utiliser p50_live_v4_reconfirm_grace_map() — conservé pour compat tests/clients. */
 const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>18,'YouTube'=>25,'Instagram'=>20,'Facebook'=>20];
 const P50_LIVE_V4_CANDIDATE_TTL_MINUTES = 30;
-const P50_LIVE_V4_BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36';
-const P50_LIVE_V4_MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
+const P50_LIVE_V4_BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+const P50_LIVE_V4_MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 
 function p50_live_v4_ensure_schema(): void {
     p50_de_ensure_schema();
@@ -104,7 +104,8 @@ function p50_live_v4_youtube_live_url(string $url): string {
 function p50_live_v4_active_auto_ids(): array {
     $out=[];
     try{
-        $stmt=db()->query("SELECT profile_id,platform FROM p50_live_streams WHERE source='automatic' AND status IN ('live','unconfirmed')");
+        // Uniquement les directs live : les unconfirmed ne doivent pas saturer le quick scan.
+        $stmt=db()->query("SELECT profile_id,platform FROM p50_live_streams WHERE source='automatic' AND status='live'");
         foreach($stmt->fetchAll() as $row)$out[(string)$row['platform'].'|'.(string)$row['profile_id']]=true;
     }catch(Throwable){}
     return $out;
@@ -183,13 +184,20 @@ function p50_live_v4_probe_requests(array $source): array {
     }
     if($platform==='TikTok'&&$identity['handle']!==''){
         $handle=rawurlencode($identity['handle']);
+        $tiktokApiHeaders=[
+            'Referer: '.$identity['profileUrl'],
+            'Origin: https://www.tiktok.com',
+            'Sec-Fetch-Dest: empty',
+            'Sec-Fetch-Mode: cors',
+            'Sec-Fetch-Site: same-origin',
+        ];
         return [
-            'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],
-            'api_basic'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*'],
-            'mobile_live'=>['url'=>'https://m.tiktok.com/@'.$handle.'/live','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-            'live'=>['url'=>$identity['liveUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-            'embed'=>['url'=>'https://www.tiktok.com/embed/live/@'.$handle.'?autoplay=0&muted=1&controls=1&embed_domain=pass50.store','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-            'profile'=>['url'=>$identity['profileUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*','headers'=>$tiktokApiHeaders],
+            'api_basic'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*','headers'=>$tiktokApiHeaders],
+            'mobile_live'=>['url'=>'https://m.tiktok.com/@'.$handle.'/live','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','userAgent'=>P50_LIVE_V4_MOBILE_UA,'headers'=>['Referer: https://www.tiktok.com/']],
+            'live'=>['url'=>$identity['liveUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','headers'=>['Referer: '.$identity['profileUrl']]],
+            'embed'=>['url'=>'https://www.tiktok.com/embed/live/@'.$handle.'?autoplay=0&muted=1&controls=1&embed_domain=pass50.store','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','headers'=>['Referer: https://www.tiktok.com/']],
+            'profile'=>['url'=>$identity['profileUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','headers'=>['Referer: https://www.tiktok.com/']],
         ];
     }
     if($platform==='Instagram'&&$identity['handle']!==''){
@@ -223,42 +231,122 @@ function p50_live_v4_probe_requests(array $source): array {
     return [];
 }
 
-function p50_live_v4_parallel_fetch(array $jobs,int $timeout=7): array {
+function p50_live_v4_platform_referer(string $url): array {
+    $host=strtolower((string)(parse_url($url,PHP_URL_HOST)?:''));
+    if(str_contains($host,'tiktok.com'))return ['referer'=>'https://www.tiktok.com/','origin'=>'https://www.tiktok.com'];
+    if(str_contains($host,'instagram.com'))return ['referer'=>'https://www.instagram.com/','origin'=>'https://www.instagram.com'];
+    if(str_contains($host,'facebook.com'))return ['referer'=>'https://www.facebook.com/','origin'=>'https://www.facebook.com'];
+    if(str_contains($host,'youtube.com')||str_contains($host,'youtu.be'))return ['referer'=>'https://www.youtube.com/','origin'=>'https://www.youtube.com'];
+    return ['referer'=>'https://www.google.com/','origin'=>''];
+}
+
+function p50_live_v4_parallel_fetch(array $jobs,int $timeout=8): array {
     if(!$jobs)return [];
     $multi=curl_multi_init();$handles=[];$results=[];
     if(defined('CURLMOPT_MAX_TOTAL_CONNECTIONS'))@curl_multi_setopt($multi,CURLMOPT_MAX_TOTAL_CONNECTIONS,20);
     foreach($jobs as $jobId=>$job){
         $url=(string)$job['url'];
         if(!p50_public_http_url($url)){$results[$jobId]=['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'error'=>'invalid_url','timeMs'=>0];continue;}
+        $accept=(string)($job['accept']??'text/html,*/*;q=0.7');
+        $isJson=stripos($accept,'application/json')!==false;
+        $site=p50_live_v4_platform_referer($url);
         $headers=[
-            'Accept: '.(string)($job['accept']??'text/html,*/*;q=0.7'),
-            'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7',
+            'Accept: '.$accept,
+            'Accept-Language: fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
             'Cache-Control: no-cache','Pragma: no-cache','DNT: 1',
-            'Referer: https://www.google.com/',
+            'Referer: '.$site['referer'],
+            'sec-ch-ua: "Chromium";v="126", "Google Chrome";v="126", "Not.A/Brand";v="99"',
+            'sec-ch-ua-mobile: ?0',
+            'sec-ch-ua-platform: "Windows"',
+            'Sec-Fetch-Dest: '.($isJson?'empty':'document'),
+            'Sec-Fetch-Mode: '.($isJson?'cors':'navigate'),
+            'Sec-Fetch-Site: '.($isJson?'same-origin':'none'),
+            'Upgrade-Insecure-Requests: 1',
         ];
+        if($site['origin']!==''&&$isJson)$headers[]='Origin: '.$site['origin'];
         if(!empty($job['headers'])&&is_array($job['headers'])){
             foreach($job['headers'] as $header){
                 $header=trim((string)$header);
                 if($header==='')continue;
-                if(stripos($header,'Referer:')===0||stripos($header,'Accept:')===0){
-                    $headers=array_values(array_filter($headers,static fn($existing)=>stripos($existing,strtok($header,':').':')!==0));
+                $name=strtok($header,':');
+                if($name!==false){
+                    $headers=array_values(array_filter($headers,static fn($existing)=>stripos($existing,$name.':')!==0));
                 }
                 $headers[]=$header;
             }
         }
         $ch=curl_init($url);
         curl_setopt_array($ch,[
-            CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>$timeout,CURLOPT_CONNECTTIMEOUT=>min(3,$timeout),CURLOPT_ENCODING=>'',
+            CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>$timeout,CURLOPT_CONNECTTIMEOUT=>min(4,$timeout),CURLOPT_ENCODING=>'',
             CURLOPT_USERAGENT=>(string)($job['userAgent']??P50_LIVE_V4_BROWSER_UA),
             CURLOPT_HTTPHEADER=>$headers,
             CURLOPT_HEADER=>false,
+        ]);
+        $handles[(int)$ch]=['handle'=>$ch,'id'=>$jobId,'url'=>$url,'job'=>$job];curl_multi_add_handle($multi,$ch);
+    }
+    do{$status=curl_multi_exec($multi,$active);if($active)curl_multi_select($multi,0.35);}while($active&&$status===CURLM_OK);
+    $retryJobs=[];
+    foreach($handles as $item){
+        $ch=$item['handle'];$body=curl_multi_getcontent($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+        $ok=is_string($body)&&$http>=200&&$http<400;$text=is_string($body)?$body:'';
+        $blocked=$ok&&$text!==''&&function_exists('p50_live_v4_block_page')&&p50_live_v4_block_page($text);
+        $results[$item['id']]=['ok'=>$ok&&!$blocked,'status'=>$http,'body'=>$blocked?'':$text,'finalUrl'=>(string)(curl_getinfo($ch,CURLINFO_EFFECTIVE_URL)?:$item['url']),'error'=>$blocked?'blocked_or_challenged':curl_error($ch),'timeMs'=>(int)round(((float)curl_getinfo($ch,CURLINFO_TOTAL_TIME))*1000)];
+        if((!$ok||$blocked)&&empty($item['job']['userAgent'])){
+            $retry=$item['job'];$retry['userAgent']=P50_LIVE_V4_MOBILE_UA;$retryJobs[$item['id']]=$retry;
+        }
+        curl_multi_remove_handle($multi,$ch);curl_close($ch);
+    }
+    curl_multi_close($multi);
+    if($retryJobs){
+        foreach(p50_live_v4_parallel_fetch_once($retryJobs,$timeout) as $id=>$retryResult){
+            if(!empty($retryResult['ok'])&&(string)($retryResult['body']??'')!=='')$results[$id]=$retryResult;
+        }
+    }
+    return $results;
+}
+
+/** Une seule passe curl (sans retry) — utilisée par le retry mobile. */
+function p50_live_v4_parallel_fetch_once(array $jobs,int $timeout=8): array {
+    if(!$jobs)return [];
+    $multi=curl_multi_init();$handles=[];$results=[];
+    foreach($jobs as $jobId=>$job){
+        $url=(string)$job['url'];
+        if(!p50_public_http_url($url)){$results[$jobId]=['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'error'=>'invalid_url','timeMs'=>0];continue;}
+        $accept=(string)($job['accept']??'text/html,*/*;q=0.7');
+        $isJson=stripos($accept,'application/json')!==false;
+        $site=p50_live_v4_platform_referer($url);
+        $headers=[
+            'Accept: '.$accept,
+            'Accept-Language: fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Cache-Control: no-cache','Pragma: no-cache','DNT: 1',
+            'Referer: '.$site['referer'],
+            'Sec-Fetch-Dest: '.($isJson?'empty':'document'),
+            'Sec-Fetch-Mode: '.($isJson?'cors':'navigate'),
+            'Sec-Fetch-Site: '.($isJson?'same-origin':'none'),
+        ];
+        if($site['origin']!==''&&$isJson)$headers[]='Origin: '.$site['origin'];
+        if(!empty($job['headers'])&&is_array($job['headers'])){
+            foreach($job['headers'] as $header){
+                $header=trim((string)$header);if($header==='')continue;
+                $name=strtok($header,':');
+                if($name!==false)$headers=array_values(array_filter($headers,static fn($existing)=>stripos($existing,$name.':')!==0));
+                $headers[]=$header;
+            }
+        }
+        $ch=curl_init($url);
+        curl_setopt_array($ch,[
+            CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>$timeout,CURLOPT_CONNECTTIMEOUT=>min(4,$timeout),CURLOPT_ENCODING=>'',
+            CURLOPT_USERAGENT=>(string)($job['userAgent']??P50_LIVE_V4_MOBILE_UA),
+            CURLOPT_HTTPHEADER=>$headers,CURLOPT_HEADER=>false,
         ]);
         $handles[(int)$ch]=['handle'=>$ch,'id'=>$jobId,'url'=>$url];curl_multi_add_handle($multi,$ch);
     }
     do{$status=curl_multi_exec($multi,$active);if($active)curl_multi_select($multi,0.35);}while($active&&$status===CURLM_OK);
     foreach($handles as $item){
         $ch=$item['handle'];$body=curl_multi_getcontent($ch);$http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
-        $results[$item['id']]=['ok'=>is_string($body)&&$http>=200&&$http<400,'status'=>$http,'body'=>is_string($body)?$body:'','finalUrl'=>(string)(curl_getinfo($ch,CURLINFO_EFFECTIVE_URL)?:$item['url']),'error'=>curl_error($ch),'timeMs'=>(int)round(((float)curl_getinfo($ch,CURLINFO_TOTAL_TIME))*1000)];
+        $ok=is_string($body)&&$http>=200&&$http<400;$text=is_string($body)?$body:'';
+        $blocked=$ok&&$text!==''&&function_exists('p50_live_v4_block_page')&&p50_live_v4_block_page($text);
+        $results[$item['id']]=['ok'=>$ok&&!$blocked,'status'=>$http,'body'=>$blocked?'':$text,'finalUrl'=>(string)(curl_getinfo($ch,CURLINFO_EFFECTIVE_URL)?:$item['url']),'error'=>$blocked?'blocked_or_challenged':curl_error($ch),'timeMs'=>(int)round(((float)curl_getinfo($ch,CURLINFO_TOTAL_TIME))*1000)];
         curl_multi_remove_handle($multi,$ch);curl_close($ch);
     }
     curl_multi_close($multi);return $results;
