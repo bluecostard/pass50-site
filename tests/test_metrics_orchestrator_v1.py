@@ -133,7 +133,9 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
                     "p1_min_freshness_minutes", "p2_min_freshness_minutes",
                     "worker_lock_timeout_minutes"):
             self.assertIn(key, CONFIG)
-        self.assertIn("'orchestrator_enabled' => false", CONFIG)
+        self.assertIn("orchestrator_enabled", CONFIG)
+        self.assertIn("PASS50_METRICS_ORCHESTRATOR_ENABLED", CONFIG)
+        self.assertIn("'false'", CONFIG)
 
     def test_workflows_are_bounded_and_do_not_publish(self):
         expected = {

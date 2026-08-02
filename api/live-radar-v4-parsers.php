@@ -124,7 +124,8 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
             $candidateConfirmed=$strictCount>0||$cross||$freshCount>0||$htmlFresh;$rank=$strictCount>0?3:($cross?2:(($freshCount>0||$htmlFresh)?1:0));$total=$apiCount+$htmlCount;
             if($rank>$bestRank||($rank===$bestRank&&$candidateConfirmed&&!$confirmed)||($rank===$bestRank&&$candidateConfirmed===$confirmed&&$total>$bestTotal)){$roomId=(string)$candidate;$strictApi=$strictCount>0;$freshApi=$freshCount>0;$crossFamily=$cross;$confirmed=$candidateConfirmed;$bestRank=$rank;$bestTotal=$total;}
         }
-        if(!$confirmed&&$endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
+        // Page « LIVE terminé » gagne sauf preuve API stricte propriétaire.
+        if($endedLabels&&!$strictApi)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
         $state=$confirmed?'live':'probable';$confidence=$strictApi?99:($crossFamily?98:($freshApi?76:72));
         $best='';$bestUrl=$identity['liveUrl'];foreach(['live','mobile_live','embed','profile','api','api_basic'] as $label)if(!empty($bodies[$label])){$best=$bodies[$label];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}
         $meta=p50_page_metadata($best,$bestUrl);$title=trim((string)($meta['title']??''));$title=preg_replace('/\s*\|\s*TikTok\s*$/iu','',$title)??$title;
