@@ -10,6 +10,8 @@ header('Cache-Control: no-store, max-age=0');
 json_response([
     'ok'=>true,
     'contract'=>P50_LIVE_V4_LOGIC_REVISION,
-    'radarVersion'=>'4.1',
+    'trustGate'=>P50_LIVE_V4_TRUST_REVISION,
+    'radarVersion'=>'4.2',
+    'publicMaxAgeSeconds'=>p50_live_v4_trust_seconds_map(),
     'publicStateWrites'=>0,
 ]);

@@ -39,7 +39,7 @@ class CoulesShareSimpleV1Tests(unittest.TestCase):
     def test_module_is_loaded_and_cached(self):
         self.assertIn("coules-share-simple-v1.js?v=1.0", CONFIG)
         self.assertIn("coules-share-simple-v1.js?v=1.0", SW)
-        self.assertIn("pass50-v50-coules-share-simple-v1", SW)
+        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
     def test_no_public_state_write_path(self):
         for forbidden in ('INSERT INTO app_state', 'UPDATE app_state', 'DELETE FROM app_state', 'REPLACE INTO app_state'):

@@ -47,24 +47,25 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("!$currentApiActive", parser)
         self.assertIn('Le LIVE est terminé', CORE_TESTS)
         self.assertIn('ancienne trace HTML de fin', CORE_TESTS)
-        self.assertIn('structure LiveRoom fraîche', CORE_TESTS)
+        self.assertIn('Trust Gate', CORE_TESTS)
         self.assertIn("['state']==='live'", CORE_TESTS)
 
-    def test_unknown_block_preserves_confirmed_live(self):
-        self.assertIn('continuityPreserved', ENDPOINT)
+    def test_unknown_block_hides_public_live(self):
+        self.assertIn("'continuityPreserved'=>false", ENDPOINT)
         self.assertIn("status='unconfirmed'", STORAGE)
         self.assertIn('latest_probe_offline', STORAGE)
         self.assertIn("h.last_state IN ('offline','replay')", STORAGE)
-        self.assertIn("h.last_state='unknown'", STORAGE)
+        self.assertIn("h.last_state='live'", STORAGE)
+        self.assertNotIn("h.last_state='unknown'", STORAGE)
 
-    def test_public_live_uses_platform_grace_windows(self):
+    def test_public_live_uses_trust_gate_windows(self):
         active = re.search(r'function p50_live_v4_active_rows\(.*?\n}', STORAGE, re.S).group(0)
         self.assertNotIn("$platform==='TikTok'?2", active)
         self.assertIn("h.last_state='live'", active)
-        self.assertIn("h.last_state='unknown'", active)
+        self.assertIn('INTERVAL {$seconds} SECOND', active)
         self.assertIn("'lastConfirmedAt'=>p50_live_v4_iso($row['last_seen_at']", active)
         self.assertIn('confirmation_grace_expired', active)
-        self.assertIn("'graceMinutes'=>P50_LIVE_V4_GRACE_MINUTES", ENDPOINT)
+        self.assertIn("'trustSeconds'=>p50_live_v4_trust_seconds_map()", ENDPOINT)
 
     def test_dismissed_stream_never_returns(self):
         self.assertIn('p50_live_dismissals', STORAGE)
@@ -95,19 +96,20 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertNotIn("$stateValue==='probable'&&!empty($result['live'])){\n                p50_live_v4_store_live", ENDPOINT)
 
     def test_quick_scan_reserves_discovery_capacity(self):
-        self.assertIn('$discoveryQuota=min(4,$batch)', ENDPOINT)
-        self.assertIn("(int)($source['priority']??3)>=2", ENDPOINT)
+        self.assertIn('$discoveryQuota=min(4,max(0,$batch-count($reconfirm)))', ENDPOINT)
+        self.assertIn('$reconfirm', ENDPOINT)
         self.assertIn("'discoveryQuota'=>$discoveryQuota", ENDPOINT)
         self.assertIn("['TikTok'=>0,'Facebook'=>1,'YouTube'=>2,'Instagram'=>3]", ENDPOINT)
         self.assertIn("$_GET['batch']??14", ENDPOINT)
 
     def test_client_is_compatibly_loaded_but_uses_v4(self):
-        self.assertIn("live-radar-v3.js?v=1.4", CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.5", CONFIG)
         self.assertIn("const ENDPOINT='./api/live-status-v4.php'", CLIENT)
         self.assertIn('RADAR LIVE V4', CLIENT)
-        self.assertIn('TikTok:20', CLIENT)
+        self.assertIn('TikTok:90', CLIENT)
         self.assertIn('PASS50_LIVE_EXPERIENCE_VERSION', EXPERIENCE)
-        self.assertIn('live-experience-v4-1.js?v=1.2', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
+        self.assertIn('live-trust-gate-v1.js?v=1.1', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
+        self.assertIn('live-experience-v4-1.js?v=1.3', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
 
     def test_server_sweep_uses_v4(self):
         self.assertIn('*/5 * * * *', SWEEP)

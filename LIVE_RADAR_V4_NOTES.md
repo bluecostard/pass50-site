@@ -25,10 +25,16 @@ Cette version stabilise la chaîne de données LIVE sans modifier le classement 
 - une date de fin explicite classe le contenu en replay ;
 - l’ID de la vidéo et l’URL exacte sont conservés.
 
-## Continuité
+## Trust Gate (anti lives terminés)
 
-La fenêtre de grâce est de 20 minutes pour TikTok et de 15 minutes pour YouTube, Instagram et Facebook. Elle couvre l’intervalle entre deux balayages serveur sans maintenir indéfiniment un faux direct.
+Module dédié `api/live-radar-v4-trust.php` + `live-trust-gate-v1.js`.
 
-Un blocage temporaire (`unknown`) ne retire pas un LIVE déjà confirmé tant que la grâce n’est pas expirée. Seuls un offline/replay explicite ou l’expiration de la grâce retirent le direct public.
+Publication publique uniquement si :
+- la dernière sonde est explicitement `live` ;
+- la confirmation a moins de **90 s** (TikTok), **120 s** (Instagram/Facebook) ou **240 s** (YouTube).
 
-Le balayage complet tourne toutes les 5 minutes ; un balayage rapide serveur tourne toutes les 2 minutes pour reconfirmer les directs actifs et découvrir de nouvelles sources.
+Un blocage `unknown` **ne maintient plus** le LIVE dans la liste publique. Le serveur peut encore retester pendant une grâce courte (8–15 min), mais l’utilisateur ne voit que des directs frais.
+
+TikTok : une salle « fraîche » seule ne publie plus — il faut une API stricte ou une preuve croisée API+HTML.
+
+Au clic sur **Regarder**, le client revérifie le profil avant d’ouvrir ; si le direct est mort, il est retiré immédiatement.
