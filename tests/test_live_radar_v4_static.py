@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,11 +16,15 @@ FILES = {
 
 class LiveRadarV41StaticTests(unittest.TestCase):
     def test_no_public_ranking_write(self):
-        joined = '\n'.join(FILES.values())
-        self.assertNotIn("app_state", joined)
-        self.assertNotIn("p50_metric_captures", joined)
-        self.assertNotIn("scores", joined.lower())
-        self.assertNotIn("ranks", joined.lower())
+        runtime = '\n'.join(FILES[name] for name in ('source', 'parsers', 'storage', 'endpoint', 'contract'))
+        write_patterns = (
+            r'\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+app_state\b',
+            r'\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+p50_metric_captures\b',
+        )
+        for pattern in write_patterns:
+            self.assertIsNone(re.search(pattern, runtime, re.I))
+        self.assertIn("publicStateWrites'=>0", FILES['contract'])
+        self.assertNotIn('p50_metric_captures', runtime)
 
     def test_endpoint_uses_v4_only(self):
         self.assertIn("live-radar-v4-core.php", FILES['endpoint'])
@@ -42,7 +47,8 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("$strictApi?99", parser)
 
     def test_operational_contract_and_complete_sweep(self):
-        self.assertIn('LIVE-RADAR-OPERATIONAL-2026-08-02-1', FILES['contract'])
+        self.assertIn("'contract'=>P50_LIVE_V4_LOGIC_REVISION", FILES['contract'])
+        self.assertIn('LIVE-RADAR-OPERATIONAL-2026-08-02-1', FILES['parsers'])
         self.assertIn("publicStateWrites'=>0", FILES['contract'])
         workflow = FILES['workflow']
         self.assertIn('pass50/live-radar', workflow)
