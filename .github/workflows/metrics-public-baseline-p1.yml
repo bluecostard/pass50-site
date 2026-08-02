@@ -10,6 +10,8 @@ on:
     paths:
       - 'api/metrics-public-baseline-core.php'
       - 'api/metrics-public-baseline-cron.php'
+      - 'api/metrics-social-collectors-core.php'
+      - 'api/metrics-collector-readiness-core.php'
       - '.github/workflows/metrics-public-baseline-p1.yml'
 
 permissions:
@@ -51,8 +53,8 @@ jobs:
               -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
               --data "$body" "$BASELINE_URL")"; curl_status=$?
             set -e
-            if [ "$curl_status" -eq 0 ] && [ "$code" = "200" ] && jq -e '.contract == "PUBLIC-BASELINE-P1-V1.1" and .readOnly == true and .publicStateWrites == 0' baseline-probe.json >/dev/null 2>&1; then deployed=true; break; fi
-            echo "Contrat PUBLIC-BASELINE-P1-V1.1 en attente, tentative $attempt/30 (HTTP ${code:-000})."
+            if [ "$curl_status" -eq 0 ] && [ "$code" = "200" ] && jq -e '.contract == "PUBLIC-BASELINE-P1-V1.2" and .readOnly == true and .publicStateWrites == 0' baseline-probe.json >/dev/null 2>&1; then deployed=true; break; fi
+            echo "Contrat PUBLIC-BASELINE-P1-V1.2 en attente, tentative $attempt/30 (HTTP ${code:-000})."
             sleep 20
           done
           if [ "$deployed" != "true" ]; then echo "::error::Contrat de couverture P1 non déployé."; cat baseline-probe.json 2>/dev/null || true; exit 1; fi
@@ -74,7 +76,7 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 55 \
             -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
             --data "$body" "$BASELINE_URL" > public-baseline-result.json
-          jq -e '.ok == true and .version == "PUBLIC-BASELINE-P1-V1.1" and .publicStateWrites == 0' public-baseline-result.json >/dev/null
+          jq -e '.ok == true and .version == "PUBLIC-BASELINE-P1-V1.2" and .publicStateWrites == 0' public-baseline-result.json >/dev/null
           public_profiles="$(jq -r '.summary.publicProfiles // 0' public-baseline-result.json)"
           eligible_profiles="$(jq -r '.summary.eligibleProfiles // 0' public-baseline-result.json)"
           missing_sources="$(jq -r '.summary.publicProfilesWithoutVerifiedSources | length' public-baseline-result.json)"

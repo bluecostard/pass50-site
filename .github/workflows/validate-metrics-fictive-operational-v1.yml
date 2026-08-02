@@ -1,0 +1,33 @@
+name: Validate Metrics Fictive Operational V1
+
+on:
+  pull_request:
+    paths:
+      - 'api/metrics-ranking-fictive.php'
+      - 'api/metrics-collector-readiness*.php'
+      - 'api/metrics-social-collectors-core.php'
+      - 'api/metrics-public-baseline-core.php'
+      - 'api/config.example.php'
+      - 'classement-fictif.html'
+      - 'tests/test_metrics_fictive_operational_v1.py'
+      - '.github/workflows/validate-metrics-fictive-operational-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP syntax
+        run: |
+          php -l api/metrics-ranking-fictive.php
+          php -l api/metrics-collector-readiness-core.php
+          php -l api/metrics-collector-readiness.php
+          php -l api/metrics-social-collectors-core.php
+          php -l api/metrics-public-baseline-core.php
+          php -l api/config.example.php
+      - name: Static contract tests
+        run: python -m pytest -q tests/test_metrics_fictive_operational_v1.py

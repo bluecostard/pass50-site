@@ -31,72 +31,56 @@ return [
         'client_id' => getenv('GOOGLE_CLIENT_ID') ?: '',
         'client_secret' => getenv('GOOGLE_CLIENT_SECRET') ?: '',
         'redirect_uri' => getenv('GOOGLE_REDIRECT_URI') ?: 'https://www.pass50.store/api/youtube-oauth-callback.php',
-        // Clé de 32 octets encodée en base64, utilisée pour chiffrer les jetons OAuth en base.
         'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
     ],
     'meta_oauth' => [
-        // Application Business Meta. Ne jamais écrire App Secret, Configuration ID ou jetons dans GitHub.
         'app_id' => getenv('META_APP_ID') ?: '',
         'app_secret' => getenv('META_APP_SECRET') ?: '',
-        // ID de la configuration créée dans Facebook Login for Business.
         'configuration_id' => getenv('META_CONFIGURATION_ID') ?: '',
         'redirect_uri' => getenv('META_REDIRECT_URI') ?: 'https://www.pass50.store/api/meta-oauth-callback.php',
-        // Utiliser la version Graph API affichée dans le tableau de bord de l’application Meta.
-        'graph_version' => getenv('META_GRAPH_VERSION') ?: '',
-        // Peut réutiliser la même clé de chiffrement de 32 octets que YouTube.
+        'graph_version' => getenv('META_GRAPH_VERSION') ?: 'v22.0',
         'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
     ],
     'tiktok_oauth' => [
-        // Utiliser d’abord les identifiants du Bac à sable. Ne jamais écrire le secret dans GitHub.
         'client_key' => getenv('TIKTOK_CLIENT_KEY') ?: '',
         'client_secret' => getenv('TIKTOK_CLIENT_SECRET') ?: '',
         'redirect_uri' => getenv('TIKTOK_REDIRECT_URI') ?: 'https://www.pass50.store/api/tiktok-oauth-callback.php',
         'environment' => getenv('TIKTOK_ENVIRONMENT') ?: 'sandbox',
-        // Peut réutiliser la même clé de chiffrement AES-256-GCM que YouTube et Meta.
         'token_encryption_key' => getenv('PASS50_TOKEN_ENCRYPTION_KEY') ?: '',
     ],
     'data_engine' => [
-        // Politique actuelle : collecter et publier les données à partir de 80 % de confiance.
         'confidence_threshold' => 80,
-        // Facultatif : ajoutez une valeur longue et aléatoire avant d'activer un cron externe.
         'cron_token' => '',
-        // Collecte élargie : davantage de profils traités à chaque passage.
         'batch_size' => 8,
-        // V22 : lancer data-cron.php?action=priority16 une fois la nuit, puis cycle toutes les 15 minutes.
         'priority_wave_size' => 20,
-        // Radar LIVE : davantage de comptes contrôlés à chaque passage.
         'live_batch_size' => 12,
-        // Intervalle minimum entre deux passages du radar public.
         'live_refresh_seconds' => 50,
-        // Sécurité : un live automatique non revu depuis ce délai est retiré.
         'live_stale_minutes' => 45,
-        // Jeton du contrôle LIVE, uniquement dans api/config.php sur le serveur.
         'live_admin_token' => '',
     ],
     'metrics' => [
-        // À renseigner uniquement dans api/config.php sur le serveur IONOS.
-        'PASS50_YOUTUBE_API_KEY' => '',
-        // Facultatif : réservé au connecteur officiel X déjà présent dans metrics-core.php.
+        // Secrets exclusivement dans api/config.php ou l’environnement du serveur.
+        'PASS50_YOUTUBE_API_KEY' => getenv('PASS50_YOUTUBE_API_KEY') ?: '',
         'x_bearer_token' => getenv('PASS50_X_BEARER_TOKEN') ?: '',
-        // Collecteurs sociaux canoniques V1 : secrets exclusivement côté serveur.
-        'tiktok_mode' => 'none', // none, authorized_display ou approved_research
+        'tiktok_mode' => getenv('PASS50_TIKTOK_MODE') ?: 'none', // none, authorized_display, approved_research
         'tiktok_access_token' => getenv('PASS50_TIKTOK_ACCESS_TOKEN') ?: '',
         'tiktok_research_token' => getenv('PASS50_TIKTOK_RESEARCH_TOKEN') ?: '',
-        'tiktok_research_approved' => false,
-        'instagram_enabled' => false,
-        'instagram_mode' => 'professional_authorized',
+        'tiktok_research_approved' => filter_var(getenv('PASS50_TIKTOK_RESEARCH_APPROVED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        // Un jeton présent rend le collecteur statique opérationnel même si le drapeau est resté false.
+        'instagram_enabled' => filter_var(getenv('PASS50_INSTAGRAM_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        'instagram_mode' => getenv('PASS50_INSTAGRAM_MODE') ?: (getenv('PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID') ? 'business_discovery' : 'professional_authorized'),
         'instagram_access_token' => getenv('PASS50_INSTAGRAM_ACCESS_TOKEN') ?: '',
         'instagram_account_id' => getenv('PASS50_INSTAGRAM_ACCOUNT_ID') ?: '',
         'instagram_discovery_account_id' => getenv('PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID') ?: '',
-        'facebook_enabled' => false,
-        'facebook_mode' => 'page_authorized',
+        'facebook_enabled' => filter_var(getenv('PASS50_FACEBOOK_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        'facebook_mode' => getenv('PASS50_FACEBOOK_MODE') ?: 'page_authorized',
         'facebook_access_token' => getenv('PASS50_FACEBOOK_ACCESS_TOKEN') ?: '',
         'facebook_page_id' => getenv('PASS50_FACEBOOK_PAGE_ID') ?: '',
+        'meta_graph_version' => getenv('META_GRAPH_VERSION') ?: 'v22.0',
         'snapchat_enabled' => false,
         'snapchat_mode' => 'public_profile_api',
         'snapchat_access_token' => getenv('PASS50_SNAPCHAT_ACCESS_TOKEN') ?: '',
         'snapchat_stories_authorized' => false,
-        // Orchestrateur PR5 : activation explicite après configuration d'un secret d'au moins 32 caractères.
         'cron_secret' => getenv('PASS50_METRICS_CRON_SECRET') ?: '',
         'orchestrator_enabled' => false,
         'p0_max_profiles' => 20,
