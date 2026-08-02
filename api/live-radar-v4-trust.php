@@ -7,7 +7,26 @@ declare(strict_types=1);
  * - Anti-fantômes : unknown / offline / replay ne maintiennent PAS la liste publique
  * - Détection : ne pas exiger une reconfirmation toutes les 90s (sinon liste vide)
  */
-const P50_LIVE_V4_TRUST_REVISION = 'LIVE-PROBE-RECOVERY-2026-08-03-1';
+const P50_LIVE_V4_TRUST_REVISION = 'LIVE-PUBLISH-UTC-2026-08-03-1';
+
+/** Parse une datetime MySQL/ISO en timestamp Unix (UTC). */
+function p50_live_v4_parse_utc(?string $value): ?int {
+    $value = trim((string)$value);
+    if ($value === '') return null;
+    if (preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/', $value)) {
+        try {
+            return (new DateTimeImmutable(str_replace(' ', 'T', $value), new DateTimeZone('UTC')))->getTimestamp();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+    try {
+        return (new DateTimeImmutable($value))->getTimestamp();
+    } catch (Throwable) {
+        $ts = strtotime($value);
+        return $ts === false ? null : $ts;
+    }
+}
 
 /**
  * Âge max depuis la dernière confirmation live positive pour rester visible.
@@ -52,9 +71,8 @@ function p50_live_v4_is_publicly_fresh(array $row, ?int $now = null): bool {
     $status = (string)($row['status'] ?? '');
     if ($status !== 'live') return false;
 
-    $seenRaw = (string)($row['last_seen_at'] ?? $row['lastSeenAt'] ?? '');
-    $seen = $seenRaw !== '' ? strtotime($seenRaw) : false;
-    if ($seen === false) return false;
+    $seen = p50_live_v4_parse_utc((string)($row['last_seen_at'] ?? $row['lastSeenAt'] ?? ''));
+    if ($seen === null) return false;
 
     if ($source === 'meta_authorized') {
         return ($now - $seen) <= 20 * 60;

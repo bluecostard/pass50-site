@@ -71,6 +71,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('p50_live_dismissals', STORAGE)
         self.assertIn('p50_live_v4_is_dismissed', STORAGE)
         self.assertIn('p50_live_v4_event_identity', STORAGE)
+        self.assertIn('INTERVAL 24 HOUR', STORAGE)
         self.assertIn('LEFT JOIN p50_live_dismissals', STORAGE)
         self.assertIn('d.stream_key IS NULL', STORAGE)
 

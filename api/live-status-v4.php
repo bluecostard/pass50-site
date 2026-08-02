@@ -98,7 +98,7 @@ if($canScan&&$selected&&$lock){
             $platformStats[$platform]['scanned']++;
             $health=p50_live_v4_health_update($source,$result);
             if($stateValue==='live'&&!empty($result['live'])){
-                p50_live_v4_store_live($result['live']);$foundThisPass++;$platformStats[$platform]['found']++;
+                if(p50_live_v4_store_live($result['live'])){$foundThisPass++;$platformStats[$platform]['found']++;}
             }elseif($stateValue==='probable'&&!empty($result['live'])){
                 p50_live_v4_store_candidate($result['live'],(string)($result['error']??'probable'));$candidatesThisPass++;$platformStats[$platform]['candidates']++;
             }elseif($stateValue==='replay'){
@@ -148,7 +148,7 @@ $healthSummary=p50_live_v4_health_summary($sources,$automatic);
 $coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;$lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
 
 json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
-    'version'=>'4.4','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
+    'version'=>'4.5','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
     'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
     'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,'coveragePercent'=>$coverage,

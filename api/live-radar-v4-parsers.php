@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-PROBE-RECOVERY-2026-08-03-1';
+const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-PUBLISH-UTC-2026-08-03-1';
 const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800;
 
 function p50_live_v4_unescape(string $value): string {
