@@ -125,8 +125,8 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
     def test_admin_lab_is_isolated_from_public_ranking(self):
         self.assertIn("['rankinglab','Classement expérimental']", UI)
         self.assertLess(UI.index("['rankinglab','Classement expérimental']"), UI.index("['ranking','Classement']"))
-        self.assertIn("CLASSEMENT MÉTRIQUE EXPÉRIMENTAL", UI)
-        self.assertIn("Ce calcul n’a aucun effet sur le classement public.", UI)
+        self.assertIn("CLASSEMENT MÉTRIQUE MR‑V1.0", UI)
+        self.assertIn("Publier vers le classement public", UI)
         public_rank = UI[UI.index("function dePublicRank"):UI.index("function deDrawRankingLab")]
         self.assertIn("function dePublicRank(profileId,period)", public_rank)
         self.assertIn("profile.scores?.[period]", public_rank)
@@ -135,8 +135,8 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertNotIn("ui.period", public_rank)
         self.assertNotIn("ui.period=", public_rank)
         self.assertIn("dePublicRank(row.profileId,DE.rankingLabPeriod)", UI)
-        block = UI[UI.index("function deDrawRankingLab"):UI.index("async function deCalculateRankingLab")]
-        self.assertNotIn(">Publier<", block)
+        self.assertIn("dePublishRankingLab", UI)
+        self.assertIn("metrics-ranking-publication-apply.php", UI)
 
     def test_read_aggregates_all_profiles_before_limiting_rows(self):
         read = self._function("p50_mr_read")
@@ -148,9 +148,9 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$limit=max(1,min(200,$limit))", read)
 
     def test_cache_and_workflow_versions(self):
-        self.assertIn("data-engine-ui.js?v=18.2", TOOLS)
+        self.assertIn("data-engine-ui.js?v=18.3", TOOLS)
         self.assertIn("data-engine-ui.css?v=27.0", TOOLS)
-        self.assertIn("data-engine-ui.js?v=18.2", SW)
+        self.assertIn("data-engine-ui.js?v=18.3", SW)
         self.assertIn("data-engine-ui.css?v=27.0", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
         self.assertIn("mariadb:11.4", WORKFLOW)

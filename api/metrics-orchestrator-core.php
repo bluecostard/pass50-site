@@ -19,6 +19,9 @@ function p50_mo_config(): array {
       'priorityIds'=>array_values(array_unique(array_filter(array_map('strval',(array)($m['priority_profile_ids']??[]))))),
       'fresh'=>['p0'=>max(1,(int)($m['p0_min_freshness_minutes']??12)),'p1'=>max(1,(int)($m['p1_min_freshness_minutes']??90)),'p2'=>max(1,(int)($m['p2_min_freshness_minutes']??600))],
       'lockTimeout'=>max(2,min(60,(int)($m['worker_lock_timeout_minutes']??10))),
+      'rankingPublicationEnabled'=>filter_var($m['ranking_publication_enabled']??(getenv('PASS50_RANKING_PUBLICATION_ENABLED')?:false),FILTER_VALIDATE_BOOLEAN),
+      'rankingAutomaticPublicationEnabled'=>filter_var($m['ranking_automatic_publication_enabled']??(getenv('PASS50_RANKING_AUTOMATIC_PUBLICATION_ENABLED')?:false),FILTER_VALIDATE_BOOLEAN),
+      'rankingBootstrapAllowed'=>filter_var($m['ranking_publication_bootstrap_allowed']??(getenv('PASS50_RANKING_BOOTSTRAP_ALLOWED')?:'true'),FILTER_VALIDATE_BOOLEAN),
     ];
 }
 

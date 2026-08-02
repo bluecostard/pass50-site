@@ -82,7 +82,14 @@ return [
         'snapchat_access_token' => getenv('PASS50_SNAPCHAT_ACCESS_TOKEN') ?: '',
         'snapchat_stories_authorized' => false,
         'cron_secret' => getenv('PASS50_METRICS_CRON_SECRET') ?: '',
-        'orchestrator_enabled' => false,
+        // Collecte P0/P1/P2 + calcul MR-V1.0. Sans ceci le classement ne peut pas bouger.
+        'orchestrator_enabled' => filter_var(getenv('PASS50_METRICS_ORCHESTRATOR_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        // Publier MR-V1.0 vers le classement public (app_state).
+        'ranking_publication_enabled' => filter_var(getenv('PASS50_RANKING_PUBLICATION_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        // Publication automatique via cron HMAC (après garde-fous).
+        'ranking_automatic_publication_enabled' => filter_var(getenv('PASS50_RANKING_AUTOMATIC_PUBLICATION_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        // 1er passage : autorise un fort turnover entrées/sorties pour débloquer un classement figé.
+        'ranking_publication_bootstrap_allowed' => filter_var(getenv('PASS50_RANKING_BOOTSTRAP_ALLOWED') ?: 'true', FILTER_VALIDATE_BOOLEAN),
         'p0_max_profiles' => 20,
         'p1_max_profiles' => 100,
         'p1_max_rank' => 70,

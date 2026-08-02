@@ -1,0 +1,436 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Publication contrôlée MR-V1.0 → classement public (app_state.id='public').
+ * - Backup complet avant écriture
+ * - Garde-fous simulation (bootstrap assouplit entrées/sorties au 1er passage)
+ * - Modes: preview | controlled | automatic
+ */
+require_once __DIR__.'/metrics-ranking-publication-core.php';
+require_once __DIR__.'/metrics-orchestrator-core.php';
+require_once __DIR__.'/data-engine-core.php';
+
+const P50_MRP_APPLY_VERSION='PUBAPPLY-V1.0';
+const P50_MRP_APPLY_LOCK='pass50_metrics_ranking_publication_apply_v1';
+const P50_MRP_APPLY_PERIODS=['2H','24H','48H','7J','15J'];
+
+function p50_mrp_apply_config(): array {
+    $cfg=p50_mo_config();
+    global $config;$m=(array)($config['metrics']??[]);
+    $publication=filter_var($m['ranking_publication_enabled']??(getenv('PASS50_RANKING_PUBLICATION_ENABLED')?:false),FILTER_VALIDATE_BOOLEAN);
+    $automatic=filter_var($m['ranking_automatic_publication_enabled']??(getenv('PASS50_RANKING_AUTOMATIC_PUBLICATION_ENABLED')?:false),FILTER_VALIDATE_BOOLEAN);
+    $bootstrap=filter_var($m['ranking_publication_bootstrap_allowed']??(getenv('PASS50_RANKING_BOOTSTRAP_ALLOWED')?:'true'),FILTER_VALIDATE_BOOLEAN);
+    return [
+        'orchestratorEnabled'=>(bool)$cfg['enabled'],
+        'publicationEnabled'=>$publication,
+        'automaticPublicationEnabled'=>$publication&&$automatic,
+        'bootstrapAllowed'=>$bootstrap,
+        'cronSecret'=>(string)$cfg['cronSecret'],
+    ];
+}
+
+function p50_mrp_apply_schema_sql(): array {
+    return [
+        "CREATE TABLE IF NOT EXISTS p50_metric_publication_applies (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          apply_uuid CHAR(36) CHARACTER SET ascii NOT NULL,
+          dispatch_id VARCHAR(120) CHARACTER SET ascii NOT NULL,
+          mode VARCHAR(24) NOT NULL,status VARCHAR(24) NOT NULL,
+          algorithm_version VARCHAR(24) NOT NULL,run_uuid CHAR(36) CHARACTER SET ascii NOT NULL,
+          periods_json LONGTEXT NOT NULL,
+          public_revision_before BIGINT UNSIGNED NOT NULL DEFAULT 0,
+          public_revision_after BIGINT UNSIGNED NOT NULL DEFAULT 0,
+          public_fingerprint_before CHAR(64) CHARACTER SET ascii NOT NULL,
+          candidate_fingerprint CHAR(64) CHARACTER SET ascii NOT NULL,
+          profiles_updated INT UNSIGNED NOT NULL DEFAULT 0,
+          scores_written INT UNSIGNED NOT NULL DEFAULT 0,
+          entries_count INT UNSIGNED NOT NULL DEFAULT 0,
+          exits_count INT UNSIGNED NOT NULL DEFAULT 0,
+          bootstrap TINYINT(1) NOT NULL DEFAULT 0,
+          backup_json LONGTEXT NOT NULL,
+          report_json LONGTEXT NOT NULL,
+          applied_by VARCHAR(120) NOT NULL DEFAULT '',
+          error_message VARCHAR(500) NULL,
+          generated_at DATETIME NOT NULL,
+          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uq_p50_mrpa_apply_uuid(apply_uuid),
+          UNIQUE KEY uq_p50_mrpa_dispatch_id(dispatch_id),
+          INDEX idx_p50_mrpa_status_created(status,created_at),
+          INDEX idx_p50_mrpa_run(run_uuid)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+    ];
+}
+
+function p50_mrp_apply_ensure_schema(PDO $pdo): array {
+    foreach(p50_mrp_apply_schema_sql() as $sql)$pdo->exec($sql);
+    return ['status'=>p50_metrics_table_exists($pdo,'p50_metric_publication_applies')?'applied':'missing','table'=>'p50_metric_publication_applies'];
+}
+
+function p50_mrp_apply_has_prior_success(PDO $pdo): bool {
+    if(!p50_metrics_table_exists($pdo,'p50_metric_publication_applies'))return false;
+    $count=(int)$pdo->query("SELECT COUNT(*) FROM p50_metric_publication_applies WHERE status='applied'")->fetchColumn();
+    return $count>0;
+}
+
+function p50_mrp_apply_public_score(float $score): float {
+    return round(max(0,min(100,$score)),1);
+}
+
+function p50_mrp_apply_relax_gates(array $report,bool $bootstrap): array {
+    if(!$bootstrap)return $report;
+    $gates=[];
+    foreach((array)($report['gates']??[]) as $gate){
+        if(!is_array($gate))continue;
+        $key=(string)($gate['key']??'');
+        if(in_array($key,['exit_ratio','entry_ratio','maximum_rank_movement'],true)&&($gate['status']??'')==='block'){
+            $gate['status']='warn';
+            $gate['message']=($gate['message']??'').' (assoupli en bootstrap 1er passage)';
+            $gate['bootstrapRelaxed']=true;
+        }
+        $gates[]=$gate;
+    }
+    $blocked=(bool)array_filter($gates,static fn($g)=>($g['status']??'')==='block');
+    $warnings=(bool)array_filter($gates,static fn($g)=>($g['status']??'')==='warn');
+    $report['gates']=$gates;
+    $report['status']=$blocked?'blocked':($warnings?'review':'ready');
+    $report['bootstrap']=true;
+    return $report;
+}
+
+function p50_mrp_apply_plan_period(PDO $pdo,string $period,bool $bootstrap,?DateTimeImmutable $now=null): array {
+    $period=p50_mrp_period($period);
+    $report=p50_mrp_simulate($pdo,$period,500,$now);
+    $report=p50_mrp_apply_relax_gates($report,$bootstrap);
+    $mutations=[];$entries=0;$exits=0;$updates=0;
+    foreach((array)($report['movements']??[]) as $movement){
+        if(!is_array($movement))continue;
+        $profileId=trim((string)($movement['profileId']??''));
+        if($profileId==='')continue;
+        $type=(string)($movement['type']??'');
+        if($type==='exit'){
+            $mutations[]=['profileId'=>$profileId,'period'=>$period,'action'=>'clear','score'=>null];
+            $exits++;
+        }elseif(in_array($type,['entry','up','down','stable'],true)&&isset($movement['candidateScore'])&&is_numeric($movement['candidateScore'])){
+            $mutations[]=['profileId'=>$profileId,'period'=>$period,'action'=>'set','score'=>p50_mrp_apply_public_score((float)$movement['candidateScore'])];
+            if($type==='entry')$entries++;else $updates++;
+        }
+    }
+    return [
+        'period'=>$period,
+        'report'=>$report,
+        'mutations'=>$mutations,
+        'counts'=>['entries'=>$entries,'exits'=>$exits,'updates'=>$updates,'mutations'=>count($mutations)],
+        'runUuid'=>(string)(($report['source']['experimentalRun']['runUuid']??'')?:''),
+        'publicFingerprint'=>(string)($report['source']['publicFingerprint']??''),
+        'candidateFingerprint'=>(string)($report['source']['candidateFingerprint']??''),
+        'publicStateRevision'=>(int)($report['source']['publicStateRevision']??0),
+        'status'=>(string)$report['status'],
+    ];
+}
+
+function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $now=null): array {
+    $cfg=p50_mrp_apply_config();
+    p50_mrp_apply_ensure_schema($pdo);
+    $now=$now??new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $periods=$periods?:P50_MRP_APPLY_PERIODS;
+    $bootstrap=$cfg['bootstrapAllowed']&&!p50_mrp_apply_has_prior_success($pdo);
+    $plans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;
+    foreach($periods as $period){
+        if(!array_key_exists($period,p50_mr_periods()))continue;
+        $plan=p50_mrp_apply_plan_period($pdo,$period,$bootstrap,$now);
+        $plans[$period]=$plan;
+        $totalMutations+=(int)$plan['counts']['mutations'];
+        $entries+=(int)$plan['counts']['entries'];
+        $exits+=(int)$plan['counts']['exits'];
+        if($plan['status']==='blocked')$blocked=true;
+        if($runUuid===null&&$plan['runUuid']!=='')$runUuid=$plan['runUuid'];
+        elseif($runUuid!==null&&$plan['runUuid']!==''&&$plan['runUuid']!==$runUuid)$blocked=true;
+    }
+    $eligible=!$blocked&&$runUuid!==null&&$totalMutations>0&&$cfg['publicationEnabled'];
+    $autoEligible=$eligible&&$cfg['automaticPublicationEnabled']&&(!$bootstrap||$cfg['bootstrapAllowed']);
+    // En auto, le bootstrap n'est autorisé qu'une fois si bootstrapAllowed.
+    if($bootstrap&&!$cfg['bootstrapAllowed'])$autoEligible=false;
+    return [
+        'ok'=>true,
+        'version'=>P50_MRP_APPLY_VERSION,
+        'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
+        'generatedAt'=>$now->format(DATE_ATOM),
+        'config'=>[
+            'publicationEnabled'=>$cfg['publicationEnabled'],
+            'automaticPublicationEnabled'=>$cfg['automaticPublicationEnabled'],
+            'bootstrapAllowed'=>$cfg['bootstrapAllowed'],
+            'orchestratorEnabled'=>$cfg['orchestratorEnabled'],
+        ],
+        'bootstrap'=>$bootstrap,
+        'status'=>$blocked?'blocked':($eligible?'ready':'blocked'),
+        'publicationEligible'=>$eligible,
+        'automaticPublicationEligible'=>$autoEligible,
+        'runUuid'=>$runUuid,
+        'periods'=>array_keys($plans),
+        'summary'=>[
+            'mutations'=>$totalMutations,
+            'entries'=>$entries,
+            'exits'=>$exits,
+            'blockedPeriods'=>array_values(array_filter(array_keys($plans),static fn($p)=>($plans[$p]['status']??'')==='blocked')),
+        ],
+        'plans'=>$plans,
+        'nextPhase'=>$eligible?'apply_with_backup':'resolve_gates_or_enable_publication',
+    ];
+}
+
+function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): array {
+    $index=[];
+    foreach((array)($state['profiles']??[]) as $i=>$profile){
+        if(!is_array($profile))continue;
+        $id=trim((string)($profile['id']??''));
+        if($id!=='')$index[$id]=$i;
+    }
+    $profilesUpdated=[];$scoresWritten=0;$primaryPeriod='2H';
+    foreach($plans as $period=>$plan){
+        foreach((array)($plan['mutations']??[]) as $mutation){
+            if(!is_array($mutation))continue;
+            $profileId=(string)$mutation['profileId'];
+            if(!isset($index[$profileId]))continue;
+            $i=$index[$profileId];
+            $scores=is_array($state['profiles'][$i]['scores']??null)?$state['profiles'][$i]['scores']:[];
+            if(($mutation['action']??'')==='clear'){
+                unset($scores[$period]);
+            }else{
+                $scores[$period]=p50_mrp_apply_public_score((float)$mutation['score']);
+                $scoresWritten++;
+            }
+            $state['profiles'][$i]['scores']=$scores;
+            if($period===$primaryPeriod){
+                if(isset($scores[$primaryPeriod])){
+                    $state['profiles'][$i]['score']=$scores[$primaryPeriod];
+                    $state['profiles'][$i]['eligible']=true;
+                    $state['profiles'][$i]['classable']=true;
+                    $score=(float)$scores[$primaryPeriod];
+                    $badges=array_values(array_filter((array)($state['profiles'][$i]['badges']??[]),static fn($b)=>!in_array($b,['HOT','UP','VIRAL'],true)));
+                    if($score>=88)$badges[]='HOT';
+                    if($score>=82)$badges[]='UP';
+                    $state['profiles'][$i]['badges']=array_values(array_unique($badges));
+                }else{
+                    // Sortie 2H : ne plus classer sur le score principal, conserver l’historique des autres périodes.
+                    unset($state['profiles'][$i]['score']);
+                    $state['profiles'][$i]['classable']=false;
+                }
+            }
+            $engine=is_array($state['profiles'][$i]['dataEngine']??null)?$state['profiles'][$i]['dataEngine']:[];
+            $engine['algorithmVersion']=P50_MR_ALGORITHM_VERSION;
+            $engine['publishedAt']=gmdate('c');
+            $engine['metricRankingRunUuid']=$runUuid;
+            $engine['autoScore']=true;
+            $engine['scoreStatus']='published_mr_v1';
+            $state['profiles'][$i]['dataEngine']=$engine;
+            $profilesUpdated[$profileId]=true;
+        }
+    }
+    $state['metricsRankingMeta']=[
+        'version'=>P50_MRP_APPLY_VERSION,
+        'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
+        'runUuid'=>$runUuid,
+        'publishedAt'=>gmdate('c'),
+        'periods'=>array_keys($plans),
+    ];
+    return ['state'=>$state,'profilesUpdated'=>count($profilesUpdated),'scoresWritten'=>$scoresWritten];
+}
+
+function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
+    $cfg=p50_mrp_apply_config();
+    $mode=trim((string)($options['mode']??'controlled'));
+    if(!in_array($mode,['controlled','automatic'],true))$mode='controlled';
+    $dispatchId=trim((string)($options['dispatchId']??''));
+    $appliedBy=trim((string)($options['appliedBy']??''));
+    $confirm=!(empty($options['confirm']));
+    $forceBootstrap=!empty($options['bootstrap']);
+    $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+
+    if(!$cfg['publicationEnabled'])throw new RuntimeException('Publication du classement désactivée (metrics.ranking_publication_enabled).');
+    if($mode==='automatic'&&!$cfg['automaticPublicationEnabled'])throw new RuntimeException('Publication automatique désactivée.');
+    if(!$confirm)throw new InvalidArgumentException('Confirmation explicite requise.');
+    if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))throw new InvalidArgumentException('dispatchId invalide.');
+
+    p50_mrp_apply_ensure_schema($pdo);
+    $dup=$pdo->prepare("SELECT apply_uuid,status,public_revision_after FROM p50_metric_publication_applies WHERE dispatch_id=? LIMIT 1");
+    $dup->execute([$dispatchId]);
+    if($existing=$dup->fetch()){
+        if((string)$existing['status']==='applied'){
+            return [
+                'ok'=>true,'idempotent'=>true,'status'=>'applied',
+                'applyUuid'=>(string)$existing['apply_uuid'],
+                'publicStateRevision'=>(int)$existing['public_revision_after'],
+                'publicStateWrites'=>1,
+            ];
+        }
+        throw new RuntimeException('Ce dispatchId a déjà échoué. Relancez avec un nouvel identifiant.');
+    }
+
+    if((int)p50_metrics_value($pdo,"SELECT GET_LOCK(?,10)",[P50_MRP_APPLY_LOCK])!==1){
+        throw new RuntimeException('Une publication de classement est déjà en cours.');
+    }
+
+    $applyUuid=p50_mr_uuid();
+    try{
+        $prior=p50_mrp_apply_has_prior_success($pdo);
+        $bootstrap=($forceBootstrap||!$prior)&&$cfg['bootstrapAllowed'];
+        if($mode==='automatic'&&$bootstrap&&!$cfg['bootstrapAllowed']){
+            throw new RuntimeException('Bootstrap automatique refusé.');
+        }
+
+        $preview=p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now);
+        // Recompute with explicit bootstrap choice
+        if($bootstrap!==(bool)$preview['bootstrap']){
+            $plans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;
+            foreach(P50_MRP_APPLY_PERIODS as $period){
+                $plan=p50_mrp_apply_plan_period($pdo,$period,$bootstrap,$now);
+                $plans[$period]=$plan;
+                $totalMutations+=(int)$plan['counts']['mutations'];
+                $entries+=(int)$plan['counts']['entries'];
+                $exits+=(int)$plan['counts']['exits'];
+                if($plan['status']==='blocked')$blocked=true;
+                if($runUuid===null&&$plan['runUuid']!=='')$runUuid=$plan['runUuid'];
+                elseif($runUuid!==null&&$plan['runUuid']!==''&&$plan['runUuid']!==$runUuid)$blocked=true;
+            }
+            $preview['bootstrap']=$bootstrap;
+            $preview['plans']=$plans;
+            $preview['runUuid']=$runUuid;
+            $preview['status']=$blocked?'blocked':'ready';
+            $preview['summary']=['mutations'=>$totalMutations,'entries'=>$entries,'exits'=>$exits,'blockedPeriods'=>array_values(array_filter(array_keys($plans),static fn($p)=>($plans[$p]['status']??'')==='blocked'))];
+            $preview['publicationEligible']=!$blocked&&$runUuid!==null&&$totalMutations>0;
+        }
+
+        $blockedPeriods=(array)($preview['summary']['blockedPeriods']??[]);
+        if($blockedPeriods||($preview['status']??'')==='blocked'||empty($preview['runUuid'])||empty($preview['publicationEligible'])){
+            throw new RuntimeException('Garde-fous de publication non satisfaits: '.implode(',', $blockedPeriods?:['blocked']));
+        }
+        if((int)($preview['summary']['mutations']??0)<=0)throw new RuntimeException('Aucune mutation de score à publier.');
+
+        $runUuid=(string)$preview['runUuid'];
+        $plans=$preview['plans'];
+        $fingerprintBefore=(string)($plans['2H']['publicFingerprint']??p50_mrp_fingerprint(['period'=>'2H','stateRevision'=>0,'rows'=>[]]));
+        $candidateFp=(string)($plans['2H']['candidateFingerprint']??'');
+        $revisionBefore=(int)($plans['2H']['publicStateRevision']??0);
+
+        $pdo->beginTransaction();
+        $state=p50_de_load_public_state_for_update();
+        if(!$state)throw new RuntimeException('État public introuvable.');
+        $currentRevision=(int)($state['stateRevision']??0);
+        if($currentRevision!==$revisionBefore){
+            throw new RuntimeException('Révision publique changée pendant la publication ('.$currentRevision.' ≠ '.$revisionBefore.').');
+        }
+        // Re-verify 2H fingerprint against locked state
+        $publicNow=p50_mrp_public_rows($state,'2H');
+        $fpNow=p50_mrp_fingerprint(['period'=>'2H','stateRevision'=>$currentRevision,'rows'=>$publicNow['rows']]);
+        if(!hash_equals($fingerprintBefore,$fpNow)){
+            throw new RuntimeException('Empreinte publique incohérente au moment de l’écriture.');
+        }
+
+        $backupJson=p50_mr_json($state);
+        $mutated=p50_mrp_apply_mutate_state($state,$plans,$runUuid);
+        $newState=$mutated['state'];
+        $newState['stateRevision']=$currentRevision+1;
+        $stmt=$pdo->prepare("UPDATE app_state SET data=?,updated_by=?,updated_at=NOW() WHERE id='public'");
+        $stmt->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$appliedBy!==''?$appliedBy:'metrics-publication']);
+        if($stmt->rowCount()===0){
+            $ins=$pdo->prepare("INSERT INTO app_state(id,data,updated_by) VALUES('public',?,?)");
+            $ins->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$appliedBy!==''?$appliedBy:'metrics-publication']);
+        }
+
+        $report=[
+            'version'=>P50_MRP_APPLY_VERSION,'mode'=>$mode,'bootstrap'=>$bootstrap,
+            'runUuid'=>$runUuid,'periods'=>array_keys($plans),
+            'summary'=>$preview['summary'],'gates2H'=>$plans['2H']['report']['gates']??[],
+        ];
+        $insert=$pdo->prepare("INSERT INTO p50_metric_publication_applies(
+            apply_uuid,dispatch_id,mode,status,algorithm_version,run_uuid,periods_json,
+            public_revision_before,public_revision_after,public_fingerprint_before,candidate_fingerprint,
+            profiles_updated,scores_written,entries_count,exits_count,bootstrap,backup_json,report_json,applied_by,generated_at
+          ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $insert->execute([
+            $applyUuid,$dispatchId,$bootstrap?'bootstrap':$mode,'applied',P50_MR_ALGORITHM_VERSION,$runUuid,
+            p50_mr_json(array_keys($plans)),$revisionBefore,$currentRevision+1,$fingerprintBefore,$candidateFp,
+            (int)$mutated['profilesUpdated'],(int)$mutated['scoresWritten'],
+            (int)($preview['summary']['entries']??0),(int)($preview['summary']['exits']??0),
+            $bootstrap?1:0,$backupJson,p50_mr_json($report),mb_substr($appliedBy,0,120),
+            $now->format('Y-m-d H:i:s'),
+        ]);
+        $pdo->commit();
+
+        // Snapshot ranking history (best-effort, hors transaction critique)
+        try{p50_de_capture_snapshots('2H');}catch(Throwable){}
+
+        return [
+            'ok'=>true,
+            'version'=>P50_MRP_APPLY_VERSION,
+            'status'=>'applied',
+            'mode'=>$bootstrap?'bootstrap':$mode,
+            'bootstrap'=>$bootstrap,
+            'applyUuid'=>$applyUuid,
+            'dispatchId'=>$dispatchId,
+            'runUuid'=>$runUuid,
+            'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
+            'periods'=>array_keys($plans),
+            'publicStateRevision'=>$currentRevision+1,
+            'publicStateWrites'=>1,
+            'profilesUpdated'=>(int)$mutated['profilesUpdated'],
+            'scoresWritten'=>(int)$mutated['scoresWritten'],
+            'entries'=>(int)($preview['summary']['entries']??0),
+            'exits'=>(int)($preview['summary']['exits']??0),
+            'backupCreated'=>true,
+            'rollbackAvailable'=>true,
+            'generatedAt'=>$now->format(DATE_ATOM),
+        ];
+    }catch(Throwable $error){
+        if($pdo->inTransaction())$pdo->rollBack();
+        try{
+            $pdo->prepare("INSERT INTO p50_metric_publication_applies(
+                apply_uuid,dispatch_id,mode,status,algorithm_version,run_uuid,periods_json,
+                public_revision_before,public_revision_after,public_fingerprint_before,candidate_fingerprint,
+                profiles_updated,scores_written,entries_count,exits_count,bootstrap,backup_json,report_json,applied_by,error_message,generated_at
+              ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")->execute([
+                $applyUuid,$dispatchId,$mode,'failed',P50_MR_ALGORITHM_VERSION,'00000000-0000-4000-8000-000000000000',
+                p50_mr_json([]),0,0,str_repeat('0',64),str_repeat('0',64),0,0,0,0,0,'{}','{}',
+                mb_substr($appliedBy,0,120),p50_mr_safe_error($error),$now->format('Y-m-d H:i:s'),
+            ]);
+        }catch(Throwable){}
+        throw $error;
+    }finally{
+        try{p50_metrics_value($pdo,"SELECT RELEASE_LOCK(?)",[P50_MRP_APPLY_LOCK]);}catch(Throwable){}
+    }
+}
+
+function p50_mrp_apply_rollback(PDO $pdo,string $applyUuid,string $appliedBy=''): array {
+    $cfg=p50_mrp_apply_config();
+    if(!$cfg['publicationEnabled'])throw new RuntimeException('Publication désactivée.');
+    p50_mrp_apply_ensure_schema($pdo);
+    $stmt=$pdo->prepare("SELECT * FROM p50_metric_publication_applies WHERE apply_uuid=? AND status='applied' LIMIT 1");
+    $stmt->execute([trim($applyUuid)]);
+    $row=$stmt->fetch();
+    if(!$row)throw new InvalidArgumentException('Publication introuvable pour rollback.');
+    $backup=json_decode((string)$row['backup_json'],true);
+    if(!is_array($backup)||empty($backup['profiles']))throw new RuntimeException('Backup invalide.');
+    if((int)p50_metrics_value($pdo,"SELECT GET_LOCK(?,10)",[P50_MRP_APPLY_LOCK])!==1){
+        throw new RuntimeException('Rollback impossible : publication en cours.');
+    }
+    try{
+        $pdo->beginTransaction();
+        $state=p50_de_load_public_state_for_update();
+        $currentRevision=(int)($state['stateRevision']??0);
+        if($currentRevision!==(int)$row['public_revision_after']){
+            throw new RuntimeException('Rollback refusé : d’autres écritures publiques sont intervenues.');
+        }
+        $backup['stateRevision']=$currentRevision+1;
+        $pdo->prepare("UPDATE app_state SET data=?,updated_by=?,updated_at=NOW() WHERE id='public'")
+            ->execute([json_encode($backup,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$appliedBy!==''?$appliedBy:'metrics-rollback']);
+        $pdo->prepare("UPDATE p50_metric_publication_applies SET status='rolled_back' WHERE id=?")->execute([(int)$row['id']]);
+        $pdo->commit();
+        return ['ok'=>true,'status'=>'rolled_back','applyUuid'=>$applyUuid,'publicStateRevision'=>$currentRevision+1,'publicStateWrites'=>1];
+    }catch(Throwable $error){
+        if($pdo->inTransaction())$pdo->rollBack();
+        throw $error;
+    }finally{
+        try{p50_metrics_value($pdo,"SELECT RELEASE_LOCK(?)",[P50_MRP_APPLY_LOCK]);}catch(Throwable){}
+    }
+}

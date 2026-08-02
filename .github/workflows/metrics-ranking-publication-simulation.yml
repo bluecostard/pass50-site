@@ -103,14 +103,11 @@ jobs:
           jq -e '.ok == true' "$response_file" >/dev/null
           jq -e '
             .publication.mode == "simulation" and
-            .publication.publicationEnabled == false and
-            .publication.automaticPublicationEnabled == false and
             .publication.appStateWriteAttempted == false and
             .scope.publicStateWrites == 0 and
-            .history.publicStateWrites == 0 and
-            .stability.automaticPublicationEligible == false
+            .history.publicStateWrites == 0
           ' "$response_file" >/dev/null || {
-            echo "::error::Le rapport ou son historique ne garantit pas strictement l'absence d'écriture publique."
+            echo "::error::Le rapport de simulation ne reste pas strictement en lecture seule."
             exit 1
           }
 
@@ -163,8 +160,8 @@ jobs:
             printf -- '- Conservation Top 10 : %s\n' "$top10"
             printf -- '- Garde-fous bloquants / avertissements : %s / %s\n' "$blocked" "$warnings"
             printf -- '- Éligible au passage public contrôlé : `%s`\n' "$controlled_eligible"
-            printf -- '- Écritures app_state : `0`\n'
-            printf -- '- Publication automatique : `désactivée`\n'
+            printf -- '- Écritures app_state (simulation) : `0`\n'
+            printf -- '- Publication réelle : workflow dédié apply (si flags serveur activés)\n'
             printf -- '- Durée : %s ms\n' "$duration"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -174,7 +171,27 @@ jobs:
             printf 'observed_reports=%s\n' "$observed_reports"
             printf 'distinct_runs=%s\n' "$distinct_runs"
             printf 'controlled_eligible=%s\n' "$controlled_eligible"
+            printf 'automatic_eligible=%s\n' "$(jq -r '.stability.automaticPublicationEligible // false' "$response_file")"
+            printf 'sim_status=%s\n' "$status"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch automatic publication when eligible
+        if: ${{ steps.simulation.outcome == 'success' && steps.simulation.outputs.automatic_eligible == 'true' && steps.simulation.outputs.sim_status != 'blocked' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -nc --arg ref "main" '{ref:$ref}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/metrics-ranking-publication-apply.yml/dispatches" || {
+              echo "::warning::Impossible de déclencher metrics-ranking-publication-apply.yml."
+              exit 0
+            }
+          echo "Workflow de publication automatique déclenché."
 
       - name: Publish sanitized simulation status
         if: ${{ always() }}

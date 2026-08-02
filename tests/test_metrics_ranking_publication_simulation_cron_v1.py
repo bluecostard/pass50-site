@@ -78,12 +78,12 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('http_code="000"', WORKFLOW)
 
     def test_workflow_enforces_zero_public_writes(self):
-        self.assertIn('.publication.publicationEnabled == false', WORKFLOW)
-        self.assertIn('.publication.automaticPublicationEnabled == false', WORKFLOW)
+        self.assertIn('.publication.mode == "simulation"', WORKFLOW)
         self.assertIn('.publication.appStateWriteAttempted == false', WORKFLOW)
         self.assertIn('.scope.publicStateWrites == 0', WORKFLOW)
         self.assertIn('.history.publicStateWrites == 0', WORKFLOW)
-        self.assertIn('Écritures app_state : `0`', WORKFLOW)
+        self.assertIn('Écritures app_state (simulation) : `0`', WORKFLOW)
+        self.assertIn('metrics-ranking-publication-apply.yml', WORKFLOW)
 
     def test_workflow_publishes_only_sanitized_commit_status(self):
         self.assertIn('statuses: write', WORKFLOW)
