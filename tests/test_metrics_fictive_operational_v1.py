@@ -1,3 +1,4 @@
+import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -7,43 +8,44 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_fictive_ranking_is_admin_only_and_read_only():
-    php = read("api/metrics-ranking-fictive.php")
-    assert "require_role($user,'owner','admin')" in php
-    assert "'publicPublication'=>false" in php
-    assert "'publicStateWrites'=>0" in php
-    assert "UPDATE app_state" not in php
-    assert "INSERT INTO app_state" not in php
+class MetricsFictiveOperationalV1Tests(unittest.TestCase):
+    def test_fictive_ranking_is_admin_only_and_read_only(self):
+        php = read("api/metrics-ranking-fictive.php")
+        self.assertIn("require_role($user,'owner','admin')", php)
+        self.assertIn("'publicPublication'=>false", php)
+        self.assertIn("'publicStateWrites'=>0", php)
+        self.assertNotIn("UPDATE app_state", php)
+        self.assertNotIn("INSERT INTO app_state", php)
+
+    def test_fictive_page_is_explicitly_internal_and_linked_from_admin(self):
+        html = read("classement-fictif.html")
+        loader = read("public-copy-fixes.js")
+        self.assertIn("CLASSEMENT FICTIF INTERNE", html)
+        self.assertIn("noindex,nofollow", html)
+        self.assertIn("pass50_api_token", html)
+        self.assertIn("admin-fictive-ranking-v1.js?v=1.0", loader)
+
+    def test_operational_credentials_use_non_empty_server_secrets(self):
+        php = read("api/metrics-social-collectors-core.php")
+        self.assertIn("foreach([$perProfile[$key]??null,$metrics[$key]??null", php)
+        self.assertIn("$configured=$secret!==''||(bool)$explicitEnabled", php)
+        self.assertIn("PASS50_X_BEARER_TOKEN", php)
+        self.assertIn("business_discovery", php)
+        self.assertIn("PASS50_TIKTOK_RESEARCH_APPROVED", php)
+
+    def test_readiness_never_exposes_secrets(self):
+        php = read("api/metrics-collector-readiness-core.php")
+        self.assertIn("'secretsExposed'=>false", php)
+        self.assertIn("'publicStateWrites'=>0", php)
+        self.assertNotIn("secret'=>", php)
+
+    def test_deployment_waits_for_new_baseline_contract(self):
+        core = read("api/metrics-public-baseline-core.php")
+        workflow = read(".github/workflows/metrics-public-baseline-p1.yml")
+        self.assertIn("PUBLIC-BASELINE-P1-V1.2", core)
+        self.assertGreaterEqual(workflow.count("PUBLIC-BASELINE-P1-V1.2"), 3)
+        self.assertIn("api/metrics-social-collectors-core.php", workflow)
 
 
-def test_fictive_page_is_explicitly_internal_and_linked_from_admin():
-    html = read("classement-fictif.html")
-    loader = read("public-copy-fixes.js")
-    assert "CLASSEMENT FICTIF INTERNE" in html
-    assert "noindex,nofollow" in html
-    assert "pass50_api_token" in html
-    assert "admin-fictive-ranking-v1.js?v=1.0" in loader
-
-
-def test_operational_credentials_use_non_empty_server_secrets():
-    php = read("api/metrics-social-collectors-core.php")
-    assert "foreach([$perProfile[$key]??null,$metrics[$key]??null" in php
-    assert "$configured=$secret!==''||(bool)$explicitEnabled" in php
-    assert "PASS50_X_BEARER_TOKEN" in php
-    assert "business_discovery" in php
-    assert "PASS50_TIKTOK_RESEARCH_APPROVED" in php
-
-
-def test_readiness_never_exposes_secrets():
-    php = read("api/metrics-collector-readiness-core.php")
-    assert "'secretsExposed'=>false" in php
-    assert "'publicStateWrites'=>0" in php
-    assert "secret'=>" not in php
-
-
-def test_deployment_waits_for_new_baseline_contract():
-    core = read("api/metrics-public-baseline-core.php")
-    workflow = read(".github/workflows/metrics-public-baseline-p1.yml")
-    assert "PUBLIC-BASELINE-P1-V1.2" in core
-    assert workflow.count("PUBLIC-BASELINE-P1-V1.2") >= 3
-    assert "api/metrics-social-collectors-core.php" in workflow
+if __name__ == "__main__":
+    unittest.main()
