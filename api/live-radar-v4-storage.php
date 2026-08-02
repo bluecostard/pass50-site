@@ -13,8 +13,20 @@ function p50_live_v4_ensure_dismissals(): void {
         INDEX idx_p50_live_dismissals_profile (profile_id,platform,dismissed_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
+function p50_live_v4_event_identity(array $live): string {
+    $metadata=is_array($live['metadata']??null)?$live['metadata']:[];
+    foreach(['roomId','videoId','broadcastId','broadcast_id'] as $field){
+        $value=trim((string)($metadata[$field]??''));
+        if($value==='')continue;
+        $value=preg_replace('/[^A-Za-z0-9._:-]/','',$value)??'';
+        if($value!=='')return substr($value,0,128);
+    }
+    return '';
+}
 function p50_live_v4_stream_key(array $live): string {
-    return hash('sha256',strtolower((string)$live['profileId'].'|'.(string)$live['platform'].'|'.rtrim((string)$live['url'],'/')));
+    $eventId=p50_live_v4_event_identity($live);
+    $identity=$eventId!==''?'event:'.$eventId:'url:'.rtrim((string)$live['url'],'/');
+    return hash('sha256',strtolower((string)$live['profileId'].'|'.(string)$live['platform'].'|'.$identity));
 }
 function p50_live_v4_is_dismissed(string $key): bool {
     p50_live_v4_ensure_dismissals();$stmt=db()->prepare('SELECT 1 FROM p50_live_dismissals WHERE stream_key=? LIMIT 1');$stmt->execute([$key]);return (bool)$stmt->fetchColumn();
