@@ -16,15 +16,18 @@ def test_fictive_ranking_is_admin_only_and_read_only():
     assert "INSERT INTO app_state" not in php
 
 
-def test_fictive_page_is_explicitly_internal():
+def test_fictive_page_is_explicitly_internal_and_linked_from_admin():
     html = read("classement-fictif.html")
+    loader = read("public-copy-fixes.js")
     assert "CLASSEMENT FICTIF INTERNE" in html
     assert "noindex,nofollow" in html
     assert "pass50_api_token" in html
+    assert "admin-fictive-ranking-v1.js?v=1.0" in loader
 
 
-def test_operational_credentials_activate_from_server_secrets():
+def test_operational_credentials_use_non_empty_server_secrets():
     php = read("api/metrics-social-collectors-core.php")
+    assert "foreach([$perProfile[$key]??null,$metrics[$key]??null" in php
     assert "$configured=$secret!==''||(bool)$explicitEnabled" in php
     assert "PASS50_X_BEARER_TOKEN" in php
     assert "business_discovery" in php

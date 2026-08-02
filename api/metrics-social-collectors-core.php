@@ -15,7 +15,10 @@ function p50_mc_env_bool(string $name,bool $fallback=false): bool {
 function p50_mc_credentials(string $platform,string $profileId): array {
     global $config;$metrics=(array)($config['metrics']??[]);$perProfile=(array)($metrics['social_credentials'][$platform][$profileId]??[]);
     $read=static function(string $key,string $env='') use($metrics,$perProfile): string {
-        $value=$perProfile[$key]??$metrics[$key]??($env!==''?getenv($env):'');return trim((string)$value);
+        foreach([$perProfile[$key]??null,$metrics[$key]??null,$env!==''?getenv($env):null] as $candidate){
+            $value=trim((string)($candidate??''));if($value!=='')return $value;
+        }
+        return '';
     };
     if($platform==='YouTube'){
         $oauth=function_exists('p50ym_public_access')?p50ym_public_access($profileId):['configured'=>false,'authorized'=>false,'mode'=>'mapping_required','authorizationRequired'=>true];
@@ -24,16 +27,17 @@ function p50_mc_credentials(string $platform,string $profileId): array {
         return ['configured'=>$api!=='','authorized'=>$api!=='','mode'=>$api!==''?'official_api':'public_fallback','authorizationRequired'=>false,'secret'=>$api];
     }
     if($platform==='X'){
-        $secret=p50_mc_config('X');
-        return ['configured'=>$secret!=='','authorized'=>$secret!=='','mode'=>'official_api','authorizationRequired'=>$secret==='','secret'=>$secret];
+        $secret=p50_mc_config('X');if($secret==='')$secret=trim((string)(getenv('PASS50_X_BEARER_TOKEN')?:''));
+        return ['configured'=>$secret!=='','authorized'=>$secret!=='','mode'=>'official_api','authorizationRequired'=>false,'secret'=>$secret];
     }
     if($platform==='TikTok'){
         $oauth=function_exists('p50tm_public_access')?p50tm_public_access($profileId):['configured'=>false,'authorized'=>false,'mode'=>'mapping_required','authorizationRequired'=>true];
         if(!empty($oauth['configured']))return $oauth+['secret'=>''];
         $displayToken=$read('tiktok_access_token','PASS50_TIKTOK_ACCESS_TOKEN');
         $researchToken=$read('tiktok_research_token','PASS50_TIKTOK_RESEARCH_TOKEN');
-        $approved=(bool)($perProfile['research_approved']??$metrics['tiktok_research_approved']??p50_mc_env_bool('PASS50_TIKTOK_RESEARCH_APPROVED',false));
-        $mode=(string)($perProfile['mode']??$metrics['tiktok_mode']??(getenv('PASS50_TIKTOK_MODE')?:'none'));
+        $approved=(bool)($perProfile['research_approved']??$metrics['tiktok_research_approved']??false)||p50_mc_env_bool('PASS50_TIKTOK_RESEARCH_APPROVED',false);
+        $mode=trim((string)($perProfile['mode']??$metrics['tiktok_mode']??'none'))?:'none';
+        $envMode=trim((string)(getenv('PASS50_TIKTOK_MODE')?:''));if($mode==='none'&&$envMode!=='')$mode=$envMode;
         if($mode==='none'&&$researchToken!==''&&$approved)$mode='approved_research';
         $secret=$mode==='approved_research'?$researchToken:$displayToken;
         $configured=$mode==='authorized_display'?true:($mode==='approved_research'&&$approved);
@@ -51,7 +55,8 @@ function p50_mc_credentials(string $platform,string $profileId): array {
     if($platform==='Instagram'&&$mode==='professional_authorized'&&$accountId===''&&$discoveryAccountId!=='')$mode='business_discovery';
     $explicitEnabled=$perProfile['enabled']??$metrics[$prefix.'_enabled']??null;
     $configured=$secret!==''||(bool)$explicitEnabled;
-    $graphVersion=trim((string)($perProfile['graph_version']??$metrics['meta_graph_version']??$config['meta_oauth']['graph_version']??getenv('META_GRAPH_VERSION')?:'v22.0'))?:'v22.0';
+    $graphVersion=trim((string)($perProfile['graph_version']??$metrics['meta_graph_version']??$config['meta_oauth']['graph_version']??''));
+    if($graphVersion==='')$graphVersion=trim((string)(getenv('META_GRAPH_VERSION')?:'v22.0'))?:'v22.0';
     return ['configured'=>$configured,'authorized'=>$secret!=='','mode'=>$mode,'authorizationRequired'=>$configured&&$secret==='','secret'=>$secret,
       'accountId'=>$accountId,'pageId'=>$pageId,'discoveryAccountId'=>$discoveryAccountId,
       'storiesAuthorized'=>(bool)($perProfile['stories_authorized']??$metrics[$prefix.'_stories_authorized']??false),
