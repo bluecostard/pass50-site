@@ -307,9 +307,32 @@ render();
 
   p50v9UseNews=async function(index){
     const a=PASS50_V9.news[index],id=PASS50_V9.newsProfileId,p=profile(id);if(!a||!p)return;
+    if(!confirm('Confirmer que ce lien est bien l’élément original à afficher dans la FI ?'))return;
     try{
-      const preview=await apiFetch('content-preview.php',{method:'POST',body:{url:a.url}});
-      const isVideo=a.kind==='video'||a.type==='Vidéo'||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(a.platform);let ev=primaryEvent(id);const platform=a.platform||preview.platform||(isVideo?'Réseau social':'Web');const patch={type:isVideo?'Vidéo':'Article',title:a.title||`${isVideo?'Vidéo':'Actualité'} concernant ${p.name}`,platforms:[platform],metric:isVideo?'Vidéo détectée':'Article détecté',publishedLabel:a.date||`Sur ${PASS50_V9.newsDays} jours`,reason:isVideo?'Vidéo récente détectée sur un réseau officiel ou dans la recherche sociale, puis validée par le propriétaire.':'Article récent sélectionné et lien original validé par le propriétaire.',url:preview.canonicalUrl||a.url,icon:isVideo?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),coverCandidateUrl:a.image||preview.thumbnail||'',coverUrl:'',coverStatus:(a.image||preview.thumbnail)?'validated':'missing',coverSource:a.source||a.domain||preview.source||'Actualité',coverNote:(a.image||preview.thumbnail)?'Vignette extraite automatiquement du contenu original confirmé.':'Aucune vignette détectée : la photo validée du profil sera utilisée comme visuel de secours.'};if(ev)Object.assign(ev,patch);else{ev={id:'news_'+id+'_'+Date.now(),profileId:id,...patch};db.events.push(ev);}p50v20SyncTrendContent(id,ev,platform);save();render();p50v9RenderNews();toast(`${isVideo?'Vidéo':'Article'} validé avec vignette dans la FI et le Top 5`);
+      const preview=await apiFetch('news-validate.php',{method:'POST',body:{profileId:id,url:a.url,confirmed:true,validationMethod:'discover_click',title:a.title||'',type:a.type||(a.kind==='video'?'Vidéo':'Article')}});
+      const isVideo=a.kind==='video'||a.type==='Vidéo'||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(preview.platform||a.platform);
+      let ev=primaryEvent(id);
+      const platform=preview.platform||a.platform||(isVideo?'Réseau social':'Web');
+      const patch={
+        type:preview.type||(isVideo?'Vidéo':'Article'),
+        title:preview.title||a.title||`${isVideo?'Vidéo':'Actualité'} concernant ${p.name}`,
+        platforms:[platform],
+        metric:preview.metricBridge?.queued?'Métriques en file':'Lien original validé',
+        publishedLabel:preview.publishedAt?new Date(preview.publishedAt).toLocaleString('fr-FR'):(a.date||`Sur ${PASS50_V9.newsDays} jours`),
+        reason:preview.reason||(isVideo?'Vidéo récente validée avec confirmation explicite.':'Article récent validé avec confirmation explicite.'),
+        url:preview.canonicalUrl||a.url,submittedUrl:a.url,resolvedUrl:preview.canonicalUrl||a.url,
+        icon:isVideo?'▶':'📰',confidence:'élevée',
+        originalLinkValidated:true,originalLinkValidatedAt:preview.validatedAt||new Date().toISOString(),
+        validatedBy:preview.validatedBy||'',validationMethod:preview.validationMethod||'discover_click',
+        publishedAt:preview.publishedAt||null,contentId:preview.contentId||'',
+        coverCandidateUrl:a.image||preview.thumbnail||'',coverUrl:'',
+        coverStatus:(a.image||preview.thumbnail)?'pending':'missing',
+        coverSource:a.source||a.domain||preview.source||'Actualité',
+        coverNote:(a.image||preview.thumbnail)?'Vignette candidate — confirmer qu’elle représente bien le contenu.':'Aucune vignette détectée : la photo validée du profil sera utilisée comme visuel de secours.',
+      };
+      if(ev)Object.assign(ev,patch);else{ev={id:'news_'+id+'_'+Date.now(),profileId:id,...patch};db.events.push(ev);}
+      p50v20SyncTrendContent(id,ev,platform);save();render();p50v9RenderNews();
+      toast(preview.message||`${isVideo?'Vidéo':'Article'} validé dans la FI`);
     }catch(err){toast(err.message||'Impossible de valider ce lien');}
   };
 
@@ -322,13 +345,13 @@ render();
     const btn=form.querySelector('button[type=submit]'),old=btn?.textContent||'';
     if(btn){btn.disabled=true;btn.textContent='ANALYSE…';}
     try{
-      const preview=await apiFetch('content-preview.php',{method:'POST',body:{url}});
+      const preview=await apiFetch('news-validate.php',{method:'POST',body:{profileId:id,url,confirmed:true,validationMethod:'manual_form',title,reason,type:String(fd.get('type')||'Vidéo')}});
       let ev=primaryEvent(id),previousUrl=String(ev?.url||''),urlChanged=previousUrl!==url;
-      const patch={type:String(fd.get('type')||'Vidéo'),title,platforms:[preview.platform||'Web'],metric:'Lien original validé',publishedLabel:'Validation manuelle',reason,url,submittedUrl:url,resolvedUrl:preview.canonicalUrl||url,icon:['YouTube','TikTok','Instagram','Facebook'].includes(preview.platform)?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),manualDataValidated:true,coverCandidateUrl:preview.thumbnail||(!urlChanged?(ev?.coverCandidateUrl||''):''),coverUrl:!urlChanged?(ev?.coverUrl||''):'',coverStatus:preview.thumbnail?'validated':(!urlChanged?(ev?.coverStatus||'missing'):'missing'),coverSource:preview.source||(!urlChanged?(ev?.coverSource||''):''),coverNote:preview.thumbnail?'Vignette extraite automatiquement du lien original confirmé.':(!urlChanged?(ev?.coverNote||''):'Aucune vignette détectée : la photo validée du profil sera utilisée dans le Top 5.')};
+      const patch={type:preview.type||String(fd.get('type')||'Vidéo'),title:preview.title||title,platforms:[preview.platform||'Web'],metric:preview.metricBridge?.queued?'Métriques en file':'Lien original validé',publishedLabel:preview.publishedAt?new Date(preview.publishedAt).toLocaleString('fr-FR'):'Validation manuelle',reason:preview.reason||reason,url:preview.canonicalUrl||url,submittedUrl:url,resolvedUrl:preview.canonicalUrl||url,icon:['YouTube','TikTok','Instagram','Facebook'].includes(preview.platform)?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:preview.validatedAt||new Date().toISOString(),manualDataValidated:true,validatedBy:preview.validatedBy||'',validationMethod:preview.validationMethod||'manual_form',publishedAt:preview.publishedAt||null,contentId:preview.contentId||'',coverCandidateUrl:preview.thumbnail||(!urlChanged?(ev?.coverCandidateUrl||''):''),coverUrl:!urlChanged?(ev?.coverUrl||''):'',coverStatus:preview.thumbnail?'pending':(!urlChanged?(ev?.coverStatus||'missing'):'missing'),coverSource:preview.source||(!urlChanged?(ev?.coverSource||''):''),coverNote:preview.thumbnail?'Vignette candidate — confirmer qu’elle représente bien le contenu.':(!urlChanged?(ev?.coverNote||''):'Aucune vignette détectée : la photo validée du profil sera utilisée dans le Top 5.')};
       if(ev){Object.assign(ev,patch);db.events=db.events.filter(x=>x.profileId!==id||x.id===ev.id);}else{ev={id:'trigger_'+id+'_'+Date.now(),profileId:id,...patch};db.events.push(ev);}
-      db.content.forEach(c=>{if(c.profileId===id)c.url=url;});
+      db.content.forEach(c=>{if(c.profileId===id)c.url=preview.canonicalUrl||url;});
       p50v20SyncTrendContent(id,ev,preview.platform||'Réseau social');
-      save();render();p50v9RenderNews();toast(preview.thumbnail?'Lien, vignette et données enregistrés dans la FI et le Top 5':'Lien enregistré ; visuel du profil utilisé dans le Top 5');
+      save();render();p50v9RenderNews();toast(preview.message||(preview.thumbnail?'Lien validé et métriques mises en file':'Lien enregistré ; visuel du profil utilisé dans le Top 5'));
     }catch(err){console.error(err);toast(err.message||'Lien original non validé');}
     finally{if(btn){btn.disabled=false;btn.textContent=old;}}
   }
@@ -671,7 +694,7 @@ render();
     const photo=Boolean((p.photoStatus==='validated'||p.photoManualLocked)&&((p.photoUrl||p.photoCandidateUrl)));
     const birth=Boolean((p.birthDate||p.birthYear)&&(p.ageStatus==='confirmed'||p.birthManualLocked));
     const socials=links.length>=2;
-    const event=Boolean(ev&&/^https?:\/\//i.test(ev.url||'')&&(ev.originalLinkValidated!==false));
+    const event=Boolean(ev&&/^https?:\/\//i.test(ev.url||'')&&ev.originalLinkValidated===true);
     let visual=false;
     try{visual=Boolean((ev&&typeof publicCover==='function'&&publicCover(ev))||(content&&content.thumbnail)||(photo));}catch{visual=photo;}
     const live=Boolean(qaLive(p));

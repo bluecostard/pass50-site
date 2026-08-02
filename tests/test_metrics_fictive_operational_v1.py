@@ -14,6 +14,9 @@ class MetricsFictiveOperationalV1Tests(unittest.TestCase):
         self.assertIn("require_role($user,'owner','admin')", php)
         self.assertIn("'publicPublication'=>false", php)
         self.assertIn("'publicStateWrites'=>0", php)
+        self.assertIn("exclusionSummary", php)
+        self.assertIn("freshness", php)
+        self.assertIn("runUuid", php)
         self.assertNotIn("UPDATE app_state", php)
         self.assertNotIn("INSERT INTO app_state", php)
 
@@ -23,6 +26,8 @@ class MetricsFictiveOperationalV1Tests(unittest.TestCase):
         self.assertIn("CLASSEMENT FICTIF INTERNE", html)
         self.assertIn("noindex,nofollow", html)
         self.assertIn("pass50_api_token", html)
+        self.assertIn("Exclusions (non classables)", html)
+        self.assertIn("runUuid", html)
         self.assertIn("admin-fictive-ranking-v1.js?v=1.0", loader)
 
     def test_operational_credentials_use_non_empty_server_secrets(self):

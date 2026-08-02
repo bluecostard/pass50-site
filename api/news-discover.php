@@ -103,23 +103,47 @@ if($profileId!==''){
     }
 }
 
-// 2) Recherche sociale publique : davantage de vidéos que d'articles.
-$videoQueries=[
-    '"'.$name.'" (site:youtube.com/watch OR site:youtube.com/shorts)',
-    '"'.$name.'" (site:tiktok.com OR site:instagram.com/reel OR site:facebook.com/reel OR site:facebook.com/videos)',
-];
-foreach($videoQueries as $query){
+// 2) Recherche sociale ancrée sur handles officiels (+ nom en secours).
+$officialHandles=[];
+if($profileId!==''){
+    try{
+        $stmt=db()->prepare("SELECT platform,handle,normalized_url FROM p50_social_links WHERE profile_id=? AND status='verified' AND confidence>=?");
+        $stmt->execute([$profileId,p50_de_threshold()]);
+        foreach($stmt->fetchAll() as $row){
+            $h=trim((string)($row['handle']??''));
+            if($h===''){
+                $path=(string)(parse_url((string)$row['normalized_url'],PHP_URL_PATH)?:'');
+                if(preg_match('#/@([^/]+)#',$path,$m))$h=$m[1];
+                elseif(preg_match('#^/([^/]+)/?$#',$path,$m)&&!in_array(strtolower($m[1]),['watch','reel','reels','videos','channel'],true))$h=$m[1];
+            }
+            $h=ltrim($h,'@');
+            if($h!=='')$officialHandles[(string)$row['platform']]=$h;
+        }
+    }catch(Throwable){}
+}
+if($handle!=='')$officialHandles['_input']=ltrim($handle,'@');
+
+$videoQueries=[];
+if(!empty($officialHandles['YouTube']))$videoQueries[]='("'.$officialHandles['YouTube'].'" OR "@'.$officialHandles['YouTube'].'") (site:youtube.com/watch OR site:youtube.com/shorts)';
+if(!empty($officialHandles['TikTok']))$videoQueries[]='(site:tiktok.com/@'.$officialHandles['TikTok'].'/video)';
+if(!empty($officialHandles['Instagram']))$videoQueries[]='(site:instagram.com/reel OR site:instagram.com/p) ("'.$officialHandles['Instagram'].'" OR "@'.$officialHandles['Instagram'].'")';
+if(!empty($officialHandles['Facebook']))$videoQueries[]='("'.$name.'" OR "'.$officialHandles['Facebook'].'") (site:facebook.com/reel OR site:facebook.com/videos OR site:facebook.com/watch)';
+// Secours nom, priorité plus basse.
+$videoQueries[]='"'.$name.'" (site:youtube.com/watch OR site:youtube.com/shorts OR site:tiktok.com OR site:instagram.com/reel)';
+foreach($videoQueries as $qi=>$query){
     try{
         $rss='https://www.bing.com/search?format=rss&q='.rawurlencode($query);
-        $results=array_merge($results,p50_news_rss_items($rss,'Bing Vidéos',1,true));
+        $priority=$qi<count($videoQueries)-1?1:3;
+        $results=array_merge($results,p50_news_rss_items($rss,'Bing Vidéos',$priority,true));
     }catch(Throwable){$warnings[]='Recherche vidéo Bing indisponible.';}
 }
 
-// 3) Articles, volontairement limités et placés après les vidéos.
+// 3) Articles : nom + handle si dispo.
 $articles=[];
+$articleQuery='"'.str_replace('"','',$name).'"';
+if($handle!=='')$articleQuery.=' OR "'.str_replace('"','',ltrim($handle,'@')).'"';
 try{
-    $query='"'.str_replace('"','',$name).'"';
-    $gdelt='https://api.gdeltproject.org/api/v2/doc/doc?query='.rawurlencode($query).'&mode=ArtList&maxrecords=15&format=json&sort=datedesc&timespan='.$days.'d';
+    $gdelt='https://api.gdeltproject.org/api/v2/doc/doc?query='.rawurlencode($articleQuery).'&mode=ArtList&maxrecords=15&format=json&sort=datedesc&timespan='.$days.'d';
     $r=p50_http_fetch($gdelt,18,'application/json,*/*;q=0.7');
     if($r['ok']){
         $data=json_decode($r['body'],true);
@@ -131,7 +155,7 @@ try{
 
 if(count($articles)<5){
     try{
-        $rss='https://news.google.com/rss/search?q='.rawurlencode('"'.$name.'" when:'.$days.'d').'&hl=fr&gl=CI&ceid=CI:fr';
+        $rss='https://news.google.com/rss/search?q='.rawurlencode($articleQuery.' when:'.$days.'d').'&hl=fr&gl=CI&ceid=CI:fr';
         $articles=array_merge($articles,p50_news_rss_items($rss,'Google News',11,false));
     }catch(Throwable){$warnings[]='Google News indisponible.';}
 }
@@ -145,7 +169,8 @@ json_response([
     'name'=>$name,
     'profileId'=>$profileId,
     'days'=>$days,
-    'source'=>'Réseaux officiels + Bing Vidéos + GDELT/Google News',
+    'source'=>'Handles officiels + Bing Vidéos + GDELT/Google News',
+    'officialHandles'=>array_filter($officialHandles,static fn($k)=>$k!=='_input',ARRAY_FILTER_USE_KEY),
     'articles'=>$results,
     'results'=>$results,
     'videoCount'=>$videoCount,
