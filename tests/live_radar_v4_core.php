@@ -15,10 +15,17 @@ require dirname(__DIR__).'/api/live-radar-v4-core.php';
 function must(bool $value,string $message): void {if(!$value)throw new RuntimeException($message);}
 function response(string $body,int $status=200,string $url='https://example.test'): array {return ['ok'=>$status>=200&&$status<400,'status'=>$status,'body'=>$body,'finalUrl'=>$url,'error'=>'','timeMs'=>12];}
 
+must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
+must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-RADAR-OPERATIONAL-2026-08-02-1','La révision opérationnelle attendue doit être active.');
+
 $source=['profile_id'=>'coach-test','public_name'=>'Coach Test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest'];
 $api=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"741234567890","uniqueId":"coachtest"}')]);
-must($api['state']==='probable','Une API TikTok isolée ne doit plus publier un LIVE.');
+must($api['state']==='live','Une API TikTok structurée, active et rattachée au bon compte doit publier le LIVE.');
 must(($api['live']['metadata']['roomId']??'')==='741234567890','RoomId TikTok conservé pour confirmation.');
+must(($api['live']['metadata']['strictApiLabels'][0]??'')==='api','La preuve API stricte doit être conservée.');
+
+$apiWithoutOwner=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"741234567890"}')]);
+must($apiWithoutOwner['state']==='probable','Une API TikTok sans identité propriétaire doit rester probable.');
 
 $html='<!doctype html><title>Coach Test LIVE | TikTok</title><script>{"LiveRoom":{"id":"741234567891"},"isLive":true}</script>';
 $multi=p50_live_v4_parse_tiktok($source,['live'=>response($html,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($html,200,'https://www.tiktok.com/embed/live/@coachtest')]);
@@ -33,21 +40,22 @@ must(($cross['live']['metadata']['proofFamilies']['api'][0]??'')==='api','La fam
 must(($cross['live']['metadata']['proofFamilies']['html'][0]??'')==='live','La famille HTML est conservée.');
 
 $single=p50_live_v4_parse_tiktok($source,['live'=>response($html,200,'https://www.tiktok.com/@coachtest/live')]);
-must($single['state']==='probable','Une seule preuve positive doit rester à confirmer.');
+must($single['state']==='probable','Une seule preuve HTML positive doit rester à confirmer.');
 
 $offline=p50_live_v4_parse_tiktok($source,['api'=>response('{"liveStatus":4,"isLive":false,"uniqueId":"coachtest"}')]);
 must($offline['state']==='offline','Une preuve API explicite de fin doit être hors ligne.');
 
 $endedHtml='<!doctype html><div>Le LIVE est terminé</div><script>{"LiveRoom":{"id":"741234567891"},"isLive":true,"roomId":"741234567891"}</script>';
 $endedFrench=p50_live_v4_parse_tiktok($source,['live'=>response($endedHtml,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($endedHtml,200,'https://www.tiktok.com/embed/live/@coachtest')]);
-must($endedFrench['state']==='offline','« Le LIVE est terminé » doit gagner sur les anciens roomId et LiveRoom.');
+must($endedFrench['state']==='offline','« Le LIVE est terminé » doit gagner sur des signaux HTML internes contradictoires.');
 must(($endedFrench['error']??'')==='tiktok_live_ended','La raison de fin TikTok doit être explicite.');
 
 $apiLiveWithEndedPage=p50_live_v4_parse_tiktok($source,[
     'api'=>response('{"status":2,"room_id":"741234567892","uniqueId":"coachtest"}'),
     'live'=>response($endedHtml,200,'https://www.tiktok.com/@coachtest/live'),
 ]);
-must($apiLiveWithEndedPage['state']==='offline','Une page LIVE terminée doit gagner sur un ancien statut API actif.');
+must($apiLiveWithEndedPage['state']==='live','Une preuve API structurée et actuelle doit gagner sur une ancienne trace HTML de fin.');
+must(in_array('live',(array)($apiLiveWithEndedPage['evidence']['ended']??[]),true),'La contradiction HTML doit rester visible dans le diagnostic.');
 
 $blocked=p50_live_v4_parse_tiktok($source,['live'=>response('<html>Verify to continue - captcha</html>')]);
 must($blocked['state']==='unknown','Un challenge anti-bot ne doit pas être interprété comme une fin de direct.');
@@ -66,4 +74,4 @@ must($instagram['state']==='live','Signal Instagram actif explicite.');
 $facebook=p50_live_v4_parse_facebook(['profile_id'=>'fb','public_name'=>'FB','platform'=>'Facebook','url'=>'https://www.facebook.com/test'],['live'=>response('{"is_live_streaming":true,"video_id":"123456789"} https://www.facebook.com/test/videos/123456789')]);
 must($facebook['state']==='live','Signal Facebook actif et vidéo spécifique.');
 
-echo json_encode(['ok'=>true,'cases'=>12],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>15],JSON_UNESCAPED_SLASHES).PHP_EOL;
