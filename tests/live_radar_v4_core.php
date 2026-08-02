@@ -17,10 +17,10 @@ function response(string $body,int $status=200,string $url='https://example.test
 function room_id_for(int $timestamp,int $suffix=123456): string {return (string)(($timestamp*4294967296)+$suffix);}
 
 must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
-must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-TRUST-GATE-2026-08-03-1','La révision Trust Gate doit être active.');
-must(P50_LIVE_V4_TRUST_REVISION==='LIVE-TRUST-GATE-2026-08-03-1','Le module Trust Gate doit être chargé.');
+must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-TRUST-BALANCED-2026-08-03-1','La révision Trust Gate équilibrée doit être active.');
+must(P50_LIVE_V4_TRUST_REVISION==='LIVE-TRUST-BALANCED-2026-08-03-1','Le module Trust Gate doit être chargé.');
 must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===10800,'La fenêtre TikTok Trust Gate est de trois heures.');
-must(p50_live_v4_public_max_age('TikTok')===90,'TikTok public max age = 90s.');
+must(p50_live_v4_public_max_age('TikTok')===720,'TikTok public max age = 12 min.');
 
 $source=['profile_id'=>'coach-test','public_name'=>'Coach Test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest'];
 $api=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"741234567890","uniqueId":"coachtest"}')]);
@@ -30,10 +30,10 @@ must(($api['live']['metadata']['strictApiLabels'][0]??'')==='api','La preuve API
 
 $freshRoom=room_id_for(time()-300);
 $apiFreshStatus=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"'.$freshRoom.'"}')]);
-must($apiFreshStatus['state']==='probable','Une salle fraîche sans identité propriétaire reste à confirmer (Trust Gate).');
+must($apiFreshStatus['state']==='live','Une salle API fraîche active doit confirmer le LIVE (Trust Gate équilibré).');
 
 $apiFreshStructure=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$freshRoom.'"},"webcastRoomId":"'.$freshRoom.'"}')]);
-must($apiFreshStructure['state']==='probable','Une structure LiveRoom seule ne publie plus un faux direct.');
+must($apiFreshStructure['state']==='live','Une structure LiveRoom fraîche peut confirmer ; le Trust Gate public coupe ensuite les fantômes.');
 
 $staleRoom=room_id_for(time()-P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS-3600);
 $apiStale=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$staleRoom.'"},"webcastRoomId":"'.$staleRoom.'"}')]);

@@ -40,9 +40,9 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("h.last_state='live'", FILES['storage'])
         self.assertNotIn("h.last_state='unknown'", FILES['storage'])
 
-    def test_tiktok_trust_gate_requires_strict_or_cross_proof(self):
+    def test_tiktok_trust_gate_allows_fresh_api_confirmation(self):
         parser = FILES['parsers']
-        self.assertIn('LIVE-TRUST-GATE-2026-08-03-1', parser)
+        self.assertIn('LIVE-TRUST-BALANCED-2026-08-03-1', parser)
         self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800', parser)
         self.assertIn('p50_live_v4_tiktok_room_timestamp', parser)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', parser)
@@ -51,7 +51,7 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn('$currentApiActive', parser)
         self.assertIn("!$currentApiActive", parser)
         self.assertIn("'apiLiveStructureLabels'", parser)
-        self.assertIn('$candidateConfirmed=$strictCount>0||$cross', parser)
+        self.assertIn('$candidateConfirmed=$strictCount>0||$cross||$freshCount>0', parser)
 
     def test_each_live_event_has_its_own_stream_key(self):
         storage = FILES['storage']
@@ -87,7 +87,7 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("h.last_state='live'", storage)
         self.assertIn('INTERVAL {$seconds} SECOND', storage)
         self.assertIn("confirmation_grace_expired", storage)
-        self.assertIn("'TikTok'=>8", source)
+        self.assertIn("'TikTok'=>18", source)
         self.assertNotIn("$platform==='TikTok'?2", storage)
         self.assertIn("latest_probe_offline", storage)
 

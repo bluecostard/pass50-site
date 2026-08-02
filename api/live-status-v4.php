@@ -145,7 +145,7 @@ $healthSummary=p50_live_v4_health_summary($sources,$automatic);
 $coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;$lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
 
 json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
-    'version'=>'4.2','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
+    'version'=>'4.3','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
     'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
     'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,'coveragePercent'=>$coverage,

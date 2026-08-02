@@ -2,35 +2,38 @@
 declare(strict_types=1);
 
 /**
- * PASS50 Live Trust Gate
- * Garantit qu’un LIVE public est encore réellement en cours.
- * Sépare la publication stricte (ce que voit l’utilisateur) de la grâce
- * de reconfirmation serveur (anti faux négatifs sur blocage réseau).
+ * PASS50 Live Trust Gate (balanced)
+ * - Public : confirmation live positive encore dans une fenêtre réaliste (> intervalle de balayage)
+ * - Anti-fantômes : unknown / offline / replay ne maintiennent PAS la liste publique
+ * - Détection : ne pas exiger une reconfirmation toutes les 90s (sinon liste vide)
  */
-const P50_LIVE_V4_TRUST_REVISION = 'LIVE-TRUST-GATE-2026-08-03-1';
+const P50_LIVE_V4_TRUST_REVISION = 'LIVE-TRUST-BALANCED-2026-08-03-1';
 
-/** Âge max depuis la dernière confirmation live positive pour rester visible. */
+/**
+ * Âge max depuis la dernière confirmation live positive pour rester visible.
+ * Doit rester > intervalle quick/full sweep, sinon la liste se vide en permanence.
+ */
 const P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS = [
-    'TikTok' => 90,
-    'YouTube' => 240,
-    'Instagram' => 120,
-    'Facebook' => 120,
+    'TikTok' => 720,      // 12 min
+    'YouTube' => 1200,    // 20 min
+    'Instagram' => 900,   // 15 min
+    'Facebook' => 900,    // 15 min
 ];
 
-/** Grâce serveur pour retester un direct sans le clôturer trop tôt. */
+/** Grâce serveur pour retester un direct sans le clôturer trop tôt ( ≥ fenêtre publique ). */
 const P50_LIVE_V4_RECONFIRM_GRACE_MINUTES = [
-    'TikTok' => 8,
-    'YouTube' => 15,
-    'Instagram' => 10,
-    'Facebook' => 10,
+    'TikTok' => 18,
+    'YouTube' => 25,
+    'Instagram' => 20,
+    'Facebook' => 20,
 ];
 
 function p50_live_v4_public_max_age(string $platform): int {
-    return max(30, (int)(P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS[$platform] ?? 120));
+    return max(120, (int)(P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS[$platform] ?? 900));
 }
 
 function p50_live_v4_reconfirm_grace_minutes(string $platform): int {
-    return max(1, (int)(P50_LIVE_V4_RECONFIRM_GRACE_MINUTES[$platform] ?? 10));
+    return max(5, (int)(P50_LIVE_V4_RECONFIRM_GRACE_MINUTES[$platform] ?? 18));
 }
 
 function p50_live_v4_trust_seconds_map(): array {

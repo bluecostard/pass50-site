@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-TRUST-GATE-2026-08-03-1';
+const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-TRUST-BALANCED-2026-08-03-1';
 const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800;
 
 function p50_live_v4_unescape(string $value): string {
@@ -120,7 +120,8 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
         foreach($roomEvidence as $candidate=>$families){
             $apiCount=count($families['api']);$htmlCount=count($families['html']);$strictCount=count($families['strictApi']);$freshCount=count($families['freshApi']);$cross=$apiCount>0&&$htmlCount>0;
             // Trust Gate : une salle « fraîche » seule ne suffit plus — il faut une API stricte ou une preuve croisée API+HTML.
-            $candidateConfirmed=$strictCount>0||$cross;$rank=$strictCount>0?3:($cross?2:($freshCount>0?1:0));$total=$apiCount+$htmlCount;
+            // Fresh API room suffit pour confirmer ; le Trust Gate public coupe les fantômes ensuite.
+            $candidateConfirmed=$strictCount>0||$cross||$freshCount>0;$rank=$strictCount>0?3:($cross?2:($freshCount>0?1:0));$total=$apiCount+$htmlCount;
             if($rank>$bestRank||($rank===$bestRank&&$candidateConfirmed&&!$confirmed)||($rank===$bestRank&&$candidateConfirmed===$confirmed&&$total>$bestTotal)){$roomId=(string)$candidate;$strictApi=$strictCount>0;$freshApi=$freshCount>0;$crossFamily=$cross;$confirmed=$candidateConfirmed;$bestRank=$rank;$bestTotal=$total;}
         }
         if(!$confirmed&&$endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];

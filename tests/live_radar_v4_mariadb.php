@@ -44,7 +44,11 @@ must(count($active)===1,'Une nouvelle confirmation live peut republier le flux.'
 $pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 MINUTE) WHERE profile_id='tiktok-test'");
 $pdo->exec("UPDATE p50_live_source_health SET last_checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 MINUTE) WHERE profile_id='tiktok-test'");
 $active=p50_live_v4_active_rows();
-must(count($active)===0,'TikTok sort du public après 90 secondes sans reconfirmation.');
+must(count($active)===1,'TikTok reste public 2 minutes après confirmation (fenêtre 12 min).');
+$pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 13 MINUTE) WHERE profile_id='tiktok-test'");
+$pdo->exec("UPDATE p50_live_source_health SET last_checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 13 MINUTE),last_state='live' WHERE profile_id='tiktok-test'");
+$active=p50_live_v4_active_rows();
+must(count($active)===0,'TikTok sort du public après 12 minutes sans reconfirmation.');
 
 p50_live_v4_store_live($live);
 $pdo->prepare("UPDATE p50_live_source_health SET last_state='live',last_checked_at=UTC_TIMESTAMP(),last_live_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);

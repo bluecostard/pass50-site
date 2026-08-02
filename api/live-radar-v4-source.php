@@ -4,7 +4,7 @@ declare(strict_types=1);
 const P50_LIVE_V4_PLATFORMS = ['TikTok','YouTube','Instagram','Facebook'];
 const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];
 /** @deprecated Utiliser p50_live_v4_reconfirm_grace_map() — conservé pour compat tests/clients. */
-const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>8,'YouTube'=>15,'Instagram'=>10,'Facebook'=>10];
+const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>18,'YouTube'=>25,'Instagram'=>20,'Facebook'=>20];
 const P50_LIVE_V4_CANDIDATE_TTL_MINUTES = 30;
 const P50_LIVE_V4_BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36';
 const P50_LIVE_V4_MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
