@@ -4,7 +4,7 @@
 if(window.__pass50LiveExperienceV41)return;
 window.__pass50LiveExperienceV41=true;
 
-const VERSION='4.1.1';
+const VERSION='4.2.0';
 let currentShare=null;
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -13,6 +13,12 @@ function safeUrl(value){
     const url=new URL(String(value||''),location.href);
     return ['http:','https:'].includes(url.protocol)?url.href:'';
   }catch{return ''}
+}
+
+function isAndroid(){return /Android/i.test(navigator.userAgent||'')}
+function isIOS(){return /iPhone|iPad|iPod/i.test(navigator.userAgent||'')}
+function isMobile(){
+  return isAndroid()||isIOS()||((navigator.maxTouchPoints||0)>1&&Math.min(screen.width,screen.height)<920);
 }
 
 function lives(){
@@ -36,12 +42,113 @@ function notify(message){
   try{if(typeof toast==='function')toast(message)}catch{}
 }
 
+function tiktokHandle(live,webUrl=''){
+  const fromMeta=String(live?.handle||live?.metadata?.handle||'').replace(/^@/,'').trim();
+  if(fromMeta)return fromMeta;
+  const match=String(webUrl||live?.url||'').match(/tiktok\.com\/@([^/?#]+)/i);
+  return match?decodeURIComponent(match[1]):'';
+}
+
+function androidIntent(hostPath,packageName,fallbackUrl){
+  const path=String(hostPath||'').replace(/^https?:\/\//i,'').replace(/^\/+/,'');
+  return `intent://${path}#Intent;scheme=https;package=${packageName};S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};end`;
+}
+
+function appAwareLiveUrl(live,preferred=''){
+  const web=safeUrl(preferred||live?.url);
+  if(!web)return '';
+  const platform=String(live?.platform||'');
+  const roomId=String(live?.roomId||live?.metadata?.roomId||'').trim();
+  const videoId=String(live?.videoId||live?.metadata?.videoId||'').trim();
+
+  if(platform==='TikTok'){
+    const handle=tiktokHandle(live,web);
+    const httpsLive=handle?`https://www.tiktok.com/@${handle}/live`:web;
+    if(isAndroid())return androidIntent(handle?`www.tiktok.com/@${handle}/live`:httpsLive.replace(/^https?:\/\//i,''),'com.zhiliaoapp.musically',httpsLive);
+    if(isIOS()&&roomId)return `snssdk1233://live?room_id=${encodeURIComponent(roomId)}`;
+    return httpsLive;
+  }
+
+  if(platform==='Instagram'){
+    const handle=String(live?.handle||live?.metadata?.handle||'').replace(/^@/,'').trim()
+      ||(web.match(/instagram\.com\/([^/?#]+)/i)||[])[1]
+      ||'';
+    const httpsProfile=handle?`https://www.instagram.com/${handle}/`:web;
+    if(isAndroid()&&handle)return androidIntent(`www.instagram.com/${handle}/`,'com.instagram.android',httpsProfile);
+    if(isIOS()&&handle)return `instagram://user?username=${encodeURIComponent(handle)}`;
+    return httpsProfile;
+  }
+
+  if(platform==='YouTube'){
+    let id=videoId;
+    if(!id){
+      try{id=new URL(web).searchParams.get('v')||'';}catch{id=''}
+      if(!id)id=(web.match(/\/(?:live|shorts|embed)\/([A-Za-z0-9_-]{6,})/)||[])[1]||'';
+    }
+    const httpsWatch=id?`https://www.youtube.com/watch?v=${id}`:web;
+    if(isAndroid()&&id)return androidIntent(`www.youtube.com/watch?v=${id}`,'com.google.android.youtube',httpsWatch);
+    if(isIOS()&&id)return `vnd.youtube://${id}`;
+    return httpsWatch;
+  }
+
+  if(platform==='Facebook'){
+    if(isAndroid())return androidIntent(web.replace(/^https?:\/\//i,''),'com.facebook.katana',web);
+    if(isIOS())return `fb://facewebmodal/f?href=${encodeURIComponent(web)}`;
+    return web;
+  }
+
+  return web;
+}
+
 function openNewTab(value){
   const url=safeUrl(value);if(!url)return false;
   const opened=window.open(url,'_blank');
   if(opened){try{opened.opener=null}catch{}return true;}
   const anchor=document.createElement('a');anchor.href=url;anchor.target='_blank';anchor.rel='noopener noreferrer';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();anchor.remove();
   return true;
+}
+
+function openLiveDestination(live,preferred=''){
+  const web=safeUrl(preferred||live?.url);
+  const destination=appAwareLiveUrl(live,web)||web;
+  if(!destination)return false;
+
+  if(isMobile()){
+    // Navigation directe : Universal Links / Intents ouvrent mieux l’app que window.open.
+    const started=Date.now();
+    const usesCustomScheme=!/^https?:/i.test(destination);
+    window.location.href=destination;
+    if(usesCustomScheme&&web&&web!==destination){
+      setTimeout(()=>{
+        if(document.hidden||Date.now()-started>1800)return;
+        window.location.href=web;
+      },900);
+    }
+    return true;
+  }
+
+  return openNewTab(web);
+}
+
+function decorateWatchLink(watch,live){
+  if(!(watch instanceof HTMLAnchorElement))return;
+  const web=safeUrl(watch.getAttribute('href')||live?.url);
+  if(!web)return;
+  const payload=live||{profileId:watch.dataset.liveProfile,platform:watch.dataset.livePlatform,url:web,roomId:watch.dataset.liveRoom,videoId:watch.dataset.liveVideo,handle:watch.dataset.liveHandle};
+  const destination=appAwareLiveUrl(payload,web)||web;
+  watch.href=destination;
+  watch.dataset.liveWebUrl=web;
+  if(payload.roomId)watch.dataset.liveRoom=String(payload.roomId);
+  if(payload.videoId)watch.dataset.liveVideo=String(payload.videoId);
+  if(payload.handle)watch.dataset.liveHandle=String(payload.handle).replace(/^@/,'');
+  if(isMobile()){
+    watch.removeAttribute('target');
+    watch.rel='noopener';
+  }else{
+    watch.target='_blank';
+    watch.rel='noopener noreferrer';
+    watch.href=web;
+  }
 }
 
 function backgroundVerify(live){
@@ -122,7 +229,10 @@ async function copyShare(){if(!currentShare)return;try{await copyText(shareMessa
 function enhance(){
   ensureShareModal();
   document.querySelectorAll('#liveBody .live-card').forEach(card=>{
-    const watch=card.querySelector('.live-watch-link');if(!watch||card.querySelector('.p50-share-live'))return;
+    const watch=card.querySelector('.live-watch-link');if(!watch)return;
+    const live=liveFor(watch.dataset.liveProfile,watch.dataset.livePlatform);
+    decorateWatchLink(watch,live);
+    if(card.querySelector('.p50-share-live'))return;
     const button=document.createElement('button');button.type='button';button.className='btn p50-share-live';button.textContent='PARTAGER LE LIVE';button.dataset.liveProfile=watch.dataset.liveProfile||'';button.dataset.livePlatform=watch.dataset.livePlatform||'';watch.insertAdjacentElement('afterend',button);
   });
   document.querySelectorAll('.badge.live-badge').forEach(badge=>{
@@ -133,7 +243,9 @@ function enhance(){
 
 function pruneLocalTikTok(){
   try{
-    if(typeof db==='undefined'||!Array.isArray(db.liveStreams))return;const limit=3*60_000,now=Date.now(),before=db.liveStreams.length;
+    if(typeof db==='undefined'||!Array.isArray(db.liveStreams))return;
+    const grace=Number(window.PASS50_LIVE_RADAR?.graceMinutes?.TikTok||20);
+    const limit=Math.max(3,grace)*60_000,now=Date.now(),before=db.liveStreams.length;
     db.liveStreams=db.liveStreams.filter(item=>{if(item?.source==='manual'||String(item?.platform)!=='TikTok')return true;const checked=new Date(item.lastConfirmedAt||item.lastSeenAt||'').getTime();return Number.isFinite(checked)&&now-checked<=limit;});
     if(db.liveStreams.length!==before){normalizeLiveStreams?.();localStorage.setItem(APP_KEY,JSON.stringify(db));render?.();if(document.getElementById('liveModal')?.classList.contains('show'))openLives?.();}
   }catch{}
@@ -142,7 +254,25 @@ function pruneLocalTikTok(){
 window.addEventListener('click',event=>{
   const target=event.target instanceof Element?event.target:null;if(!target)return;
   const watch=target.closest('.live-watch-link');
-  if(watch){event.preventDefault();event.stopImmediatePropagation();const live=liveFor(watch.dataset.liveProfile,watch.dataset.livePlatform)||{profileId:watch.dataset.liveProfile,platform:watch.dataset.livePlatform,url:watch.href};openNewTab(watch.href);backgroundVerify(live);return;}
+  if(watch){
+    const live=liveFor(watch.dataset.liveProfile,watch.dataset.livePlatform)||{
+      profileId:watch.dataset.liveProfile,
+      platform:watch.dataset.livePlatform,
+      url:watch.dataset.liveWebUrl||watch.href,
+      roomId:watch.dataset.liveRoom,
+      videoId:watch.dataset.liveVideo,
+      handle:watch.dataset.liveHandle,
+    };
+    decorateWatchLink(watch,live);
+    // Mobile : navigation native du <a> (Universal Links / Intent). Desktop : laisser target=_blank.
+    if(isMobile()){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openLiveDestination(live,watch.dataset.liveWebUrl||safeUrl(watch.href));
+    }
+    backgroundVerify(live);
+    return;
+  }
   const share=target.closest('.p50-share-live');
   if(share){
     event.preventDefault();event.stopImmediatePropagation();
@@ -154,7 +284,12 @@ window.addEventListener('click',event=>{
     return;
   }
   const badge=target.closest('.badge.live-badge[data-live-clickable="1"]');
-  if(badge){event.preventDefault();event.stopImmediatePropagation();const owner=badge.closest('[data-profile]'),live=owner?liveFor(owner.dataset.profile):null;if(live){openNewTab(live.url);backgroundVerify(live);}return;}
+  if(badge){
+    event.preventDefault();event.stopImmediatePropagation();
+    const owner=badge.closest('[data-profile]'),live=owner?liveFor(owner.dataset.profile):null;
+    if(live){openLiveDestination(live);backgroundVerify(live);}
+    return;
+  }
   if(target.closest('.p50-live-share-close')||target.id==='p50LiveShareModal'){event.preventDefault();closeShare();return;}
   if(target.closest('[data-live-share-native]')){event.preventDefault();nativeShare();return;}
   if(target.closest('[data-live-share-whatsapp]')){event.preventDefault();whatsappShare();return;}
@@ -169,5 +304,8 @@ window.addEventListener('keydown',event=>{
 
 const observer=new MutationObserver(()=>requestAnimationFrame(enhance));observer.observe(document.documentElement,{subtree:true,childList:true});
 document.addEventListener('DOMContentLoaded',()=>{ensureShareModal();enhance();pruneLocalTikTok();setInterval(pruneLocalTikTok,30_000);});
-setTimeout(enhance,0);window.PASS50_LIVE_EXPERIENCE_VERSION=VERSION;
+setTimeout(enhance,0);
+window.PASS50_LIVE_EXPERIENCE_VERSION=VERSION;
+window.PASS50_OPEN_LIVE=openLiveDestination;
+window.PASS50_LIVE_APP_URL=appAwareLiveUrl;
 })();
