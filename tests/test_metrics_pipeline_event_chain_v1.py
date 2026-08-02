@@ -56,10 +56,11 @@ class MetricsPipelineEventChainV1Tests(unittest.TestCase):
 
     def test_simulation_remains_read_only_and_dispatchable(self):
         self.assertIn('workflow_dispatch:', SIMULATION)
-        self.assertIn('.publication.publicationEnabled == false', SIMULATION)
-        self.assertIn('.publication.automaticPublicationEnabled == false', SIMULATION)
+        self.assertIn('.publication.mode == "simulation"', SIMULATION)
+        self.assertIn('.publication.appStateWriteAttempted == false', SIMULATION)
         self.assertIn('.scope.publicStateWrites == 0', SIMULATION)
         self.assertIn('pass50/publication-simulation', SIMULATION)
+        self.assertIn('metrics-ranking-publication-apply.yml', SIMULATION)
 
     def test_chain_never_contains_a_public_write_path(self):
         combined = P1 + RANKING + SIMULATION
