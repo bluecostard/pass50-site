@@ -37,18 +37,20 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("latest_probe_not_live", FILES['storage'])
         self.assertIn("h.last_state<>'live'", FILES['storage'])
 
-    def test_tiktok_strict_api_beats_stale_ended_html(self):
+    def test_tiktok_fresh_room_beats_stale_html_without_reviving_old_rooms(self):
         parser = FILES['parsers']
-        self.assertIn('P50_LIVE_V4_LOGIC_REVISION', parser)
-        self.assertIn('p50_live_v4_tiktok_owner_match', parser)
-        self.assertIn('$strictApiActive', parser)
-        self.assertIn("!$strictApiActive", parser)
-        self.assertIn("'strictApiLabels'", parser)
-        self.assertIn("$strictApi?99", parser)
+        self.assertIn('LIVE-RADAR-FRESH-TIKTOK-ROOMS-2026-08-02-2', parser)
+        self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 43200', parser)
+        self.assertIn('p50_live_v4_tiktok_room_timestamp', parser)
+        self.assertIn('p50_live_v4_tiktok_room_is_fresh', parser)
+        self.assertIn('$freshApiActive', parser)
+        self.assertIn('$currentApiActive', parser)
+        self.assertIn("!$currentApiActive", parser)
+        self.assertIn("'freshApiLabels'", parser)
+        self.assertIn("$freshApi?96", parser)
 
     def test_operational_contract_and_complete_sweep(self):
         self.assertIn("'contract'=>P50_LIVE_V4_LOGIC_REVISION", FILES['contract'])
-        self.assertIn('LIVE-RADAR-OPERATIONAL-2026-08-02-1', FILES['parsers'])
         self.assertIn("publicStateWrites'=>0", FILES['contract'])
         workflow = FILES['workflow']
         self.assertIn('pass50/live-radar', workflow)
