@@ -28,3 +28,7 @@ Cette version stabilise la chaîne de données LIVE sans modifier le classement 
 ## Continuité
 
 La fenêtre de grâce est de 20 minutes pour TikTok et de 15 minutes pour YouTube, Instagram et Facebook. Elle couvre l’intervalle entre deux balayages serveur sans maintenir indéfiniment un faux direct.
+
+Un blocage temporaire (`unknown`) ne retire pas un LIVE déjà confirmé tant que la grâce n’est pas expirée. Seuls un offline/replay explicite ou l’expiration de la grâce retirent le direct public.
+
+Le balayage complet tourne toutes les 5 minutes ; un balayage rapide serveur tourne toutes les 2 minutes pour reconfirmer les directs actifs et découvrir de nouvelles sources.

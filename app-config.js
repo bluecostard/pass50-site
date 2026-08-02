@@ -199,12 +199,12 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
-// Radar LIVE V3 : balayage complet de tous les liens officiels validés.
+// Radar LIVE V4 : balayage continu de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
   var script = document.createElement('script');
-  script.src = './live-radar-v3.js?v=1.2';
-  script.dataset.pass50LiveRadar = '3.2';
+  script.src = './live-radar-v3.js?v=1.3';
+  script.dataset.pass50LiveRadar = '4.2';
   document.head.appendChild(script);
 })();
 

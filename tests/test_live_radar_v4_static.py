@@ -32,15 +32,16 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertNotIn("live-status-v3.php", FILES['client'])
         self.assertIn("live-status-v4.php", FILES['client'])
 
-    def test_tiktok_unknown_is_not_published(self):
-        self.assertIn("continuityPreserved'=>false", FILES['endpoint'])
+    def test_unknown_block_preserves_confirmed_live(self):
+        self.assertIn('continuityPreserved', FILES['endpoint'])
         self.assertIn("tiktok_blocked_or_challenged", FILES['parsers'])
-        self.assertIn("latest_probe_not_live", FILES['storage'])
-        self.assertIn("h.last_state<>'live'", FILES['storage'])
+        self.assertIn("latest_probe_offline", FILES['storage'])
+        self.assertIn("h.last_state IN ('offline','replay')", FILES['storage'])
+        self.assertIn("h.last_state='unknown'", FILES['storage'])
 
     def test_tiktok_fresh_live_room_beats_stale_html(self):
         parser = FILES['parsers']
-        self.assertIn('LIVE-RADAR-EVENT-IDENTITY-2026-08-02-3', parser)
+        self.assertIn('LIVE-RADAR-CONTINUOUS-MAX-2026-08-02-1', parser)
         self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 43200', parser)
         self.assertIn('p50_live_v4_tiktok_room_timestamp', parser)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', parser)
@@ -70,7 +71,7 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn('live-radar-audit.json', workflow)
         self.assertIn('len(latest)>=total', workflow)
         self.assertIn('classified>0', workflow)
-        self.assertIn("batch=12", workflow)
+        self.assertIn("batch=14", workflow)
 
     def test_authorized_meta_live_is_not_filtered_by_manual_links(self):
         endpoint = FILES['endpoint']
@@ -79,21 +80,27 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         manual_key_check = endpoint.index("return isset($officialKeys[$key])")
         self.assertLess(meta_check, manual_key_check)
 
-    def test_public_rows_require_latest_live_confirmation(self):
+    def test_public_rows_keep_grace_and_block_continuity(self):
         storage = FILES['storage']
+        source = FILES['source']
         self.assertIn("h.last_state='live'", storage)
-        self.assertIn("$platform==='TikTok'?2", storage)
-        self.assertIn("latest_probe_not_live", storage)
-        self.assertNotIn("h.last_state IN ('unknown','probable')", storage)
-        self.assertNotIn("latest_probe_not_confirmed", storage)
+        self.assertIn("h.last_state='unknown'", storage)
+        self.assertIn("confirmation_grace_expired", storage)
+        self.assertIn("'TikTok'=>20", source)
+        self.assertNotIn("$platform==='TikTok'?2", storage)
+        self.assertIn("latest_probe_offline", storage)
 
     def test_facebook_uses_specific_video_and_independent_probes(self):
         parser = FILES['parsers']
+        source = FILES['source']
         self.assertIn('videoVotes', parser)
         self.assertIn('public_multi_probe', parser)
         self.assertIn("$votes>=2", parser)
         self.assertIn('facebook_active_without_specific_video', parser)
         self.assertIn('watch/?v=', parser)
+        self.assertIn('live_videos', source)
+        self.assertIn('mbasic.facebook.com', source)
+        self.assertIn('web_profile_info', source)
 
 
 if __name__ == '__main__':
