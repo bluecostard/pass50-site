@@ -42,7 +42,7 @@ class LiveRadarV41StaticTests(unittest.TestCase):
 
     def test_tiktok_trust_gate_allows_fresh_api_confirmation(self):
         parser = FILES['parsers']
-        self.assertIn('LIVE-TRUST-BALANCED-2026-08-03-1', parser)
+        self.assertIn('LIVE-PROBE-RECOVERY-2026-08-03-1', parser)
         self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800', parser)
         self.assertIn('p50_live_v4_tiktok_room_timestamp', parser)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', parser)
@@ -51,7 +51,12 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn('$currentApiActive', parser)
         self.assertIn("!$currentApiActive", parser)
         self.assertIn("'apiLiveStructureLabels'", parser)
-        self.assertIn('$candidateConfirmed=$strictCount>0||$cross||$freshCount>0', parser)
+        self.assertIn('$candidateConfirmed=$strictCount>0||$cross||$freshCount>0||$htmlFresh', parser)
+        self.assertIn('p50_live_v4_platform_referer', FILES['source'])
+        self.assertIn('Chrome/126', FILES['source'])
+        self.assertIn("status='live'", FILES['source'])
+        self.assertIn("return ['state'=>'offline','error'=>'instagram_no_public_live_signal'", parser)
+        self.assertIn("return ['state'=>'offline','error'=>'tiktok_no_live_signal'", parser)
 
     def test_each_live_event_has_its_own_stream_key(self):
         storage = FILES['storage']

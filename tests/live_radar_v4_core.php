@@ -17,8 +17,8 @@ function response(string $body,int $status=200,string $url='https://example.test
 function room_id_for(int $timestamp,int $suffix=123456): string {return (string)(($timestamp*4294967296)+$suffix);}
 
 must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
-must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-TRUST-BALANCED-2026-08-03-1','La révision Trust Gate équilibrée doit être active.');
-must(P50_LIVE_V4_TRUST_REVISION==='LIVE-TRUST-BALANCED-2026-08-03-1','Le module Trust Gate doit être chargé.');
+must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-PROBE-RECOVERY-2026-08-03-1','La révision Probe Recovery doit être active.');
+must(P50_LIVE_V4_TRUST_REVISION==='LIVE-PROBE-RECOVERY-2026-08-03-1','Le module Trust Gate doit être chargé.');
 must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===10800,'La fenêtre TikTok Trust Gate est de trois heures.');
 must(p50_live_v4_public_max_age('TikTok')===720,'TikTok public max age = 12 min.');
 
@@ -41,7 +41,11 @@ must($apiStale['state']==='probable','Une ancienne structure LiveRoom sans ident
 
 $html='<!doctype html><title>Coach Test LIVE | TikTok</title><script>{"LiveRoom":{"id":"741234567891"},"isLive":true}</script>';
 $multi=p50_live_v4_parse_tiktok($source,['live'=>response($html,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($html,200,'https://www.tiktok.com/embed/live/@coachtest')]);
-must($multi['state']==='probable','Deux pages HTML de la même famille restent à confirmer.');
+must($multi['state']==='probable','Deux pages HTML sur une salle non datable restent à confirmer.');
+
+$freshHtml='<!doctype html><title>Coach Test LIVE | TikTok</title><script>{"LiveRoom":{"id":"'.$freshRoom.'"},"isLive":true,"roomId":"'.$freshRoom.'"}</script>';
+$multiFresh=p50_live_v4_parse_tiktok($source,['live'=>response($freshHtml,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($freshHtml,200,'https://www.tiktok.com/embed/live/@coachtest')]);
+must($multiFresh['state']==='live','Deux pages HTML sur la même salle fraîche confirment le LIVE.');
 
 $cross=p50_live_v4_parse_tiktok($source,[
     'api'=>response('{"status":2,"room_id":"741234567891","uniqueId":"coachtest"}'),

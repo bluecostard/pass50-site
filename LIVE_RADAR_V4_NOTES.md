@@ -25,6 +25,13 @@ Cette version stabilise la chaîne de données LIVE sans modifier le classement 
 - une date de fin explicite classe le contenu en replay ;
 - l’ID de la vidéo et l’URL exacte sont conservés.
 
+## Probe Recovery (2026-08-03)
+
+- Referer/Origin natifs + UA Chrome 126 + retry mobile si challenge
+- Meta/TikTok « page lisible sans signal live » → `offline` (plus `unknown`)
+- Quick scan : réserver 4–6 slots de découverte ; priority live seulement
+- TikTok : 2 HTML sur la même salle fraîche peuvent confirmer
+
 ## Trust Gate équilibré (anti lives terminés)
 
 Module dédié `api/live-radar-v4-trust.php` + `live-trust-gate-v1.js`.
