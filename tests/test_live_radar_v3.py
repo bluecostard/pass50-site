@@ -13,6 +13,7 @@ CONFIG = (ROOT / 'app-config.js').read_text(encoding='utf-8')
 CONFIG_EXAMPLE = (ROOT / 'api' / 'config.example.php').read_text(encoding='utf-8')
 DATA_CORE = (ROOT / 'api' / 'data-engine-core.php').read_text(encoding='utf-8')
 SWEEP = (ROOT / '.github' / 'workflows' / 'live-radar-sweep.yml').read_text(encoding='utf-8')
+CORE_TESTS = (ROOT / 'tests' / 'live_radar_v4_core.php').read_text(encoding='utf-8')
 
 
 class LiveRadarV41Tests(unittest.TestCase):
@@ -22,21 +23,26 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('p50_live_v4_parse_tiktok', PARSERS)
         self.assertIn('p50_live_v4_parse_youtube', PARSERS)
 
-    def test_tiktok_requires_cross_family_confirmation(self):
+    def test_tiktok_requires_strong_or_cross_family_confirmation(self):
         parser = re.search(r'function p50_live_v4_parse_tiktok\(.*?\n}', PARSERS, re.S).group(0)
         self.assertIn("$confirmed?'live':'probable'", parser)
         self.assertIn("['api','api_basic']", PARSERS)
         self.assertIn("'live','mobile_live','embed'", PARSERS)
         self.assertIn('proofFamilies', parser)
+        self.assertIn('strictApiLabels', parser)
         self.assertIn('tiktok_confirmation_incomplete', parser)
         self.assertIn('roomEvidence', parser)
+        self.assertIn('$strictApiActive', parser)
 
-    def test_explicit_tiktok_end_always_wins(self):
+    def test_tiktok_end_only_beats_unconfirmed_signals(self):
         parser = re.search(r'function p50_live_v4_parse_tiktok\(.*?\n}', PARSERS, re.S).group(0)
+        self.assertIn("if(!$confirmed&&$endedLabels)return ['state'=>'offline'", parser)
         self.assertIn("if($endedLabels)return ['state'=>'offline'", parser)
-        self.assertNotIn('$endedLabels&&!$strongApi', parser)
-        self.assertIn('Le LIVE est terminé', (ROOT / 'tests' / 'live_radar_v4_core.php').read_text(encoding='utf-8'))
-        self.assertIn('ancien statut API actif', (ROOT / 'tests' / 'live_radar_v4_core.php').read_text(encoding='utf-8'))
+        self.assertIn('p50_live_v4_tiktok_owner_match', PARSERS)
+        self.assertIn("!$strictApiActive", parser)
+        self.assertIn('Le LIVE est terminé', CORE_TESTS)
+        self.assertIn('ancienne trace HTML de fin', CORE_TESTS)
+        self.assertIn("['state']==='live'", CORE_TESTS)
 
     def test_unknown_and_probable_withdraw_public_live_immediately(self):
         self.assertIn("continuityPreserved'=>false", ENDPOINT)
@@ -98,6 +104,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('*/10 * * * *', SWEEP)
         self.assertIn('api/live-status-v4.php', SWEEP)
         self.assertIn('mode=full', SWEEP)
+        self.assertIn('live-radar-audit.json', SWEEP)
+        self.assertIn('pass50/live-radar', SWEEP)
 
 
 if __name__ == '__main__':

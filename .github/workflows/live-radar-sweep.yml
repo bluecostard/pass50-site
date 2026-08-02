@@ -4,48 +4,209 @@ on:
   schedule:
     - cron: '*/10 * * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/live-radar-v4-*.php'
+      - 'api/live-status-v4.php'
+      - 'api/live-radar-contract.php'
+      - 'live-radar-v3.js'
+      - '.github/workflows/live-radar-sweep.yml'
 
 permissions:
   contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-live-radar-sweep
+  cancel-in-progress: false
 
 jobs:
   full-sweep:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
+    env:
+      ENDPOINT: https://pass50.store/api/live-status-v4.php
+      CONTRACT_URL: https://pass50.store/api/live-radar-contract.php
+      EXPECTED_CONTRACT: LIVE-RADAR-OPERATIONAL-2026-08-02-1
     steps:
-      - name: Balayer tous les liens officiels
-        env:
-          ENDPOINT: https://pass50.store/api/live-status-v4.php
+      - name: Attendre le moteur LIVE corrigé
+        run: |
+          set -euo pipefail
+          deployed=false
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --location --max-time 20 "${CONTRACT_URL}?t=$(date +%s)" > live-radar-contract.json \
+              && jq -e --arg contract "$EXPECTED_CONTRACT" '.ok == true and .contract == $contract and .publicStateWrites == 0' live-radar-contract.json >/dev/null; then
+              deployed=true
+              break
+            fi
+            echo "Moteur LIVE corrigé en attente (${attempt}/30)."
+            sleep 10
+          done
+          if [[ "$deployed" != "true" ]]; then
+            echo "::error::Le contrat du Radar LIVE corrigé n'est pas déployé."
+            cat live-radar-contract.json 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: Balayer et auditer tous les liens officiels
+        id: sweep
         run: |
           set -euo pipefail
           cycle="github_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
-          complete="false"
+          : > live-radar-passes.ndjson
+          complete=false
           for attempt in $(seq 1 100); do
-            response="$(curl --fail --silent --show-error --location --max-time 30 --retry 2 --retry-delay 2 "${ENDPOINT}?mode=full&force=1&batch=10&cycle=${cycle}&t=$(date +%s)")"
-            printf '%s' "$response" > /tmp/live-radar.json
-            readarray -t values < <(python3 - <<'PY'
-          import json
-          with open('/tmp/live-radar.json', encoding='utf-8') as stream:
-              data=json.load(stream)
-          radar=data.get('radar') or {}
-          print('true' if radar.get('cycleComplete') else 'false')
-          print('true' if radar.get('busy') else 'false')
-          print(int(radar.get('cycleScanned') or 0))
-          print(int(radar.get('cycleTotal') or 0))
-          print(int(radar.get('livesFoundInCycle') or 0))
-          PY
-            )
+            response="$(curl --fail --silent --show-error --location --max-time 45 --retry 2 --retry-delay 2 "${ENDPOINT}?mode=full&force=1&batch=12&cycle=${cycle}&t=$(date +%s)")"
+            printf '%s' "$response" | jq -c '.' >> live-radar-passes.ndjson
+            readarray -t values < <(printf '%s' "$response" | python3 -c '
+          import json,sys
+          data=json.load(sys.stdin)
+          radar=data.get("radar") or {}
+          print("true" if radar.get("cycleComplete") else "false")
+          print("true" if radar.get("busy") else "false")
+          print(int(radar.get("cycleScanned") or 0))
+          print(int(radar.get("cycleTotal") or 0))
+          print(int(radar.get("livesFoundInCycle") or 0))
+          print(int(radar.get("candidatesFoundInCycle") or 0))
+          print(int(radar.get("officialSourcesKnown") or 0))
+          ')
             complete="${values[0]}"
             busy="${values[1]}"
-            echo "Radar PASS50 : ${values[2]}/${values[3]} sources · ${values[4]} live(s)"
+            echo "Radar PASS50 : ${values[2]}/${values[3]} sources · ${values[4]} live(s) · ${values[5]} probable(s) · ${values[6]} source(s) connue(s)"
             if [[ "$complete" == "true" ]]; then
-              exit 0
+              break
             fi
-            if [[ "$busy" == "true" ]]; then
-              sleep 3
-            else
-              sleep 1
-            fi
+            if [[ "$busy" == "true" ]]; then sleep 3; else sleep 1; fi
           done
-          echo "Le balayage complet n'a pas terminé dans la limite prévue."
-          exit 1
+          if [[ "$complete" != "true" ]]; then
+            echo "::error::Le balayage complet n'a pas terminé dans la limite prévue."
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import collections, datetime, json, os
+
+          passes=[]
+          with open('live-radar-passes.ndjson', encoding='utf-8') as stream:
+              for line in stream:
+                  line=line.strip()
+                  if line:
+                      passes.append(json.loads(line))
+          if not passes:
+              raise SystemExit('Aucune réponse du radar à auditer.')
+
+          latest={}
+          error_counts=collections.Counter()
+          probe_http=collections.Counter()
+          for payload in passes:
+              radar=payload.get('radar') or {}
+              for row in radar.get('diagnostics') or []:
+                  key=f"{row.get('platform','')}|{row.get('profileId','')}"
+                  latest[key]=row
+                  error=str(row.get('error') or row.get('withdrawalReason') or '')
+                  if error:
+                      error_counts[error]+=1
+                  for probe in (row.get('probes') or {}).values():
+                      probe_http[str(probe.get('status') or 0)]+=1
+
+          final=passes[-1].get('radar') or {}
+          states=collections.Counter(str(row.get('state') or 'unknown') for row in latest.values())
+          platforms={}
+          for key,row in latest.items():
+              platform=str(row.get('platform') or 'Unknown')
+              bucket=platforms.setdefault(platform, collections.Counter())
+              bucket[str(row.get('state') or 'unknown')]+=1
+          total=int(final.get('cycleTotal') or 0)
+          scanned=int(final.get('cycleScanned') or 0)
+          complete=bool(final.get('cycleComplete'))
+          classified=sum(states[name] for name in ('live','probable','offline','replay'))
+          operational=complete and total>0 and scanned>=total and len(latest)>=total and classified>0
+          audit={
+              'ok': operational,
+              'contract': os.environ.get('EXPECTED_CONTRACT'),
+              'generatedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'cycle': {
+                  'id': final.get('cycleId'),
+                  'complete': complete,
+                  'scanned': scanned,
+                  'total': total,
+                  'diagnostics': len(latest),
+              },
+              'results': {
+                  'live': int(final.get('livesFoundInCycle') or 0),
+                  'probable': int(final.get('candidatesFoundInCycle') or 0),
+                  'activePublished': len(passes[-1].get('liveStreams') or []),
+                  'states': dict(states),
+                  'platforms': {name: dict(counts) for name,counts in sorted(platforms.items())},
+              },
+              'health': {
+                  'classified': classified,
+                  'unknown': states.get('unknown',0),
+                  'topErrors': error_counts.most_common(20),
+                  'probeHttpStatuses': dict(probe_http),
+              },
+              'publicStateWrites': 0,
+          }
+          with open('live-radar-audit.json','w',encoding='utf-8') as stream:
+              json.dump(audit,stream,ensure_ascii=False,indent=2)
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as stream:
+              stream.write(f"operational={'true' if operational else 'false'}\n")
+              stream.write(f"scanned={scanned}\n")
+              stream.write(f"total={total}\n")
+              stream.write(f"live={audit['results']['live']}\n")
+              stream.write(f"probable={audit['results']['probable']}\n")
+              stream.write(f"unknown={states.get('unknown',0)}\n")
+          if not operational:
+              raise SystemExit('Le radar a terminé sans couverture diagnostique exploitable.')
+          PY
+
+      - name: Résumer le balayage
+        if: always()
+        run: |
+          if [[ -f live-radar-audit.json ]]; then
+            {
+              echo '### Radar LIVE PASS50'
+              echo
+              jq -r '"- Couverture : \(.cycle.scanned)/\(.cycle.total) sources\n- Diagnostics : \(.cycle.diagnostics)\n- Lives confirmés : \(.results.live)\n- Probables : \(.results.probable)\n- États : `\(.results.states|tojson)`\n- Plateformes : `\(.results.platforms|tojson)`\n- Principales erreurs : `\(.health.topErrors|tojson)`\n- Écriture app_state : `0`"' live-radar-audit.json
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Le fichier d’audit du Radar LIVE n’a pas été produit.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Publier l’état opérationnel
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STEP_OUTCOME: ${{ steps.sweep.outcome }}
+          SCANNED: ${{ steps.sweep.outputs.scanned }}
+          TOTAL: ${{ steps.sweep.outputs.total }}
+          LIVE: ${{ steps.sweep.outputs.live }}
+          PROBABLE: ${{ steps.sweep.outputs.probable }}
+          UNKNOWN: ${{ steps.sweep.outputs.unknown }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="Radar LIVE · ${SCANNED:-0}/${TOTAL:-0} · ${LIVE:-0} live · ${PROBABLE:-0} prob. · ${UNKNOWN:-0} inconnus"
+          if [[ "$STEP_OUTCOME" != "success" ]]; then
+            state=failure
+            description="Radar LIVE incomplet ou non diagnostiquable"
+          fi
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context 'pass50/live-radar' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archiver le diagnostic du radar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-radar-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            live-radar-contract.json
+            live-radar-passes.ndjson
+            live-radar-audit.json
+          if-no-files-found: warn
+          retention-days: 30
