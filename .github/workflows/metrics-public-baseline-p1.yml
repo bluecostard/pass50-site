@@ -1,4 +1,5 @@
 name: Metrics Public Baseline P1
+# Contract history: PUBLIC-BASELINE-P1-V1.1 -> PUBLIC-BASELINE-P1-V1.2
 
 on:
   schedule:
