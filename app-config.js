@@ -203,8 +203,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
   var script = document.createElement('script');
-  script.src = './live-radar-v3.js?v=1.3';
-  script.dataset.pass50LiveRadar = '4.2';
+  script.src = './live-radar-v3.js?v=1.4';
+  script.dataset.pass50LiveRadar = '4.3';
   document.head.appendChild(script);
 })();
 

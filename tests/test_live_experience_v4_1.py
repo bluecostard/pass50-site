@@ -10,6 +10,7 @@ DISMISS_API = (ROOT / 'api' / 'live-dismiss.php').read_text(encoding='utf-8')
 STORAGE = (ROOT / 'api' / 'live-radar-v4-storage.php').read_text(encoding='utf-8')
 PUBLIC = (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8')
 SW = (ROOT / 'sw.js').read_text(encoding='utf-8')
+INDEX = (ROOT / 'index.html').read_text(encoding='utf-8')
 
 
 class LiveExperienceV41Tests(unittest.TestCase):
@@ -18,14 +19,34 @@ class LiveExperienceV41Tests(unittest.TestCase):
         self.assertIn("setTimeout(()=>{if(profileId)verifyProfile(profileId);},0)", block)
         self.assertNotIn('preventDefault', block)
         self.assertNotIn('stopImmediatePropagation', block)
-        self.assertIn('target="_blank"', (ROOT / 'index.html').read_text(encoding='utf-8'))
+        self.assertIn('target="_blank"', INDEX)
+        self.assertIn('data-live-web-url', INDEX)
+
+    def test_mobile_opens_native_apps_instead_of_window_open(self):
+        self.assertIn('function appAwareLiveUrl', UI)
+        self.assertIn('function openLiveDestination', UI)
+        self.assertIn('androidIntent', UI)
+        self.assertIn('com.zhiliaoapp.musically', UI)
+        self.assertIn('snssdk1233://live?room_id=', UI)
+        self.assertIn('com.instagram.android', UI)
+        self.assertIn('com.google.android.youtube', UI)
+        self.assertIn('com.facebook.katana', UI)
+        self.assertIn('window.location.href=destination', UI)
+        self.assertIn('PASS50_OPEN_LIVE', UI)
+        self.assertIn("if(isMobile())", UI)
+        self.assertNotIn('openNewTab(watch.href)', UI)
 
     def test_live_badge_works_inside_influencer_sheet(self):
         self.assertIn("badge.closest?.('#profileBody')", RADAR)
         self.assertIn("document.querySelector('#profileBody h2')", RADAR)
         self.assertIn("event.target.closest?.('.badge.live-badge')", RADAR)
-        self.assertIn('openExternal(live.url)', RADAR)
+        self.assertIn('openExternal(live.url,live)', RADAR)
         self.assertIn("profileBadge.style.cursor='pointer'", DISMISS_UI)
+
+    def test_public_streams_expose_open_metadata(self):
+        self.assertIn("'roomId'=>trim((string)($meta['roomId']??''))", STORAGE)
+        self.assertIn("'videoId'=>trim((string)($meta['videoId']??''))", STORAGE)
+        self.assertIn("'handle'=>$handle", STORAGE)
 
     def test_live_list_receives_share_button(self):
         self.assertIn("button.className='btn p50-share-live'", UI)
@@ -51,7 +72,7 @@ class LiveExperienceV41Tests(unittest.TestCase):
         self.assertNotIn('Description détaillée', UI)
 
     def test_modules_are_loaded_and_cached(self):
-        self.assertIn("live-experience-v4-1.js?v=1.1", PUBLIC)
+        self.assertIn("live-experience-v4-1.js?v=1.2", PUBLIC)
         self.assertIn("live-dismiss-ui-v1.js?v=1.0", PUBLIC)
         self.assertIn("live-dismiss-ui-v1.js?v=1.0", SW)
         self.assertIn("share-center-v1.js?v=1.0", SW)

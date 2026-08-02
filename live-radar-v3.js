@@ -188,8 +188,12 @@ async function verifyProfile(profileId){
   finally{runningMode='';renderStatus();}
 }
 
-function openExternal(url){
+function openExternal(url,live=null){
+  if(typeof window.PASS50_OPEN_LIVE==='function'&&live)return window.PASS50_OPEN_LIVE(live,url);
+  if(typeof window.PASS50_OPEN_LIVE==='function'&&url)return window.PASS50_OPEN_LIVE({url,platform:live?.platform||''},url);
   if(!/^https?:\/\//i.test(String(url||'')))return false;
+  const mobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');
+  if(mobile){window.location.href=String(url);return true;}
   const opened=window.open(String(url),'_blank');
   if(opened){try{opened.opener=null}catch{}return true;}
   const anchor=document.createElement('a');anchor.href=String(url);anchor.target='_blank';anchor.rel='noopener noreferrer';anchor.style.display='none';document.body.appendChild(anchor);anchor.click();anchor.remove();return true;
@@ -206,7 +210,7 @@ function badgeProfileId(badge){
 
 function ensureLiveExperience(){
   if(document.querySelector('script[data-pass50-live-experience-v41]'))return;
-  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.1';script.dataset.pass50LiveExperienceV41='1.1';document.head.appendChild(script);
+  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.2';script.dataset.pass50LiveExperienceV41='1.2';document.head.appendChild(script);
 }
 
 function bind(){
@@ -228,7 +232,7 @@ document.addEventListener('click',event=>{
   if(liveBadge){
     const profileId=badgeProfileId(liveBadge);
     let live=null;try{live=(db.liveStreams||[]).find(item=>String(item.profileId)===profileId&&item.status==='live')||null}catch{}
-    if(live?.url){event.preventDefault();event.stopImmediatePropagation();openExternal(live.url);setTimeout(()=>verifyProfile(profileId),0);return;}
+    if(live?.url){event.preventDefault();event.stopImmediatePropagation();openExternal(live.url,live);setTimeout(()=>verifyProfile(profileId),0);return;}
   }
   const radarButton=event.target.closest?.('#liveRadarRefresh');
   if(radarButton){event.preventDefault();event.stopImmediatePropagation();runFullSweep();return;}

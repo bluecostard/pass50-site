@@ -79,6 +79,10 @@ function p50_live_v4_active_rows(): array {
     $stmt->execute($params);$out=[];
     foreach($stmt->fetchAll() as $row){
         $source=(string)$row['source'];
+        $meta=json_decode((string)($row['metadata']??''),true);
+        if(!is_array($meta))$meta=[];
+        $handle=trim((string)($meta['handle']??''));
+        if($handle!==''&&!str_starts_with($handle,'@'))$handle='@'.$handle;
         $out[]=[
             'id'=>($source==='meta_authorized'?'meta_':'auto_').substr((string)$row['stream_key'],0,18),
             'profileId'=>(string)$row['profile_id'],'platform'=>(string)$row['platform'],'title'=>(string)$row['title'],
@@ -87,6 +91,15 @@ function p50_live_v4_active_rows(): array {
             'startedAt'=>p50_live_v4_iso($row['started_at']??null),'lastSeenAt'=>p50_live_v4_iso($row['last_seen_at']??null),
             'lastConfirmedAt'=>p50_live_v4_iso($row['last_seen_at']??null),
             'lastCheckState'=>$source==='meta_authorized'?'live':(string)($row['last_state']??'unknown'),'endsAt'=>null,
+            'roomId'=>trim((string)($meta['roomId']??'')),
+            'videoId'=>trim((string)($meta['videoId']??'')),
+            'handle'=>$handle,
+            'metadata'=>[
+                'roomId'=>trim((string)($meta['roomId']??'')),
+                'videoId'=>trim((string)($meta['videoId']??'')),
+                'handle'=>$handle,
+                'probe'=>(string)($meta['probe']??''),
+            ],
         ];
     }
     return $out;
