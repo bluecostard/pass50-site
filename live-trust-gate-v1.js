@@ -4,7 +4,7 @@
 if(window.__pass50LiveTrustGateV1)return;
 window.__pass50LiveTrustGateV1=true;
 
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const DEFAULT_TRUST_SECONDS={TikTok:90,YouTube:240,Instagram:120,Facebook:120};
 
 function trustSeconds(platform){
@@ -62,71 +62,57 @@ function installTrustNormalizer(){
   normalizer();
 }
 
-async function verifyThenOpen(live,preferredUrl=''){
+function pruneEndedLive(live){
   const profileId=String(live?.profileId||'');
   const platform=String(live?.platform||'');
-  const fallbackUrl=String(preferredUrl||live?.url||'');
-  if(!profileId||!fallbackUrl)return false;
-
-  if(live?.source==='manual'){
-    if(typeof window.PASS50_OPEN_LIVE==='function')return window.PASS50_OPEN_LIVE(live,fallbackUrl);
-    window.location.href=fallbackUrl;return true;
-  }
-
-  try{if(typeof toast==='function')toast('Vérification du direct…');}catch{}
-
-  let confirmed=null;
+  if(!profileId)return;
   try{
-    if(typeof window.PASS50_VERIFY_LIVE_PROFILE==='function'){
-      const data=await window.PASS50_VERIFY_LIVE_PROFILE(profileId);
-      confirmed=(data?.liveStreams||[]).find(item=>String(item.profileId)===profileId&&String(item.platform)===platform&&item.status==='live'&&isFreshLive(item))||null;
+    if(Array.isArray(db?.liveStreams)){
+      db.liveStreams=db.liveStreams.filter(item=>!(String(item.profileId)===profileId&&String(item.platform)===platform));
+      normalizeLiveStreams?.();
+      localStorage.setItem(APP_KEY,JSON.stringify(db));
+      render?.();
+      if(document.getElementById('liveModal')?.classList.contains('show'))openLives?.();
     }
   }catch{}
-
-  if(!confirmed){
-    try{
-      if(Array.isArray(db?.liveStreams)){
-        db.liveStreams=db.liveStreams.filter(item=>!(String(item.profileId)===profileId&&String(item.platform)===platform));
-        normalizeLiveStreams?.();
-        localStorage.setItem(APP_KEY,JSON.stringify(db));
-        render?.();
-        if(document.getElementById('liveModal')?.classList.contains('show'))openLives?.();
-      }
-    }catch{}
-    try{if(typeof toast==='function')toast('Ce direct est terminé ou n’est plus confirmé.');}catch{}
-    return false;
-  }
-
-  if(typeof window.PASS50_OPEN_LIVE==='function')return window.PASS50_OPEN_LIVE(confirmed,confirmed.url||fallbackUrl);
-  window.location.href=String(confirmed.url||fallbackUrl);
-  return true;
 }
 
-window.addEventListener('click',event=>{
-  const target=event.target instanceof Element?event.target:null;if(!target)return;
-  const watch=target.closest('.live-watch-link[data-live-profile]');
-  if(!watch)return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  const live={
-    profileId:watch.dataset.liveProfile,
-    platform:watch.dataset.livePlatform,
-    url:watch.dataset.liveWebUrl||watch.href,
-    roomId:watch.dataset.liveRoom,
-    videoId:watch.dataset.liveVideo,
-    handle:watch.dataset.liveHandle,
-    source:'automatic',
-    status:'live',
-    lastConfirmedAt:watch.dataset.liveConfirmedAt,
-    lastCheckState:'live',
-  };
-  verifyThenOpen(live,watch.dataset.liveWebUrl||watch.href);
-},true);
+/** Ouvre d’abord (geste utilisateur), puis vérifie en arrière-plan pour purger les fantômes. */
+function openThenVerify(live,preferredUrl=''){
+  const fallbackUrl=String(preferredUrl||live?.url||'');
+  if(!fallbackUrl&&!live?.url)return false;
 
-document.addEventListener('DOMContentLoaded',installTrustNormalizer);
-setTimeout(installTrustNormalizer,0);
+  let opened=false;
+  if(typeof window.PASS50_OPEN_LIVE==='function')opened=!!window.PASS50_OPEN_LIVE(live,fallbackUrl);
+  else if(fallbackUrl){window.location.href=fallbackUrl;opened=true;}
+
+  if(live?.source==='manual')return opened;
+
+  const profileId=String(live?.profileId||'');
+  const platform=String(live?.platform||'');
+  if(!profileId||typeof window.PASS50_VERIFY_LIVE_PROFILE!=='function')return opened;
+
+  setTimeout(async()=>{
+    try{
+      const data=await window.PASS50_VERIFY_LIVE_PROFILE(profileId);
+      const confirmed=(data?.liveStreams||[]).find(item=>String(item.profileId)===profileId&&String(item.platform)===platform&&item.status==='live'&&isFreshLive(item))||null;
+      if(confirmed)return;
+      pruneEndedLive(live);
+      try{if(typeof toast==='function')toast('Ce direct est terminé ou n’est plus confirmé.');}catch{}
+    }catch{}
+  },0);
+
+  return opened;
+}
+
+// Ne jamais intercepter .live-watch-link ici : preventDefault + await casse iOS / Universal Links.
+// Le lien <a> (ou live-experience) ouvre immédiatement ; on purge seulement en arrière-plan.
 window.PASS50_LIVE_TRUST_GATE=VERSION;
 window.PASS50_LIVE_IS_FRESH=isFreshLive;
 window.PASS50_LIVE_FILTER_PUBLIC=filterPublicLives;
-window.PASS50_VERIFY_THEN_OPEN_LIVE=verifyThenOpen;
+window.PASS50_VERIFY_THEN_OPEN_LIVE=openThenVerify;
+window.PASS50_OPEN_THEN_VERIFY_LIVE=openThenVerify;
+
+document.addEventListener('DOMContentLoaded',installTrustNormalizer);
+setTimeout(installTrustNormalizer,0);
 })();

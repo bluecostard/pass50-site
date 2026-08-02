@@ -35,6 +35,17 @@ class LiveExperienceV41Tests(unittest.TestCase):
         self.assertIn('PASS50_OPEN_LIVE', UI)
         self.assertIn("if(isMobile())", UI)
         self.assertNotIn('openNewTab(watch.href)', UI)
+        watch_click = re.search(r"const watch=target\.closest\('\.live-watch-link'\);.*?return;\n  }", UI, re.S).group(0)
+        self.assertNotIn('event.preventDefault()', watch_click)
+        self.assertNotIn('stopImmediatePropagation', watch_click)
+        self.assertIn('appAwareLiveUrl', watch_click)
+
+    def test_modules_are_loaded_and_cached(self):
+        self.assertIn("live-experience-v4-1.js?v=1.3", PUBLIC)
+        self.assertIn("live-dismiss-ui-v1.js?v=1.0", PUBLIC)
+        self.assertIn("live-dismiss-ui-v1.js?v=1.0", SW)
+        self.assertIn("share-center-v1.js?v=1.0", SW)
+        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
     def test_live_badge_works_inside_influencer_sheet(self):
         self.assertIn("badge.closest?.('#profileBody')", RADAR)
@@ -70,13 +81,6 @@ class LiveExperienceV41Tests(unittest.TestCase):
         self.assertIn('navigator.canShare', UI)
         self.assertIn('https://wa.me/?text=', UI)
         self.assertNotIn('Description détaillée', UI)
-
-    def test_modules_are_loaded_and_cached(self):
-        self.assertIn("live-experience-v4-1.js?v=1.2", PUBLIC)
-        self.assertIn("live-dismiss-ui-v1.js?v=1.0", PUBLIC)
-        self.assertIn("live-dismiss-ui-v1.js?v=1.0", SW)
-        self.assertIn("share-center-v1.js?v=1.0", SW)
-        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
 
 if __name__ == '__main__':

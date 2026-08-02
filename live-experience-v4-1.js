@@ -264,11 +264,14 @@ window.addEventListener('click',event=>{
       handle:watch.dataset.liveHandle,
     };
     decorateWatchLink(watch,live);
-    // Mobile : navigation native du <a> (Universal Links / Intent). Desktop : laisser target=_blank.
+    // Mobile : laisser la navigation native du <a> (Universal Links / deep links).
+    // Ne pas preventDefault : sinon iOS ignore le geste et « rien ne se passe ».
     if(isMobile()){
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      openLiveDestination(live,watch.dataset.liveWebUrl||safeUrl(watch.href));
+      const web=watch.dataset.liveWebUrl||safeUrl(watch.href);
+      const destination=appAwareLiveUrl(live,web)||web;
+      if(destination&&watch.href!==destination)watch.href=destination;
+      backgroundVerify(live);
+      return;
     }
     backgroundVerify(live);
     return;
@@ -288,7 +291,9 @@ window.addEventListener('click',event=>{
     event.preventDefault();event.stopImmediatePropagation();
     const owner=badge.closest('[data-profile]'),live=owner?liveFor(owner.dataset.profile):null;
     if(live){
-      if(typeof window.PASS50_VERIFY_THEN_OPEN_LIVE==='function')window.PASS50_VERIFY_THEN_OPEN_LIVE(live,live.url);
+      // Badge : pas de <a> natif → ouvrir tout de suite, vérifier après (jamais await avant open).
+      if(typeof window.PASS50_OPEN_THEN_VERIFY_LIVE==='function')window.PASS50_OPEN_THEN_VERIFY_LIVE(live,live.url);
+      else if(typeof window.PASS50_VERIFY_THEN_OPEN_LIVE==='function')window.PASS50_VERIFY_THEN_OPEN_LIVE(live,live.url);
       else{openLiveDestination(live);backgroundVerify(live);}
     }
     return;

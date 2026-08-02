@@ -108,8 +108,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('RADAR LIVE V4', CLIENT)
         self.assertIn('TikTok:90', CLIENT)
         self.assertIn('PASS50_LIVE_EXPERIENCE_VERSION', EXPERIENCE)
-        self.assertIn('live-trust-gate-v1.js?v=1.0', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
-        self.assertIn('live-experience-v4-1.js?v=1.2', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
+        self.assertIn('live-trust-gate-v1.js?v=1.1', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
+        self.assertIn('live-experience-v4-1.js?v=1.3', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
 
     def test_server_sweep_uses_v4(self):
         self.assertIn('*/5 * * * *', SWEEP)

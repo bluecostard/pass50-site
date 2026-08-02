@@ -214,12 +214,12 @@ function badgeProfileId(badge){
 
 function ensureLiveTrustGate(){
   if(document.querySelector('script[data-pass50-live-trust-gate]'))return;
-  const script=document.createElement('script');script.src='./live-trust-gate-v1.js?v=1.0';script.dataset.pass50LiveTrustGate='1.0';document.head.appendChild(script);
+  const script=document.createElement('script');script.src='./live-trust-gate-v1.js?v=1.1';script.dataset.pass50LiveTrustGate='1.1';document.head.appendChild(script);
 }
 function ensureLiveExperience(){
   ensureLiveTrustGate();
   if(document.querySelector('script[data-pass50-live-experience-v41]'))return;
-  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.2';script.dataset.pass50LiveExperienceV41='1.2';document.head.appendChild(script);
+  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.3';script.dataset.pass50LiveExperienceV41='1.3';document.head.appendChild(script);
 }
 
 function bind(){

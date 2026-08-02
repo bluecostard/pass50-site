@@ -39,12 +39,15 @@ class LiveTrustGateV1Tests(unittest.TestCase):
         self.assertIn('LIVE-TRUST-GATE-2026-08-03-1', PARSERS)
         self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800', PARSERS)
 
-    def test_client_verifies_before_open_and_loads_gate(self):
+    def test_client_opens_first_then_verifies_and_loads_gate(self):
+        self.assertIn('PASS50_OPEN_THEN_VERIFY_LIVE', CLIENT)
         self.assertIn('PASS50_VERIFY_THEN_OPEN_LIVE', CLIENT)
         self.assertIn('Ce direct est terminé', CLIENT)
         self.assertIn('trustSeconds', CLIENT)
+        self.assertNotIn("closest('.live-watch-link", CLIENT)
+        self.assertNotIn('event.preventDefault()', CLIENT)
         self.assertIn('ensureLiveTrustGate', RADAR)
-        self.assertIn('live-trust-gate-v1.js?v=1.0', RADAR + SW)
+        self.assertIn('live-trust-gate-v1.js?v=1.1', RADAR + SW)
         self.assertIn('live-radar-v3.js?v=1.5', CONFIG)
 
     def test_contract_exposes_trust_gate(self):
