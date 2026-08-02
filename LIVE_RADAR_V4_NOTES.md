@@ -25,16 +25,18 @@ Cette version stabilise la chaîne de données LIVE sans modifier le classement 
 - une date de fin explicite classe le contenu en replay ;
 - l’ID de la vidéo et l’URL exacte sont conservés.
 
-## Trust Gate (anti lives terminés)
+## Trust Gate équilibré (anti lives terminés)
 
 Module dédié `api/live-radar-v4-trust.php` + `live-trust-gate-v1.js`.
 
 Publication publique uniquement si :
-- la dernière sonde est explicitement `live` ;
-- la confirmation a moins de **90 s** (TikTok), **120 s** (Instagram/Facebook) ou **240 s** (YouTube).
+- la dernière sonde est explicitement `live` (pas `unknown`) ;
+- la confirmation a moins de **12 min** (TikTok), **15 min** (Instagram/Facebook) ou **20 min** (YouTube).
 
-Un blocage `unknown` **ne maintient plus** le LIVE dans la liste publique. Le serveur peut encore retester pendant une grâce courte (8–15 min), mais l’utilisateur ne voit que des directs frais.
+Ces fenêtres restent **au-dessus** de l’intervalle de balayage, sinon la liste se vide.
 
-TikTok : une salle « fraîche » seule ne publie plus — il faut une API stricte ou une preuve croisée API+HTML.
+Un blocage `unknown` **ne maintient pas** le LIVE public. Offline/replay → retrait immédiat. Grâce serveur de retest un peu plus longue (18–25 min).
 
-Au clic sur **Regarder**, le client revérifie le profil avant d’ouvrir ; si le direct est mort, il est retiré immédiatement.
+TikTok : API stricte, preuve croisée, **ou** salle API fraîche peuvent confirmer ; le Trust Gate coupe ensuite les fantômes.
+
+Au clic sur **Regarder**, ouverture immédiate puis vérification en arrière-plan.

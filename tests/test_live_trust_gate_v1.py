@@ -15,10 +15,11 @@ WORKFLOW = (ROOT / '.github' / 'workflows' / 'live-radar-sweep.yml').read_text(e
 
 
 class LiveTrustGateV1Tests(unittest.TestCase):
-    def test_trust_module_defines_strict_public_windows(self):
-        self.assertIn("P50_LIVE_V4_TRUST_REVISION = 'LIVE-TRUST-GATE-2026-08-03-1'", TRUST)
-        self.assertIn("'TikTok' => 90", TRUST)
-        self.assertIn("'YouTube' => 240", TRUST)
+    def test_trust_module_defines_balanced_public_windows(self):
+        self.assertIn("P50_LIVE_V4_TRUST_REVISION = 'LIVE-TRUST-BALANCED-2026-08-03-1'", TRUST)
+        self.assertIn("'TikTok' => 720", TRUST)
+        self.assertIn("'YouTube' => 1200", TRUST)
+        self.assertIn("'Instagram' => 900", TRUST)
         self.assertIn('p50_live_v4_is_publicly_fresh', TRUST)
         self.assertIn('p50_live_v4_filter_public_streams', TRUST)
 
@@ -34,25 +35,25 @@ class LiveTrustGateV1Tests(unittest.TestCase):
         self.assertIn('p50_live_v4_filter_public_streams', ENDPOINT)
         self.assertIn("'trustSeconds'=>p50_live_v4_trust_seconds_map()", ENDPOINT)
 
-    def test_tiktok_fresh_room_alone_is_not_enough(self):
-        self.assertIn('$candidateConfirmed=$strictCount>0||$cross', PARSERS)
-        self.assertIn('LIVE-TRUST-GATE-2026-08-03-1', PARSERS)
+    def test_tiktok_fresh_api_can_confirm_again(self):
+        self.assertIn('$candidateConfirmed=$strictCount>0||$cross||$freshCount>0', PARSERS)
+        self.assertIn('LIVE-TRUST-BALANCED-2026-08-03-1', PARSERS)
         self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800', PARSERS)
 
     def test_client_opens_first_then_verifies_and_loads_gate(self):
         self.assertIn('PASS50_OPEN_THEN_VERIFY_LIVE', CLIENT)
         self.assertIn('PASS50_VERIFY_THEN_OPEN_LIVE', CLIENT)
         self.assertIn('Ce direct est terminé', CLIENT)
-        self.assertIn('trustSeconds', CLIENT)
+        self.assertIn('TikTok:720', CLIENT + RADAR)
         self.assertNotIn("closest('.live-watch-link", CLIENT)
         self.assertNotIn('event.preventDefault()', CLIENT)
         self.assertIn('ensureLiveTrustGate', RADAR)
-        self.assertIn('live-trust-gate-v1.js?v=1.1', RADAR + SW)
-        self.assertIn('live-radar-v3.js?v=1.5', CONFIG)
+        self.assertIn('live-trust-gate-v1.js?v=1.2', RADAR + SW)
+        self.assertIn('live-radar-v3.js?v=1.6', CONFIG)
 
     def test_contract_exposes_trust_gate(self):
         self.assertIn("'trustGate'=>P50_LIVE_V4_TRUST_REVISION", CONTRACT)
-        self.assertIn('LIVE-TRUST-GATE-2026-08-03-1', WORKFLOW)
+        self.assertIn('LIVE-TRUST-BALANCED-2026-08-03-1', WORKFLOW)
 
 
 if __name__ == '__main__':
