@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-RADAR-OPERATIONAL-2026-08-02-1';
+
 function p50_live_v4_unescape(string $value): string {
     return html_entity_decode(str_replace(['\\u0026','\\u003d','\\/'],['&','=','/'],$value),ENT_QUOTES|ENT_HTML5,'UTF-8');
 }
@@ -53,6 +55,12 @@ function p50_live_v4_tiktok_owner_mismatch(string $body,string $handle): bool {
     return strcasecmp(trim($m[1],'@'),$handle)!==0;
 }
 
+function p50_live_v4_tiktok_owner_match(string $body,string $handle): bool {
+    if($handle===''||!preg_match_all('/"(?:uniqueId|unique_id|ownerHandle|owner_handle)"\s*:\s*"@?([^"]+)"/i',$body,$matches))return false;
+    foreach($matches[1] as $candidate)if(strcasecmp(trim((string)$candidate,'@'),$handle)===0)return true;
+    return false;
+}
+
 function p50_live_v4_tiktok_ended_signal(string $body): bool {
     $body=p50_live_v4_unescape($body);
     $textEnd=(bool)preg_match('/\b(?:(?:ce|le|this)\s+)?live\s+(?:est\s+|is\s+|has\s+)?(?:termin(?:é|ée|e|ee|és|ées|es)|ended|finished|over)\b|\b(?:direct|diffusion|broadcast|livestream)\s+(?:est\s+|is\s+|has\s+)?(?:termin(?:é|ée|e|ee|és|ées|es)|ended|finished|over)\b|\bn[’\']est\s+plus\s+en\s+direct\b|\bnot\s+currently\s+live\b|\broom\s+not\s+found\b/iu',$body);
@@ -73,30 +81,37 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
         if($body===''||p50_live_v4_block_page($body)){$blocked++;continue;}
         if(p50_live_v4_tiktok_owner_mismatch($body,(string)$identity['handle']))continue;
         $isApi=in_array($label,['api','api_basic'],true);$isLiveProbe=in_array($label,['api','api_basic','live','mobile_live','embed'],true);$json=$isApi?json_decode($body,true):null;
-        $explicitEnded=$isLiveProbe&&(p50_live_v4_tiktok_ended_signal($body)||($isApi&&$json!==null&&(bool)preg_match('/"status"\s*:\s*4(?:\D|$)/i',$body)));
-        if($explicitEnded){$endedLabels[]=$label;continue;}
         $roomId=p50_live_v4_tiktok_room_id($body);
-        $active=(bool)preg_match('/"(?:liveStatus|live_status)"\s*:\s*2(?:\D|$)|"(?:isLive|is_live)"\s*:\s*true/i',$body)
+        $strictApiActive=$isApi&&$json!==null&&$roomId!==''&&p50_live_v4_tiktok_owner_match($body,(string)$identity['handle'])&&(bool)preg_match('/"status"\s*:\s*2(?:\D|$)/i',$body);
+        $explicitEnded=$isLiveProbe&&!$strictApiActive&&(p50_live_v4_tiktok_ended_signal($body)||($isApi&&$json!==null&&(bool)preg_match('/"status"\s*:\s*4(?:\D|$)/i',$body)));
+        if($explicitEnded){$endedLabels[]=$label;continue;}
+        $active=$strictApiActive
+            ||(bool)preg_match('/"(?:liveStatus|live_status)"\s*:\s*2(?:\D|$)|"(?:isLive|is_live)"\s*:\s*true/i',$body)
             ||($isApi&&$json!==null&&(bool)preg_match('/"status"\s*:\s*2(?:\D|$)/i',$body))
             ||($roomId!==''&&(bool)preg_match('/"LiveRoom"\s*:|"webcastRoomId"\s*:|"liveRoomId"\s*:/i',$body));
         if($roomId!==''&&$active){
-            $family=p50_live_v4_tiktok_probe_family((string)$label);$positive[$label]=['roomId'=>$roomId,'family'=>$family,'body'=>$body];
-            $roomEvidence[$roomId]=$roomEvidence[$roomId]??['api'=>[],'html'=>[]];$roomEvidence[$roomId][$family][]=(string)$label;
+            $family=p50_live_v4_tiktok_probe_family((string)$label);$positive[$label]=['roomId'=>$roomId,'family'=>$family,'strictApi'=>$strictApiActive,'body'=>$body];
+            $roomEvidence[$roomId]=$roomEvidence[$roomId]??['api'=>[],'html'=>[],'strictApi'=>[]];$roomEvidence[$roomId][$family][]=(string)$label;
+            if($strictApiActive)$roomEvidence[$roomId]['strictApi'][]=(string)$label;
         }
     }
-    if($endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
     if($positive){
-        $roomId='';$confirmed=false;$bestTotal=-1;
-        foreach($roomEvidence as $candidate=>$families){$apiCount=count($families['api']);$htmlCount=count($families['html']);$cross=$apiCount>0&&$htmlCount>0;$total=$apiCount+$htmlCount;if(($cross&&!$confirmed)||($cross===$confirmed&&$total>$bestTotal)){$roomId=(string)$candidate;$confirmed=$cross;$bestTotal=$total;}}
-        $state=$confirmed?'live':'probable';$confidence=$confirmed?98:78;
+        $roomId='';$confirmed=false;$strictApi=false;$bestTotal=-1;
+        foreach($roomEvidence as $candidate=>$families){
+            $apiCount=count($families['api']);$htmlCount=count($families['html']);$strictCount=count($families['strictApi']);$cross=$apiCount>0&&$htmlCount>0;$candidateConfirmed=$strictCount>0||$cross;$total=$apiCount+$htmlCount;
+            if(($strictCount>0&&!$strictApi)||($strictCount>0===$strictApi&&$candidateConfirmed&&!$confirmed)||($strictCount>0===$strictApi&&$candidateConfirmed===$confirmed&&$total>$bestTotal)){$roomId=(string)$candidate;$strictApi=$strictCount>0;$confirmed=$candidateConfirmed;$bestTotal=$total;}
+        }
+        if(!$confirmed&&$endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
+        $state=$confirmed?'live':'probable';$confidence=$strictApi?99:($confirmed?98:78);
         $best='';$bestUrl=$identity['liveUrl'];foreach(['live','mobile_live','embed','profile','api','api_basic'] as $label)if(!empty($bodies[$label])){$best=$bodies[$label];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}
         $meta=p50_page_metadata($best,$bestUrl);$title=trim((string)($meta['title']??''));$title=preg_replace('/\s*\|\s*TikTok\s*$/iu','',$title)??$title;
         if($title===''||preg_match('/^(TikTok|Make Your Day)$/iu',$title))$title=trim((string)($source['public_name']??''));
         if($title==='')$title='Direct TikTok détecté';elseif(!preg_match('/\b(direct|live)\b/iu',$title))$title.=' est en direct';
-        $families=$roomEvidence[$roomId]??['api'=>[],'html'=>[]];
-        $live=['profileId'=>(string)$source['profile_id'],'platform'=>'TikTok','title'=>$title,'url'=>$identity['liveUrl'],'thumbnail'=>(string)($meta['image']??''),'confidence'=>$confidence,'startedAt'=>null,'viewers'=>p50_live_v4_viewers(implode("\n",$bodies)),'metadata'=>['profileUrl'=>$identity['profileUrl'],'handle'=>'@'.$identity['handle'],'roomId'=>$roomId,'probeLabels'=>array_keys($positive),'proofFamilies'=>['api'=>$families['api'],'html'=>$families['html']],'classification'=>$state]];
-        return ['state'=>$state,'confidence'=>$confidence,'responseMs'=>$maxMs,'error'=>$state==='probable'?'tiktok_confirmation_incomplete':'','live'=>$live,'evidence'=>['positive'=>array_keys($positive),'ended'=>[],'blocked'=>$blocked,'rooms'=>$roomEvidence]];
+        $families=$roomEvidence[$roomId]??['api'=>[],'html'=>[],'strictApi'=>[]];
+        $live=['profileId'=>(string)$source['profile_id'],'platform'=>'TikTok','title'=>$title,'url'=>$identity['liveUrl'],'thumbnail'=>(string)($meta['image']??''),'confidence'=>$confidence,'startedAt'=>null,'viewers'=>p50_live_v4_viewers(implode("\n",$bodies)),'metadata'=>['profileUrl'=>$identity['profileUrl'],'handle'=>'@'.$identity['handle'],'roomId'=>$roomId,'probeLabels'=>array_keys($positive),'proofFamilies'=>['api'=>$families['api'],'html'=>$families['html']],'strictApiLabels'=>$families['strictApi'],'classification'=>$state]];
+        return ['state'=>$state,'confidence'=>$confidence,'responseMs'=>$maxMs,'error'=>$state==='probable'?'tiktok_confirmation_incomplete':'','live'=>$live,'evidence'=>['positive'=>array_keys($positive),'ended'=>$endedLabels,'blocked'=>$blocked,'rooms'=>$roomEvidence]];
     }
+    if($endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>[],'rooms'=>[]]];
     return ['state'=>'unknown','error'=>$blocked>0?'tiktok_blocked_or_challenged':($errors?implode(';',$errors):'tiktok_no_live_signal'),'confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>[],'blocked'=>$blocked,'positive'=>[]]];
 }
 
