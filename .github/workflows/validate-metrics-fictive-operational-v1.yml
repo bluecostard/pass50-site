@@ -30,4 +30,4 @@ jobs:
           php -l api/metrics-public-baseline-core.php
           php -l api/config.example.php
       - name: Static contract tests
-        run: python -m pytest -q tests/test_metrics_fictive_operational_v1.py
+        run: python -m unittest tests/test_metrics_fictive_operational_v1.py
