@@ -17,10 +17,13 @@ function response(string $body,int $status=200,string $url='https://example.test
 function room_id_for(int $timestamp,int $suffix=123456): string {return (string)(($timestamp*4294967296)+$suffix);}
 
 must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
-must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-PROBE-RECOVERY-2026-08-03-1','La révision Probe Recovery doit être active.');
-must(P50_LIVE_V4_TRUST_REVISION==='LIVE-PROBE-RECOVERY-2026-08-03-1','Le module Trust Gate doit être chargé.');
+must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-PUBLISH-UTC-2026-08-03-1','La révision Publish UTC doit être active.');
+must(P50_LIVE_V4_TRUST_REVISION==='LIVE-PUBLISH-UTC-2026-08-03-1','Le module Trust Gate doit être chargé.');
 must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===10800,'La fenêtre TikTok Trust Gate est de trois heures.');
 must(p50_live_v4_public_max_age('TikTok')===720,'TikTok public max age = 12 min.');
+$utcNow=gmdate('Y-m-d H:i:s');
+must(p50_live_v4_parse_utc($utcNow)!==null&&abs(time()-(int)p50_live_v4_parse_utc($utcNow))<=2,'Les datetimes MySQL UTC doivent être lues en UTC.');
+must(p50_live_v4_is_publicly_fresh(['status'=>'live','platform'=>'TikTok','source'=>'automatic','last_state'=>'live','last_seen_at'=>$utcNow]),'Un LIVE confirmé à l’instant doit rester public.');
 
 $source=['profile_id'=>'coach-test','public_name'=>'Coach Test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest'];
 $api=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"741234567890","uniqueId":"coachtest"}')]);

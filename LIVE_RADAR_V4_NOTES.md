@@ -25,6 +25,12 @@ Cette version stabilise la chaîne de données LIVE sans modifier le classement 
 - une date de fin explicite classe le contenu en replay ;
 - l’ID de la vidéo et l’URL exacte sont conservés.
 
+## Publish UTC (2026-08-03)
+
+Bug critique : `strtotime()` sur datetime MySQL UTC était interprété en heure locale IONOS,
+donc les LIVE fraîchement stockés étaient rejetés par le Trust Gate PHP (liste publique vide
+alors que le scan trouvait des directs). Parse UTC explicite + dismiss admin TTL 24h.
+
 ## Probe Recovery (2026-08-03)
 
 - Referer/Origin natifs + UA Chrome 126 + retry mobile si challenge

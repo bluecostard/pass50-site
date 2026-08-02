@@ -16,7 +16,8 @@ WORKFLOW = (ROOT / '.github' / 'workflows' / 'live-radar-sweep.yml').read_text(e
 
 class LiveTrustGateV1Tests(unittest.TestCase):
     def test_trust_module_defines_balanced_public_windows(self):
-        self.assertIn("P50_LIVE_V4_TRUST_REVISION = 'LIVE-PROBE-RECOVERY-2026-08-03-1'", TRUST)
+        self.assertIn("P50_LIVE_V4_TRUST_REVISION = 'LIVE-PUBLISH-UTC-2026-08-03-1'", TRUST)
+        self.assertIn('p50_live_v4_parse_utc', TRUST)
         self.assertIn("'TikTok' => 720", TRUST)
         self.assertIn("'YouTube' => 1200", TRUST)
         self.assertIn("'Instagram' => 900", TRUST)
@@ -37,7 +38,7 @@ class LiveTrustGateV1Tests(unittest.TestCase):
 
     def test_tiktok_fresh_api_can_confirm_again(self):
         self.assertIn('$candidateConfirmed=$strictCount>0||$cross||$freshCount>0||$htmlFresh', PARSERS)
-        self.assertIn('LIVE-PROBE-RECOVERY-2026-08-03-1', PARSERS)
+        self.assertIn('LIVE-PUBLISH-UTC-2026-08-03-1', PARSERS)
         self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800', PARSERS)
 
     def test_client_opens_first_then_verifies_and_loads_gate(self):
@@ -53,7 +54,7 @@ class LiveTrustGateV1Tests(unittest.TestCase):
 
     def test_contract_exposes_trust_gate(self):
         self.assertIn("'trustGate'=>P50_LIVE_V4_TRUST_REVISION", CONTRACT)
-        self.assertIn('LIVE-PROBE-RECOVERY-2026-08-03-1', WORKFLOW)
+        self.assertIn('LIVE-PUBLISH-UTC-2026-08-03-1', WORKFLOW)
 
 
 if __name__ == '__main__':

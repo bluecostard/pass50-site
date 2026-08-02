@@ -30,7 +30,7 @@ jobs:
     env:
       ENDPOINT: https://pass50.store/api/live-status-v4.php
       CONTRACT_URL: https://pass50.store/api/live-radar-contract.php
-      EXPECTED_CONTRACT: LIVE-PROBE-RECOVERY-2026-08-03-1
+      EXPECTED_CONTRACT: LIVE-PUBLISH-UTC-2026-08-03-1
     steps:
       - name: Attendre le moteur LIVE corrigé
         run: |

@@ -42,7 +42,8 @@ class LiveRadarV41StaticTests(unittest.TestCase):
 
     def test_tiktok_trust_gate_allows_fresh_api_confirmation(self):
         parser = FILES['parsers']
-        self.assertIn('LIVE-PROBE-RECOVERY-2026-08-03-1', parser)
+        self.assertIn('LIVE-PUBLISH-UTC-2026-08-03-1', parser)
+        self.assertIn('p50_live_v4_parse_utc', (ROOT / 'api' / 'live-radar-v4-trust.php').read_text(encoding='utf-8'))
         self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800', parser)
         self.assertIn('p50_live_v4_tiktok_room_timestamp', parser)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', parser)
