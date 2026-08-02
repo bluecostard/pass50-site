@@ -31,8 +31,8 @@ $sourceMap=[];foreach($sources as $source)$sourceMap[(string)$source['source_key
 $mode=strtolower((string)($_GET['mode']??'quick'));
 if(!in_array($mode,['quick','full','profile','status'],true))$mode='quick';
 $force=p50_live_v4_bool_query('force')||in_array($mode,['full','profile'],true);
-$batch=max(1,min(12,(int)($_GET['batch']??12)));
-$refresh=45;
+$batch=max(1,min(16,(int)($_GET['batch']??14)));
+$refresh=30;
 $lastScan=(string)p50_de_get_setting('live_radar_v4_last_scan_at','');
 $lastTs=$lastScan!==''?(strtotime($lastScan)?:0):0;
 $canScan=$mode!=='status'&&($force||(time()-$lastTs)>=$refresh);
@@ -72,6 +72,7 @@ if($canScan&&$selected&&$lock){
             $source=$result['source'];$platform=(string)$source['platform'];$profileId=(string)$source['profile_id'];$stateValue=(string)($result['state']??'unknown');
             $platformStats[$platform]['scanned']++;
             $health=p50_live_v4_health_update($source,$result);
+            $continuityPreserved=$stateValue==='unknown'&&($health['previousState']??'')==='live';
             if($stateValue==='live'&&!empty($result['live'])){
                 p50_live_v4_store_live($result['live']);$foundThisPass++;$platformStats[$platform]['found']++;
             }elseif($stateValue==='probable'&&!empty($result['live'])){
@@ -83,10 +84,10 @@ if($canScan&&$selected&&$lock){
             }
             $diagnostics[]=[
                 'profileId'=>$profileId,'name'=>(string)$source['public_name'],'platform'=>$platform,'state'=>$stateValue,
-                'publicState'=>$stateValue==='probable'?'unconfirmed':$stateValue,
+                'publicState'=>$stateValue==='probable'?'unconfirmed':($continuityPreserved?'live':$stateValue),
                 'lastCheckedAt'=>gmdate(DATE_ATOM),'lastConfirmedAt'=>$stateValue==='live'?gmdate(DATE_ATOM):null,
-                'continuityPreserved'=>false,
-                'withdrawalReason'=>in_array($stateValue,['live','probable'],true)?'':(string)($result['error']??$stateValue),
+                'continuityPreserved'=>$continuityPreserved,
+                'withdrawalReason'=>in_array($stateValue,['live','probable'],true)||$continuityPreserved?'':(string)($result['error']??$stateValue),
                 'confidence'=>(int)($result['confidence']??0),'error'=>(string)($result['error']??''),'evidence'=>$result['evidence']??[],'probes'=>$result['probes']??[],
             ];
         }
@@ -121,5 +122,5 @@ json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
     'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,'coveragePercent'=>$coverage,
     'officialSourcesKnown'=>count($sources),'activeAutomaticConfirmed'=>count($automatic),'platforms'=>$platformStats,'health'=>$healthSummary,'lastFullSweep'=>$lastFull,
-    'refreshSeconds'=>$refresh,'batchSize'=>$batch,'discoveryQuota'=>$discoveryQuota,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],'graceMinutes'=>array_replace(P50_LIVE_V4_GRACE_MINUTES,['TikTok'=>2]),'diagnostics'=>$diagnostics,
+    'refreshSeconds'=>$refresh,'batchSize'=>$batch,'discoveryQuota'=>$discoveryQuota,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],'graceMinutes'=>P50_LIVE_V4_GRACE_MINUTES,'diagnostics'=>$diagnostics,
 ]]);

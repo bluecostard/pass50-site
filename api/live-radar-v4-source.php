@@ -5,6 +5,8 @@ const P50_LIVE_V4_PLATFORMS = ['TikTok','YouTube','Instagram','Facebook'];
 const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];
 const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>20,'YouTube'=>15,'Instagram'=>15,'Facebook'=>15];
 const P50_LIVE_V4_CANDIDATE_TTL_MINUTES = 30;
+const P50_LIVE_V4_BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36';
+const P50_LIVE_V4_MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
 
 function p50_live_v4_ensure_schema(): void {
     p50_de_ensure_schema();
@@ -189,30 +191,65 @@ function p50_live_v4_probe_requests(array $source): array {
             'profile'=>['url'=>$identity['profileUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
         ];
     }
-    if($platform==='Instagram'&&$identity['handle']!=='')return [
-        'profile'=>['url'=>$identity['profileUrl'].'?hl=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-        'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-    ];
-    if($platform==='Facebook')return [
-        'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-        'videos'=>['url'=>rtrim($identity['profileUrl'],'/').'/videos/','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-        'mobile'=>['url'=>str_replace('www.facebook.com','m.facebook.com',$identity['profileUrl']),'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
-    ];
+    if($platform==='Instagram'&&$identity['handle']!==''){
+        $handle=rawurlencode($identity['handle']);
+        return [
+            'web_profile'=>[
+                'url'=>'https://www.instagram.com/api/v1/users/web_profile_info/?username='.$handle,
+                'accept'=>'application/json,text/plain,*/*',
+                'headers'=>[
+                    'X-IG-App-ID: 936619743392459',
+                    'X-Requested-With: XMLHttpRequest',
+                    'Referer: '.$identity['profileUrl'],
+                    'Origin: https://www.instagram.com',
+                ],
+            ],
+            'profile'=>['url'=>$identity['profileUrl'].'?hl=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'profile_mobile'=>['url'=>$identity['profileUrl'].'?hl=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','userAgent'=>P50_LIVE_V4_MOBILE_UA],
+            'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+        ];
+    }
+    if($platform==='Facebook'){
+        $profile=rtrim($identity['profileUrl'],'/');
+        return [
+            'live'=>['url'=>$identity['liveUrl'],'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'videos'=>['url'=>$profile.'/videos/','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'live_videos'=>['url'=>$profile.'/live_videos/','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7'],
+            'mobile'=>['url'=>str_replace('www.facebook.com','m.facebook.com',$identity['profileUrl']),'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','userAgent'=>P50_LIVE_V4_MOBILE_UA],
+            'mbasic'=>['url'=>str_replace('www.facebook.com','mbasic.facebook.com',$identity['profileUrl']),'accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','userAgent'=>P50_LIVE_V4_MOBILE_UA],
+        ];
+    }
     return [];
 }
 
 function p50_live_v4_parallel_fetch(array $jobs,int $timeout=7): array {
     if(!$jobs)return [];
     $multi=curl_multi_init();$handles=[];$results=[];
-    if(defined('CURLMOPT_MAX_TOTAL_CONNECTIONS'))@curl_multi_setopt($multi,CURLMOPT_MAX_TOTAL_CONNECTIONS,16);
+    if(defined('CURLMOPT_MAX_TOTAL_CONNECTIONS'))@curl_multi_setopt($multi,CURLMOPT_MAX_TOTAL_CONNECTIONS,20);
     foreach($jobs as $jobId=>$job){
         $url=(string)$job['url'];
         if(!p50_public_http_url($url)){$results[$jobId]=['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>$url,'error'=>'invalid_url','timeMs'=>0];continue;}
+        $headers=[
+            'Accept: '.(string)($job['accept']??'text/html,*/*;q=0.7'),
+            'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7',
+            'Cache-Control: no-cache','Pragma: no-cache','DNT: 1',
+            'Referer: https://www.google.com/',
+        ];
+        if(!empty($job['headers'])&&is_array($job['headers'])){
+            foreach($job['headers'] as $header){
+                $header=trim((string)$header);
+                if($header==='')continue;
+                if(stripos($header,'Referer:')===0||stripos($header,'Accept:')===0){
+                    $headers=array_values(array_filter($headers,static fn($existing)=>stripos($existing,strtok($header,':').':')!==0));
+                }
+                $headers[]=$header;
+            }
+        }
         $ch=curl_init($url);
         curl_setopt_array($ch,[
             CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_MAXREDIRS=>5,CURLOPT_TIMEOUT=>$timeout,CURLOPT_CONNECTTIMEOUT=>min(3,$timeout),CURLOPT_ENCODING=>'',
-            CURLOPT_USERAGENT=>'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36',
-            CURLOPT_HTTPHEADER=>['Accept: '.(string)($job['accept']??'text/html,*/*;q=0.7'),'Accept-Language: fr-FR,fr;q=0.9,en;q=0.7','Cache-Control: no-cache','Pragma: no-cache','DNT: 1','Referer: https://www.google.com/'],
+            CURLOPT_USERAGENT=>(string)($job['userAgent']??P50_LIVE_V4_BROWSER_UA),
+            CURLOPT_HTTPHEADER=>$headers,
             CURLOPT_HEADER=>false,
         ]);
         $handles[(int)$ch]=['handle'=>$ch,'id'=>$jobId,'url'=>$url];curl_multi_add_handle($multi,$ch);

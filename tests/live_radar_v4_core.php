@@ -17,7 +17,7 @@ function response(string $body,int $status=200,string $url='https://example.test
 function room_id_for(int $timestamp,int $suffix=123456): string {return (string)(($timestamp*4294967296)+$suffix);}
 
 must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
-must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-RADAR-EVENT-IDENTITY-2026-08-02-3','La révision par identité événementielle doit être active.');
+must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-RADAR-CONTINUOUS-MAX-2026-08-02-1','La révision de continuité maximale doit être active.');
 must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===43200,'La fenêtre TikTok doit rester conservatrice à douze heures.');
 
 $source=['profile_id'=>'coach-test','public_name'=>'Coach Test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest'];

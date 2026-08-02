@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-RADAR-EVENT-IDENTITY-2026-08-02-3';
+const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-RADAR-CONTINUOUS-MAX-2026-08-02-1';
 const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 43200;
 
 function p50_live_v4_unescape(string $value): string {
@@ -136,15 +136,36 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
 }
 
 function p50_live_v4_parse_instagram(array $source,array $responses): array {
-    $identity=p50_live_v4_identity('Instagram',(string)$source['url']);$combined='';$errors=[];$maxMs=0;$ok=0;
-    foreach($responses as $label=>$r){$maxMs=max($maxMs,(int)($r['timeMs']??0));if(!empty($r['ok'])){$ok++;$combined.="\n".(string)$r['body'];}else $errors[]=$label.':http_'.($r['status']??0);}
-    if($ok===0)return ['state'=>'unknown','error'=>implode(';',$errors),'confidence'=>0,'responseMs'=>$maxMs];
-    if(p50_live_v4_block_page($combined))return ['state'=>'unknown','error'=>'instagram_blocked_or_challenged','confidence'=>0,'responseMs'=>$maxMs];
-    $live=(bool)preg_match('/"(?:is_live_broadcast|isLiveBroadcast|is_live|isLive)"\s*:\s*true|"broadcast_status"\s*:\s*"(?:active|live)"/i',$combined);
-    $offline=(bool)preg_match('/"(?:is_live_broadcast|isLiveBroadcast|is_live|isLive)"\s*:\s*false|"broadcast_status"\s*:\s*"(?:ended|archived|vod|finished)"/i',$combined);
-    if($live){$meta=p50_page_metadata($combined,$identity['profileUrl']);return ['state'=>'live','confidence'=>94,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'Instagram','title'=>trim((string)($source['public_name']??'Instagram')).' est en direct','url'=>$identity['profileUrl'],'thumbnail'=>(string)($meta['image']??''),'confidence'=>94,'startedAt'=>null,'viewers'=>p50_live_v4_viewers($combined),'metadata'=>['profileUrl'=>$identity['profileUrl'],'handle'=>'@'.$identity['handle'],'probe'=>'public_profile']]];}
-    if($offline)return ['state'=>'offline','error'=>'instagram_explicit_offline','confidence'=>96,'responseMs'=>$maxMs];
-    return ['state'=>'unknown','error'=>'instagram_no_public_live_signal','confidence'=>0,'responseMs'=>$maxMs];
+    $identity=p50_live_v4_identity('Instagram',(string)$source['url']);$combined='';$errors=[];$maxMs=0;$ok=0;$blocked=0;$probeLabels=[];
+    foreach($responses as $label=>$r){
+        $maxMs=max($maxMs,(int)($r['timeMs']??0));
+        if(empty($r['ok'])){$errors[]=$label.':http_'.($r['status']??0);continue;}
+        $body=(string)($r['body']??'');
+        if($body===''||p50_live_v4_block_page($body)){$blocked++;continue;}
+        $ok++;$probeLabels[]=(string)$label;$combined.="\n".$body;
+    }
+    if($ok===0)return ['state'=>'unknown','error'=>$blocked>0?'instagram_blocked_or_challenged':implode(';',$errors),'confidence'=>0,'responseMs'=>$maxMs];
+    $live=(bool)preg_match('/"(?:is_live_broadcast|isLiveBroadcast|is_live|isLive|broadcasting_content)"\s*:\s*true/i',$combined)
+        ||(bool)preg_match('/"broadcast_status"\s*:\s*"(?:active|live)"/i',$combined)
+        ||(bool)preg_match('/"live_broadcast_id"\s*:\s*"?[1-9]\d{5,}"?/i',$combined)
+        ||(bool)preg_match('/"live_status"\s*:\s*1(?:\D|$)/i',$combined)
+        ||(bool)preg_match('/"media_product_type"\s*:\s*"LIVE"/i',$combined);
+    $offline=(bool)preg_match('/"(?:is_live_broadcast|isLiveBroadcast|is_live|isLive|broadcasting_content)"\s*:\s*false/i',$combined)
+        ||(bool)preg_match('/"broadcast_status"\s*:\s*"(?:ended|archived|vod|finished)"/i',$combined)
+        ||(bool)preg_match('/"live_status"\s*:\s*0(?:\D|$)/i',$combined);
+    if($live){
+        $meta=p50_page_metadata($combined,$identity['profileUrl']);
+        $confidence=!empty($responses['web_profile']['ok'])?96:94;
+        return ['state'=>'live','confidence'=>$confidence,'responseMs'=>$maxMs,'live'=>[
+            'profileId'=>(string)$source['profile_id'],'platform'=>'Instagram',
+            'title'=>trim((string)($source['public_name']??'Instagram')).' est en direct',
+            'url'=>$identity['profileUrl'],'thumbnail'=>(string)($meta['image']??''),'confidence'=>$confidence,'startedAt'=>null,
+            'viewers'=>p50_live_v4_viewers($combined),
+            'metadata'=>['profileUrl'=>$identity['profileUrl'],'handle'=>'@'.$identity['handle'],'probeLabels'=>$probeLabels,'probe'=>'public_multi_probe'],
+        ],'evidence'=>['positive'=>$probeLabels,'blocked'=>$blocked]];
+    }
+    if($offline)return ['state'=>'offline','error'=>'instagram_explicit_offline','confidence'=>96,'responseMs'=>$maxMs,'evidence'=>['blocked'=>$blocked]];
+    return ['state'=>'unknown','error'=>$blocked>0?'instagram_blocked_or_challenged':'instagram_no_public_live_signal','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['blocked'=>$blocked,'errors'=>$errors]];
 }
 
 function p50_live_v4_parse_facebook(array $source,array $responses): array {

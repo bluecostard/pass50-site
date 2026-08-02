@@ -2,11 +2,11 @@
 'use strict';
 
 const ENDPOINT='./api/live-status-v4.php';
-const QUICK_INTERVAL=45_000;
+const QUICK_INTERVAL=30_000;
 const FULL_CYCLE_KEY='pass50_live_radar_v4_cycle';
-const DEFAULT_GRACE_MINUTES={TikTok:2,Facebook:15,YouTube:15,Instagram:15};
+const DEFAULT_GRACE_MINUTES={TikTok:20,Facebook:15,YouTube:15,Instagram:15};
 const PLATFORM_PRIORITY=['TikTok','Facebook','YouTube','Instagram'];
-const RADAR_BATCH_SIZE='12';
+const RADAR_BATCH_SIZE='14';
 let runningMode='';
 let lastData=null;
 let autoTimer=null;

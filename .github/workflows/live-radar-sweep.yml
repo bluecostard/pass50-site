@@ -2,7 +2,7 @@ name: PASS50 Live Radar Sweep
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
   push:
     branches:
@@ -30,7 +30,7 @@ jobs:
     env:
       ENDPOINT: https://pass50.store/api/live-status-v4.php
       CONTRACT_URL: https://pass50.store/api/live-radar-contract.php
-      EXPECTED_CONTRACT: LIVE-RADAR-EVENT-IDENTITY-2026-08-02-3
+      EXPECTED_CONTRACT: LIVE-RADAR-CONTINUOUS-MAX-2026-08-02-1
     steps:
       - name: Attendre le moteur LIVE corrigé
         run: |
@@ -59,7 +59,7 @@ jobs:
           : > live-radar-passes.ndjson
           complete=false
           for attempt in $(seq 1 100); do
-            response="$(curl --fail --silent --show-error --location --max-time 45 --retry 2 --retry-delay 2 "${ENDPOINT}?mode=full&force=1&batch=12&cycle=${cycle}&t=$(date +%s)")"
+            response="$(curl --fail --silent --show-error --location --max-time 45 --retry 2 --retry-delay 2 "${ENDPOINT}?mode=full&force=1&batch=14&cycle=${cycle}&t=$(date +%s)")"
             printf '%s' "$response" | jq -c '.' >> live-radar-passes.ndjson
             readarray -t values < <(printf '%s' "$response" | python3 -c '
           import json,sys

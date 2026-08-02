@@ -1,0 +1,50 @@
+name: PASS50 Live Radar Quick
+
+on:
+  schedule:
+    - cron: '*/2 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pass50-live-radar-quick
+  cancel-in-progress: false
+
+jobs:
+  quick-sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      ENDPOINT: https://pass50.store/api/live-status-v4.php
+    steps:
+      - name: Reconfirmer les directs et découvrir de nouveaux LIVE
+        run: |
+          set -euo pipefail
+          total_found=0
+          total_active=0
+          for pass in 1 2 3 4; do
+            response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
+              "${ENDPOINT}?mode=quick&force=1&batch=14&t=$(date +%s)${pass}")"
+            readarray -t values < <(printf '%s' "$response" | python3 -c '
+          import json,sys
+          data=json.load(sys.stdin)
+          radar=data.get("radar") or {}
+          print("true" if radar.get("busy") else "false")
+          print(int(radar.get("livesFoundThisPass") or 0))
+          print(int(radar.get("activeAutomaticConfirmed") or 0))
+          print(int(radar.get("sourcesScannedThisPass") or 0))
+          print(int(radar.get("officialSourcesKnown") or 0))
+          ')
+            busy="${values[0]}"
+            found="${values[1]}"
+            active="${values[2]}"
+            scanned="${values[3]}"
+            known="${values[4]}"
+            total_found=$((total_found + found))
+            total_active=$active
+            echo "Quick PASS50 #${pass} : ${scanned} sondés / ${known} connus · +${found} live · ${active} publiés · busy=${busy}"
+            if [[ "$busy" == "true" ]]; then sleep 2; else sleep 1; fi
+          done
+          echo "Radar rapide : ${total_found} confirmation(s) · ${total_active} direct(s) publié(s)"

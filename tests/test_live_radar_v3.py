@@ -50,20 +50,21 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('structure LiveRoom fraîche', CORE_TESTS)
         self.assertIn("['state']==='live'", CORE_TESTS)
 
-    def test_unknown_and_probable_withdraw_public_live_immediately(self):
-        self.assertIn("continuityPreserved'=>false", ENDPOINT)
+    def test_unknown_block_preserves_confirmed_live(self):
+        self.assertIn('continuityPreserved', ENDPOINT)
         self.assertIn("status='unconfirmed'", STORAGE)
-        self.assertIn('latest_probe_not_live', STORAGE)
-        self.assertIn("h.last_state<>'live'", STORAGE)
-        self.assertNotIn('latest_probe_not_confirmed', STORAGE)
+        self.assertIn('latest_probe_offline', STORAGE)
+        self.assertIn("h.last_state IN ('offline','replay')", STORAGE)
+        self.assertIn("h.last_state='unknown'", STORAGE)
 
-    def test_public_live_requires_recent_confirmation(self):
+    def test_public_live_uses_platform_grace_windows(self):
         active = re.search(r'function p50_live_v4_active_rows\(.*?\n}', STORAGE, re.S).group(0)
-        self.assertIn("$platform==='TikTok'?2", active)
+        self.assertNotIn("$platform==='TikTok'?2", active)
         self.assertIn("h.last_state='live'", active)
+        self.assertIn("h.last_state='unknown'", active)
         self.assertIn("'lastConfirmedAt'=>p50_live_v4_iso($row['last_seen_at']", active)
         self.assertIn('confirmation_grace_expired', active)
-        self.assertIn("array_replace(P50_LIVE_V4_GRACE_MINUTES,['TikTok'=>2])", ENDPOINT)
+        self.assertIn("'graceMinutes'=>P50_LIVE_V4_GRACE_MINUTES", ENDPOINT)
 
     def test_dismissed_stream_never_returns(self):
         self.assertIn('p50_live_dismissals', STORAGE)
@@ -98,22 +99,26 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("(int)($source['priority']??3)>=2", ENDPOINT)
         self.assertIn("'discoveryQuota'=>$discoveryQuota", ENDPOINT)
         self.assertIn("['TikTok'=>0,'Facebook'=>1,'YouTube'=>2,'Instagram'=>3]", ENDPOINT)
-        self.assertIn("$_GET['batch']??12", ENDPOINT)
+        self.assertIn("$_GET['batch']??14", ENDPOINT)
 
     def test_client_is_compatibly_loaded_but_uses_v4(self):
-        self.assertIn("live-radar-v3.js?v=1.2", CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.3", CONFIG)
         self.assertIn("const ENDPOINT='./api/live-status-v4.php'", CLIENT)
         self.assertIn('RADAR LIVE V4', CLIENT)
+        self.assertIn('TikTok:20', CLIENT)
         self.assertIn('PASS50_LIVE_EXPERIENCE_VERSION', EXPERIENCE)
         self.assertIn('live-experience-v4-1.js?v=1.1', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
 
     def test_server_sweep_uses_v4(self):
-        self.assertIn('*/10 * * * *', SWEEP)
+        self.assertIn('*/5 * * * *', SWEEP)
         self.assertIn('api/live-status-v4.php', SWEEP)
         self.assertIn('mode=full', SWEEP)
         self.assertIn('live-radar-audit.json', SWEEP)
         self.assertIn('publishedStreams', SWEEP)
         self.assertIn('pass50/live-radar', SWEEP)
+        quick = (ROOT / '.github' / 'workflows' / 'live-radar-quick.yml').read_text(encoding='utf-8')
+        self.assertIn('*/2 * * * *', quick)
+        self.assertIn('mode=quick', quick)
 
 
 if __name__ == '__main__':
