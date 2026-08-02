@@ -287,7 +287,10 @@ window.addEventListener('click',event=>{
   if(badge){
     event.preventDefault();event.stopImmediatePropagation();
     const owner=badge.closest('[data-profile]'),live=owner?liveFor(owner.dataset.profile):null;
-    if(live){openLiveDestination(live);backgroundVerify(live);}
+    if(live){
+      if(typeof window.PASS50_VERIFY_THEN_OPEN_LIVE==='function')window.PASS50_VERIFY_THEN_OPEN_LIVE(live,live.url);
+      else{openLiveDestination(live);backgroundVerify(live);}
+    }
     return;
   }
   if(target.closest('.p50-live-share-close')||target.id==='p50LiveShareModal'){event.preventDefault();closeShare();return;}

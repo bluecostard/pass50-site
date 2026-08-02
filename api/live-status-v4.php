@@ -48,12 +48,34 @@ if($mode==='full'){
 }elseif($mode==='profile'){
     $selected=array_slice($sources,0,$batch);$cycleTotal=count($sources);
 }elseif($mode==='quick'){
-    $discoveryQuota=min(4,$batch);$priorityLimit=max(0,$batch-$discoveryQuota);$priority=array_slice($sources,0,$priorityLimit);$used=[];
-    foreach($priority as $source)$used[(string)$source['source_key']]=true;
-    $discovery=array_values(array_filter($sources,static fn($source)=>!isset($used[(string)$source['source_key']])&&(int)($source['priority']??3)>=2));
-    usort($discovery,static function(array $a,array $b): int {$ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);});
-    $selected=array_merge($priority,array_slice($discovery,0,$discoveryQuota));foreach($selected as $source)$used[(string)$source['source_key']]=true;
+    // Trust Gate : reconfirmer d'abord tous les directs encore marqués live en base.
+    $activeKeys=[];
+    try{
+        foreach(db()->query("SELECT profile_id,platform FROM p50_live_streams WHERE source IN ('automatic','meta_authorized') AND status='live'")->fetchAll() as $row){
+            $activeKeys[strtolower((string)$row['platform']).'|'.trim((string)$row['profile_id'])]=true;
+        }
+    }catch(Throwable){}
+    $reconfirm=[];$discovery=[];$used=[];
+    foreach($sources as $source){
+        $key=strtolower((string)$source['platform']).'|'.trim((string)$source['profile_id']);
+        if(isset($activeKeys[$key])||(int)($source['priority']??3)<=1){$reconfirm[]=$source;$used[(string)$source['source_key']]=true;}
+        else $discovery[]=$source;
+    }
+    usort($reconfirm,static function(array $a,array $b): int {
+        $ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');
+        if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
+        if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);
+    });
+    usort($discovery,static function(array $a,array $b): int {
+        $ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');
+        if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
+        if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);
+    });
+    $discoveryQuota=min(4,max(0,$batch-count($reconfirm)));
+    $selected=array_merge($reconfirm,array_slice($discovery,0,$discoveryQuota));
+    foreach($selected as $source)$used[(string)$source['source_key']]=true;
     if(count($selected)<$batch)foreach($sources as $source){$key=(string)$source['source_key'];if(isset($used[$key]))continue;$selected[]=$source;$used[$key]=true;if(count($selected)>=$batch)break;}
+    $selected=array_slice($selected,0,$batch);
 }else{
     $selected=array_slice($sources,0,$batch);
 }
@@ -72,7 +94,6 @@ if($canScan&&$selected&&$lock){
             $source=$result['source'];$platform=(string)$source['platform'];$profileId=(string)$source['profile_id'];$stateValue=(string)($result['state']??'unknown');
             $platformStats[$platform]['scanned']++;
             $health=p50_live_v4_health_update($source,$result);
-            $continuityPreserved=$stateValue==='unknown'&&($health['previousState']??'')==='live';
             if($stateValue==='live'&&!empty($result['live'])){
                 p50_live_v4_store_live($result['live']);$foundThisPass++;$platformStats[$platform]['found']++;
             }elseif($stateValue==='probable'&&!empty($result['live'])){
@@ -81,13 +102,18 @@ if($canScan&&$selected&&$lock){
                 p50_live_v4_mark_ended($profileId,$platform,'replay',is_array($result['replay']??null)?$result['replay']:null);$replaysThisPass++;$platformStats[$platform]['replays']++;
             }elseif($stateValue==='offline'){
                 p50_live_v4_mark_ended($profileId,$platform,(string)($result['error']??'offline'));
+            }elseif($stateValue==='unknown'&&($health['previousState']??'')==='live'){
+                // Trust Gate : un blocage ne prolonge plus la publication ; le flux sort dès que la fenêtre publique expire.
+                db()->prepare("UPDATE p50_live_streams SET metadata=JSON_SET(COALESCE(metadata,'{}'),'$.withdrawalReason','awaiting_reconfirm_after_block') WHERE profile_id=? AND platform=? AND source='automatic' AND status='live'")
+                    ->execute([$profileId,$platform]);
             }
             $diagnostics[]=[
                 'profileId'=>$profileId,'name'=>(string)$source['public_name'],'platform'=>$platform,'state'=>$stateValue,
-                'publicState'=>$stateValue==='probable'?'unconfirmed':($continuityPreserved?'live':$stateValue),
+                'publicState'=>$stateValue==='probable'?'unconfirmed':$stateValue,
                 'lastCheckedAt'=>gmdate(DATE_ATOM),'lastConfirmedAt'=>$stateValue==='live'?gmdate(DATE_ATOM):null,
-                'continuityPreserved'=>$continuityPreserved,
-                'withdrawalReason'=>in_array($stateValue,['live','probable'],true)||$continuityPreserved?'':(string)($result['error']??$stateValue),
+                'continuityPreserved'=>false,
+                'trustGate'=>P50_LIVE_V4_TRUST_REVISION,
+                'withdrawalReason'=>in_array($stateValue,['live','probable'],true)?'':(string)($result['error']??$stateValue),
                 'confidence'=>(int)($result['confidence']??0),'error'=>(string)($result['error']??''),'evidence'=>$result['evidence']??[],'probes'=>$result['probes']??[],
             ];
         }
@@ -113,14 +139,17 @@ $automatic=array_values(array_filter(p50_live_v4_active_rows(),static function(a
     $key=strtolower((string)($stream['platform']??'')).'|'.$profileId;
     return isset($officialKeys[$key]);
 }));
-$manual=p50_live_v4_manual_streams($state);$streams=p50_live_v4_dedup($automatic,$manual);$healthSummary=p50_live_v4_health_summary($sources,$automatic);
+$manual=p50_live_v4_manual_streams($state);
+$streams=p50_live_v4_filter_public_streams(p50_live_v4_dedup($automatic,$manual));
+$healthSummary=p50_live_v4_health_summary($sources,$automatic);
 $coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;$lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
 
 json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
-    'version'=>'4.1','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
+    'version'=>'4.2','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
     'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
     'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,'coveragePercent'=>$coverage,
     'officialSourcesKnown'=>count($sources),'activeAutomaticConfirmed'=>count($automatic),'platforms'=>$platformStats,'health'=>$healthSummary,'lastFullSweep'=>$lastFull,
-    'refreshSeconds'=>$refresh,'batchSize'=>$batch,'discoveryQuota'=>$discoveryQuota,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],'graceMinutes'=>P50_LIVE_V4_GRACE_MINUTES,'diagnostics'=>$diagnostics,
+    'refreshSeconds'=>$refresh,'batchSize'=>$batch,'discoveryQuota'=>$discoveryQuota,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],
+    'graceMinutes'=>p50_live_v4_reconfirm_grace_map(),'trustSeconds'=>p50_live_v4_trust_seconds_map(),'trustGate'=>P50_LIVE_V4_TRUST_REVISION,'diagnostics'=>$diagnostics,
 ]]);

@@ -17,8 +17,10 @@ function response(string $body,int $status=200,string $url='https://example.test
 function room_id_for(int $timestamp,int $suffix=123456): string {return (string)(($timestamp*4294967296)+$suffix);}
 
 must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
-must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-RADAR-CONTINUOUS-MAX-2026-08-02-1','La révision de continuité maximale doit être active.');
-must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===43200,'La fenêtre TikTok doit rester conservatrice à douze heures.');
+must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-TRUST-GATE-2026-08-03-1','La révision Trust Gate doit être active.');
+must(P50_LIVE_V4_TRUST_REVISION==='LIVE-TRUST-GATE-2026-08-03-1','Le module Trust Gate doit être chargé.');
+must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===10800,'La fenêtre TikTok Trust Gate est de trois heures.');
+must(p50_live_v4_public_max_age('TikTok')===90,'TikTok public max age = 90s.');
 
 $source=['profile_id'=>'coach-test','public_name'=>'Coach Test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest'];
 $api=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"741234567890","uniqueId":"coachtest"}')]);
@@ -28,13 +30,10 @@ must(($api['live']['metadata']['strictApiLabels'][0]??'')==='api','La preuve API
 
 $freshRoom=room_id_for(time()-300);
 $apiFreshStatus=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"'.$freshRoom.'"}')]);
-must($apiFreshStatus['state']==='live','Une salle TikTok récente avec statut actif doit confirmer le direct.');
-must(($apiFreshStatus['live']['metadata']['freshApiLabels'][0]??'')==='api','La preuve temporelle fraîche doit être conservée.');
+must($apiFreshStatus['state']==='probable','Une salle fraîche sans identité propriétaire reste à confirmer (Trust Gate).');
 
 $apiFreshStructure=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$freshRoom.'"},"webcastRoomId":"'.$freshRoom.'"}')]);
-must($apiFreshStructure['state']==='live','Une structure LiveRoom récente doit confirmer le direct même sans champ status.');
-must(($apiFreshStructure['live']['metadata']['apiLiveStructureLabels'][0]??'')==='api','La structure LiveRoom doit rester visible dans le diagnostic.');
-must(($apiFreshStructure['live']['startedAt']??null)!==null,'La date encodée dans la salle TikTok doit devenir la date de début.');
+must($apiFreshStructure['state']==='probable','Une structure LiveRoom seule ne publie plus un faux direct.');
 
 $staleRoom=room_id_for(time()-P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS-3600);
 $apiStale=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$staleRoom.'"},"webcastRoomId":"'.$staleRoom.'"}')]);
@@ -66,7 +65,13 @@ $freshApiWithEndedPage=p50_live_v4_parse_tiktok($source,[
     'api'=>response('{"LiveRoom":{"id":"'.$freshRoom.'"},"webcastRoomId":"'.$freshRoom.'"}'),
     'live'=>response($endedHtml,200,'https://www.tiktok.com/@coachtest/live'),
 ]);
-must($freshApiWithEndedPage['state']==='live','Une structure LiveRoom fraîche doit gagner sur une ancienne trace HTML de fin.');
+must($freshApiWithEndedPage['state']==='offline','Sans preuve API stricte, une page « LIVE terminé » retire le direct (Trust Gate).');
+
+$strictBeatsEndedPage=p50_live_v4_parse_tiktok($source,[
+    'api'=>response('{"status":2,"room_id":"'.$freshRoom.'","uniqueId":"coachtest"}'),
+    'live'=>response($endedHtml,200,'https://www.tiktok.com/@coachtest/live'),
+]);
+must($strictBeatsEndedPage['state']==='live','Une API stricte propriétaire gagne sur une ancienne trace HTML de fin.');
 
 $blocked=p50_live_v4_parse_tiktok($source,['live'=>response('<html>Verify to continue - captcha</html>')]);
 must($blocked['state']==='unknown','Un challenge anti-bot ne doit pas être interprété comme une fin de direct.');

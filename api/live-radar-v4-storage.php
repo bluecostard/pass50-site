@@ -60,18 +60,20 @@ function p50_live_v4_active_rows(): array {
     p50_live_v4_ensure_dismissals();
     db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='automatic' AND status='unconfirmed' AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR)");
     db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='meta_authorized' AND status='live' AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE)");
-    // Un offline/replay explicite retire le direct. Un simple blocage (unknown) ne le retire pas.
+    // Offline/replay explicite → retrait immédiat.
     db()->exec("UPDATE p50_live_streams s JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform SET s.status='unconfirmed',s.metadata=JSON_SET(COALESCE(s.metadata,'{}'),'$.withdrawalReason','latest_probe_offline') WHERE s.source='automatic' AND s.status='live' AND h.last_state IN ('offline','replay')");
-    foreach(P50_LIVE_V4_GRACE_MINUTES as $platform=>$configured){
+    // Grâce de reconfirmation serveur (pas la fenêtre publique).
+    foreach(p50_live_v4_reconfirm_grace_map() as $platform=>$configured){
         $minutes=max(1,(int)$configured);
         $stmt=db()->prepare("UPDATE p50_live_streams SET status='unconfirmed',metadata=JSON_SET(COALESCE(metadata,'{}'),'$.withdrawalReason','confirmation_grace_expired') WHERE source='automatic' AND status='live' AND platform=? AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$minutes} MINUTE)");
         $stmt->execute([$platform]);
     }
+    // Trust Gate public : uniquement last_state=live + confirmation encore fraîche.
+    // Un unknown / blocage ne maintient plus le LIVE dans la liste publique.
     $conditions=[];$params=[];
-    foreach(P50_LIVE_V4_GRACE_MINUTES as $platform=>$configured){
-        $minutes=max(1,(int)$configured);
-        // Conserve un LIVE confirmé pendant la grâce même si la dernière sonde est un blocage temporaire.
-        $conditions[]="(s.source='automatic' AND s.platform=? AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$minutes} MINUTE) AND (h.last_state='live' OR (h.last_state='unknown' AND h.last_live_at IS NOT NULL AND h.last_live_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$minutes} MINUTE))))";
+    foreach(p50_live_v4_trust_seconds_map() as $platform=>$seconds){
+        $seconds=max(30,(int)$seconds);
+        $conditions[]="(s.source='automatic' AND s.platform=? AND h.last_state='live' AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$seconds} SECOND) AND h.last_checked_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$seconds} SECOND))";
         $params[]=$platform;
     }
     $conditions[]="(s.source='meta_authorized' AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE))";
@@ -83,7 +85,7 @@ function p50_live_v4_active_rows(): array {
         if(!is_array($meta))$meta=[];
         $handle=trim((string)($meta['handle']??''));
         if($handle!==''&&!str_starts_with($handle,'@'))$handle='@'.$handle;
-        $out[]=[
+        $candidate=[
             'id'=>($source==='meta_authorized'?'meta_':'auto_').substr((string)$row['stream_key'],0,18),
             'profileId'=>(string)$row['profile_id'],'platform'=>(string)$row['platform'],'title'=>(string)$row['title'],
             'url'=>(string)$row['url'],'thumbnail'=>(string)($row['thumbnail_url']??''),'status'=>'live','source'=>$source,
@@ -91,6 +93,8 @@ function p50_live_v4_active_rows(): array {
             'startedAt'=>p50_live_v4_iso($row['started_at']??null),'lastSeenAt'=>p50_live_v4_iso($row['last_seen_at']??null),
             'lastConfirmedAt'=>p50_live_v4_iso($row['last_seen_at']??null),
             'lastCheckState'=>$source==='meta_authorized'?'live':(string)($row['last_state']??'unknown'),'endsAt'=>null,
+            'last_state'=>$source==='meta_authorized'?'live':(string)($row['last_state']??'unknown'),
+            'last_seen_at'=>(string)($row['last_seen_at']??''),
             'roomId'=>trim((string)($meta['roomId']??'')),
             'videoId'=>trim((string)($meta['videoId']??'')),
             'handle'=>$handle,
@@ -101,6 +105,10 @@ function p50_live_v4_active_rows(): array {
                 'probe'=>(string)($meta['probe']??''),
             ],
         ];
+        if(!p50_live_v4_is_publicly_fresh($candidate))continue;
+        unset($candidate['last_state'],$candidate['last_seen_at']);
+        $candidate['trust']=['gate'=>P50_LIVE_V4_TRUST_REVISION,'maxAgeSeconds'=>p50_live_v4_public_max_age((string)$candidate['platform']),'fresh'=>true];
+        $out[]=$candidate;
     }
     return $out;
 }

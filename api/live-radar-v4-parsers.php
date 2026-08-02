@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-RADAR-CONTINUOUS-MAX-2026-08-02-1';
-const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 43200;
+const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-TRUST-GATE-2026-08-03-1';
+const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800;
 
 function p50_live_v4_unescape(string $value): string {
     return html_entity_decode(str_replace(['\\u0026','\\u003d','\\/'],['&','=','/'],$value),ENT_QUOTES|ENT_HTML5,'UTF-8');
@@ -118,11 +118,13 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
     if($positive){
         $roomId='';$confirmed=false;$strictApi=false;$freshApi=false;$crossFamily=false;$bestRank=-1;$bestTotal=-1;
         foreach($roomEvidence as $candidate=>$families){
-            $apiCount=count($families['api']);$htmlCount=count($families['html']);$strictCount=count($families['strictApi']);$freshCount=count($families['freshApi']);$cross=$apiCount>0&&$htmlCount>0;$candidateConfirmed=$strictCount>0||$freshCount>0||$cross;$rank=$strictCount>0?3:($cross?2:($freshCount>0?1:0));$total=$apiCount+$htmlCount;
+            $apiCount=count($families['api']);$htmlCount=count($families['html']);$strictCount=count($families['strictApi']);$freshCount=count($families['freshApi']);$cross=$apiCount>0&&$htmlCount>0;
+            // Trust Gate : une salle « fraîche » seule ne suffit plus — il faut une API stricte ou une preuve croisée API+HTML.
+            $candidateConfirmed=$strictCount>0||$cross;$rank=$strictCount>0?3:($cross?2:($freshCount>0?1:0));$total=$apiCount+$htmlCount;
             if($rank>$bestRank||($rank===$bestRank&&$candidateConfirmed&&!$confirmed)||($rank===$bestRank&&$candidateConfirmed===$confirmed&&$total>$bestTotal)){$roomId=(string)$candidate;$strictApi=$strictCount>0;$freshApi=$freshCount>0;$crossFamily=$cross;$confirmed=$candidateConfirmed;$bestRank=$rank;$bestTotal=$total;}
         }
         if(!$confirmed&&$endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
-        $state=$confirmed?'live':'probable';$confidence=$strictApi?99:($crossFamily?98:($freshApi?96:78));
+        $state=$confirmed?'live':'probable';$confidence=$strictApi?99:($crossFamily?98:($freshApi?76:72));
         $best='';$bestUrl=$identity['liveUrl'];foreach(['live','mobile_live','embed','profile','api','api_basic'] as $label)if(!empty($bodies[$label])){$best=$bodies[$label];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}
         $meta=p50_page_metadata($best,$bestUrl);$title=trim((string)($meta['title']??''));$title=preg_replace('/\s*\|\s*TikTok\s*$/iu','',$title)??$title;
         if($title===''||preg_match('/^(TikTok|Make Your Day)$/iu',$title))$title=trim((string)($source['public_name']??''));

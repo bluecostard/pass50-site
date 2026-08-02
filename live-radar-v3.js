@@ -4,7 +4,7 @@
 const ENDPOINT='./api/live-status-v4.php';
 const QUICK_INTERVAL=30_000;
 const FULL_CYCLE_KEY='pass50_live_radar_v4_cycle';
-const DEFAULT_GRACE_MINUTES={TikTok:20,Facebook:15,YouTube:15,Instagram:15};
+const DEFAULT_TRUST_SECONDS={TikTok:90,Facebook:120,YouTube:240,Instagram:120};
 const PLATFORM_PRIORITY=['TikTok','Facebook','YouTube','Instagram'];
 const RADAR_BATCH_SIZE='14';
 let runningMode='';
@@ -12,44 +12,48 @@ let lastData=null;
 let autoTimer=null;
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
-function graceMinutes(platform){
-  const configured=Number(window.PASS50_LIVE_RADAR?.graceMinutes?.[platform]);
-  return Number.isFinite(configured)&&configured>0?configured:Number(DEFAULT_GRACE_MINUTES[platform]||15);
+function trustSeconds(platform){
+  const configured=Number(window.PASS50_LIVE_RADAR?.trustSeconds?.[platform]);
+  return Number.isFinite(configured)&&configured>0?configured:Number(DEFAULT_TRUST_SECONDS[platform]||120);
 }
 
 function installLiveNormalizerV4(){
   if(window.__pass50LiveNormalizerV4)return;
   const normalizer=function(){
-    if(!Array.isArray(db.liveStreams))db.liveStreams=[];
-    const browserNow=Date.now();
-    const serverParsed=new Date(window.PASS50_LIVE_RADAR?.serverNow||'').getTime();
-    const now=Number.isFinite(serverParsed)?serverParsed:browserNow;
-    const seen=new Set();
-    db.liveStreams=db.liveStreams.filter(item=>{
-      if(!item||item.status!=='live'||!item.profileId||!/^https?:\/\//i.test(String(item.url||'')))return false;
-      if(item.source==='manual'){
-        const endsAt=new Date(item.endsAt||'').getTime();
-        if(!Number.isFinite(endsAt)||endsAt<=now)return false;
-      }else{
-        let confirmedAt=new Date(item.lastConfirmedAt||item.lastSeenAt||'').getTime();
-        if(!Number.isFinite(confirmedAt))return false;
-        const futureSkew=confirmedAt-now;
-        if(futureSkew>5*60_000&&futureSkew<=6*60*60_000){
-          confirmedAt=now;
-          const fixed=new Date(now).toISOString();
-          item.lastConfirmedAt=fixed;
-          item.lastSeenAt=fixed;
-        }else if(futureSkew>6*60*60_000){
-          return false;
+    if(typeof window.PASS50_LIVE_FILTER_PUBLIC==='function'){
+      if(!Array.isArray(db.liveStreams))db.liveStreams=[];
+      db.liveStreams=window.PASS50_LIVE_FILTER_PUBLIC(db.liveStreams);
+    }else{
+      if(!Array.isArray(db.liveStreams))db.liveStreams=[];
+      const browserNow=Date.now();
+      const serverParsed=new Date(window.PASS50_LIVE_RADAR?.serverNow||'').getTime();
+      const now=Number.isFinite(serverParsed)?serverParsed:browserNow;
+      const seen=new Set();
+      db.liveStreams=db.liveStreams.filter(item=>{
+        if(!item||item.status!=='live'||!item.profileId||!/^https?:\/\//i.test(String(item.url||'')))return false;
+        if(item.source==='manual'){
+          const endsAt=new Date(item.endsAt||'').getTime();
+          if(!Number.isFinite(endsAt)||endsAt<=now)return false;
+        }else{
+          let confirmedAt=new Date(item.lastConfirmedAt||item.lastSeenAt||'').getTime();
+          if(!Number.isFinite(confirmedAt))return false;
+          const futureSkew=confirmedAt-now;
+          if(futureSkew>5*60_000&&futureSkew<=6*60*60_000){
+            confirmedAt=now;
+            const fixed=new Date(now).toISOString();
+            item.lastConfirmedAt=fixed;
+            item.lastSeenAt=fixed;
+          }else if(futureSkew>6*60*60_000){
+            return false;
+          }
+          if(now-confirmedAt>trustSeconds(String(item.platform||''))*1000)return false;
         }
-        const maxAge=(graceMinutes(String(item.platform||''))+2)*60_000;
-        if(now-confirmedAt>maxAge)return false;
-      }
-      const key=[item.profileId,item.platform||'',String(item.url).replace(/\/+$/,'')].map(value=>String(value).trim().toLowerCase()).join('|');
-      if(seen.has(key))return false;
-      seen.add(key);
-      return true;
-    });
+        const key=[item.profileId,item.platform||'',String(item.url).replace(/\/+$/,'')].map(value=>String(value).trim().toLowerCase()).join('|');
+        if(seen.has(key))return false;
+        seen.add(key);
+        return true;
+      });
+    }
     if(Array.isArray(db.profiles))db.profiles.forEach(profile=>{
       profile.badges=(profile.badges||[]).filter(badge=>badge!=='LIVE');
       if(db.liveStreams.some(item=>item.profileId===profile.id&&item.status==='live'))profile.badges.unshift('LIVE');
@@ -208,7 +212,12 @@ function badgeProfileId(badge){
   return '';
 }
 
+function ensureLiveTrustGate(){
+  if(document.querySelector('script[data-pass50-live-trust-gate]'))return;
+  const script=document.createElement('script');script.src='./live-trust-gate-v1.js?v=1.0';script.dataset.pass50LiveTrustGate='1.0';document.head.appendChild(script);
+}
 function ensureLiveExperience(){
+  ensureLiveTrustGate();
   if(document.querySelector('script[data-pass50-live-experience-v41]'))return;
   const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.2';script.dataset.pass50LiveExperienceV41='1.2';document.head.appendChild(script);
 }

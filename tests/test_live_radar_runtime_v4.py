@@ -17,10 +17,10 @@ class LiveRadarRuntimeV4Tests(unittest.TestCase):
         self.assertIn("SET time_zone = '+00:00'", ENDPOINT)
         self.assertIn("'serverNow'=>gmdate(DATE_ATOM)", ENDPOINT)
 
-    def test_browser_uses_platform_grace_instead_of_three_minutes(self):
+    def test_browser_uses_trust_seconds_instead_of_three_minutes(self):
         self.assertIn('installLiveNormalizerV4', CLIENT)
-        self.assertIn('DEFAULT_GRACE_MINUTES', CLIENT)
-        self.assertIn('graceMinutes(String(item.platform', CLIENT)
+        self.assertIn('DEFAULT_TRUST_SECONDS', CLIENT)
+        self.assertIn('trustSeconds(String(item.platform', CLIENT)
         self.assertIn('confirmation', CLIENT.lower())
         self.assertNotIn("10*60_000:3*60_000", CLIENT)
 
