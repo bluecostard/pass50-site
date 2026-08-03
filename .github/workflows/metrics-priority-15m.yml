@@ -4,6 +4,17 @@ on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/metrics-priority-15m.yml'
+      - '.github/workflows/activate-multinetwork-collectors.yml'
+      - 'api/metrics-collector-readiness-cron.php'
+
+permissions:
+  contents: read
+  statuses: write
 
 concurrency:
   group: pass50-metrics-p0
@@ -12,19 +23,22 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
     steps:
       - name: Dispatch and process P0
+        id: collection
         shell: bash
         run: |
+          set -euo pipefail
           if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then
-            echo "::warning::PASS50 metrics cron secrets are not configured."
-            exit 0
+            echo "::error::PASS50 metrics cron secrets are not configured."
+            exit 1
           fi
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-p0"
+          : > p0-work-diagnostics.jsonl
           call_cron() {
             local body="$1" timestamp signature
             timestamp="$(date +%s)"
@@ -35,18 +49,87 @@ jobs:
               -H "X-P50-Signature: $signature" \
               --data "$body" "$CRON_URL"
           }
+
           response="$(call_cron "$(jq -nc --arg id "$dispatch_id" '{action:"dispatch",cadence:"p0",dispatchId:$id}')")"
-          remaining="$(jq -r '.remaining // 0' <<<"$response")"
-          processed=0
-          for iteration in $(seq 1 40); do
+          remaining="$(jq -r '.queue.p0Remaining // .remaining // 0' <<<"$response")"
+          processed=0; completed=0; partial=0; failed=0; skipped=0
+          for iteration in $(seq 1 80); do
             [ "$remaining" -eq 0 ] && break
             response="$(call_cron "$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",cadence:"p0",dispatchId:$id,iteration:$iteration}')")"
-            remaining="$(jq -r '.remaining // 0' <<<"$response")"
-            processed=$((processed + $(jq -r '.processed // 0' <<<"$response")))
+            current="$(jq -r '.processed // 0' <<<"$response")"
+            processed=$((processed + current))
+            completed=$((completed + $(jq -r '.completed // 0' <<<"$response")))
+            partial=$((partial + $(jq -r '.partial // 0' <<<"$response")))
+            failed=$((failed + $(jq -r '.failed // 0' <<<"$response")))
+            skipped=$((skipped + $(jq -r '.skipped // 0' <<<"$response")))
+            if [ "$current" -eq 1 ]; then jq -c '.diagnostic // empty' <<<"$response" >> p0-work-diagnostics.jsonl; fi
+            remaining="$(jq -r '.queue.p0Remaining // .remaining // 0' <<<"$response")"
+            if [ "$current" -eq 0 ] && [ "$remaining" -gt 0 ]; then
+              wait_seconds="$(jq -r '.queue.p0WaitSeconds // 5' <<<"$response")"
+              if ! [[ "$wait_seconds" =~ ^[0-9]+$ ]]; then wait_seconds=5; fi
+              [ "$wait_seconds" -lt 3 ] && wait_seconds=3
+              [ "$wait_seconds" -gt 30 ] && wait_seconds=30
+              sleep "$wait_seconds"
+            fi
           done
+
+          if [ -s p0-work-diagnostics.jsonl ]; then diagnostics="$(jq -s '.' p0-work-diagnostics.jsonl)"; else diagnostics='[]'; fi
+          captures="$(jq '[.[].capturesRecorded] | add // 0' <<<"$diagnostics")"
+          duplicates="$(jq '[.[].duplicatesSkipped] | add // 0' <<<"$diagnostics")"
+          quarantined="$(jq '[.[].quarantined] | add // 0' <<<"$diagnostics")"
+          by_platform="$(jq 'group_by(.platform) | map({key:(.[0].platform // "unknown"),value:{tasks:length,captures:(map(.capturesRecorded)|add//0),duplicates:(map(.duplicatesSkipped)|add//0),quarantined:(map(.quarantined)|add//0),statuses:(group_by(.status)|map({key:(.[0].status//"unknown"),value:length})|from_entries)}}) | from_entries' <<<"$diagnostics")"
+
+          jq -nc --arg dispatchId "$dispatch_id" --argjson processed "$processed" --argjson completed "$completed" \
+            --argjson partial "$partial" --argjson failed "$failed" --argjson skipped "$skipped" --argjson remaining "$remaining" \
+            --argjson captures "$captures" --argjson duplicates "$duplicates" --argjson quarantined "$quarantined" \
+            --argjson byPlatform "$by_platform" --argjson diagnostics "$diagnostics" \
+            '{ok:true,version:"P0-MULTINET-DIAG-V1.0",dispatchId:$dispatchId,processed:$processed,completed:$completed,partial:$partial,failed:$failed,skipped:$skipped,remaining:$remaining,capturesRecorded:$captures,duplicatesSkipped:$duplicates,quarantined:$quarantined,byPlatform:$byPlatform,diagnostics:$diagnostics,publicStateWrites:0}' > metrics-p0-result.json
+
           {
-            echo "### Metrics Priority P0"
-            echo "- Dispatch: \`$dispatch_id\`"
-            echo "- Tâches traitées: $processed"
-            echo "- File restante: $remaining"
+            echo '### Metrics Priority P0 multi-réseaux'
+            echo "- Dispatch : \`$dispatch_id\`"
+            echo "- Tâches traitées : $processed"
+            echo "- Terminées / partielles / ignorées / échouées : $completed / $partial / $skipped / $failed"
+            echo "- Captures / doublons / quarantaine : $captures / $duplicates / $quarantined"
+            echo "- Diagnostic par plateforme : \`$(jq -c . <<<"$by_platform")\`"
+            echo "- File restante : $remaining"
+            echo '- Écriture app_state : `0`'
           } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "processed=$processed"
+            echo "remaining=$remaining"
+            echo "captures=$captures"
+            echo "platforms=$(jq 'length' <<<"$by_platform")"
+          } >> "$GITHUB_OUTPUT"
+          [ "$remaining" -eq 0 ]
+
+      - name: Publier le statut P0
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STEP_OUTCOME: ${{ steps.collection.outcome }}
+          PROCESSED: ${{ steps.collection.outputs.processed }}
+          REMAINING: ${{ steps.collection.outputs.remaining }}
+          CAPTURES: ${{ steps.collection.outputs.captures }}
+          PLATFORMS: ${{ steps.collection.outputs.platforms }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="P0 multi-réseaux · ${PROCESSED:-0} tâches · ${CAPTURES:-0} captures · ${PLATFORMS:-0} plateforme(s)"
+          if [ "$STEP_OUTCOME" != success ]; then state=failure; description='P0 multi-réseaux interrompu';
+          elif [ "${REMAINING:-0}" != 0 ]; then state=pending; description="P0 en attente · ${REMAINING} tâche(s) restante(s)"; fi
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context 'pass50/metrics-p0' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archiver le résultat P0
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics-p0-${{ github.run_id }}-${{ github.run_attempt }}
+          path: metrics-p0-result.json
+          if-no-files-found: warn
+          retention-days: 30
