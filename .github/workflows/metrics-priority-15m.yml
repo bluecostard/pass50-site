@@ -24,13 +24,13 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
     steps:
-      - name: Dispatch and process P0
-        id: collection
+      - name: Attendre le runtime P0 corrigé
+        id: runtime
         shell: bash
         run: |
           set -euo pipefail
@@ -38,25 +38,79 @@ jobs:
             echo "::error::PASS50 metrics cron secrets are not configured."
             exit 1
           fi
-          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-p0"
-          : > p0-work-diagnostics.jsonl
-          call_cron() {
-            local body="$1" timestamp signature
+          case "$CRON_URL" in
+            */metrics-cron.php) PROBE_URL="${CRON_URL%/metrics-cron.php}/metrics-collector-readiness-cron.php" ;;
+            *) echo "::error::PASS50_METRICS_CRON_URL invalide"; exit 1 ;;
+          esac
+          signed_call() {
+            local url="$1" body="$2" output="$3" timestamp signature
             timestamp="$(date +%s)"
             signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
-            curl --fail-with-body --silent --show-error --max-time 55 \
-              -H "Content-Type: application/json" \
-              -H "X-P50-Timestamp: $timestamp" \
-              -H "X-P50-Signature: $signature" \
-              --data "$body" "$CRON_URL"
+            curl --silent --show-error --max-time 55 --output "$output" --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+              --data "$body" "$url" || true
           }
+          deployed=false
+          for attempt in $(seq 1 36); do
+            body="$(jq -nc --arg dispatchId "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-p0-probe-$attempt" '{action:"probe",dispatchId:$dispatchId}')"
+            code="$(signed_call "$PROBE_URL" "$body" p0-runtime-probe.json)"
+            if [ "$code" = 200 ] && jq -e '.ok == true and .version == "MULTINET-ACTIVATION-V1.1" and .runtime.tiktokBridge == "1.0.1"' p0-runtime-probe.json >/dev/null 2>&1; then
+              if jq -e '.p0Preview.ok == true' p0-runtime-probe.json >/dev/null; then
+                deployed=true
+                break
+              fi
+              error="$(jq -r '.p0Preview.error // "Aperçu P0 interrompu sans détail."' p0-runtime-probe.json)"
+              echo "::error::Le runtime corrigé est déployé, mais la sélection P0 échoue : $error"
+              exit 1
+            fi
+            echo "Runtime P0 corrigé en attente (${attempt}/36, HTTP ${code:-0})."
+            sleep 10
+          done
+          if [ "$deployed" != true ]; then
+            echo "::error::Le runtime P0 1.0.1 n'est pas disponible."
+            cat p0-runtime-probe.json 2>/dev/null || true
+            exit 1
+          fi
+          jq -r '"P0 prêt · candidats: \(.p0Preview.candidateCount) · plateformes: \(.p0Preview.candidatesByPlatform|tojson)"' p0-runtime-probe.json
 
-          response="$(call_cron "$(jq -nc --arg id "$dispatch_id" '{action:"dispatch",cadence:"p0",dispatchId:$id}')")"
+      - name: Dispatch and process P0
+        id: collection
+        shell: bash
+        run: |
+          set -euo pipefail
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-p0"
+          : > p0-work-diagnostics.jsonl
+          signed_cron() {
+            local body="$1" output="$2" timestamp signature
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            curl --silent --show-error --max-time 55 --output "$output" --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+              --data "$body" "$CRON_URL" || true
+          }
+          dispatch_body="$(jq -nc --arg id "$dispatch_id" '{action:"dispatch",cadence:"p0",dispatchId:$id}')"
+          code="$(signed_cron "$dispatch_body" p0-dispatch-response.json)"
+          if [ "$code" != 200 ]; then
+            error="$(jq -r '.error // "Erreur serveur sans détail."' p0-dispatch-response.json 2>/dev/null || printf 'Réponse non JSON')"
+            jq -nc --arg dispatchId "$dispatch_id" --arg error "$error" --arg httpCode "$code" \
+              '{ok:false,version:"P0-MULTINET-DIAG-V1.1",dispatchId:$dispatchId,stage:"dispatch",httpCode:$httpCode,error:$error,publicStateWrites:0}' > metrics-p0-result.json
+            echo "::error::Dispatch P0 refusé (HTTP $code) : $error"
+            exit 1
+          fi
+          response="$(cat p0-dispatch-response.json)"
           remaining="$(jq -r '.queue.p0Remaining // .remaining // 0' <<<"$response")"
-          processed=0; completed=0; partial=0; failed=0; skipped=0
+          processed=0; completed=0; partial=0; failed=0; skipped=0; work_error=''
           for iteration in $(seq 1 80); do
             [ "$remaining" -eq 0 ] && break
-            response="$(call_cron "$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",cadence:"p0",dispatchId:$id,iteration:$iteration}')")"
+            work_body="$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",cadence:"p0",dispatchId:$id,iteration:$iteration}')"
+            work_file="p0-work-response-${iteration}.json"
+            code="$(signed_cron "$work_body" "$work_file")"
+            if [ "$code" != 200 ]; then
+              work_error="$(jq -r '.error // "Erreur serveur sans détail."' "$work_file" 2>/dev/null || printf 'Réponse non JSON')"
+              echo "::error::Traitement P0 refusé à l'itération $iteration (HTTP $code) : $work_error"
+              break
+            fi
+            response="$(cat "$work_file")"
             current="$(jq -r '.processed // 0' <<<"$response")"
             processed=$((processed + current))
             completed=$((completed + $(jq -r '.completed // 0' <<<"$response")))
@@ -80,11 +134,11 @@ jobs:
           quarantined="$(jq '[.[].quarantined] | add // 0' <<<"$diagnostics")"
           by_platform="$(jq 'group_by(.platform) | map({key:(.[0].platform // "unknown"),value:{tasks:length,captures:(map(.capturesRecorded)|add//0),duplicates:(map(.duplicatesSkipped)|add//0),quarantined:(map(.quarantined)|add//0),statuses:(group_by(.status)|map({key:(.[0].status//"unknown"),value:length})|from_entries)}}) | from_entries' <<<"$diagnostics")"
 
-          jq -nc --arg dispatchId "$dispatch_id" --argjson processed "$processed" --argjson completed "$completed" \
+          jq -nc --arg dispatchId "$dispatch_id" --arg workError "$work_error" --argjson processed "$processed" --argjson completed "$completed" \
             --argjson partial "$partial" --argjson failed "$failed" --argjson skipped "$skipped" --argjson remaining "$remaining" \
             --argjson captures "$captures" --argjson duplicates "$duplicates" --argjson quarantined "$quarantined" \
             --argjson byPlatform "$by_platform" --argjson diagnostics "$diagnostics" \
-            '{ok:true,version:"P0-MULTINET-DIAG-V1.0",dispatchId:$dispatchId,processed:$processed,completed:$completed,partial:$partial,failed:$failed,skipped:$skipped,remaining:$remaining,capturesRecorded:$captures,duplicatesSkipped:$duplicates,quarantined:$quarantined,byPlatform:$byPlatform,diagnostics:$diagnostics,publicStateWrites:0}' > metrics-p0-result.json
+            '{ok:($workError=="" and $remaining==0),version:"P0-MULTINET-DIAG-V1.1",dispatchId:$dispatchId,processed:$processed,completed:$completed,partial:$partial,failed:$failed,skipped:$skipped,remaining:$remaining,capturesRecorded:$captures,duplicatesSkipped:$duplicates,quarantined:$quarantined,byPlatform:$byPlatform,diagnostics:$diagnostics,workError:($workError|select(.!="")),publicStateWrites:0}' > metrics-p0-result.json
 
           {
             echo '### Metrics Priority P0 multi-réseaux'
@@ -102,13 +156,14 @@ jobs:
             echo "captures=$captures"
             echo "platforms=$(jq 'length' <<<"$by_platform")"
           } >> "$GITHUB_OUTPUT"
-          [ "$remaining" -eq 0 ]
+          [ -z "$work_error" ] && [ "$remaining" -eq 0 ]
 
       - name: Publier le statut P0
         if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          RUNTIME_OUTCOME: ${{ steps.runtime.outcome }}
           STEP_OUTCOME: ${{ steps.collection.outcome }}
           PROCESSED: ${{ steps.collection.outputs.processed }}
           REMAINING: ${{ steps.collection.outputs.remaining }}
@@ -118,7 +173,8 @@ jobs:
           set -euo pipefail
           state=success
           description="P0 multi-réseaux · ${PROCESSED:-0} tâches · ${CAPTURES:-0} captures · ${PLATFORMS:-0} plateforme(s)"
-          if [ "$STEP_OUTCOME" != success ]; then state=failure; description='P0 multi-réseaux interrompu';
+          if [ "$RUNTIME_OUTCOME" != success ]; then state=failure; description='Runtime P0 non déployé ou sélection invalide';
+          elif [ "$STEP_OUTCOME" != success ]; then state=failure; description='P0 multi-réseaux interrompu';
           elif [ "${REMAINING:-0}" != 0 ]; then state=pending; description="P0 en attente · ${REMAINING} tâche(s) restante(s)"; fi
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context 'pass50/metrics-p0' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
@@ -126,11 +182,15 @@ jobs:
             -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' \
             --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
 
-      - name: Archiver le résultat P0
+      - name: Archiver le diagnostic P0
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: metrics-p0-${{ github.run_id }}-${{ github.run_attempt }}
-          path: metrics-p0-result.json
+          path: |
+            p0-runtime-probe.json
+            p0-dispatch-response.json
+            p0-work-response-*.json
+            metrics-p0-result.json
           if-no-files-found: warn
           retention-days: 30
