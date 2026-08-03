@@ -1,0 +1,279 @@
+name: Activate Multi-Network Collectors
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/metrics-collector-readiness-cron.php'
+      - '.github/workflows/activate-multinetwork-collectors.yml'
+      - 'tests/test_metrics_social_collectors_v1.py'
+
+permissions:
+  actions: write
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-activate-multinetwork-collectors
+  cancel-in-progress: false
+
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HOST: ${{ secrets.IONOS_SFTP_HOST }}
+      USER: ${{ secrets.IONOS_SFTP_USER }}
+      PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+      REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+      X_BEARER_TOKEN: ${{ secrets.PASS50_X_BEARER_TOKEN }}
+      TIKTOK_ACCESS_TOKEN: ${{ secrets.PASS50_TIKTOK_ACCESS_TOKEN }}
+      TIKTOK_RESEARCH_TOKEN: ${{ secrets.PASS50_TIKTOK_RESEARCH_TOKEN }}
+      TIKTOK_RESEARCH_APPROVED: ${{ secrets.PASS50_TIKTOK_RESEARCH_APPROVED }}
+      TIKTOK_MODE: ${{ secrets.PASS50_TIKTOK_MODE }}
+      INSTAGRAM_ACCESS_TOKEN: ${{ secrets.PASS50_INSTAGRAM_ACCESS_TOKEN }}
+      INSTAGRAM_ACCOUNT_ID: ${{ secrets.PASS50_INSTAGRAM_ACCOUNT_ID }}
+      INSTAGRAM_DISCOVERY_ACCOUNT_ID: ${{ secrets.PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID }}
+      FACEBOOK_ACCESS_TOKEN: ${{ secrets.PASS50_FACEBOOK_ACCESS_TOKEN }}
+      FACEBOOK_PAGE_ID: ${{ secrets.PASS50_FACEBOOK_PAGE_ID }}
+      SNAPCHAT_ACCESS_TOKEN: ${{ secrets.PASS50_SNAPCHAT_ACCESS_TOKEN }}
+      META_GRAPH_VERSION: ${{ secrets.META_GRAPH_VERSION }}
+    steps:
+      - name: Installer SFTP et PHP
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp php-cli
+
+      - name: Activer les credentials disponibles sur IONOS
+        id: patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${HOST:-}" ] || [ -z "${USER:-}" ] || [ -z "${PASSWORD:-}" ] || [ -z "${REMOTE_DIR:-}" ]; then
+            echo "::error::Secrets IONOS SFTP manquants."
+            exit 1
+          fi
+          mkdir -p /tmp/p50-multinet
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          get "$REMOTE_DIR/api/config.php" -o /tmp/p50-multinet/config.php
+          bye
+          LFTP
+
+          python3 <<'PY'
+          from pathlib import Path
+          import json, os, re
+
+          path=Path('/tmp/p50-multinet/config.php')
+          text=path.read_text(encoding='utf-8')
+          original=text
+          patched=[]
+
+          def php_string(value: str) -> str:
+              return "'" + value.replace('\\','\\\\').replace("'","\\'") + "'"
+
+          def metrics_open(src: str):
+              for pattern in (r"(['\"]metrics['\"]\s*=>\s*\[)",r"(['\"]metrics['\"]\s*=>\s*array\s*\()"):
+                  match=re.search(pattern,src,re.I)
+                  if match:return match
+              return None
+
+          def upsert(src: str,key: str,rhs: str) -> str:
+              line=re.compile(rf"^(\s*)['\"]{re.escape(key)}['\"]\s*=>.*?,\s*$",re.M)
+              match=line.search(src)
+              if match:
+                  replacement=f"{match.group(1)}'{key}' => {rhs},"
+                  if match.group(0).strip()==replacement.strip():return src
+                  patched.append(key)
+                  return src[:match.start()]+replacement+src[match.end():]
+              opening=metrics_open(src)
+              if opening is None:raise SystemExit('Section metrics introuvable dans api/config.php')
+              patched.append(key)
+              return src[:opening.end()]+f"\n        '{key}' => {rhs},"+src[opening.end():]
+
+          def present(name: str) -> bool:
+              return bool(os.environ.get(name,'').strip())
+
+          text=upsert(text,'orchestrator_enabled','true')
+
+          if present('X_BEARER_TOKEN'):
+              text=upsert(text,'x_bearer_token',php_string(os.environ['X_BEARER_TOKEN'].strip()))
+
+          display=present('TIKTOK_ACCESS_TOKEN')
+          research=present('TIKTOK_RESEARCH_TOKEN')
+          approved=os.environ.get('TIKTOK_RESEARCH_APPROVED','').strip().lower() in {'1','true','yes','on'}
+          requested_mode=os.environ.get('TIKTOK_MODE','').strip()
+          if display:
+              text=upsert(text,'tiktok_access_token',php_string(os.environ['TIKTOK_ACCESS_TOKEN'].strip()))
+              text=upsert(text,'tiktok_mode',php_string(requested_mode or 'authorized_display'))
+          elif research and approved:
+              text=upsert(text,'tiktok_research_token',php_string(os.environ['TIKTOK_RESEARCH_TOKEN'].strip()))
+              text=upsert(text,'tiktok_research_approved','true')
+              text=upsert(text,'tiktok_mode',php_string(requested_mode or 'approved_research'))
+
+          if present('INSTAGRAM_ACCESS_TOKEN'):
+              text=upsert(text,'instagram_access_token',php_string(os.environ['INSTAGRAM_ACCESS_TOKEN'].strip()))
+              text=upsert(text,'instagram_enabled','true')
+              if present('INSTAGRAM_DISCOVERY_ACCOUNT_ID'):
+                  text=upsert(text,'instagram_discovery_account_id',php_string(os.environ['INSTAGRAM_DISCOVERY_ACCOUNT_ID'].strip()))
+                  text=upsert(text,'instagram_mode',php_string('business_discovery'))
+              else:
+                  if present('INSTAGRAM_ACCOUNT_ID'):
+                      text=upsert(text,'instagram_account_id',php_string(os.environ['INSTAGRAM_ACCOUNT_ID'].strip()))
+                  text=upsert(text,'instagram_mode',php_string('professional_authorized'))
+
+          if present('FACEBOOK_ACCESS_TOKEN'):
+              text=upsert(text,'facebook_access_token',php_string(os.environ['FACEBOOK_ACCESS_TOKEN'].strip()))
+              text=upsert(text,'facebook_enabled','true')
+              text=upsert(text,'facebook_mode',php_string('page_authorized'))
+              if present('FACEBOOK_PAGE_ID'):
+                  text=upsert(text,'facebook_page_id',php_string(os.environ['FACEBOOK_PAGE_ID'].strip()))
+
+          if present('SNAPCHAT_ACCESS_TOKEN'):
+              text=upsert(text,'snapchat_access_token',php_string(os.environ['SNAPCHAT_ACCESS_TOKEN'].strip()))
+              text=upsert(text,'snapchat_enabled','true')
+              text=upsert(text,'snapchat_mode',php_string('public_profile_api'))
+
+          if present('META_GRAPH_VERSION'):
+              text=upsert(text,'meta_graph_version',php_string(os.environ['META_GRAPH_VERSION'].strip()))
+
+          path.write_text(text,encoding='utf-8')
+          report={
+              'version':'MULTINET-ACTIVATION-V1.0',
+              'githubSecretsPresent':{
+                  'x':present('X_BEARER_TOKEN'),
+                  'tiktokDisplay':display,
+                  'tiktokResearch':research,
+                  'tiktokResearchApproved':approved,
+                  'instagram':present('INSTAGRAM_ACCESS_TOKEN'),
+                  'facebook':present('FACEBOOK_ACCESS_TOKEN'),
+                  'snapchat':present('SNAPCHAT_ACCESS_TOKEN'),
+              },
+              'patchedKeys':sorted(set(patched)),
+              'configChanged':text!=original,
+              'secretsExposed':False,
+              'publicStateWrites':0,
+          }
+          Path('/tmp/p50-multinet/secret-presence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('Clés de configuration mises à jour :',len(set(patched)))
+          PY
+
+          php -l /tmp/p50-multinet/config.php
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          get "$REMOTE_DIR/api/config.php" -o /tmp/p50-multinet/config.php.bak
+          put /tmp/p50-multinet/config.php.bak -o "$REMOTE_DIR/api/config.php.bak-multinet-$stamp"
+          put /tmp/p50-multinet/config.php -o "$REMOTE_DIR/api/config.php"
+          bye
+          LFTP
+          echo "Configuration multi-réseaux publiée avec sauvegarde serveur."
+
+      - name: Vérifier la couverture opérationnelle
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Secrets cron métriques manquants."
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php) PROBE_URL="${CRON_URL%/metrics-cron.php}/metrics-collector-readiness-cron.php" ;;
+            *) echo "::error::PASS50_METRICS_CRON_URL invalide"; exit 1 ;;
+          esac
+          ready=false
+          for attempt in $(seq 1 36); do
+            dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-multinet-probe-$attempt"
+            body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            code="$(curl --silent --show-error --max-time 35 --output /tmp/p50-multinet/probe.json --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+              --data "$body" "$PROBE_URL" || true)"
+            if [ "$code" = "200" ] && jq -e '.ok == true and .secretsExposed == false and .publicStateWrites == 0' /tmp/p50-multinet/probe.json >/dev/null; then
+              ready=true
+              break
+            fi
+            echo "Diagnostic multi-réseaux en attente (${attempt}/36, HTTP ${code:-0})."
+            sleep 10
+          done
+          if [ "$ready" != "true" ]; then
+            echo "::error::Diagnostic multi-réseaux indisponible après déploiement."
+            cat /tmp/p50-multinet/probe.json 2>/dev/null || true
+            exit 1
+          fi
+          cp /tmp/p50-multinet/probe.json /tmp/p50-multinet/activation-report.json
+          additional="$(jq '[.readiness.platforms | to_entries[] | select(.key != "YouTube" and (.value.operational // 0) > 0)] | length' /tmp/p50-multinet/probe.json)"
+          candidates="$(jq '.p1Preview.candidateCount // 0' /tmp/p50-multinet/probe.json)"
+          candidate_networks="$(jq '[.p1Preview.candidatesByPlatform | to_entries[] | select(.key != "YouTube" and .value > 0)] | length' /tmp/p50-multinet/probe.json)"
+          {
+            echo '### Activation collecte multi-réseaux'
+            echo
+            jq -r '.readiness.platforms | to_entries[] | "- \(.key) : \(.value.operational // 0)/\(.value.verifiedLinks // 0) lien(s) opérationnel(s) · couverture \(.value.coveragePercent // 0)% · modes `\((.value.modes // {})|tojson)`"' /tmp/p50-multinet/probe.json
+            echo "- Candidats P1 actuels : ${candidates}"
+            echo "- Réseaux supplémentaires opérationnels : ${additional}"
+            echo '- Écriture app_state : `0`'
+          } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "additional_operational=$additional"
+            echo "candidate_networks=$candidate_networks"
+            echo "candidates=$candidates"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Déclencher une collecte P1 complète
+        if: ${{ steps.probe.outcome == 'success' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -nc --arg ref main '{ref:$ref}')"
+          curl --fail-with-body --silent --show-error -X POST \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/metrics-top50-2h.yml/dispatches"
+          echo 'Collecte P1 multi-réseaux déclenchée.'
+
+      - name: Publier le statut d’activation
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PATCH_OUTCOME: ${{ steps.patch.outcome }}
+          PROBE_OUTCOME: ${{ steps.probe.outcome }}
+          ADDITIONAL: ${{ steps.probe.outputs.additional_operational }}
+          CANDIDATE_NETWORKS: ${{ steps.probe.outputs.candidate_networks }}
+          CANDIDATES: ${{ steps.probe.outputs.candidates }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="Multi-réseaux · ${ADDITIONAL:-0} réseau(x) actif(s) · ${CANDIDATE_NETWORKS:-0} en P1 · ${CANDIDATES:-0} candidats"
+          if [ "$PATCH_OUTCOME" != success ] || [ "$PROBE_OUTCOME" != success ]; then
+            state=failure
+            description='Activation multi-réseaux interrompue'
+          elif [ "${ADDITIONAL:-0}" = 0 ]; then
+            state=pending
+            description='Moteur prêt · credentials externes encore absents'
+          fi
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context 'pass50/multinetwork-collection' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archiver le diagnostic sans secrets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multinetwork-activation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/p50-multinet/secret-presence.json
+            /tmp/p50-multinet/activation-report.json
+          if-no-files-found: warn
+          retention-days: 30
