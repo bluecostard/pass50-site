@@ -32,16 +32,32 @@ if(!is_string($input['dispatchId']??null))json_response(['error'=>'dispatchId in
 $dispatchId=trim($input['dispatchId']);
 if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))json_response(['error'=>'dispatchId invalide.'],422);
 
+function p50_multinet_preview(PDO $pdo,string $cadence,string $dispatchId): array {
+    try{
+        $preview=p50_mo_dispatch($pdo,$cadence,$dispatchId.'-'.$cadence,['preview'=>true,'source'=>'cron_hmac']);
+        $byPlatform=[];
+        foreach((array)($preview['candidates']??[]) as $candidate){
+            $platform=(string)($candidate['platform']??'');
+            if($platform!=='')$byPlatform[$platform]=($byPlatform[$platform]??0)+1;
+        }
+        ksort($byPlatform);
+        return [
+            'ok'=>true,
+            'summary'=>$preview['summary']??[],
+            'candidateCount'=>count((array)($preview['candidates']??[])),
+            'candidatesByPlatform'=>$byPlatform,
+        ];
+    }catch(Throwable $error){
+        $safe=p50_metrics_safe_error($error);
+        error_log('PASS50 '.$cadence.' readiness: '.$safe);
+        return ['ok'=>false,'error'=>$safe,'candidateCount'=>0,'candidatesByPlatform'=>[]];
+    }
+}
+
 try{
     $pdo=db();
     $readiness=p50_mcr_status($pdo);
     $collectors=p50_metrics_collectors_status($pdo);
-    $preview=p50_mo_dispatch($pdo,'p1',$dispatchId,['preview'=>true,'source'=>'cron_hmac']);
-    $candidatePlatforms=[];
-    foreach((array)($preview['candidates']??[]) as $candidate){
-        $platform=(string)($candidate['platform']??'');
-        if($platform!=='')$candidatePlatforms[$platform]=($candidatePlatforms[$platform]??0)+1;
-    }
     $sanitizedCollectors=[];
     foreach(['youtube','x','tiktok','instagram','facebook','snapchat'] as $key){
         $row=(array)($collectors[$key]??[]);
@@ -63,7 +79,11 @@ try{
     }
     json_response([
         'ok'=>true,
-        'version'=>'MULTINET-ACTIVATION-V1.0',
+        'version'=>'MULTINET-ACTIVATION-V1.1',
+        'runtime'=>[
+            'orchestrator'=>defined('P50_METRICS_ORCHESTRATOR_VERSION')?P50_METRICS_ORCHESTRATOR_VERSION:null,
+            'tiktokBridge'=>defined('P50_TIKTOK_METRICS_BRIDGE_VERSION')?P50_TIKTOK_METRICS_BRIDGE_VERSION:null,
+        ],
         'dispatchId'=>$dispatchId,
         'generatedAt'=>gmdate('c'),
         'readiness'=>[
@@ -71,11 +91,8 @@ try{
             'requirements'=>$readiness['requirements']??[],
         ],
         'collectors'=>$sanitizedCollectors,
-        'p1Preview'=>[
-            'summary'=>$preview['summary']??[],
-            'candidateCount'=>count((array)($preview['candidates']??[])),
-            'candidatesByPlatform'=>$candidatePlatforms,
-        ],
+        'p0Preview'=>p50_multinet_preview($pdo,'p0',$dispatchId),
+        'p1Preview'=>p50_multinet_preview($pdo,'p1',$dispatchId),
         'secretsExposed'=>false,
         'publicStateWrites'=>0,
     ]);
