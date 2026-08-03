@@ -8,3 +8,11 @@
 *.log
 *.tmp
 .DS_Store
+
+# App mobile Capacitor
+/mobile/node_modules/
+/mobile/ios/
+/mobile/android/
+/mobile/.capacitor/
+*.p8
+AuthKey_*.p8

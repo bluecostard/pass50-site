@@ -3,6 +3,16 @@ window.PASS50_API = {
   baseUrl: './api'
 };
 
+// Pont Capacitor iOS (push, liens externes, détection native).
+(function () {
+  if (document.querySelector('script[data-pass50-mobile-bridge]')) return;
+  var script = document.createElement('script');
+  script.src = './mobile-bridge.js?v=1.0';
+  script.async = false;
+  script.dataset.pass50MobileBridge = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Centre de partage unifié : doit être chargé avant les anciens gestionnaires.
 (function () {
   if (document.querySelector('script[data-pass50-share-center]')) return;
