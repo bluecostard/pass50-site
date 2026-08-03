@@ -6,7 +6,7 @@
     ['adminhome','Accueil'],['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],
     ['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['update','MAJ PASS50'],
     ['metricsdiag','Diagnostic métriques'],['intelligence','PASS50 Intelligence'],['hub','Data Hub'],
-    ['quality','Contrôle qualité'],['rankinglab','Classement expérimental'],['ranking','Classement'],['data','Maintenance']
+    ['quality','Contrôle qualité'],['rankinglab','Classement métrique'],['ranking','Classement'],['data','Maintenance']
   ];
   const ADMIN_DESCRIPTIONS={
     adminhome:'Vue d’ensemble et accès rapide à tous les outils administratifs.',
@@ -15,7 +15,7 @@
     news:'Rechercher et valider les contenus déclencheurs.',live:'Superviser les directs et leur disponibilité.',
     update:'Synchroniser, calculer et publier les données validées.',metricsdiag:'Inspecter le pipeline métrique en lecture seule.',
     intelligence:'Consulter les tendances et diagnostics éditoriaux.',hub:'Contrôler la complétude et les preuves des fiches.',
-    quality:'Repérer les données manquantes ou incohérentes.',rankinglab:'Comparer un classement métrique isolé, sans effet public.',ranking:'Prévisualiser et publier le classement.',
+    quality:'Repérer les données manquantes ou incohérentes.',rankinglab:'Calculer MR‑V1.0 puis publier le classement public (avec backup).',ranking:'Prévisualiser et publier le classement.',
     data:'Sauvegarder, restaurer et diagnostiquer les données.'
   };
 

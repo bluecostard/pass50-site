@@ -123,8 +123,8 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
             self.assertIn(f"'{field}'", CORE)
 
     def test_admin_lab_is_isolated_from_public_ranking(self):
-        self.assertIn("['rankinglab','Classement expérimental']", UI)
-        self.assertLess(UI.index("['rankinglab','Classement expérimental']"), UI.index("['ranking','Classement']"))
+        self.assertIn("['rankinglab','Classement métrique']", UI)
+        self.assertLess(UI.index("['rankinglab','Classement métrique']"), UI.index("['ranking','Classement']"))
         self.assertIn("CLASSEMENT MÉTRIQUE MR‑V1.0", UI)
         self.assertIn("Publier vers le classement public", UI)
         public_rank = UI[UI.index("function dePublicRank"):UI.index("function deDrawRankingLab")]
@@ -148,9 +148,9 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$limit=max(1,min(200,$limit))", read)
 
     def test_cache_and_workflow_versions(self):
-        self.assertIn("data-engine-ui.js?v=18.3", TOOLS)
+        self.assertIn("data-engine-ui.js?v=18.4", TOOLS)
         self.assertIn("data-engine-ui.css?v=27.0", TOOLS)
-        self.assertIn("data-engine-ui.js?v=18.3", SW)
+        self.assertIn("data-engine-ui.js?v=18.4", SW)
         self.assertIn("data-engine-ui.css?v=27.0", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
         self.assertIn("mariadb:11.4", WORKFLOW)
