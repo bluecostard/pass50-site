@@ -1,0 +1,158 @@
+name: Enable Ranking Publication Flags
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HOST: ${{ secrets.IONOS_SFTP_HOST }}
+      USER: ${{ secrets.IONOS_SFTP_USER }}
+      PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+      REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - name: Installer SFTP
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Télécharger, activer flags, republier config.php
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${HOST:-}" ] || [ -z "${USER:-}" ] || [ -z "${PASSWORD:-}" ] || [ -z "${REMOTE_DIR:-}" ]; then
+            echo "::error::Secrets IONOS SFTP manquants."
+            exit 1
+          fi
+          mkdir -p /tmp/p50cfg
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          get "$REMOTE_DIR/api/config.php" -o /tmp/p50cfg/config.php
+          bye
+          LFTP
+
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('/tmp/p50cfg/config.php')
+          text = path.read_text(encoding='utf-8')
+          original = text
+          flags = {
+              'orchestrator_enabled': "true",
+              'ranking_publication_enabled': "true",
+              'ranking_automatic_publication_enabled': "true",
+              'ranking_publication_bootstrap_allowed': "true",
+          }
+
+          def replace_flag(src: str, key: str, value: str) -> str:
+              pat_bool = re.compile(rf"(['\"]{re.escape(key)}['\"]\s*=>\s*)(true|false)\b")
+              if pat_bool.search(src):
+                  return pat_bool.sub(rf"\g<1>{value}", src, count=1)
+              pat_line = re.compile(rf"(['\"]{re.escape(key)}['\"]\s*=>\s*filter_var\([^;\n]+)")
+              m = pat_line.search(src)
+              if m:
+                  line = m.group(0)
+                  line2 = re.sub(r"\?:\s*'false'", f"?: '{value}'", line)
+                  line2 = re.sub(r'\?:\s*"false"', f'?: "{value}"', line2)
+                  line2 = re.sub(r"\?:\s*false\b", f"?: '{value}'", line2)
+                  # Force true even if env already true-ish: also rewrite true defaults to keep explicit.
+                  if line2 == line:
+                      line2 = re.sub(r"\?:\s*'true'", f"?: '{value}'", line)
+                  return src[:m.start()] + line2 + src[m.end():]
+              return src
+
+          for key, value in flags.items():
+              before = text
+              text = replace_flag(text, key, value)
+              if text == before:
+                  metrics = re.search(r"(['\"]metrics['\"]\s*=>\s*\[)", text)
+                  if not metrics:
+                      raise SystemExit(f'Impossible de localiser metrics[] pour injecter {key}')
+                  if f"'{key}'" in text or f'"{key}"' in text:
+                      raise SystemExit(f'Flag {key} présent mais non patchable')
+                  inject = f"\n        '{key}' => {value},"
+                  anchor = re.search(r"['\"]cron_secret['\"]\s*=>[^,\n]+,", text)
+                  if anchor:
+                      text = text[:anchor.end()] + inject + text[anchor.end():]
+                  else:
+                      text = text[:metrics.end()] + inject + text[metrics.end():]
+
+          for key in flags:
+              if key not in text:
+                  raise SystemExit(f'{key} absent après patch')
+          path.write_text(text, encoding='utf-8')
+          print('changed=', text != original, 'delta=', len(text) - len(original))
+          PY
+
+          # Syntax check without executing DB side effects: php -l
+          if command -v php >/dev/null; then php -l /tmp/p50cfg/config.php; else
+            sudo apt-get install -y -qq php-cli >/dev/null
+            php -l /tmp/p50cfg/config.php
+          fi
+
+          # Backup then upload
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          get "$REMOTE_DIR/api/config.php" -o /tmp/p50cfg/config.php.bak
+          put /tmp/p50cfg/config.php.bak -o "$REMOTE_DIR/api/config.php.bak-$stamp"
+          put /tmp/p50cfg/config.php -o "$REMOTE_DIR/api/config.php"
+          bye
+          LFTP
+          echo "Config IONOS mise à jour (backup config.php.bak-$stamp)."
+
+      - name: Vérifier les flags via cron probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::warning::Secrets cron absents — patch SFTP fait, vérification probe sautée."
+            exit 0
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              APPLY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL invalide"
+              exit 1
+              ;;
+          esac
+          # Attendre propagation FS
+          for i in 1 2 3 4 5 6; do
+            dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-enable-probe-$i"
+            body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            code="$(curl --silent --show-error --max-time 30 \
+              --output /tmp/probe.json --write-out '%{http_code}' \
+              -H "Content-Type: application/json" \
+              -H "X-P50-Timestamp: $timestamp" \
+              -H "X-P50-Signature: $signature" \
+              --data "$body" "$APPLY_URL" || true)"
+            echo "probe HTTP $code"
+            cat /tmp/probe.json || true
+            echo
+            if [ "$code" = "200" ] && jq -e '.publicationEnabled == true and .automaticPublicationEnabled == true' /tmp/probe.json >/dev/null; then
+              echo "Flags actifs confirmés."
+              {
+                printf '### Flags classement public\n'
+                printf -- '- publicationEnabled : `true`\n'
+                printf -- '- automaticPublicationEnabled : `true`\n'
+                printf -- '- bootstrapAllowed : `%s`\n' "$(jq -r '.bootstrapAllowed' /tmp/probe.json)"
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 8
+          done
+          echo "::error::Flags non confirmés après patch."
+          exit 1
