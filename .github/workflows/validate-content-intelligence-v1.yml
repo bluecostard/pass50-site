@@ -1,0 +1,38 @@
+name: Validate Content Intelligence V1
+
+on:
+  pull_request:
+    paths:
+      - 'api/content-intelligence-core.php'
+      - 'api/content-intelligence-cron.php'
+      - 'api/content-feed.php'
+      - 'api/news-discover.php'
+      - 'api/news-validate.php'
+      - 'content-intelligence.js'
+      - 'app-config.js'
+      - 'tests/test_content_intelligence_v1.py'
+      - '.github/workflows/content-intelligence-15m.yml'
+      - '.github/workflows/validate-content-intelligence-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP lint
+        run: |
+          php -l api/content-intelligence-core.php
+          php -l api/content-intelligence-cron.php
+          php -l api/content-feed.php
+          php -l api/news-discover.php
+          php -l api/news-validate.php
+      - name: JavaScript syntax
+        run: node --check content-intelligence.js && node --check app-config.js
+      - name: Contract tests
+        run: python3 -m unittest tests.test_content_intelligence_v1 -v
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
