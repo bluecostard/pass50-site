@@ -1,0 +1,118 @@
+name: Content Intelligence 15m
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '3,18,33,48 * * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/content-intelligence-core.php'
+      - 'api/content-intelligence-cron.php'
+      - 'api/content-feed.php'
+      - 'content-intelligence.js'
+      - '.github/workflows/content-intelligence-15m.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-content-intelligence
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Actualiser l’actualité et les tendances
+        id: refresh
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo '::error::Secrets cron métriques manquants.'
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-intelligence-cron.php" ;;
+            *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
+          esac
+          mkdir -p /tmp/p50-content-intelligence
+          ready=false
+          attempts=1
+          if [ "$GITHUB_EVENT_NAME" = push ]; then attempts=48; fi
+          for attempt in $(seq 1 "$attempts"); do
+            dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-content-$attempt"
+            body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"refresh",dispatchId:$dispatchId}')"
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            code="$(curl --silent --show-error --max-time 180 --output /tmp/p50-content-intelligence/result.json --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+              --data "$body" "$ENDPOINT" || true)"
+            if [ "$code" = 200 ] && jq -e '.ok == true and .version == "CONTENT-INTELLIGENCE-V1.0" and .publicStateWrites == 0' /tmp/p50-content-intelligence/result.json >/dev/null; then
+              ready=true
+              break
+            fi
+            if [ "$attempt" -lt "$attempts" ]; then
+              echo "Runtime Content Intelligence en attente ($attempt/$attempts, HTTP ${code:-0})."
+              sleep 10
+            fi
+          done
+          if [ "$ready" != true ]; then
+            echo '::error::Actualisation Content Intelligence interrompue.'
+            cat /tmp/p50-content-intelligence/result.json 2>/dev/null || true
+            exit 1
+          fi
+          news_created="$(jq -r '.news.created // 0' /tmp/p50-content-intelligence/result.json)"
+          news_updated="$(jq -r '.news.updated // 0' /tmp/p50-content-intelligence/result.json)"
+          contents="$(jq -r '.trends.contentsConsidered // 0' /tmp/p50-content-intelligence/result.json)"
+          rows="$(jq -r '.trends.rowsWritten // 0' /tmp/p50-content-intelligence/result.json)"
+          {
+            echo '### PASS50 Content Intelligence'
+            echo "- Actualités officielles créées / mises à jour : $news_created / $news_updated"
+            echo "- Contenus considérés : $contents"
+            echo "- Lignes de tendance calculées : $rows"
+            echo "- Périodes : \`$(jq -c '.trends.periods' /tmp/p50-content-intelligence/result.json)\`"
+            echo '- Écriture directe app_state : `0`'
+          } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "news_created=$news_created"
+            echo "news_updated=$news_updated"
+            echo "contents=$contents"
+            echo "rows=$rows"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publier le statut Content Intelligence
+        if: always()
+        shell: bash
+        env:
+          STEP_OUTCOME: ${{ steps.refresh.outcome }}
+          CONTENTS: ${{ steps.refresh.outputs.contents }}
+          ROWS: ${{ steps.refresh.outputs.rows }}
+          NEWS_CREATED: ${{ steps.refresh.outputs.news_created }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="Contenus · ${CONTENTS:-0} analysés · ${ROWS:-0} scores · ${NEWS_CREATED:-0} actualités"
+          if [ "$STEP_OUTCOME" != success ]; then state=failure; description='Content Intelligence interrompu'; fi
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context 'pass50/content-intelligence' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archiver le diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-intelligence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/p50-content-intelligence/result.json
+          if-no-files-found: warn
+          retention-days: 30
