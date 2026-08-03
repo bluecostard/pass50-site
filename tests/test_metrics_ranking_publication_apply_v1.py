@@ -17,6 +17,8 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("backup_json", core)
         self.assertIn("p50_mrp_apply_rollback", core)
         self.assertIn("bootstrap", core)
+        self.assertIn("p50_mrp_apply_is_skippable_plan", core)
+        self.assertIn("publishPlans", core)
         self.assertIn("p50_de_load_public_state_for_update", core)
 
     def test_admin_and_cron_endpoints_exist(self):

@@ -133,16 +133,22 @@
   async function dePublishRankingLab(button){await deAction(button,async()=>{
     const preview=await apiFetch('metrics-ranking-publication-apply.php');
     if(!preview.publicationEligible){
-      const blocked=(preview.summary?.blockedPeriods||[]).join(', ')||preview.status||'bloqué';
-      throw new Error(`Publication non éligible (${blocked}). Activez ranking_publication_enabled ou corrigez les garde-fous.`);
+      const reasons=(preview.summary?.reasons||[]).join(' · ')
+        ||((preview.summary?.blockedPeriods||[]).length?('bloqué: '+(preview.summary.blockedPeriods||[]).join(', ')):'')
+        ||(!preview.config?.publicationEnabled?'flags publication désactivés':'')
+        ||preview.status||'bloqué';
+      throw new Error(`Publication non éligible — ${reasons}`);
     }
+    const periods=(preview.summary?.publishablePeriods||preview.periods||[]).join(', ')||'périodes OK';
+    const skipped=(preview.summary?.skippedPeriods||[]).length?` (ignoré: ${preview.summary.skippedPeriods.join(', ')})`:'';
     const msg=preview.bootstrap
-      ?`BOOTSTRAP : 1er passage autorisé (${preview.summary?.entries||0} entrées / ${preview.summary?.exits||0} sorties). Publier MR‑V1.0 vers le classement public ?`
-      :`Publier MR‑V1.0 vers le classement public (${preview.summary?.mutations||0} scores) ? Un backup sera créé.`;
+      ?`BOOTSTRAP : publier ${periods}${skipped} — ${preview.summary?.entries||0} entrées / ${preview.summary?.exits||0} sorties / ${preview.summary?.mutations||0} scores. Continuer ?`
+      :`Publier MR‑V1.0 (${periods}${skipped}, ${preview.summary?.mutations||0} scores) vers le classement public ? Un backup sera créé.`;
     if(!confirm(msg))return;
     const result=await apiFetch('metrics-ranking-publication-apply.php',{method:'POST',body:{action:'apply',confirm:true,bootstrap:!!preview.bootstrap,dispatchId:'admin-'+Date.now()}});
     await loadCloudState?.();render?.();
-    toast(`Classement public mis à jour · révision ${result.publicStateRevision} · ${result.scoresWritten||0} scores`);
+    const skipNote=(result.skippedPeriods||[]).length?` · ignoré ${result.skippedPeriods.join(', ')}`:'';
+    toast(`Classement public mis à jour · révision ${result.publicStateRevision} · ${result.scoresWritten||0} scores${skipNote}`);
   },'Publication…');}
   async function deLoadMetricsDiagnostic(force=false){
     if(DE.metricsDiagnosticLoading||(!force&&DE.metricsDiagnostic))return;

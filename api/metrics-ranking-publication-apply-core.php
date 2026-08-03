@@ -116,6 +116,11 @@ function p50_mrp_apply_plan_period(PDO $pdo,string $period,bool $bootstrap,?Date
             if($type==='entry')$entries++;else $updates++;
         }
     }
+    $blockedGates=[];
+    foreach((array)($report['gates']??[]) as $gate){
+        if(is_array($gate)&&(($gate['status']??'')==='block'))$blockedGates[]=(string)($gate['key']??'');
+    }
+    $blockedGates=array_values(array_filter($blockedGates));
     return [
         'period'=>$period,
         'report'=>$report,
@@ -126,7 +131,19 @@ function p50_mrp_apply_plan_period(PDO $pdo,string $period,bool $bootstrap,?Date
         'candidateFingerprint'=>(string)($report['source']['candidateFingerprint']??''),
         'publicStateRevision'=>(int)($report['source']['publicStateRevision']??0),
         'status'=>(string)$report['status'],
+        'blockedGates'=>$blockedGates,
     ];
+}
+
+/** Périodes sans candidat classable : on les saute au lieu de bloquer toute la publication. */
+function p50_mrp_apply_is_skippable_plan(array $plan): bool {
+    if(($plan['status']??'')!=='blocked')return false;
+    $gates=array_values(array_unique(array_map('strval',(array)($plan['blockedGates']??[]))));
+    if(!$gates)return false;
+    foreach($gates as $gate){
+        if(!in_array($gate,['candidate_non_empty','successful_run'],true))return false;
+    }
+    return true;
 }
 
 function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $now=null): array {
@@ -135,22 +152,34 @@ function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $
     $now=$now??new DateTimeImmutable('now',new DateTimeZone('UTC'));
     $periods=$periods?:P50_MRP_APPLY_PERIODS;
     $bootstrap=$cfg['bootstrapAllowed']&&!p50_mrp_apply_has_prior_success($pdo);
-    $plans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;
+    $plans=[];$publishPlans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;$skipped=[];
     foreach($periods as $period){
         if(!array_key_exists($period,p50_mr_periods()))continue;
         $plan=p50_mrp_apply_plan_period($pdo,$period,$bootstrap,$now);
+        if(p50_mrp_apply_is_skippable_plan($plan)){
+            $plan['status']='skipped';
+            $plan['skipReason']=implode(',',(array)$plan['blockedGates']);
+            $plans[$period]=$plan;
+            $skipped[]=$period;
+            continue;
+        }
         $plans[$period]=$plan;
-        $totalMutations+=(int)$plan['counts']['mutations'];
+        if($plan['status']==='blocked'){$blocked=true;continue;}
+        // ready + review (avertissements bootstrap) sont publiables.
+        if(!in_array($plan['status'],['ready','review'],true))continue;
+        $mut=(int)$plan['counts']['mutations'];
+        if($mut<=0)continue;
+        $publishPlans[$period]=$plan;
+        $totalMutations+=$mut;
         $entries+=(int)$plan['counts']['entries'];
         $exits+=(int)$plan['counts']['exits'];
-        if($plan['status']==='blocked')$blocked=true;
-        if($runUuid===null&&$plan['runUuid']!=='')$runUuid=$plan['runUuid'];
-        elseif($runUuid!==null&&$plan['runUuid']!==''&&$plan['runUuid']!==$runUuid)$blocked=true;
+        $planRun=(string)$plan['runUuid'];
+        if($planRun===''){$blocked=true;continue;}
+        if($runUuid===null)$runUuid=$planRun;
+        elseif($runUuid!==$planRun)$blocked=true;
     }
-    $eligible=!$blocked&&$runUuid!==null&&$totalMutations>0&&$cfg['publicationEnabled'];
-    $autoEligible=$eligible&&$cfg['automaticPublicationEnabled']&&(!$bootstrap||$cfg['bootstrapAllowed']);
-    // En auto, le bootstrap n'est autorisé qu'une fois si bootstrapAllowed.
-    if($bootstrap&&!$cfg['bootstrapAllowed'])$autoEligible=false;
+    $eligible=!$blocked&&$runUuid!==null&&$totalMutations>0&&$publishPlans!==[]&&$cfg['publicationEnabled'];
+    $autoEligible=$eligible&&$cfg['automaticPublicationEnabled'];
     return [
         'ok'=>true,
         'version'=>P50_MRP_APPLY_VERSION,
@@ -163,16 +192,26 @@ function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $
             'orchestratorEnabled'=>$cfg['orchestratorEnabled'],
         ],
         'bootstrap'=>$bootstrap,
-        'status'=>$blocked?'blocked':($eligible?'ready':'blocked'),
+        'status'=>$blocked?'blocked':($eligible?($bootstrap?'review':'ready'):'blocked'),
         'publicationEligible'=>$eligible,
         'automaticPublicationEligible'=>$autoEligible,
         'runUuid'=>$runUuid,
-        'periods'=>array_keys($plans),
+        'periods'=>array_keys($publishPlans),
+        'allPeriods'=>array_keys($plans),
+        'publishPlans'=>$publishPlans,
         'summary'=>[
             'mutations'=>$totalMutations,
             'entries'=>$entries,
             'exits'=>$exits,
             'blockedPeriods'=>array_values(array_filter(array_keys($plans),static fn($p)=>($plans[$p]['status']??'')==='blocked')),
+            'skippedPeriods'=>$skipped,
+            'publishablePeriods'=>array_keys($publishPlans),
+            'reasons'=>array_values(array_filter(array_map(static function($period) use ($plans){
+                $plan=$plans[$period]??[];
+                if(($plan['status']??'')==='blocked')return $period.':'.implode(',',(array)($plan['blockedGates']??['blocked']));
+                if(($plan['status']??'')==='skipped')return $period.':skipped:'.(string)($plan['skipReason']??'');
+                return null;
+            },array_keys($plans)))),
         ],
         'plans'=>$plans,
         'nextPhase'=>$eligible?'apply_with_backup':'resolve_gates_or_enable_publication',
@@ -280,38 +319,21 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
         }
 
         $preview=p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now);
-        // Recompute with explicit bootstrap choice
-        if($bootstrap!==(bool)$preview['bootstrap']){
-            $plans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;
-            foreach(P50_MRP_APPLY_PERIODS as $period){
-                $plan=p50_mrp_apply_plan_period($pdo,$period,$bootstrap,$now);
-                $plans[$period]=$plan;
-                $totalMutations+=(int)$plan['counts']['mutations'];
-                $entries+=(int)$plan['counts']['entries'];
-                $exits+=(int)$plan['counts']['exits'];
-                if($plan['status']==='blocked')$blocked=true;
-                if($runUuid===null&&$plan['runUuid']!=='')$runUuid=$plan['runUuid'];
-                elseif($runUuid!==null&&$plan['runUuid']!==''&&$plan['runUuid']!==$runUuid)$blocked=true;
-            }
-            $preview['bootstrap']=$bootstrap;
-            $preview['plans']=$plans;
-            $preview['runUuid']=$runUuid;
-            $preview['status']=$blocked?'blocked':'ready';
-            $preview['summary']=['mutations'=>$totalMutations,'entries'=>$entries,'exits'=>$exits,'blockedPeriods'=>array_values(array_filter(array_keys($plans),static fn($p)=>($plans[$p]['status']??'')==='blocked'))];
-            $preview['publicationEligible']=!$blocked&&$runUuid!==null&&$totalMutations>0;
-        }
-
+        $reasons=(array)($preview['summary']['reasons']??[]);
         $blockedPeriods=(array)($preview['summary']['blockedPeriods']??[]);
-        if($blockedPeriods||($preview['status']??'')==='blocked'||empty($preview['runUuid'])||empty($preview['publicationEligible'])){
-            throw new RuntimeException('Garde-fous de publication non satisfaits: '.implode(',', $blockedPeriods?:['blocked']));
+        if(($preview['status']??'')==='blocked'||empty($preview['runUuid'])||empty($preview['publicationEligible'])){
+            throw new RuntimeException('Garde-fous de publication non satisfaits: '.implode(',', $reasons?:($blockedPeriods?:['blocked'])));
         }
         if((int)($preview['summary']['mutations']??0)<=0)throw new RuntimeException('Aucune mutation de score à publier.');
 
         $runUuid=(string)$preview['runUuid'];
-        $plans=$preview['plans'];
-        $fingerprintBefore=(string)($plans['2H']['publicFingerprint']??p50_mrp_fingerprint(['period'=>'2H','stateRevision'=>0,'rows'=>[]]));
-        $candidateFp=(string)($plans['2H']['candidateFingerprint']??'');
-        $revisionBefore=(int)($plans['2H']['publicStateRevision']??0);
+        $plans=(array)($preview['publishPlans']??[]);
+        if(!$plans)throw new RuntimeException('Aucune période publiable.');
+        $anchorPeriod=(string)(array_key_exists('24H',$plans)?'24H':array_key_first($plans));
+        $anchor=$plans[$anchorPeriod];
+        $fingerprintBefore=(string)($anchor['publicFingerprint']??'');
+        $candidateFp=(string)($anchor['candidateFingerprint']??'');
+        $revisionBefore=(int)($anchor['publicStateRevision']??0);
 
         $pdo->beginTransaction();
         $state=p50_de_load_public_state_for_update();
@@ -320,10 +342,9 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
         if($currentRevision!==$revisionBefore){
             throw new RuntimeException('Révision publique changée pendant la publication ('.$currentRevision.' ≠ '.$revisionBefore.').');
         }
-        // Re-verify 2H fingerprint against locked state
-        $publicNow=p50_mrp_public_rows($state,'2H');
-        $fpNow=p50_mrp_fingerprint(['period'=>'2H','stateRevision'=>$currentRevision,'rows'=>$publicNow['rows']]);
-        if(!hash_equals($fingerprintBefore,$fpNow)){
+        $publicNow=p50_mrp_public_rows($state,$anchorPeriod);
+        $fpNow=p50_mrp_fingerprint(['period'=>$anchorPeriod,'stateRevision'=>$currentRevision,'rows'=>$publicNow['rows']]);
+        if($fingerprintBefore===''||!hash_equals($fingerprintBefore,$fpNow)){
             throw new RuntimeException('Empreinte publique incohérente au moment de l’écriture.');
         }
 
@@ -340,8 +361,8 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
 
         $report=[
             'version'=>P50_MRP_APPLY_VERSION,'mode'=>$mode,'bootstrap'=>$bootstrap,
-            'runUuid'=>$runUuid,'periods'=>array_keys($plans),
-            'summary'=>$preview['summary'],'gates2H'=>$plans['2H']['report']['gates']??[],
+            'runUuid'=>$runUuid,'periods'=>array_keys($plans),'skippedPeriods'=>(array)($preview['summary']['skippedPeriods']??[]),
+            'summary'=>$preview['summary'],'anchorPeriod'=>$anchorPeriod,
         ];
         $insert=$pdo->prepare("INSERT INTO p50_metric_publication_applies(
             apply_uuid,dispatch_id,mode,status,algorithm_version,run_uuid,periods_json,
@@ -372,6 +393,7 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
             'runUuid'=>$runUuid,
             'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
             'periods'=>array_keys($plans),
+            'skippedPeriods'=>(array)($preview['summary']['skippedPeriods']??[]),
             'publicStateRevision'=>$currentRevision+1,
             'publicStateWrites'=>1,
             'profilesUpdated'=>(int)$mutated['profilesUpdated'],

@@ -57,8 +57,8 @@ class MetricsControlCenterYoutubeV1Tests(unittest.TestCase):
             self.assertNotIn(forbidden, joined)
 
     def test_ui_cache_is_versioned(self):
-        self.assertIn('data-engine-ui.js?v=18.4', TOOLS)
-        self.assertIn('data-engine-ui.js?v=18.4', SW)
+        self.assertIn('data-engine-ui.js?v=18.5', TOOLS)
+        self.assertIn('data-engine-ui.js?v=18.5', SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
 
