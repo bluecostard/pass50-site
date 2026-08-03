@@ -11,6 +11,7 @@ on:
       - '.github/workflows/metrics-priority-15m.yml'
       - '.github/workflows/activate-multinetwork-collectors.yml'
       - 'api/metrics-collector-readiness-cron.php'
+      - 'api/tiktok-metrics-bridge-core.php'
 
 permissions:
   contents: read
