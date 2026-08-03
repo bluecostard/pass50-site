@@ -11,7 +11,11 @@ on:
       - 'api/content-intelligence-core.php'
       - 'api/content-intelligence-cron.php'
       - 'api/content-feed.php'
+      - 'api/news-discover.php'
+      - 'api/news-validate.php'
       - 'content-intelligence.js'
+      - 'app-config.js'
+      - 'sw.js'
       - '.github/workflows/content-intelligence-15m.yml'
 
 permissions:
