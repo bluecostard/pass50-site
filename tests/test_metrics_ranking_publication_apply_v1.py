@@ -43,6 +43,8 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("metrics-ranking-publication-apply-cron.php", workflow)
         self.assertIn("de-ranking-publish", ui)
         self.assertIn("metrics-ranking-publication-apply.php", ui)
+        self.assertIn("dePublishOnlyStale", ui)
+        self.assertIn("run_freshness", ui)
 
     def test_simulation_remains_read_only(self):
         core = read("api/metrics-ranking-publication-core.php")
