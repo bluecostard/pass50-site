@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__.'/metrics-schema-core.php';
 require_once __DIR__.'/tiktok-oauth-core.php';
 
-const P50_TIKTOK_METRICS_BRIDGE_VERSION='1.0.0';
+const P50_TIKTOK_METRICS_BRIDGE_VERSION='1.0.1';
 
 function p50tm_schema_ready(PDO $pdo): bool {
     return p50_metrics_table_exists($pdo,'p50_tiktok_oauth_connections')
