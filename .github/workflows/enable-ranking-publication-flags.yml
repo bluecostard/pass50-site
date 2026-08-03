@@ -52,6 +52,13 @@ jobs:
           print('has_metrics_token=', 'metrics' in text)
           print('has_orchestrator_token=', 'orchestrator_enabled' in text)
           print('return_style=', bool(re.search(r'return\s*\[', text)), 'array_style=', bool(re.search(r'return\s*array\s*\(', text)))
+          for key in ('orchestrator_enabled','ranking_publication_enabled','ranking_automatic_publication_enabled','ranking_publication_bootstrap_allowed'):
+              for line in text.splitlines():
+                  if key in line:
+                      # Redact quoted secrets / long tokens.
+                      safe=re.sub(r"(['\"])[^'\"]{12,}\1", r"\1***\1", line.strip())
+                      print('line', key, '=', safe[:220])
+                      break
 
           flags = {
               'orchestrator_enabled': 'true',
@@ -61,19 +68,24 @@ jobs:
           }
 
           def replace_flag(src: str, key: str, value: str) -> str:
-              pat_bool = re.compile(rf"(['\"]{re.escape(key)}['\"]\s*=>\s*)(true|false)\b")
-              if pat_bool.search(src):
-                  return pat_bool.sub(rf"\g<1>{value}", src, count=1)
-              pat_line = re.compile(rf"(['\"]{re.escape(key)}['\"]\s*=>\s*filter_var\([^;\n]+)")
-              m = pat_line.search(src)
-              if m:
-                  line = m.group(0)
-                  line2 = re.sub(r"\?:\s*'false'", f"?: '{value}'", line)
-                  line2 = re.sub(r'\?:\s*"false"', f'?: "{value}"', line2)
-                  line2 = re.sub(r"\?:\s*false\b", f"?: '{value}'", line2)
-                  if line2 == line:
-                      line2 = re.sub(r"\?:\s*'true'", f"?: '{value}'", line)
-                  return src[:m.start()] + line2 + src[m.end():]
+              # Full RHS replacement up to comma/newline/)/]
+              pat = re.compile(
+                  rf"(['\"]{re.escape(key)}['\"]\s*=>\s*)([^,\n\]]+)",
+                  re.M,
+              )
+              m = pat.search(src)
+              if not m:
+                  return src
+              rhs = m.group(2).strip()
+              # Already boolean true
+              if re.fullmatch(r'true', rhs, re.I):
+                  return src
+              # Boolean / numeric / filter_var / getenv / (bool)...
+              if re.match(r'(true|false|0|1|filter_var\s*\(|getenv\s*\(|\(bool\)|\(int\))', rhs, re.I):
+                  return src[:m.start(2)] + value + src[m.end(2):]
+              # Unknown RHS — still force true for these known flags.
+              if key in flags:
+                  return src[:m.start(2)] + value + src[m.end(2):]
               return src
 
           def find_metrics_open(src: str):
@@ -90,45 +102,31 @@ jobs:
               before = text
               text = replace_flag(text, key, value)
               if text != before:
+                  print('updated', key)
                   continue
+              if re.search(rf"['\"]{re.escape(key)}['\"]\s*=>", text):
+                  raise SystemExit(f'Flag {key} présent mais RHS non réécrit')
               metrics = find_metrics_open(text)
               if metrics is None:
-                  # Create metrics section before final return closer if missing.
                   m = re.search(r"(return\s*(?:\[|array\s*\())", text, re.I)
                   if not m:
                       raise SystemExit('Impossible de localiser return [...] de config.php')
-                  inject_block = (
-                      "\n    'metrics' => [\n"
-                      f"        '{key}' => {value},\n"
-                      "    ],\n"
-                  )
-                  # Insert after opener only once; subsequent keys go into created block via later loops.
                   if "'metrics'" not in text and '"metrics"' not in text:
-                      text = text[:m.end()] + inject_block + text[m.end():]
-                      # Continue so remaining flags are injected into metrics.
+                      text = text[:m.end()] + "\n    'metrics' => array(\n    ),\n" + text[m.end():]
                       metrics = find_metrics_open(text)
                   else:
-                      raise SystemExit(f'Flag {key} non patchable; metrics introuvable proprement')
-              if f"'{key}'" in text or f'"{key}"' in text:
-                  # Key exists in some form we couldn't rewrite.
-                  if key in text and re.search(rf"['\"]{re.escape(key)}['\"]\s*=>\s*(true|false|filter_var)", text):
-                      text2 = replace_flag(text, key, value)
-                      if text2 == text:
-                          raise SystemExit(f'Flag {key} présent mais non patchable')
-                      text = text2
-                      continue
+                      raise SystemExit('Section metrics introuvable proprement')
               inject = f"\n        '{key}' => {value},"
               anchor = re.search(r"['\"]cron_secret['\"]\s*=>[^,\n]+,?", text)
               if anchor:
                   text = text[:anchor.end()] + inject + text[anchor.end():]
               else:
                   text = text[:metrics.end()] + inject + text[metrics.end():]
+              print('injected', key)
 
           for key in flags:
-              if key not in text:
-                  raise SystemExit(f'{key} absent après patch')
-              if not re.search(rf"['\"]{re.escape(key)}['\"]\s*=>\s*(true|filter_var\([^;\n]*['\"]true['\"])", text):
-                  raise SystemExit(f'{key} pas explicitement true après patch')
+              if not re.search(rf"['\"]{re.escape(key)}['\"]\s*=>\s*true\b", text):
+                  raise SystemExit(f'{key} pas à true après patch')
           path.write_text(text, encoding='utf-8')
           print('changed=', text != original, 'delta=', len(text) - len(original))
           PY
