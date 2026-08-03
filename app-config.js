@@ -216,3 +216,17 @@ document.addEventListener('DOMContentLoaded', function () {
   script.dataset.pass50OfficialLinksPersistence = '3.2';
   document.head.appendChild(script);
 })();
+
+// Actualité automatique des fiches et Top 5 calculé à partir des captures métriques.
+(function () {
+  if (document.querySelector('script[data-pass50-content-intelligence]')) return;
+  function loadContentIntelligence() {
+    if (document.querySelector('script[data-pass50-content-intelligence]')) return;
+    var script = document.createElement('script');
+    script.src = './content-intelligence.js?v=1.0';
+    script.dataset.pass50ContentIntelligence = '1.0';
+    document.body.appendChild(script);
+  }
+  if (document.readyState === 'complete') loadContentIntelligence();
+  else window.addEventListener('load', loadContentIntelligence, { once: true });
+})();
