@@ -10,8 +10,9 @@ VALIDATE = (ROOT / "api/news-validate.php").read_text()
 DISCOVER = (ROOT / "api/news-discover.php").read_text()
 CLIENT = (ROOT / "content-intelligence.js").read_text()
 CONFIG = (ROOT / "app-config.js").read_text()
+SW = (ROOT / "sw.js").read_text()
 WORKFLOW = (ROOT / ".github/workflows/content-intelligence-15m.yml").read_text()
-ALL = CORE + FEED + CRON + VALIDATE + DISCOVER + CLIENT + CONFIG + WORKFLOW
+ALL = CORE + FEED + CRON + VALIDATE + DISCOVER + CLIENT + CONFIG + SW + WORKFLOW
 
 
 class ContentIntelligenceV1Tests(unittest.TestCase):
@@ -69,6 +70,8 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("p50ciProfileNews", CLIENT)
         self.assertIn("content-feed.php", CLIENT)
         self.assertIn("content-intelligence.js?v=1.0", CONFIG)
+        self.assertIn("content-intelligence.js?v=1.0", SW)
+        self.assertIn("pass50-v55-content-intelligence", SW)
 
     def test_admin_discovery_uses_verified_handles(self):
         self.assertIn("p50_social_links", DISCOVER)
