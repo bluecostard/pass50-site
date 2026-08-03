@@ -26,7 +26,7 @@ function p50tm_official_profile(PDO $pdo,string $profileId): ?array {
     $stmt=$pdo->prepare("SELECT r.profile_id,r.public_name,s.normalized_url,s.confidence
       FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
       WHERE BINARY r.profile_id=BINARY ? AND r.alive=1 AND s.platform='TikTok'
-      AND s.status='verified' AND s.confidence>=? ORDER BY s.confidence DESC,s.id DESC LIMIT 1");
+      AND s.status='verified' AND s.confidence>=? ORDER BY s.confidence DESC,s.normalized_url ASC LIMIT 1");
     $stmt->execute([$profileId,$threshold]);
     $row=$stmt->fetch();
     if(!is_array($row)||p50tm_username_from_url((string)$row['normalized_url'])==='')return null;
