@@ -104,6 +104,9 @@ jobs:
               if text != before:
                   print('updated', key)
                   continue
+              if re.search(rf"['\"]{re.escape(key)}['\"]\s*=>\s*true\b", text):
+                  print('already_true', key)
+                  continue
               if re.search(rf"['\"]{re.escape(key)}['\"]\s*=>", text):
                   raise SystemExit(f'Flag {key} présent mais RHS non réécrit')
               metrics = find_metrics_open(text)
