@@ -26,26 +26,16 @@ function p50_news_item(array $row,string $kind='article',int $priority=10): ?arr
     if($isVideo)$kind='video';
     $host=strtolower((string)(parse_url($url,PHP_URL_HOST)?:''));
     return [
-        'kind'=>$kind,
-        'type'=>$kind==='video'?'Vidéo':'Article',
-        'title'=>$title,
-        'url'=>$url,
+        'kind'=>$kind,'type'=>$kind==='video'?'Vidéo':'Article','title'=>$title,'url'=>$url,
         'image'=>trim((string)($row['image']??$row['socialimage']??'')),
-        'domain'=>trim((string)($row['domain']??$host)),
-        'platform'=>$platform==='Web'?'Web':$platform,
-        'date'=>trim((string)($row['date']??$row['seendate']??'')),
-        'language'=>trim((string)($row['language']??'fr')),
-        'source'=>trim((string)($row['source']??'')),
-        'priority'=>$priority,
-        'confidence'=>(int)($row['confidence']??0),
+        'domain'=>trim((string)($row['domain']??$host)),'platform'=>$platform==='Web'?'Web':$platform,
+        'date'=>trim((string)($row['date']??$row['seendate']??'')),'language'=>trim((string)($row['language']??'fr')),
+        'source'=>trim((string)($row['source']??'')),'priority'=>$priority,'confidence'=>(int)($row['confidence']??0),
     ];
 }
 
 function p50_news_dedupe_sort(array $items,int $limit=30): array {
-    usort($items,static function($a,$b){
-        $p=((int)($a['priority']??10))<=>((int)($b['priority']??10));if($p!==0)return $p;
-        return strcmp((string)($b['date']??''),(string)($a['date']??''));
-    });
+    usort($items,static function($a,$b){$p=((int)($a['priority']??10))<=>((int)($b['priority']??10));return $p!==0?$p:strcmp((string)($b['date']??''),(string)($a['date']??''));});
     $seen=[];$out=[];
     foreach($items as $item){
         if(!is_array($item))continue;$url=strtolower(rtrim((string)($item['url']??''),'/'));
@@ -73,84 +63,71 @@ function p50_news_rss_items(string $url,string $source,int $priority,bool $video
 }
 
 $results=[];$warnings=[];$visitedSocial=[];
-p50_de_ensure_schema();
-p50_de_sync_registry_from_state();
+p50_de_ensure_schema();p50_de_sync_registry_from_state();
 
-// 1) Réseaux officiels et flux vidéo déjà connus du moteur.
 if($profileId!==''){
     $profiles=p50_de_registry_profiles($profileId,1,0,false);
     if($profiles){
         $profile=$profiles[0];
-        try{$yt=p50_de_collect_youtube_activity($profile);$visitedSocial['YouTube']=$yt;}catch(Throwable $e){$warnings[]='YouTube indisponible.';}
-        try{$social=p50_de_collect_social_activity($profile);$visitedSocial['autres']=$social;if(!empty($social['blocked']))$warnings[]='Certains réseaux bloquent la visite automatique : '.implode(', ',(array)$social['blocked']).'.';}catch(Throwable $e){$warnings[]='Visite de certains réseaux indisponible.';}
+        try{$yt=p50_de_collect_youtube_activity($profile);$visitedSocial['YouTube']=$yt;}catch(Throwable){$warnings[]='YouTube indisponible.';}
+        try{$social=p50_de_collect_social_activity($profile);$visitedSocial['autres']=$social;if(!empty($social['blocked']))$warnings[]='Certains réseaux bloquent la visite automatique : '.implode(', ',(array)$social['blocked']).'.';}catch(Throwable){$warnings[]='Visite de certains réseaux indisponible.';}
         foreach(p50_de_activity_events($profileId,false,60) as $event){
             $published=(string)($event['published_at']??'');
-            if($published!==''){
-                try{if((new DateTimeImmutable($published))<(new DateTimeImmutable('-'.$days.' days')))continue;}catch(Throwable){}
-            }
+            if($published!==''){try{if((new DateTimeImmutable($published))<(new DateTimeImmutable('-'.$days.' days')))continue;}catch(Throwable){}}
             $platform=(string)($event['platform']??'Web');$eventType=strtolower((string)($event['event_type']??''));
             $kind=in_array($eventType,['video','reel','short','live'],true)||in_array($platform,['YouTube','TikTok','Instagram','Facebook','Snapchat'],true)?'video':'article';
-            $item=p50_news_item([
-                'title'=>(string)($event['title']??'Contenu récent de '.$name),
-                'url'=>(string)($event['url']??''),
-                'platform'=>$platform,
-                'date'=>$published,
-                'source'=>$platform.' officiel',
-                'confidence'=>(int)($event['confidence']??0),
-            ],$kind,$kind==='video'?0:6);
+            $item=p50_news_item(['title'=>(string)($event['title']??'Contenu récent de '.$name),'url'=>(string)($event['url']??''),
+                'platform'=>$platform,'date'=>$published,'source'=>$platform.' officiel','confidence'=>(int)($event['confidence']??0)],$kind,$kind==='video'?0:6);
             if($item)$results[]=$item;
         }
     }
 }
 
-// 2) Recherche sociale publique : davantage de vidéos que d'articles.
-$videoQueries=[
-    '"'.$name.'" (site:youtube.com/watch OR site:youtube.com/shorts)',
-    '"'.$name.'" (site:tiktok.com OR site:instagram.com/reel OR site:facebook.com/reel OR site:facebook.com/videos)',
-];
-foreach($videoQueries as $query){
+$officialHandles=[];
+if($profileId!==''){
     try{
-        $rss='https://www.bing.com/search?format=rss&q='.rawurlencode($query);
-        $results=array_merge($results,p50_news_rss_items($rss,'Bing Vidéos',1,true));
-    }catch(Throwable){$warnings[]='Recherche vidéo Bing indisponible.';}
-}
-
-// 3) Articles, volontairement limités et placés après les vidéos.
-$articles=[];
-try{
-    $query='"'.str_replace('"','',$name).'"';
-    $gdelt='https://api.gdeltproject.org/api/v2/doc/doc?query='.rawurlencode($query).'&mode=ArtList&maxrecords=15&format=json&sort=datedesc&timespan='.$days.'d';
-    $r=p50_http_fetch($gdelt,18,'application/json,*/*;q=0.7');
-    if($r['ok']){
-        $data=json_decode($r['body'],true);
-        foreach((array)($data['articles']??[]) as $row){
-            $item=p50_news_item(is_array($row)?$row:[],'article',10);if($item){$item['source']='GDELT';$articles[]=$item;}
+        $stmt=db()->prepare("SELECT platform,handle,normalized_url FROM p50_social_links WHERE profile_id=? AND status='verified' AND confidence>=?");
+        $stmt->execute([$profileId,p50_de_threshold()]);
+        foreach($stmt->fetchAll() as $row){
+            $h=trim((string)($row['handle']??''));
+            if($h===''){
+                $path=(string)(parse_url((string)$row['normalized_url'],PHP_URL_PATH)?:'');
+                if(preg_match('#/@([^/]+)#',$path,$m))$h=$m[1];
+                elseif(preg_match('#^/([^/]+)/?$#',$path,$m)&&!in_array(strtolower($m[1]),['watch','reel','reels','videos','channel'],true))$h=$m[1];
+            }
+            $h=ltrim($h,'@');if($h!=='')$officialHandles[(string)$row['platform']]=$h;
         }
-    }else $warnings[]='GDELT indisponible (HTTP '.(int)$r['status'].').';
-}catch(Throwable){$warnings[]='GDELT indisponible.';}
-
-if(count($articles)<5){
-    try{
-        $rss='https://news.google.com/rss/search?q='.rawurlencode('"'.$name.'" when:'.$days.'d').'&hl=fr&gl=CI&ceid=CI:fr';
-        $articles=array_merge($articles,p50_news_rss_items($rss,'Google News',11,false));
-    }catch(Throwable){$warnings[]='Google News indisponible.';}
+    }catch(Throwable){}
 }
-$results=array_merge($results,array_slice($articles,0,10));
-$results=p50_news_dedupe_sort($results,30);
-$videoCount=count(array_filter($results,static fn($x)=>(string)($x['kind']??'')==='video'));
-$articleCount=count($results)-$videoCount;
+if($handle!=='')$officialHandles['_input']=ltrim($handle,'@');
 
-json_response([
-    'ok'=>true,
-    'name'=>$name,
-    'profileId'=>$profileId,
-    'days'=>$days,
-    'source'=>'Réseaux officiels + Bing Vidéos + GDELT/Google News',
-    'articles'=>$results,
-    'results'=>$results,
-    'videoCount'=>$videoCount,
-    'articleCount'=>$articleCount,
-    'socialVisit'=>$visitedSocial,
+$videoQueries=[];
+if(!empty($officialHandles['YouTube']))$videoQueries[]='("'.$officialHandles['YouTube'].'" OR "@'.$officialHandles['YouTube'].'") (site:youtube.com/watch OR site:youtube.com/shorts)';
+if(!empty($officialHandles['TikTok']))$videoQueries[]='(site:tiktok.com/@'.$officialHandles['TikTok'].'/video)';
+if(!empty($officialHandles['Instagram']))$videoQueries[]='(site:instagram.com/reel OR site:instagram.com/p) ("'.$officialHandles['Instagram'].'" OR "@'.$officialHandles['Instagram'].'")';
+if(!empty($officialHandles['Facebook']))$videoQueries[]='("'.$name.'" OR "'.$officialHandles['Facebook'].'") (site:facebook.com/reel OR site:facebook.com/videos OR site:facebook.com/watch)';
+$videoQueries[]='"'.$name.'" (site:youtube.com/watch OR site:youtube.com/shorts OR site:tiktok.com OR site:instagram.com/reel)';
+foreach($videoQueries as $qi=>$query){
+    try{$rss='https://www.bing.com/search?format=rss&q='.rawurlencode($query);$priority=$qi<count($videoQueries)-1?1:3;$results=array_merge($results,p50_news_rss_items($rss,'Bing Vidéos',$priority,true));}
+    catch(Throwable){$warnings[]='Recherche vidéo Bing indisponible.';}
+}
+
+$articles=[];$articleQuery='"'.str_replace('"','',$name).'"';
+if($handle!=='')$articleQuery.=' OR "'.str_replace('"','',ltrim($handle,'@')).'"';
+try{
+    $gdelt='https://api.gdeltproject.org/api/v2/doc/doc?query='.rawurlencode($articleQuery).'&mode=ArtList&maxrecords=15&format=json&sort=datedesc&timespan='.$days.'d';
+    $r=p50_http_fetch($gdelt,18,'application/json,*/*;q=0.7');
+    if($r['ok']){foreach((array)((json_decode($r['body'],true)['articles']??[])) as $row){$item=p50_news_item(is_array($row)?$row:[],'article',10);if($item){$item['source']='GDELT';$articles[]=$item;}}}
+    else $warnings[]='GDELT indisponible (HTTP '.(int)$r['status'].').';
+}catch(Throwable){$warnings[]='GDELT indisponible.';}
+if(count($articles)<5){
+    try{$rss='https://news.google.com/rss/search?q='.rawurlencode($articleQuery.' when:'.$days.'d').'&hl=fr&gl=CI&ceid=CI:fr';$articles=array_merge($articles,p50_news_rss_items($rss,'Google News',11,false));}
+    catch(Throwable){$warnings[]='Google News indisponible.';}
+}
+$results=array_merge($results,array_slice($articles,0,10));$results=p50_news_dedupe_sort($results,30);
+$videoCount=count(array_filter($results,static fn($x)=>(string)($x['kind']??'')==='video'));
+json_response(['ok'=>true,'name'=>$name,'profileId'=>$profileId,'days'=>$days,'source'=>'Handles officiels + Bing Vidéos + GDELT/Google News',
+    'officialHandles'=>array_filter($officialHandles,static fn($k)=>$k!=='_input',ARRAY_FILTER_USE_KEY),'articles'=>$results,'results'=>$results,
+    'videoCount'=>$videoCount,'articleCount'=>count($results)-$videoCount,'socialVisit'=>$visitedSocial,
     'warning'=>implode(' ',array_values(array_unique($warnings))),
-    'message'=>$results?count($results).' résultat(s), vidéos affichées en premier.':'Aucune vidéo ni actualité récente trouvée pour cette période.',
-]);
+    'message'=>$results?count($results).' résultat(s), vidéos affichées en premier.':'Aucune vidéo ni actualité récente trouvée pour cette période.']);
