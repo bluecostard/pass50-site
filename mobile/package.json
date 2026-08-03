@@ -1,0 +1,24 @@
+{
+  "name": "pass50-mobile-ios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PASS50 iOS app (Capacitor remote → https://pass50.store)",
+  "scripts": {
+    "sync": "npx cap sync ios",
+    "open": "npx cap open ios",
+    "build:ios": "npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/app": "^7.0.1",
+    "@capacitor/browser": "^7.0.1",
+    "@capacitor/core": "^7.2.0",
+    "@capacitor/ios": "^7.2.0",
+    "@capacitor/push-notifications": "^7.0.1",
+    "@capacitor/share": "^7.0.1",
+    "@capacitor/splash-screen": "^7.0.1",
+    "@capacitor/status-bar": "^7.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.2.0"
+  }
+}

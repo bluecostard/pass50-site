@@ -1,0 +1,6 @@
+# Apple App Site Association — Content-Type application/json (pas de .json)
+<IfModule mod_headers.c>
+  <Files "apple-app-site-association">
+    Header set Content-Type "application/json"
+  </Files>
+</IfModule>

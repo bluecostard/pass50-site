@@ -104,4 +104,15 @@ return [
         'max_bytes' => 5 * 1024 * 1024,
         'allowed_mime' => ['image/jpeg', 'image/png', 'image/webp'],
     ],
+    // Push iOS (Capacitor / APNs). Secrets uniquement dans config.php serveur.
+    'push' => [
+        'enabled' => filter_var(getenv('PASS50_PUSH_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        'apns_key_id' => getenv('PASS50_APNS_KEY_ID') ?: '',
+        'apns_team_id' => getenv('PASS50_APNS_TEAM_ID') ?: '',
+        'apns_bundle_id' => getenv('PASS50_APNS_BUNDLE_ID') ?: 'store.pass50.app',
+        // Chemin absolu vers AuthKey_XXXXX.p8 hors webroot.
+        'apns_key_path' => getenv('PASS50_APNS_KEY_PATH') ?: '',
+        'apns_production' => filter_var(getenv('PASS50_APNS_PRODUCTION') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        'cron_secret' => getenv('PASS50_PUSH_CRON_SECRET') ?: '',
+    ],
 ];
