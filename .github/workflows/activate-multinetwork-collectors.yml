@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'api/metrics-collector-readiness-cron.php'
+      - 'api/tiktok-metrics-bridge-core.php'
       - '.github/workflows/activate-multinetwork-collectors.yml'
       - 'tests/test_metrics_social_collectors_v1.py'
 
@@ -22,7 +23,7 @@ concurrency:
 jobs:
   activate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       HOST: ${{ secrets.IONOS_SFTP_HOST }}
       USER: ${{ secrets.IONOS_SFTP_USER }}
@@ -143,7 +144,7 @@ jobs:
 
           path.write_text(text,encoding='utf-8')
           report={
-              'version':'MULTINET-ACTIVATION-V1.0',
+              'version':'MULTINET-ACTIVATION-V1.1',
               'githubSecretsPresent':{
                   'x':present('X_BEARER_TOKEN'),
                   'tiktokDisplay':display,
@@ -175,7 +176,7 @@ jobs:
           LFTP
           echo "Configuration multi-réseaux publiée avec sauvegarde serveur."
 
-      - name: Vérifier la couverture opérationnelle
+      - name: Vérifier la couverture et les candidats P0/P1
         id: probe
         shell: bash
         run: |
@@ -189,7 +190,7 @@ jobs:
             *) echo "::error::PASS50_METRICS_CRON_URL invalide"; exit 1 ;;
           esac
           ready=false
-          for attempt in $(seq 1 36); do
+          for attempt in $(seq 1 48); do
             dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-multinet-probe-$attempt"
             body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
             timestamp="$(date +%s)"
@@ -197,35 +198,142 @@ jobs:
             code="$(curl --silent --show-error --max-time 35 --output /tmp/p50-multinet/probe.json --write-out '%{http_code}' \
               -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
               --data "$body" "$PROBE_URL" || true)"
-            if [ "$code" = "200" ] && jq -e '.ok == true and .secretsExposed == false and .publicStateWrites == 0' /tmp/p50-multinet/probe.json >/dev/null; then
+            if [ "$code" = "200" ] && jq -e '
+              .ok == true and .version == "MULTINET-ACTIVATION-V1.1" and
+              .runtime.tiktokBridge == "1.0.1" and .p0Preview.ok == true and .p1Preview.ok == true and
+              .secretsExposed == false and .publicStateWrites == 0
+            ' /tmp/p50-multinet/probe.json >/dev/null; then
               ready=true
               break
             fi
-            echo "Diagnostic multi-réseaux en attente (${attempt}/36, HTTP ${code:-0})."
+            echo "Diagnostic multi-réseaux V1.1 en attente (${attempt}/48, HTTP ${code:-0})."
             sleep 10
           done
           if [ "$ready" != "true" ]; then
-            echo "::error::Diagnostic multi-réseaux indisponible après déploiement."
+            echo "::error::Diagnostic multi-réseaux V1.1 indisponible ou aperçu P0/P1 invalide."
             cat /tmp/p50-multinet/probe.json 2>/dev/null || true
             exit 1
           fi
           cp /tmp/p50-multinet/probe.json /tmp/p50-multinet/activation-report.json
           additional="$(jq '[.readiness.platforms | to_entries[] | select(.key != "YouTube" and (.value.operational // 0) > 0)] | length' /tmp/p50-multinet/probe.json)"
-          candidates="$(jq '.p1Preview.candidateCount // 0' /tmp/p50-multinet/probe.json)"
-          candidate_networks="$(jq '[.p1Preview.candidatesByPlatform | to_entries[] | select(.key != "YouTube" and .value > 0)] | length' /tmp/p50-multinet/probe.json)"
+          p0_candidates="$(jq '.p0Preview.candidateCount // 0' /tmp/p50-multinet/probe.json)"
+          p0_networks="$(jq '.p0Preview.candidatesByPlatform | length' /tmp/p50-multinet/probe.json)"
+          p1_candidates="$(jq '.p1Preview.candidateCount // 0' /tmp/p50-multinet/probe.json)"
+          p1_networks="$(jq '[.p1Preview.candidatesByPlatform | to_entries[] | select(.key != "YouTube" and .value > 0)] | length' /tmp/p50-multinet/probe.json)"
           {
             echo '### Activation collecte multi-réseaux'
             echo
-            jq -r '.readiness.platforms | to_entries[] | "- \(.key) : \(.value.operational // 0)/\(.value.verifiedLinks // 0) lien(s) opérationnel(s) · couverture \(.value.coveragePercent // 0)% · modes `\((.value.modes // {})|tojson)`"' /tmp/p50-multinet/probe.json
-            echo "- Candidats P1 actuels : ${candidates}"
+            jq -r '.readiness.platforms | to_entries[] | select(.value != null) | "- \(.key) : \(.value.operational // 0)/\(.value.verifiedLinks // 0) lien(s) opérationnel(s) · couverture \(.value.coveragePercent // 0)% · modes `\((.value.modes // {})|tojson)`"' /tmp/p50-multinet/probe.json
+            echo "- Candidats P0 : ${p0_candidates} · plateformes : \`$(jq -c '.p0Preview.candidatesByPlatform' /tmp/p50-multinet/probe.json)\`"
+            echo "- Candidats P1 : ${p1_candidates} · plateformes : \`$(jq -c '.p1Preview.candidatesByPlatform' /tmp/p50-multinet/probe.json)\`"
             echo "- Réseaux supplémentaires opérationnels : ${additional}"
             echo '- Écriture app_state : `0`'
           } >> "$GITHUB_STEP_SUMMARY"
           {
             echo "additional_operational=$additional"
-            echo "candidate_networks=$candidate_networks"
-            echo "candidates=$candidates"
+            echo "p0_candidates=$p0_candidates"
+            echo "p0_networks=$p0_networks"
+            echo "p1_candidates=$p1_candidates"
+            echo "p1_networks=$p1_networks"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Collecter immédiatement les comptes OAuth prioritaires P0
+        id: p0
+        if: ${{ steps.probe.outcome == 'success' }}
+        shell: bash
+        env:
+          EXPECTED_CANDIDATES: ${{ steps.probe.outputs.p0_candidates }}
+        run: |
+          set -euo pipefail
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-activation-p0"
+          : > /tmp/p50-multinet/p0-diagnostics.jsonl
+          signed_call() {
+            local body="$1" output="$2" timestamp signature
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            curl --silent --show-error --max-time 55 --output "$output" --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+              --data "$body" "$CRON_URL" || true
+          }
+
+          if [ "${EXPECTED_CANDIDATES:-0}" = "0" ]; then
+            jq -nc --arg dispatchId "$dispatch_id" '{ok:true,version:"INLINE-P0-V1.0",dispatchId:$dispatchId,skipped:true,reason:"no_p0_candidates",processed:0,remaining:0,capturesRecorded:0,byPlatform:{},publicStateWrites:0}' > /tmp/p50-multinet/p0-result.json
+            echo 'processed=0' >> "$GITHUB_OUTPUT"
+            echo 'remaining=0' >> "$GITHUB_OUTPUT"
+            echo 'captures=0' >> "$GITHUB_OUTPUT"
+            echo 'platforms=0' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          body="$(jq -nc --arg id "$dispatch_id" '{action:"dispatch",cadence:"p0",dispatchId:$id}')"
+          code="$(signed_call "$body" /tmp/p50-multinet/p0-dispatch.json)"
+          if [ "$code" != "200" ]; then
+            error="$(jq -r '.error // "Erreur serveur sans détail."' /tmp/p50-multinet/p0-dispatch.json 2>/dev/null || printf 'Réponse non JSON')"
+            jq -nc --arg dispatchId "$dispatch_id" --arg error "$error" --arg httpCode "$code" '{ok:false,version:"INLINE-P0-V1.0",dispatchId:$dispatchId,stage:"dispatch",httpCode:$httpCode,error:$error,publicStateWrites:0}' > /tmp/p50-multinet/p0-result.json
+            echo "::error::Dispatch P0 refusé (HTTP $code) : $error"
+            exit 1
+          fi
+
+          response="$(cat /tmp/p50-multinet/p0-dispatch.json)"
+          remaining="$(jq -r '.queue.p0Remaining // .remaining // 0' <<<"$response")"
+          processed=0; completed=0; partial=0; failed=0; skipped=0; work_error=''
+          deadline=$((SECONDS + 720))
+          for iteration in $(seq 1 120); do
+            [ "$remaining" -eq 0 ] && break
+            [ "$SECONDS" -ge "$deadline" ] && break
+            body="$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",cadence:"p0",dispatchId:$id,iteration:$iteration}')"
+            output="/tmp/p50-multinet/p0-work-${iteration}.json"
+            code="$(signed_call "$body" "$output")"
+            if [ "$code" != "200" ]; then
+              work_error="$(jq -r '.error // "Erreur serveur sans détail."' "$output" 2>/dev/null || printf 'Réponse non JSON')"
+              echo "::error::Traitement P0 refusé à l'itération $iteration (HTTP $code) : $work_error"
+              break
+            fi
+            response="$(cat "$output")"
+            current="$(jq -r '.processed // 0' <<<"$response")"
+            processed=$((processed + current))
+            completed=$((completed + $(jq -r '.completed // 0' <<<"$response")))
+            partial=$((partial + $(jq -r '.partial // 0' <<<"$response")))
+            failed=$((failed + $(jq -r '.failed // 0' <<<"$response")))
+            skipped=$((skipped + $(jq -r '.skipped // 0' <<<"$response")))
+            if [ "$current" -eq 1 ]; then jq -c '.diagnostic // empty' <<<"$response" >> /tmp/p50-multinet/p0-diagnostics.jsonl; fi
+            remaining="$(jq -r '.queue.p0Remaining // .remaining // 0' <<<"$response")"
+            if [ "$current" -eq 0 ] && [ "$remaining" -gt 0 ]; then
+              wait_seconds="$(jq -r '.queue.p0WaitSeconds // 5' <<<"$response")"
+              if ! [[ "$wait_seconds" =~ ^[0-9]+$ ]]; then wait_seconds=5; fi
+              [ "$wait_seconds" -lt 3 ] && wait_seconds=3
+              [ "$wait_seconds" -gt 30 ] && wait_seconds=30
+              remaining_runtime=$((deadline - SECONDS)); [ "$remaining_runtime" -le 0 ] && break
+              [ "$wait_seconds" -gt "$remaining_runtime" ] && wait_seconds="$remaining_runtime"
+              sleep "$wait_seconds"
+            fi
+          done
+
+          if [ -s /tmp/p50-multinet/p0-diagnostics.jsonl ]; then diagnostics="$(jq -s '.' /tmp/p50-multinet/p0-diagnostics.jsonl)"; else diagnostics='[]'; fi
+          captures="$(jq '[.[].capturesRecorded] | add // 0' <<<"$diagnostics")"
+          duplicates="$(jq '[.[].duplicatesSkipped] | add // 0' <<<"$diagnostics")"
+          quarantined="$(jq '[.[].quarantined] | add // 0' <<<"$diagnostics")"
+          by_platform="$(jq 'group_by(.platform) | map({key:(.[0].platform // "unknown"),value:{tasks:length,captures:(map(.capturesRecorded)|add//0),duplicates:(map(.duplicatesSkipped)|add//0),quarantined:(map(.quarantined)|add//0),statuses:(group_by(.status)|map({key:(.[0].status//"unknown"),value:length})|from_entries)}}) | from_entries' <<<"$diagnostics")"
+          jq -nc --arg dispatchId "$dispatch_id" --arg workError "$work_error" --argjson processed "$processed" --argjson completed "$completed" \
+            --argjson partial "$partial" --argjson failed "$failed" --argjson skipped "$skipped" --argjson remaining "$remaining" \
+            --argjson captures "$captures" --argjson duplicates "$duplicates" --argjson quarantined "$quarantined" \
+            --argjson byPlatform "$by_platform" --argjson diagnostics "$diagnostics" \
+            '{ok:($workError=="" and $remaining==0),version:"INLINE-P0-V1.0",dispatchId:$dispatchId,processed:$processed,completed:$completed,partial:$partial,failed:$failed,skipped:$skipped,remaining:$remaining,capturesRecorded:$captures,duplicatesSkipped:$duplicates,quarantined:$quarantined,byPlatform:$byPlatform,diagnostics:$diagnostics,workError:($workError|select(.!="")),publicStateWrites:0}' > /tmp/p50-multinet/p0-result.json
+          {
+            echo '### Collecte immédiate P0'
+            echo "- Tâches traitées : $processed"
+            echo "- Captures / doublons / quarantaine : $captures / $duplicates / $quarantined"
+            echo "- Plateformes : \`$(jq -c . <<<"$by_platform")\`"
+            echo "- File restante : $remaining"
+            echo '- Écriture app_state : `0`'
+          } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "processed=$processed"
+            echo "remaining=$remaining"
+            echo "captures=$captures"
+            echo "platforms=$(jq 'length' <<<"$by_platform")"
+          } >> "$GITHUB_OUTPUT"
+          [ -z "$work_error" ]
 
       - name: Déclencher une collecte P1 complète
         if: ${{ steps.probe.outcome == 'success' }}
@@ -247,16 +355,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PATCH_OUTCOME: ${{ steps.patch.outcome }}
           PROBE_OUTCOME: ${{ steps.probe.outcome }}
+          P0_OUTCOME: ${{ steps.p0.outcome }}
           ADDITIONAL: ${{ steps.probe.outputs.additional_operational }}
-          CANDIDATE_NETWORKS: ${{ steps.probe.outputs.candidate_networks }}
-          CANDIDATES: ${{ steps.probe.outputs.candidates }}
+          P0_CANDIDATES: ${{ steps.probe.outputs.p0_candidates }}
+          P0_CAPTURES: ${{ steps.p0.outputs.captures }}
+          P0_REMAINING: ${{ steps.p0.outputs.remaining }}
+          P1_NETWORKS: ${{ steps.probe.outputs.p1_networks }}
+          P1_CANDIDATES: ${{ steps.probe.outputs.p1_candidates }}
         run: |
           set -euo pipefail
           state=success
-          description="Multi-réseaux · ${ADDITIONAL:-0} réseau(x) actif(s) · ${CANDIDATE_NETWORKS:-0} en P1 · ${CANDIDATES:-0} candidats"
-          if [ "$PATCH_OUTCOME" != success ] || [ "$PROBE_OUTCOME" != success ]; then
+          description="Multi-réseaux · ${ADDITIONAL:-0} réseau(x) actif(s) · P0 ${P0_CAPTURES:-0} capture(s) · P1 ${P1_NETWORKS:-0} réseau(x)"
+          if [ "$PATCH_OUTCOME" != success ] || [ "$PROBE_OUTCOME" != success ] || [ "$P0_OUTCOME" != success ]; then
             state=failure
-            description='Activation multi-réseaux interrompue'
+            description='Activation ou collecte P0 multi-réseaux interrompue'
+          elif [ "${P0_REMAINING:-0}" != 0 ]; then
+            state=pending
+            description="Multi-réseaux actifs · P0 ${P0_REMAINING} tâche(s) en réessai"
           elif [ "${ADDITIONAL:-0}" = 0 ]; then
             state=pending
             description='Moteur prêt · credentials externes encore absents'
@@ -275,5 +390,8 @@ jobs:
           path: |
             /tmp/p50-multinet/secret-presence.json
             /tmp/p50-multinet/activation-report.json
+            /tmp/p50-multinet/p0-result.json
+            /tmp/p50-multinet/p0-dispatch.json
+            /tmp/p50-multinet/p0-work-*.json
           if-no-files-found: warn
           retention-days: 30
