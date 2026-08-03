@@ -127,17 +127,54 @@
     if(DE.rankingLabLoading&&!DE.rankingLab){pane.innerHTML='<div class="de-ranking-lab"><div class="de-loading">Chargement du classement expérimental…</div></div>';return;}
     if(DE.rankingLabView!=='current'&&DE.rankingCalibrationLoading&&!DE.rankingCalibration){pane.innerHTML='<div class="de-ranking-lab"><div class="de-loading">Chargement de l’historique…</div></div>';return;}
     const content=DE.rankingLabView==='history'?deRankingHistoryHtml():DE.rankingLabView==='calibration'?deRankingCalibrationHtml():deRankingCurrentHtml();
-    pane.innerHTML=`<div class="de-ranking-lab"><div class="section-head"><div><div class="section-title">CLASSEMENT MÉTRIQUE MR‑V1.0</div><div class="de-ranking-warning">Calcul expérimental → publication publique via le bouton ci‑dessous (backup + garde‑fous).</div></div><div class="de-ranking-actions"><button class="btn primary de-ranking-calculate">Calculer les 5 périodes</button><button class="btn primary de-ranking-publish">Publier vers le classement public</button><button class="btn de-ranking-refresh">Actualiser</button><select id="deRankingLabPeriod">${periods.map(period=>`<option ${period===DE.rankingLabPeriod?'selected':''}>${period}</option>`).join('')}</select></div></div><nav class="de-ranking-subnav" aria-label="Vues du classement expérimental"><button class="btn ${DE.rankingLabView==='current'?'primary':''}" data-ranking-view="current">Classement actuel</button><button class="btn ${DE.rankingLabView==='history'?'primary':''}" data-ranking-view="history">Historique des cycles</button><button class="btn ${DE.rankingLabView==='calibration'?'primary':''}" data-ranking-view="calibration">Calibration</button></nav>${content}</div>`;
+    pane.innerHTML=`<div class="de-ranking-lab"><div class="section-head"><div><div class="section-title">CLASSEMENT MÉTRIQUE MR‑V1.0</div><div class="de-ranking-warning">Calcul expérimental → publication publique via le bouton ci‑dessous (backup + garde‑fous). Le sélecteur de période ne fait que changer la vue ; la publication couvre toutes les périodes éligibles (ex. 24H+).</div></div><div class="de-ranking-actions"><button class="btn primary de-ranking-calculate">Calculer les 5 périodes</button><button class="btn primary de-ranking-publish">Publier vers le classement public</button><button class="btn de-ranking-refresh">Actualiser</button><select id="deRankingLabPeriod">${periods.map(period=>`<option ${period===DE.rankingLabPeriod?'selected':''}>${period}</option>`).join('')}</select></div></div><nav class="de-ranking-subnav" aria-label="Vues du classement expérimental"><button class="btn ${DE.rankingLabView==='current'?'primary':''}" data-ranking-view="current">Classement actuel</button><button class="btn ${DE.rankingLabView==='history'?'primary':''}" data-ranking-view="history">Historique des cycles</button><button class="btn ${DE.rankingLabView==='calibration'?'primary':''}" data-ranking-view="calibration">Calibration</button></nav>${content}</div>`;
   }
   async function deCalculateRankingLab(button){await deAction(button,async()=>{await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});DE.rankingLab=null;DE.rankingCalibration=null;await deLoadRankingLab(true);if(DE.rankingLabView!=='current')await deLoadRankingCalibration(true);toast('Classements expérimentaux calculés');},'Calcul…');}
+  const DE_PUBLISH_GATE_LABELS={
+    run_freshness:'calcul expérimental trop ancien (> 6 h) — cliquez d’abord « Calculer les 5 périodes »',
+    candidate_non_empty:'aucun profil classable sur cette période',
+    successful_run:'aucun cycle MR‑V1.0 réussi pour la période',
+    public_ranking_non_empty:'classement public vide pour la période',
+    candidate_run_consistency:'lignes candidates incohérentes avec le dernier cycle',
+    exit_ratio:'trop de sorties vs classement public',
+    entry_ratio:'trop d’entrées vs classement public',
+  };
+  function dePublishReasons(preview){
+    const reasons=preview?.summary?.reasons||[];
+    if(reasons.length){
+      return reasons.map(raw=>{
+        const [period,gates]=String(raw).split(/:(.+)/);
+        const labels=(gates||'').split(',').map(g=>DE_PUBLISH_GATE_LABELS[g.trim()]||g.trim()).filter(Boolean);
+        return `${period}: ${labels.join(', ')}`;
+      }).join(' · ');
+    }
+    if((preview?.summary?.blockedPeriods||[]).length)return 'bloqué: '+(preview.summary.blockedPeriods||[]).join(', ');
+    if(!preview?.config?.publicationEnabled)return 'flags publication désactivés';
+    return preview?.status||'bloqué';
+  }
+  function dePublishOnlyStale(preview){
+    const reasons=preview?.summary?.reasons||[];
+    if(!reasons.length)return false;
+    return reasons.every(raw=>{
+      const gates=String(raw).split(/:(.+)/)[1]||'';
+      return gates.split(',').every(g=>{
+        const key=g.trim();
+        return !key||key==='run_freshness'||key==='candidate_non_empty'||key==='successful_run'||key==='skipped'||key.startsWith('skipped');
+      });
+    })&&reasons.some(raw=>String(raw).includes('run_freshness'));
+  }
   async function dePublishRankingLab(button){await deAction(button,async()=>{
-    const preview=await apiFetch('metrics-ranking-publication-apply.php');
+    let preview=await apiFetch('metrics-ranking-publication-apply.php');
+    // Le sélecteur 2H/24H… ne filtre pas la publication : toutes les périodes éligibles partent ensemble.
+    if(!preview.publicationEligible&&dePublishOnlyStale(preview)){
+      toast('Calcul expérimental trop ancien — recalcul automatique…');
+      await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});
+      DE.rankingLab=null;DE.rankingCalibration=null;
+      await deLoadRankingLab(true);
+      preview=await apiFetch('metrics-ranking-publication-apply.php');
+    }
     if(!preview.publicationEligible){
-      const reasons=(preview.summary?.reasons||[]).join(' · ')
-        ||((preview.summary?.blockedPeriods||[]).length?('bloqué: '+(preview.summary.blockedPeriods||[]).join(', ')):'')
-        ||(!preview.config?.publicationEnabled?'flags publication désactivés':'')
-        ||preview.status||'bloqué';
-      throw new Error(`Publication non éligible — ${reasons}`);
+      throw new Error(`Publication non éligible — ${dePublishReasons(preview)}`);
     }
     const periods=(preview.summary?.publishablePeriods||preview.periods||[]).join(', ')||'périodes OK';
     const skipped=(preview.summary?.skippedPeriods||[]).length?` (ignoré: ${preview.summary.skippedPeriods.join(', ')})`:'';
