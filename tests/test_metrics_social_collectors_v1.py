@@ -4,10 +4,12 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 COMMON=(ROOT/"api/metrics-collectors-core.php").read_text()
 SOCIAL=(ROOT/"api/metrics-social-collectors-core.php").read_text()
 ENDPOINT=(ROOT/"api/metrics-canonical-collect.php").read_text()
+READINESS_CRON=(ROOT/"api/metrics-collector-readiness-cron.php").read_text()
+ACTIVATION=(ROOT/".github/workflows/activate-multinetwork-collectors.yml").read_text()
 SCHEMA=(ROOT/"api/metrics-schema-core.php").read_text()
 UI=(ROOT/"data-engine-ui.js").read_text()
 ADAPTERS={name:(ROOT/f"api/metrics-collector-{name}.php").read_text() for name in ("tiktok","instagram","facebook","snapchat")}
-ALL=COMMON+SOCIAL+ENDPOINT+SCHEMA+UI+"".join(ADAPTERS.values())
+ALL=COMMON+SOCIAL+ENDPOINT+READINESS_CRON+ACTIVATION+SCHEMA+UI+"".join(ADAPTERS.values())
 
 class SocialCollectorsV1Tests(unittest.TestCase):
     def test_platform_dispatch_and_separate_adapters(self):
@@ -103,7 +105,7 @@ class SocialCollectorsV1Tests(unittest.TestCase):
         self.assertNotIn("runUuid",COMMON[COMMON.index("function p50_mc_capture"):COMMON.index("function p50_mc_request")])
 
     def test_no_publication_legacy_or_browser_bypass(self):
-        new_runtime=COMMON+SOCIAL+ENDPOINT+"".join(ADAPTERS.values())
+        new_runtime=COMMON+SOCIAL+ENDPOINT+READINESS_CRON+"".join(ADAPTERS.values())
         for forbidden in ("p50_de_publish_score_pipeline","p50_de_publish_profile","p50_de_15c_window","data-publish.php","UPDATE app_state","INSERT INTO app_state","live-radar-v3"):
             self.assertNotIn(forbidden,new_runtime)
         for forbidden in ("localStorage","document.cookie","playwright","selenium","puppeteer"):
@@ -123,5 +125,39 @@ class SocialCollectorsV1Tests(unittest.TestCase):
         self.assertIn("canonical.migrationStatus==='applied'",UI)
         self.assertIn("Installe d’abord le schéma canonique.",UI)
         self.assertRegex(UI,r'class="btn de-collect-metrics"[^>]+schemaApplied')
+
+    def test_multinetwork_probe_is_hmac_protected_and_read_only(self):
+        self.assertIn("p50_mo_verify_cron_signature",READINESS_CRON)
+        self.assertIn("HTTP_X_P50_TIMESTAMP",READINESS_CRON)
+        self.assertIn("HTTP_X_P50_SIGNATURE",READINESS_CRON)
+        self.assertIn("'action','dispatchId'",READINESS_CRON)
+        self.assertIn("p50_mcr_status",READINESS_CRON)
+        self.assertIn("p50_metrics_collectors_status",READINESS_CRON)
+        self.assertIn("p50_mo_dispatch($pdo,'p1'",READINESS_CRON)
+        self.assertIn("'preview'=>true",READINESS_CRON)
+        self.assertIn("'secretsExposed'=>false",READINESS_CRON)
+        self.assertIn("'publicStateWrites'=>0",READINESS_CRON)
+
+    def test_activation_maps_all_supported_server_credentials(self):
+        for secret in (
+            "PASS50_X_BEARER_TOKEN","PASS50_TIKTOK_ACCESS_TOKEN","PASS50_TIKTOK_RESEARCH_TOKEN",
+            "PASS50_TIKTOK_RESEARCH_APPROVED","PASS50_INSTAGRAM_ACCESS_TOKEN",
+            "PASS50_INSTAGRAM_ACCOUNT_ID","PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID",
+            "PASS50_FACEBOOK_ACCESS_TOKEN","PASS50_FACEBOOK_PAGE_ID","PASS50_SNAPCHAT_ACCESS_TOKEN",
+        ):
+            self.assertIn(secret,ACTIVATION)
+        for key in ("x_bearer_token","tiktok_access_token","tiktok_research_token","instagram_access_token","facebook_access_token","snapchat_access_token"):
+            self.assertIn(key,ACTIVATION)
+        self.assertIn("config.php.bak-multinet-",ACTIVATION)
+        self.assertNotIn("cat /tmp/p50-multinet/config.php",ACTIVATION)
+        self.assertIn("secretsExposed':False",ACTIVATION)
+
+    def test_activation_verifies_coverage_and_dispatches_p1(self):
+        self.assertIn("metrics-collector-readiness-cron.php",ACTIVATION)
+        self.assertIn("candidatesByPlatform",READINESS_CRON)
+        self.assertIn("metrics-top50-2h.yml/dispatches",ACTIVATION)
+        self.assertIn("pass50/multinetwork-collection",ACTIVATION)
+        self.assertIn("publicStateWrites == 0",ACTIVATION)
+        self.assertIn("actions/upload-artifact@v4",ACTIVATION)
 
 if __name__=="__main__": unittest.main()

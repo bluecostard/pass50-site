@@ -40,7 +40,7 @@ class LiveRadarV41Tests(unittest.TestCase):
 
     def test_tiktok_end_only_beats_unconfirmed_or_stale_signals(self):
         parser = re.search(r'function p50_live_v4_parse_tiktok\(.*?\n}', PARSERS, re.S).group(0)
-        self.assertIn("if(!$confirmed&&$endedLabels)return ['state'=>'offline'", parser)
+        self.assertIn("if($endedLabels&&!$strictApi)return ['state'=>'offline'", parser)
         self.assertIn("if($endedLabels)return ['state'=>'offline'", parser)
         self.assertIn('p50_live_v4_tiktok_owner_match', PARSERS)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', PARSERS)

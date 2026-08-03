@@ -91,8 +91,9 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
     foreach($responses as $label=>$r){
         $maxMs=max($maxMs,(int)($r['timeMs']??0));
         if(empty($r['ok'])){$errors[]=$label.':'.((string)($r['error']??'')?:('http_'.($r['status']??0)));continue;}
-        $body=p50_live_v4_unescape((string)($r['body']??''));$bodies[$label]=$body;
+        $body=p50_live_v4_unescape((string)($r['body']??''));
         if($body===''||p50_live_v4_block_page($body)){$blocked++;continue;}
+        $bodies[$label]=$body;
         if(p50_live_v4_tiktok_owner_mismatch($body,(string)$identity['handle']))continue;
         $isApi=in_array($label,['api','api_basic'],true);$isLiveProbe=in_array($label,['api','api_basic','live','mobile_live','embed'],true);$json=$isApi?json_decode($body,true):null;
         $roomId=p50_live_v4_tiktok_room_id($body);$apiStatusActive=$isApi&&$json!==null&&(bool)preg_match('/"status"\s*:\s*2(?:\D|$)/i',$body);
