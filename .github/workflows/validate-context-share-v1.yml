@@ -1,0 +1,39 @@
+name: Validate Context Share V1
+
+on:
+  pull_request:
+    paths:
+      - 'context-share-v1.js'
+      - 'partage-contexte.php'
+      - 'partage-contexte-image.php'
+      - 'mobile-bottom-nav-v1.js'
+      - 'public-copy-fixes.js'
+      - 'sw.js'
+      - 'tests/test_context_share_v1.py'
+      - '.github/workflows/validate-context-share-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: JavaScript syntax
+        run: |
+          node --check context-share-v1.js
+          node --check mobile-bottom-nav-v1.js
+          node --check public-copy-fixes.js
+          node --check sw.js
+      - name: PHP syntax
+        run: |
+          php -l partage-contexte.php
+          php -l partage-contexte-image.php
+      - name: Share contract tests
+        run: python3 -m unittest tests.test_context_share_v1
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
