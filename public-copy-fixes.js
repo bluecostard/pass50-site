@@ -25,5 +25,5 @@
   if(!document.querySelector('script[data-pass50-fictive-ranking-admin]')){const script=document.createElement('script');script.src='./admin-fictive-ranking-v1.js?v=1.0';script.dataset.pass50FictiveRankingAdmin='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-classability-sync]')){const script=document.createElement('script');script.src='./classability-sync-v1.js?v=1.4';script.async=false;script.dataset.pass50ClassabilitySync='1.4';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-mobile-bottom-nav]')){const script=document.createElement('script');script.src='./mobile-bottom-nav-v1.js?v=1.2';script.async=false;script.dataset.pass50MobileBottomNav='1.2';document.head.appendChild(script);}
-  if(!document.querySelector('script[data-pass50-duel-audio-feed]')){const script=document.createElement('script');script.src='./duel-audio-feed-v1.js?v=1.0';script.async=false;script.dataset.pass50DuelAudioFeed='1.0';document.head.appendChild(script);}
+  if(!document.querySelector('script[data-pass50-duel-audio-feed]')){const script=document.createElement('script');script.src='./duel-audio-feed-v1.js?v=1.1';script.async=false;script.dataset.pass50DuelAudioFeed='1.1';document.head.appendChild(script);}
 })();
