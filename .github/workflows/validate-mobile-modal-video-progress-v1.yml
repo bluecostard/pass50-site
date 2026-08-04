@@ -1,0 +1,23 @@
+name: Validate Mobile Modal Video Progress V1
+
+on:
+  pull_request:
+    paths:
+      - 'mobile-modal-video-progress-v1.js'
+      - 'public-copy-fixes.js'
+      - 'sw.js'
+      - 'tests/test_mobile_modal_video_progress_v1.py'
+      - '.github/workflows/validate-mobile-modal-video-progress-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: JavaScript syntax
+        run: node --check mobile-modal-video-progress-v1.js
+      - name: Mobile modal and video progress contract
+        run: python3 -m unittest tests.test_mobile_modal_video_progress_v1
+      - name: Diff check
+        run: git diff --check
