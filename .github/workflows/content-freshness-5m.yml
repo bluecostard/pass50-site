@@ -1,0 +1,122 @@
+name: Content Freshness 5m
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/content-freshness-cron.php'
+      - 'api/content-feed.php'
+      - 'api/content-intelligence-core.php'
+      - 'api/metrics-collector-facebook.php'
+      - 'content-intelligence.js'
+      - '.github/workflows/content-freshness-5m.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-content-freshness
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Collecter et recalculer les contenus récents
+        id: refresh
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo '::error::Secrets cron métriques manquants.'
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-freshness-cron.php" ;;
+            *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
+          esac
+          mkdir -p /tmp/p50-content-freshness
+          attempts=1
+          if [ "$GITHUB_EVENT_NAME" = push ]; then attempts=48; fi
+          ready=false
+          for attempt in $(seq 1 "$attempts"); do
+            dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-fresh-$attempt"
+            body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"refresh",dispatchId:$dispatchId}')"
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            code="$(curl --silent --show-error --max-time 260 --output /tmp/p50-content-freshness/result.json --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+              --data "$body" "$ENDPOINT" || true)"
+            if [ "$code" = 200 ] && jq -e '.ok == true and .version == "CONTENT-FRESHNESS-V2.0" and .publicStateWrites == 0' /tmp/p50-content-freshness/result.json >/dev/null; then
+              ready=true
+              break
+            fi
+            if [ "$attempt" -lt "$attempts" ]; then
+              echo "Runtime fraîcheur en attente ($attempt/$attempts, HTTP ${code:-0})."
+              sleep 10
+            fi
+          done
+          if [ "$ready" != true ]; then
+            echo '::error::Rafraîchissement rapide des contenus interrompu.'
+            cat /tmp/p50-content-freshness/result.json 2>/dev/null || true
+            exit 1
+          fi
+          selected="$(jq -r '.profilesSelected // 0' /tmp/p50-content-freshness/result.json)"
+          processed="$(jq -r '.processed // 0' /tmp/p50-content-freshness/result.json)"
+          created="$(jq -r '.contentIntelligence.news.created // 0' /tmp/p50-content-freshness/result.json)"
+          updated="$(jq -r '.contentIntelligence.news.updated // 0' /tmp/p50-content-freshness/result.json)"
+          rows="$(jq -r '.contentIntelligence.trends.rowsWritten // 0' /tmp/p50-content-freshness/result.json)"
+          {
+            echo '### PASS50 Content Freshness'
+            echo "- Fiches prioritaires contrôlées : $selected"
+            echo "- Tâches de collecte traitées : $processed"
+            echo "- Actualités créées / mises à jour : $created / $updated"
+            echo "- Lignes de tendance recalculées : $rows"
+            echo '- Écriture directe app_state : `0`'
+          } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "selected=$selected"
+            echo "processed=$processed"
+            echo "created=$created"
+            echo "updated=$updated"
+            echo "rows=$rows"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publier le statut de fraîcheur
+        if: always()
+        shell: bash
+        env:
+          STEP_OUTCOME: ${{ steps.refresh.outcome }}
+          SELECTED: ${{ steps.refresh.outputs.selected }}
+          PROCESSED: ${{ steps.refresh.outputs.processed }}
+          CREATED: ${{ steps.refresh.outputs.created }}
+          UPDATED: ${{ steps.refresh.outputs.updated }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="Fraîcheur · ${SELECTED:-0} fiches · ${PROCESSED:-0} tâches · ${CREATED:-0}/${UPDATED:-0} actus"
+          if [ "$STEP_OUTCOME" != success ]; then state=failure; description='Rafraîchissement rapide interrompu'; fi
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context 'pass50/content-freshness' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archiver le diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-freshness-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/p50-content-freshness/result.json
+          if-no-files-found: warn
+          retention-days: 14
