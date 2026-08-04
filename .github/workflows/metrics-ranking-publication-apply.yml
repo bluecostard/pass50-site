@@ -1,8 +1,10 @@
 name: Metrics Ranking Publication Apply
 
+# Ce workflow ne possède volontairement aucun cron autonome.
+# Il est déclenché :
+# - manuellement pour un passage public contrôlé ;
+# - par la simulation uniquement lorsque automaticPublicationEligible=true.
 on:
-  schedule:
-    - cron: '27 1-23/2 * * *'
   workflow_dispatch:
 
 permissions:
@@ -16,7 +18,7 @@ concurrency:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
@@ -48,6 +50,7 @@ jobs:
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-publication-apply"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"apply",dispatchId:$dispatchId,confirm:true}')"
           response_file="publication-apply.json"
+          http_code="000"
 
           timestamp="$(date +%s)"
           signature="$(
@@ -55,8 +58,10 @@ jobs:
               openssl dgst -sha256 -hmac "$CRON_SECRET" -r |
               awk '{print $1}'
           )"
+
+          set +e
           http_code="$(
-            curl --silent --show-error --max-time 55 \
+            curl --silent --show-error --max-time 180 \
               --output "$response_file" \
               --write-out '%{http_code}' \
               -H "Content-Type: application/json" \
@@ -65,12 +70,26 @@ jobs:
               --data "$body" \
               "$APPLY_URL"
           )"
+          curl_status=$?
+          set -e
+
+          if [ "$curl_status" -ne 0 ]; then
+            echo "::error::Transport interrompu pendant la publication (curl $curl_status, HTTP ${http_code:-000})."
+            cat "$response_file" 2>/dev/null || true
+            exit 1
+          fi
 
           if [ "$http_code" != "200" ]; then
             echo "::error::Publication refusée (HTTP $http_code)."
             cat "$response_file" || true
             exit 1
           fi
+
+          jq -e '.ok == true' "$response_file" >/dev/null || {
+            echo "::error::La réponse de publication n’est pas un résultat PASS50 valide."
+            cat "$response_file" || true
+            exit 1
+          }
 
           skipped="$(jq -r '.skipped // false' "$response_file")"
           status="$(jq -r '.status // "unknown"' "$response_file")"
@@ -80,8 +99,13 @@ jobs:
           scores="$(jq -r '.scoresWritten // 0' "$response_file")"
           reason="$(jq -r '.reason // .error // "—"' "$response_file")"
 
+          if [ "$skipped" = "true" ]; then
+            echo "::notice::Publication non exécutée : $reason. Aucune écriture publique."
+          fi
+
           {
             printf '### Publication classement public MR-V1.0\n'
+            printf -- '- déclenchement : `%s`\n' "${GITHUB_EVENT_NAME}"
             printf -- '- dispatchId : `%s`\n' "$dispatch_id"
             printf -- '- skipped : `%s`\n' "$skipped"
             printf -- '- status : `%s`\n' "$status"
