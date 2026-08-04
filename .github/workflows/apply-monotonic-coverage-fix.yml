@@ -1,0 +1,98 @@
+name: Apply Monotonic Coverage Fix
+
+on:
+  push:
+    branches:
+      - 'fix/monotonic-profile-coverage'
+    paths:
+      - '.github/workflows/apply-monotonic-coverage-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      P50_TEST_DB_USER: root
+      P50_TEST_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/monotonic-profile-coverage
+          fetch-depth: 0
+
+      - name: Appliquer la règle de couverture monotone
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          core = Path('api/metrics-ranking-core.php')
+          text = core.read_text(encoding='utf-8')
+          anchor = "function p50_mr_freshness_hours(): array { return ['2H'=>3,'24H'=>6,'48H'=>8,'7J'=>18,'15J'=>18]; }\n"
+          helper = """
+
+          function p50_mr_profile_coverage(array $platforms,?float $weightedCoverage): float {
+              $best=0.0;
+              foreach($platforms as $platform)$best=max($best,(float)($platform['coverage']??0));
+              return max(0.0,min(100.0,max((float)($weightedCoverage??0),$best)));
+          }
+          """
+          old = "$score=$aggregate('score');$base=$aggregate('baseScore');$coverage=$aggregate('coverage')??0;$confidence=$aggregate('confidence')??0;"
+          new = "$score=$aggregate('score');$base=$aggregate('baseScore');$weightedCoverage=$aggregate('coverage')??0;$coverage=p50_mr_profile_coverage($platforms,$weightedCoverage);$confidence=$aggregate('confidence')??0;"
+          if 'function p50_mr_profile_coverage' not in text:
+              if anchor not in text:
+                  raise SystemExit('Point d’insertion de la politique de couverture introuvable')
+              text = text.replace(anchor, anchor + helper, 1)
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit('Agrégation de couverture introuvable')
+          core.write_text(text, encoding='utf-8')
+
+          test = Path('tests/metrics_ranking_integration.php')
+          test_text = test.read_text(encoding='utf-8')
+          test_anchor = "mr_must(array_values(p50_mr_percentiles([10,20,20]))==[0.0,75.0,75.0],'Percentiles de trois profils avec égalité haute');\n"
+          assertion = "mr_must(abs(p50_mr_profile_coverage([['coverage'=>25.0],['coverage'=>97.0]],41.0)-97.0)<0.001,'Une plateforme partielle ne réduit jamais la meilleure couverture officielle');\n"
+          if assertion not in test_text:
+              if test_anchor not in test_text:
+                  raise SystemExit('Point d’insertion du test de couverture introuvable')
+              test_text = test_text.replace(test_anchor, test_anchor + assertion, 1)
+          test.write_text(test_text, encoding='utf-8')
+          PY
+
+      - name: Valider la correction
+        run: |
+          php -l api/metrics-ranking-core.php
+          php -l tests/metrics_ranking_integration.php
+          python3 -m unittest tests.test_metrics_ranking_experimental_v1
+          php tests/metrics_ranking_integration.php
+          git diff --check
+
+      - name: Enregistrer la correction sur la branche
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'PASS50 Metrics Bot'
+          git config user.email 'pass50-metrics-bot@users.noreply.github.com'
+          git add api/metrics-ranking-core.php tests/metrics_ranking_integration.php
+          if git diff --cached --quiet; then
+            echo 'Correction déjà appliquée.'
+            exit 0
+          fi
+          git commit -m 'fix(metrics): rendre la couverture multi-plateforme monotone'
+          git push origin HEAD:fix/monotonic-profile-coverage
