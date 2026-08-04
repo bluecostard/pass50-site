@@ -178,11 +178,13 @@ class IntelligenceIntegrationTests(unittest.TestCase):
         self.assertLess(nested_catch, finish_run)
         self.assertIn("non bloquante", COLLECT[nested_catch:finish_run])
 
-    def test_admin_displays_three_private_sections(self):
+    def test_admin_displays_private_sections_including_building(self):
         self.assertIn("['intelligence','PASS50 Intelligence']", UI)
         self.assertIn("Tendances fortes", UI)
         self.assertIn("Buzz détectés", UI)
         self.assertIn("Profils en recul", UI)
+        self.assertIn("Signaux en construction", UI)
+        self.assertIn("buildingSignals", UI)
         self.assertIn("require_role($user,'owner','admin')", (ROOT / "api/intelligence.php").read_text(encoding="utf-8"))
 
     def test_official_ranking_pipeline_is_untouched_by_intelligence(self):
@@ -190,15 +192,21 @@ class IntelligenceIntegrationTests(unittest.TestCase):
         self.assertNotIn("p50_intelligence", (ROOT / "index.html").read_text(encoding="utf-8").lower())
         self.assertIn("Aucun résultat ne modifie le score officiel ni le classement public.", UI)
 
-    def test_sections_are_limited_to_ten_and_thresholded(self):
-        self.assertIn("$item['recentData']&&$item['comparisonStatus']==='comparable'&&$item['growthIndex']>=65", CORE)
-        self.assertIn("$item['recentData']&&$item['buzzIndex']>=70", CORE)
-        self.assertIn("$item['globalVariation']<=-20", CORE)
-        self.assertEqual(CORE.count("array_slice($"), 3)
+    def test_sections_are_limited_and_display_thresholds_are_relaxed(self):
+        self.assertIn("$item['recentData']&&$item['comparisonStatus']==='comparable'&&$item['growthIndex']>=55", CORE)
+        self.assertIn("$item['recentData']&&$item['buzzIndex']>=60", CORE)
+        self.assertIn("$item['globalVariation']<=-15", CORE)
+        self.assertIn("'buildingSignals'=>array_slice($building,0,20)", CORE)
+        self.assertEqual(CORE.count("array_slice($"), 4)
+        # Les diagnostics MAJ restent stricts (confiance moyenne/élevée).
+        diagnostics = CORE[CORE.index("function p50_intelligence_add_diagnostic"):CORE.index("function p50_intelligence_dashboard")]
+        self.assertIn("['moyenne','élevée']", diagnostics)
+        self.assertIn("($analysis['growthIndex']??0)>=65", diagnostics)
+        self.assertIn("($analysis['buzzIndex']??0)>=70", diagnostics)
 
     def test_profiles_without_recent_data_are_excluded_from_trends_and_buzz(self):
-        self.assertIn("$item['recentData']&&$item['comparisonStatus']==='comparable'&&$item['growthIndex']>=65", CORE)
-        self.assertIn("$item['recentData']&&$item['buzzIndex']>=70", CORE)
+        self.assertIn("$item['recentData']&&$item['comparisonStatus']==='comparable'&&$item['growthIndex']>=55", CORE)
+        self.assertIn("$item['recentData']&&$item['buzzIndex']>=60", CORE)
         diagnostics = CORE[CORE.index("function p50_intelligence_add_diagnostic"):CORE.index("function p50_intelligence_dashboard")]
         self.assertIn("!empty($analysis['recentData'])", diagnostics)
         self.assertIn("($analysis['comparisonStatus']??'')==='comparable'", diagnostics)
