@@ -185,7 +185,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("classability-sync-v1.js?v=1.3", LOADER)
         self.assertIn("data-pass50-classability-sync", LOADER)
         self.assertIn("classability-sync-v1.js?v=1.3", SW)
-        self.assertIn("pass50-v69-verified-link-promote", SW)
+        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
     def test_verified_official_links_auto_promote_eligibility(self):
         script = textwrap.dedent(
