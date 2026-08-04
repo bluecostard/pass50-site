@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,21 +34,27 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
         for mime in ("audio/webm", "audio/ogg", "audio/mp4"):
             self.assertIn(mime, API)
 
-    def test_public_duel_returns_only_three_latest_anonymous_audios(self):
-        self.assertIn("ORDER BY created_at DESC LIMIT 3", API)
+    def test_public_duel_returns_only_three_latest_attributed_audios(self):
+        self.assertIn("ORDER BY p.created_at DESC LIMIT 3", API)
         self.assertIn("'lastPerDuel'=>3", API)
-        self.assertIn("'authorLabel'=>'Un membre PASS50'", API)
+        self.assertIn("u.display_name author_display_name", API)
+        self.assertIn("'authorPseudo'=>$authorPseudo", API)
+        self.assertIn("'anonymousAuthor'=>false", API)
+        self.assertIn("'authorIdentity'=>'account_display_name'", API)
         self.assertIn("P50_DUEL_AUDIO_RETENTION_DAYS=30", API)
         item = API[API.index("function p50_duel_audio_item"):API.index("function p50_duel_audio_candidates")]
-        self.assertNotIn("user_id", item)
-        self.assertNotIn("display_name", item)
+        self.assertNotIn("'userId'", item)
+        self.assertNotIn("'email'", item)
 
-    def test_duel_page_displays_three_audio_players(self):
-        self.assertIn("PASS50-DUEL-AUDIO-FEED-V1.0", CLIENT)
+    def test_duel_page_displays_three_audio_players_with_pseudo(self):
+        self.assertIn("PASS50-DUEL-AUDIO-FEED-V1.1", CLIENT)
         self.assertIn("MAX_DUEL_AUDIOS=3", CLIENT)
         self.assertIn("Les 3 derniers audios du duel", CLIENT)
         self.assertIn("<audio controls", CLIENT)
-        self.assertIn("COMMENTAIRE ANONYME", CLIENT)
+        self.assertIn("item.authorPseudo", CLIENT)
+        self.assertIn("pseudo public du compte PASS50", CLIENT)
+        self.assertNotIn("COMMENTAIRE ANONYME", CLIENT)
+        self.assertNotIn("L’identité du membre n’est pas affichée", CLIENT)
         self.assertIn("fetchDuelAudios(true)", CLIENT)
 
     def test_audio_is_published_only_during_real_share_action(self):
@@ -57,20 +62,24 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
             self.assertIn(event, CLIENT)
         self.assertIn("Publier aussi cet audio dans PASS50", CLIENT)
         self.assertIn("visible sous ce duel et dans Mon fil", CLIENT)
+        self.assertIn("Votre pseudo public PASS50 sera affiché", CLIENT)
         self.assertIn("publishConsent", CLIENT)
         self.assertIn("VOTE_SHARE", CLIENT)
         self.assertNotIn("audio_recorded','download", CLIENT)
 
-    def test_follow_feed_includes_audio_when_either_candidate_is_followed(self):
+    def test_follow_feed_includes_attributed_audio_when_either_candidate_is_followed(self):
         self.assertIn("duel-audio.php", FEED)
         self.assertIn("profileIds: state.following.join(',')", FEED)
         self.assertIn("feedType: 'duel_audio'", FEED)
         self.assertIn("candidateA", FEED)
         self.assertIn("candidateB", FEED)
         self.assertIn("Parce que vous suivez", FEED)
-        self.assertIn("Un membre PASS50 commente son vote", FEED)
+        self.assertIn("item.authorPseudo", FEED)
+        self.assertIn("commente son vote pour", FEED)
+        self.assertIn("Pseudo issu de son compte utilisateur PASS50", FEED)
+        self.assertNotIn("Identité non affichée", FEED)
         self.assertIn("<audio controls", FEED)
-        self.assertIn("PASS50-FOLLOW-FEED-PAGE-V2.2", FEED)
+        self.assertIn("PASS50-FOLLOW-FEED-PAGE-V2.3", FEED)
         self.assertIn("mon-fil.js?v=2.2", FEED_HTML)
 
     def test_no_ranking_or_public_state_write(self):
@@ -86,11 +95,11 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
 
     def test_loader_and_cache_are_versioned(self):
-        self.assertIn("duel-audio-feed-v1.js?v=1.0", LOADER)
+        self.assertIn("duel-audio-feed-v1.js?v=1.1", LOADER)
         self.assertIn("data-pass50-duel-audio-feed", LOADER)
-        self.assertIn("duel-audio-feed-v1.js?v=1.0", SW)
+        self.assertIn("duel-audio-feed-v1.js?v=1.1", SW)
         self.assertIn("mon-fil.js?v=2.2", SW)
-        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
+        self.assertIn("pass50-v75-duel-audio-identity", SW)
 
 
 if __name__ == "__main__":
