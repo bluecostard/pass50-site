@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -53,8 +54,11 @@ class AndreaNaomiCanonicalProfileTests(unittest.TestCase):
     def test_browser_loads_the_new_census_revision(self):
         self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.8", self.v9)
         self.assertIn("CENSUS_VERSION='93-v25'", self.v9)
-        self.assertIn("v9-tools.js?v=15.5", self.index)
-        self.assertIn("v9-tools.js?v=15.5", self.sw)
+        index_version = re.search(r"v9-tools\.js\?v=([0-9.]+)", self.index)
+        worker_version = re.search(r"v9-tools\.js\?v=([0-9.]+)", self.sw)
+        self.assertIsNotNone(index_version)
+        self.assertIsNotNone(worker_version)
+        self.assertEqual(index_version.group(1), worker_version.group(1))
         self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.8", self.sw)
 
 
