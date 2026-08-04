@@ -20,6 +20,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
             let domReady = null;
             const context = {
               console,
+              addEventListener() {},
               document: {
                 readyState: 'loading',
                 addEventListener(name, callback) { if (name === 'DOMContentLoaded') domReady = callback; }
@@ -77,6 +78,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
             let domReady = null;
             const context = {
               console,
+              addEventListener() {},
               document: {
                 readyState: 'loading',
                 addEventListener(name, callback) { if (name === 'DOMContentLoaded') domReady = callback; }
