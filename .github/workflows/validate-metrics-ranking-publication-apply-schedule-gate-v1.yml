@@ -1,0 +1,35 @@
+name: Validate Metrics Ranking Publication Apply Schedule Gate V1
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/metrics-ranking-publication-apply.yml'
+      - '.github/workflows/metrics-ranking-publication-simulation.yml'
+      - 'api/metrics-ranking-publication-apply-cron.php'
+      - 'tests/test_metrics_ranking_publication_apply_schedule_gate_v1.py'
+      - '.github/workflows/validate-metrics-ranking-publication-apply-schedule-gate-v1.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/metrics-ranking-publication-apply.yml'
+      - '.github/workflows/metrics-ranking-publication-simulation.yml'
+      - 'api/metrics-ranking-publication-apply-cron.php'
+      - 'tests/test_metrics_ranking_publication_apply_schedule_gate_v1.py'
+      - '.github/workflows/validate-metrics-ranking-publication-apply-schedule-gate-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publication scheduling contract
+        run: python3 -m unittest tests.test_metrics_ranking_publication_apply_schedule_gate_v1 -v
+      - name: Workflow diff safety
+        run: |
+          set -euo pipefail
+          git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
