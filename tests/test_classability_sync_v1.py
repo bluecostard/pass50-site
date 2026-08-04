@@ -185,7 +185,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("classability-sync-v1.js?v=1.4", LOADER)
         self.assertIn("data-pass50-classability-sync", LOADER)
         self.assertIn("classability-sync-v1.js?v=1.4", SW)
-        self.assertIn("pass50-v71-fix-verify-links", SW)
+        self.assertIn("pass50-v73-keep-official-links", SW)
         self.assertIn("PASS50_LINK_SAVE_RUNNING", SYNC)
         self.assertNotIn("repairAll({ forceRender: true }), 80", SYNC)
 

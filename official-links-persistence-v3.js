@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='3.3';
+const VERSION='3.4';
 const INTEGRITY_KEY='pass50_official_links_integrity_v3';
 let installed=false;
 let integrityRunning=false;
@@ -13,8 +13,25 @@ function profileById(id){
   try{return profile(id)||db.profiles.find(item=>item.id===id)}catch{return null}
 }
 
+function normalizeLink(platform,url){
+  try{
+    if(typeof p50v9NormalizeOfficialLink==='function')return p50v9NormalizeOfficialLink(platform,url)||String(url||'').trim();
+  }catch{}
+  const value=String(url||'').trim();
+  if(!value)return '';
+  return /^https?:\/\//i.test(value)?value:'https://'+value.replace(/^\/\//,'');
+}
+
 function directLink(platform,url){
   try{return typeof p50v9IsDirectPlatformLink==='function'&&p50v9IsDirectPlatformLink(platform,url)}catch{return false}
+}
+
+function isSearchLikeUrl(url=''){
+  try{
+    const u=new URL(normalizeLink('Web',url)||url);
+    const path=u.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
+    return /(^|\/)(search|results|explore\/search)(\/|$)/i.test(path)||u.searchParams.has('search_query')||(u.searchParams.has('q')&&/(search|explore)/i.test(path));
+  }catch{return false}
 }
 
 function persistLocal(){
@@ -43,30 +60,35 @@ function collectCardLinks(card,profileItem){
   const invalid=[];
   card.querySelectorAll('[data-link-platform]').forEach(input=>{
     const platform=String(input.dataset.linkPlatform||'').trim();
-    const url=String(input.value||'').trim();
-    if(!platform||!url)return; // Un champ vide ne supprime plus une donnée enregistrée.
+    const raw=String(input.value||'').trim();
+    if(!platform||!raw)return; // Un champ vide ne supprime plus une donnée enregistrée.
+    const url=normalizeLink(platform,raw);
+    if(url&&url!==raw)input.value=url;
+    // Toujours conserver la saisie visible, même si elle n'est pas encore officielle.
+    if(profileItem){
+      profileItem.links=profileItem.links||{};
+      profileItem.linkChecks=profileItem.linkChecks||{};
+      profileItem.links[platform]=url;
+      profileItem.platforms=Array.isArray(profileItem.platforms)
+        ?[...new Set([...profileItem.platforms,platform])]
+        :[platform];
+    }
     if(directLink(platform,url)){
       links[platform]=url;
       return;
     }
     invalid.push(platform);
-    // Les pages de recherche ne doivent ni bloquer les autres plateformes,
-    // ni rester stockées comme si elles étaient officielles.
     if(profileItem){
-      profileItem.links=profileItem.links||{};
-      profileItem.linkChecks=profileItem.linkChecks||{};
-      const existing=String(profileItem.links[platform]||'');
-      if(!existing||!directLink(platform,existing)){
-        delete profileItem.links[platform];
-        input.value='';
-      }
       profileItem.linkChecks[platform]={
-        status:'search_not_official',
+        status:isSearchLikeUrl(url)?'search_not_official':'generic_or_content',
         checkedAt:new Date().toISOString(),
-        message:'Page de recherche ou lien générique : colle l’URL exacte du profil (ex. tiktok.com/@compte).',
+        message:isSearchLikeUrl(url)
+          ?'Page de recherche détectée : colle l’URL exacte du profil (ex. tiktok.com/@compte).'
+          :'Lien non reconnu comme profil direct. Vérifie la plateforme et l’URL exacte du compte.',
       };
     }
   });
+  persistLocal();
   return {links,invalid};
 }
 
@@ -156,15 +178,17 @@ function rememberIntegritySignature(restoredCount=0){
   try{localStorage.setItem(INTEGRITY_KEY,JSON.stringify({signature:currentIntegritySignature(),at:Date.now(),restored:Number(restoredCount||0)}))}catch{}
 }
 
-function refreshLinksPanel(){
+function refreshLinksPanel(options={}){
   persistLocal();
-  if(typeof render==='function')render();
+  // Éviter render() global quand une validation est en cours : il reconstruisait
+  // le panneau et donnait l'impression que le lien venait d'être effacé.
+  if(options.fullRender&&typeof render==='function')render();
   if(typeof p50v9RenderLinks==='function'&&typeof ui==='object'&&ui.adminTab==='links')p50v9RenderLinks();
 }
 
 function skippedSearchToast(invalid){
   if(!invalid.length||typeof toast!=='function')return;
-  toast(`Ignoré (page de recherche, pas un profil) : ${invalid.join(', ')}. Colle l’URL exacte du compte.`);
+  toast(`Non validé : ${invalid.join(', ')}. Garde l’URL du profil exact (avec https://), pas une page de recherche.`);
 }
 
 async function durableSaveLinks(id,card,options={}){
@@ -177,7 +201,7 @@ async function durableSaveLinks(id,card,options={}){
     refreshLinksPanel();
     if(!options.silent&&typeof toast==='function'){
       toast(invalid.length
-        ?`Aucun profil officiel direct à ${confirmed?'valider':'enregistrer'}. Remplace les pages RECHERCHE par l’URL exacte du compte.`
+        ?`Aucun profil officiel direct à ${confirmed?'valider':'enregistrer'}. Les URLs saisies restent affichées — utilise https://…/@compte (pas une page RECHERCHE).`
         :'Aucun nouveau lien à enregistrer. Les champs vides ne suppriment plus les anciens liens.');
     }
     return null;
@@ -196,7 +220,7 @@ async function durableSaveLinks(id,card,options={}){
     applyServerUpdate(profileItem,data.updates?.[id],confirmed);
     rememberIntegritySignature();
     try{PASS50_V9.socialHydrated.delete(id)}catch{}
-    refreshLinksPanel();
+    refreshLinksPanel({fullRender:true});
     if(!options.silent&&typeof toast==='function'){
       const base=confirmed?'✓ Liens officiels validés et enregistrés sur le serveur':'✓ Liens enregistrés durablement sur le serveur';
       toast(invalid.length?`${base} · ${invalid.length} page(s) de recherche ignorée(s)`:base);
@@ -206,7 +230,7 @@ async function durableSaveLinks(id,card,options={}){
     Object.keys(links).forEach(platform=>{
       profileItem.linkChecks[platform]={status:'pending',checkedAt:new Date().toISOString(),message:'Brouillon conservé dans ce navigateur. Enregistrement serveur à relancer.'};
     });
-    refreshLinksPanel();
+    refreshLinksPanel({fullRender:true});
     if(!options.silent&&typeof toast==='function')toast(error?.message||'Serveur indisponible : les liens restent conservés dans ce navigateur');
     console.error('Sauvegarde durable des liens officiels',error);
     return null;
@@ -227,7 +251,7 @@ async function durableCheckLinks(id,card){
     refreshLinksPanel();
     if(typeof toast==='function'){
       toast(invalid.length
-        ?`Aucun profil direct à vérifier. Remplace les pages RECHERCHE (${invalid.join(', ')}) par l’URL exacte du compte.`
+        ?`Aucun profil direct à vérifier pour l’instant. Les URLs saisies sont conservées — vérifie https:// et le format @compte.`
         :'Aucun lien à vérifier');
     }
     return null;

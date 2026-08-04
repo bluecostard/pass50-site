@@ -65,17 +65,19 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
     def test_old_parallel_backups_are_disabled(self):
         self.assertIn("pass50_v227_confirmed_links_backup", CONFIG)
         self.assertIn("pass50_v226_nolimit_links_seeded", CONFIG)
-        self.assertIn("official-links-persistence-v3.js?v=3.3", CONFIG)
+        self.assertIn("official-links-persistence-v3.js?v=3.4", CONFIG)
 
     def test_cache_keeps_the_persistence_module(self):
         self.assertIn("const CACHE='pass50-v", SW)
-        self.assertIn("official-links-persistence-v3.js?v=3.3", SW)
+        self.assertIn("official-links-persistence-v3.js?v=3.4", SW)
 
     def test_search_urls_do_not_abort_whole_verification(self):
         self.assertIn("collectCardLinks(card,profileItem)", CLIENT)
-        self.assertIn("Page de recherche ou lien générique", CLIENT)
+        self.assertIn("Page de recherche détectée", CLIENT)
         self.assertIn("page(s) de recherche ignorée(s)", CLIENT)
         self.assertNotIn("Lien direct invalide", CLIENT)
+        self.assertNotIn("delete profileItem.links[platform]", CLIENT)
+        self.assertNotIn("input.value=''", CLIENT)
         save_block = CLIENT.split("async function durableSaveLinks", 1)[1].split("async function durableCheckLinks", 1)[0]
         self.assertIn("if(!Object.keys(links).length)", save_block)
         self.assertLess(save_block.index("collectCardLinks(card,profileItem)"), save_block.index("keepDraft(profileItem,links,confirmed)"))
@@ -84,7 +86,16 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
         check_block = CLIENT.split("async function durableCheckLinks", 1)[1].split("async function runIntegritySync", 1)[0]
         self.assertIn("collectCardLinks(card,profileItem)", check_block)
         self.assertIn("link-check.php", check_block)
-        self.assertIn("Remplace les pages RECHERCHE", check_block)
+        self.assertIn("Les URLs saisies sont conservées", check_block)
+
+    def test_urls_are_normalized_before_validation(self):
+        tools = (ROOT / "v9-tools.js").read_text(encoding="utf-8")
+        self.assertIn("p50v9NormalizeOfficialLink", tools)
+        self.assertIn("normalizeLink(platform,raw)", CLIENT)
+        self.assertIn("VERSION='3.4'", CLIENT)
+        core = (ROOT / "api" / "data-engine-core.php").read_text(encoding="utf-8")
+        self.assertIn("if ($url !== '' && !preg_match('#^https?://#i', $url))", core)
+        self.assertIn("path='/@'.$segments[0]", core)
 
 
 if __name__ == "__main__":
