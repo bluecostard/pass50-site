@@ -427,7 +427,7 @@
   }
 
   function deRenderIntelligence(pane){
-    pane.innerHTML=`<div class="data-engine-shell"><div class="section-head"><div><div class="section-title">PASS50 Intelligence</div><div class="muted">Analyse déterministe des données Radar. Aucun résultat ne modifie le score officiel ni le classement public.</div></div><button class="btn" id="deReloadIntelligence">Actualiser</button></div><div id="deIntelligenceContent" class="de-loading">Chargement des analyses…</div></div>`;
+    pane.innerHTML=`<div class="data-engine-shell"><div class="section-head"><div><div class="section-title">PASS50 Intelligence</div><div class="muted">Analyse déterministe des données Radar. Les signaux à confiance faible restent visibles. Aucun résultat ne modifie le score officiel ni le classement public.</div></div><button class="btn" id="deReloadIntelligence">Actualiser</button></div><div id="deIntelligenceContent" class="de-loading">Chargement des analyses…</div></div>`;
     deLoadIntelligence();
   }
   function deConfidence(level){return `<span class="p50i-confidence ${level==='élevée'?'high':level==='moyenne'?'medium':'low'}">${deEsc(level)}</span>`;}
@@ -435,16 +435,24 @@
     const initials=String(item.name||'?').split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
     const photo=item.photo?`<img src="${deEsc(item.photo)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:`<span>${deEsc(initials)}</span>`;
     const start=new Date(item.periodStart),end=new Date(item.periodEnd),period=Number.isNaN(start.getTime())?'Dernières 24 heures':`${start.toLocaleString('fr-FR')} – ${end.toLocaleString('fr-FR')}`;
-    return `<article class="p50i-card"><div class="p50i-head"><div class="p50i-avatar">${photo}</div><div><strong>${deEsc(item.name)}</strong><div>${deConfidence(item.confidenceLevel)}</div></div></div><div class="p50i-indexes"><span><b>${Number(item.growthIndex)}</b> Growth</span><span><b>${Number(item.buzzIndex)}</b> Buzz</span></div><div class="p50i-signal">${deEsc(item.mainVariation)}</div><p>${deEsc(item.explanation)}</p><small>${deEsc(period)}</small></article>`;
+    const low=item.confidenceLevel==='faible';
+    return `<article class="p50i-card ${low?'is-building':''}"><div class="p50i-head"><div class="p50i-avatar">${photo}</div><div><strong>${deEsc(item.name)}</strong><div>${deConfidence(item.confidenceLevel)}</div></div></div><div class="p50i-indexes"><span><b>${Number(item.growthIndex)}</b> Growth</span><span><b>${Number(item.buzzIndex)}</b> Buzz</span></div><div class="p50i-signal">${deEsc(item.mainVariation)}</div><p>${deEsc(item.explanation)}</p><small>${deEsc(period)}</small></article>`;
   }
-  function deIntelligenceSection(title,items,empty){
-    return `<section class="p50i-section"><div class="section-head"><div class="section-title">${deEsc(title)}</div><span class="muted">${items.length}/10 profil(s)</span></div>${items.length?`<div class="p50i-grid">${items.map(deIntelligenceCard).join('')}</div>`:`<div class="p50i-empty">${deEsc(empty)}</div>`}</section>`;
+  function deIntelligenceSection(title,items,empty,limit=10,extraClass=''){
+    return `<section class="p50i-section ${extraClass}"><div class="section-head"><div class="section-title">${deEsc(title)}</div><span class="muted">${items.length}/${limit} profil(s)</span></div>${items.length?`<div class="p50i-grid">${items.map(deIntelligenceCard).join('')}</div>`:`<div class="p50i-empty">${deEsc(empty)}</div>`}</section>`;
   }
   async function deLoadIntelligence(){
     const el=$('#deIntelligenceContent');if(!el)return;
     try{
       DE.intelligence=await apiFetch('intelligence.php');
-      el.innerHTML=`<div class="media-hint"><strong>Période :</strong> ${deEsc(DE.intelligence.periodLabel||'Dernières 24 heures comparées à la période précédente')} · confiance fondée sur le nombre de captures, les métriques disponibles et leur récence.</div>${deIntelligenceSection('Tendances fortes',DE.intelligence.strongTrends||[],'Aucune tendance forte avec une confiance suffisante.')}${deIntelligenceSection('Buzz détectés',DE.intelligence.buzzDetected||[],'Aucun buzz fiable détecté.')}${deIntelligenceSection('Profils en recul',DE.intelligence.declines||[],'Aucun recul significatif avec une confiance suffisante.')}`;
+      const summary=DE.intelligence.summary||{};
+      const analyzed=Number(summary.profilesAnalyzed||0);
+      const low=Number(summary.profilesLowConfidence||0);
+      const trusted=Number(summary.profilesTrusted||0);
+      const summaryLine=analyzed
+        ? `${analyzed} profil(s) analysé(s) · ${trusted} confiance moyenne/élevée · ${low} en construction`
+        : 'Aucune analyse récente : lance une MAJ PASS50 ou Enrichir pour alimenter cet onglet.';
+      el.innerHTML=`<div class="media-hint"><strong>Période :</strong> ${deEsc(DE.intelligence.periodLabel||'Dernières 24 heures comparées à la période précédente')} · ${deEsc(summaryLine)}</div>${deIntelligenceSection('Tendances fortes',DE.intelligence.strongTrends||[],'Aucune tendance détectée pour l’instant.')}${deIntelligenceSection('Buzz détectés',DE.intelligence.buzzDetected||[],'Aucun buzz détecté pour l’instant.')}${deIntelligenceSection('Profils en recul',DE.intelligence.declines||[],'Aucun recul détecté pour l’instant.')}${deIntelligenceSection('Signaux en construction',DE.intelligence.buildingSignals||[],'Aucune analyse en attente d’historique. Relance la MAJ pour capturer plus de points Radar.',20,'is-building')}`;
     }catch(err){el.innerHTML=`<div class="de-error">${deEsc(err.message||'PASS50 Intelligence indisponible')}</div>`;}
   }
 

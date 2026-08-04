@@ -252,12 +252,42 @@ function p50_intelligence_dashboard(): array {
             'periodStart'=>gmdate('c',strtotime((string)$row['period_start'])),'periodEnd'=>gmdate('c',strtotime((string)$row['period_end'])),
         ];
     }
-    $trusted=static fn(array $item): bool=>in_array($item['confidenceLevel'],['moyenne','élevée'],true);
-    $trends=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['recentData']&&$item['comparisonStatus']==='comparable'&&$item['growthIndex']>=65));
-    $buzz=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['recentData']&&$item['buzzIndex']>=70));
-    $declines=array_values(array_filter($items,static fn(array $item): bool=>$trusted($item)&&$item['comparisonStatus']==='comparable'&&$item['globalVariation']<=-20));
-    usort($trends,static fn($a,$b)=>$b['growthIndex']<=>$a['growthIndex']);
-    usort($buzz,static fn($a,$b)=>$b['buzzIndex']<=>$a['buzzIndex']);
-    usort($declines,static fn($a,$b)=>$a['globalVariation']<=>$b['globalVariation']);
-    return ['generatedAt'=>gmdate('c'),'periodLabel'=>'Dernières 24 heures comparées aux 24 heures précédentes','strongTrends'=>array_slice($trends,0,10),'buzzDetected'=>array_slice($buzz,0,10),'declines'=>array_slice($declines,0,10)];
+    // Affichage assoupli : la confiance faible reste visible (badge),
+    // les seuils signal sont un cran plus bas que les diagnostics MAJ.
+    $trends=array_values(array_filter($items,static fn(array $item): bool=>$item['recentData']&&$item['comparisonStatus']==='comparable'&&$item['growthIndex']>=55));
+    $buzz=array_values(array_filter($items,static fn(array $item): bool=>$item['recentData']&&$item['buzzIndex']>=60));
+    $declines=array_values(array_filter($items,static fn(array $item): bool=>$item['comparisonStatus']==='comparable'&&$item['globalVariation']<=-15));
+    usort($trends,static function($a,$b){
+        $rank=static fn($item)=>($item['confidenceLevel']==='élevée'?2:($item['confidenceLevel']==='moyenne'?1:0));
+        return [$b['growthIndex'],$rank($b)]<=>[$a['growthIndex'],$rank($a)];
+    });
+    usort($buzz,static function($a,$b){
+        $rank=static fn($item)=>($item['confidenceLevel']==='élevée'?2:($item['confidenceLevel']==='moyenne'?1:0));
+        return [$b['buzzIndex'],$rank($b)]<=>[$a['buzzIndex'],$rank($a)];
+    });
+    usort($declines,static function($a,$b){
+        $rank=static fn($item)=>($item['confidenceLevel']==='élevée'?2:($item['confidenceLevel']==='moyenne'?1:0));
+        return [$a['globalVariation'],-$rank($a)]<=>[$b['globalVariation'],-$rank($b)];
+    });
+    $trends=array_slice($trends,0,10);
+    $buzz=array_slice($buzz,0,10);
+    $declines=array_slice($declines,0,10);
+    $shown=[];
+    foreach(array_merge($trends,$buzz,$declines) as $item)$shown[$item['profileId']]=true;
+    $building=array_values(array_filter($items,static fn(array $item): bool=>!isset($shown[$item['profileId']])));
+    usort($building,static fn($a,$b)=>[$b['growthIndex'],$b['buzzIndex']]<=>[$a['growthIndex'],$a['buzzIndex']]);
+    $lowConfidence=count(array_filter($items,static fn(array $item): bool=>$item['confidenceLevel']==='faible'));
+    return [
+        'generatedAt'=>gmdate('c'),
+        'periodLabel'=>'Dernières 24 heures comparées aux 24 heures précédentes',
+        'summary'=>[
+            'profilesAnalyzed'=>count($items),
+            'profilesLowConfidence'=>$lowConfidence,
+            'profilesTrusted'=>count($items)-$lowConfidence,
+        ],
+        'strongTrends'=>$trends,
+        'buzzDetected'=>$buzz,
+        'declines'=>$declines,
+        'buildingSignals'=>array_slice($building,0,20),
+    ];
 }
