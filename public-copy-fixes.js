@@ -23,6 +23,6 @@
   if(!document.querySelector('script[data-pass50-profile-lionel-pcs]')){const script=document.createElement('script');script.src='./profile-lionel-pcs.js?v=1.0';script.dataset.pass50ProfileLionelPcs='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-profile-yasmine-fofana]')){const script=document.createElement('script');script.src='./profile-yasmine-fofana.js?v=1.0';script.dataset.pass50ProfileYasmineFofana='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-fictive-ranking-admin]')){const script=document.createElement('script');script.src='./admin-fictive-ranking-v1.js?v=1.0';script.dataset.pass50FictiveRankingAdmin='1.0';document.head.appendChild(script);}
-  if(!document.querySelector('script[data-pass50-classability-sync]')){const script=document.createElement('script');script.src='./classability-sync-v1.js?v=1.2';script.async=false;script.dataset.pass50ClassabilitySync='1.2';document.head.appendChild(script);}
+  if(!document.querySelector('script[data-pass50-classability-sync]')){const script=document.createElement('script');script.src='./classability-sync-v1.js?v=1.3';script.async=false;script.dataset.pass50ClassabilitySync='1.3';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-mobile-bottom-nav]')){const script=document.createElement('script');script.src='./mobile-bottom-nav-v1.js?v=1.2';script.async=false;script.dataset.pass50MobileBottomNav='1.2';document.head.appendChild(script);}
 })();
