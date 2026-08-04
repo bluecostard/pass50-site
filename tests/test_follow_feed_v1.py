@@ -29,16 +29,32 @@ class FollowFeedV2Tests(unittest.TestCase):
         self.assertIn("SOURCE OFFICIELLE", feed)
         self.assertIn("state.news.map(feedCard)", feed)
 
-    def test_mobile_menu_is_bottom_and_has_no_live_tab(self):
+    def test_mobile_menu_is_compact_centered_and_has_no_live_tab(self):
         nav = read("mobile-bottom-nav-v1.js")
-        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.1", nav)
-        self.assertIn("position:fixed;left:0;right:0;bottom:0", nav)
-        self.assertIn("grid-template-columns:repeat(3,1fr)", nav)
+        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.2", nav)
+        self.assertIn("position:fixed;left:50%;right:auto", nav)
+        self.assertIn("width:min(350px,calc(100vw - 28px))", nav)
+        self.assertIn("transform:translateX(-50%)", nav)
+        self.assertIn("border-radius:24px", nav)
+        self.assertIn("grid-template-columns:minmax(82px,1fr) minmax(104px,1.18fr) minmax(82px,1fr)", nav)
+        self.assertNotIn('data-p50-tab="live"', nav)
+        self.assertNotIn("<span>En direct</span>", nav)
+
+    def test_ranking_is_the_raised_middle_action_with_vector_icons(self):
+        nav = read("mobile-bottom-nav-v1.js")
+        feed_position = nav.index('data-p50-tab="feed"')
+        ranking_position = nav.index('data-p50-tab="ranking"')
+        account_position = nav.index('data-p50-tab="account"')
+        self.assertLess(feed_position, ranking_position)
+        self.assertLess(ranking_position, account_position)
+        self.assertIn("p50-bottom-link-ranking", nav)
+        self.assertIn("min-height:78px", nav)
+        self.assertIn("margin-top:-18px", nav)
+        self.assertIn("transform:translateY(-3px)", nav)
+        self.assertGreaterEqual(nav.count('<svg viewBox="0 0 24 24">'), 3)
         self.assertIn("Classement", nav)
         self.assertIn("Mon fil", nav)
         self.assertIn("Mon espace", nav)
-        self.assertNotIn('data-p50-tab="live"', nav)
-        self.assertNotIn("<span>En direct</span>", nav)
 
     def test_live_radar_stays_in_the_fixed_header_on_both_pages(self):
         page = read("mon-fil.html")
@@ -54,16 +70,17 @@ class FollowFeedV2Tests(unittest.TestCase):
         self.assertNotIn("header>.actions{display:none!important}", nav)
         self.assertNotIn('id="liveSection"', page)
 
-    def test_loader_and_cache_use_the_new_page_without_live_regression(self):
+    def test_loader_and_cache_use_the_centered_menu_without_live_regression(self):
         loader = read("public-copy-fixes.js")
         worker = read("sw.js")
-        self.assertIn("mobile-bottom-nav-v1.js?v=1.1", loader)
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.2", loader)
         self.assertNotIn("data-pass50-follow-watch", loader)
         self.assertIn("live-experience-v4-1.js?v=1.4", loader)
         self.assertIn("./mon-fil.html", worker)
         self.assertIn("./mon-fil.js?v=2.1", worker)
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.2", worker)
         self.assertIn("live-radar-v3.js?v=1.7", worker)
-        self.assertIn("pass50-v63-mobile-feed", worker)
+        self.assertIn("pass50-v65-mobile-nav-centered", worker)
 
 
 if __name__ == "__main__":
