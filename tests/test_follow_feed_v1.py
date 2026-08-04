@@ -8,31 +8,62 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-class FollowFeedV1Tests(unittest.TestCase):
-    def test_feed_is_finite_and_user_selected(self):
-        feed = read("follow-feed-v1.js")
-        self.assertIn("PASS50-FOLLOW-WATCH-V1.0", feed)
+class FollowFeedV2Tests(unittest.TestCase):
+    def test_feed_is_a_separate_finite_page(self):
+        page = read("mon-fil.html")
+        feed = read("mon-fil.js")
+        self.assertIn('<body data-pass50-page="feed">', page)
+        self.assertIn('id="feedList"', page)
+        self.assertIn("PASS50-FOLLOW-FEED-PAGE-V2.1", feed)
         self.assertIn("const MAX_FOLLOWED = 5", feed)
+        self.assertIn("const NEWS_PER_PROFILE = 2", feed)
         self.assertIn("slice(0, MAX_FOLLOWED)", feed)
-        self.assertIn("Fin de votre veille", feed)
-        self.assertIn("Aucun contenu suggéré", feed)
-        self.assertNotIn("infinite", feed.lower())
+        self.assertIn("Fin de votre fil", page)
+        self.assertIn("aucune recommandation extérieure", page)
 
-    def test_feed_combines_ranking_live_news_and_official_links(self):
-        feed = read("follow-feed-v1.js")
-        self.assertIn("completeRanking", feed)
-        self.assertIn("activeLives", feed)
+    def test_feed_uses_only_followed_profiles_and_validated_news(self):
+        feed = read("mon-fil.js")
+        self.assertIn("state.following.map(loadNewsFor)", feed)
         self.assertIn("content-feed.php", feed)
-        self.assertIn("p50RecoverableDirectLink", feed)
-        self.assertIn("POURQUOI DANS LE TOP 5", feed)
+        self.assertIn("INFORMATION VALIDÉE", feed)
+        self.assertIn("SOURCE OFFICIELLE", feed)
+        self.assertIn("state.news.map(feedCard)", feed)
 
-    def test_user_space_and_cache_are_wired(self):
+    def test_mobile_menu_is_bottom_and_has_no_live_tab(self):
+        nav = read("mobile-bottom-nav-v1.js")
+        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.1", nav)
+        self.assertIn("position:fixed;left:0;right:0;bottom:0", nav)
+        self.assertIn("grid-template-columns:repeat(3,1fr)", nav)
+        self.assertIn("Classement", nav)
+        self.assertIn("Mon fil", nav)
+        self.assertIn("Mon espace", nav)
+        self.assertNotIn('data-p50-tab="live"', nav)
+        self.assertNotIn("<span>En direct</span>", nav)
+
+    def test_live_radar_stays_in_the_fixed_header_on_both_pages(self):
+        page = read("mon-fil.html")
+        feed = read("mon-fil.js")
+        nav = read("mobile-bottom-nav-v1.js")
+        index = read("index.html")
+        self.assertIn('id="feedLiveRadarBtn"', page)
+        self.assertIn('id="feedLiveModal"', page)
+        self.assertIn("live-status.php", feed)
+        self.assertIn("state.liveStreams = normalizeLives(data?.liveStreams)", feed)
+        self.assertIn('id="liveBtn"', index)
+        self.assertIn("header>nav{display:none!important}", nav)
+        self.assertNotIn("header>.actions{display:none!important}", nav)
+        self.assertNotIn('id="liveSection"', page)
+
+    def test_loader_and_cache_use_the_new_page_without_live_regression(self):
         loader = read("public-copy-fixes.js")
         worker = read("sw.js")
-        self.assertIn("follow-feed-v1.js?v=1.0", loader)
-        self.assertIn("data-pass50-follow-watch", loader)
-        self.assertIn("follow-feed-v1.js?v=1.0", worker)
-        self.assertIn("pass50-v58-follow-watch", worker)
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.1", loader)
+        self.assertNotIn("data-pass50-follow-watch", loader)
+        self.assertIn("live-experience-v4-1.js?v=1.4", loader)
+        self.assertIn("./mon-fil.html", worker)
+        self.assertIn("./mon-fil.js?v=2.1", worker)
+        self.assertIn("live-radar-v3.js?v=1.7", worker)
+        self.assertIn("pass50-v63-mobile-feed", worker)
 
 
 if __name__ == "__main__":

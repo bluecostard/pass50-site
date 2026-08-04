@@ -670,7 +670,10 @@ function openProfile(id){
 function personRow(id,type){const p=profile(id),u=userPrefs(),follow=type==='follow';return `<div class="person-row" data-profile="${id}">${avatarHtml(p)}<div><strong>${p.name}</strong><div class="muted">Score ${score(p)} · ${arrow(p)}</div></div><div class="person-actions">${follow?`<button class="btn small alert-toggle ${u.followAlerts[id]!==false?'on':''}" data-id="${id}">${u.followAlerts[id]!==false?'🔔':'🔕'}</button>`:''}<button class="btn small ${follow?'follow':'fav'}" data-id="${id}">Retirer</button></div></div>`}
 function openUser(){if(!requireAuth())return;const u=userPrefs(),admin=u.role==='owner'?`<div class="pref"><div><strong>Administration</strong><div class="muted">Gérer les profils, signaux et classements.</div></div><button class="btn" id="adminOpen">Ouvrir</button></div>`:'';$('#userBody').innerHTML=`<div class="user-grid"><section class="user-section"><div class="user-title"><span>★ Mes favoris</span><span>${u.favorites.length}/3</span></div>${u.favorites.length?u.favorites.map(id=>personRow(id,'favorite')).join(''):'<div class="empty">Aucun favori sélectionné.</div>'}</section><section class="user-section"><div class="user-title"><span>🔔 Mes suivis</span><span>${u.following.length}/5</span></div>${u.following.length?u.following.map(id=>personRow(id,'follow')).join(''):'<div class="empty">Aucun influenceur suivi.</div>'}</section><section class="user-section full"><div class="user-title"><span>Notifications</span><span class="muted">Maximum 3 par jour</span></div><div class="pref"><div><strong>Fréquence</strong><div class="muted">Immédiates, résumé quotidien ou désactivées.</div></div><div class="seg" id="notificationModes"><button data-mode="instant" class="${u.notificationMode==='instant'?'active':''}">Immédiates</button><button data-mode="daily" class="${u.notificationMode==='daily'?'active':''}">Résumé</button><button data-mode="off" class="${u.notificationMode==='off'?'active':''}">Off</button></div></div><div class="pref"><div><strong>Notifications iOS / navigateur</strong></div><button class="btn" id="browserNotify">Activer</button></div><div class="pref"><div><strong>Effets sonores</strong><div class="muted">Nouveau n°1, LIVE et record uniquement.</div></div><button class="btn" id="soundToggle">${u.soundEnabled?'Activés':'Désactivés'}</button></div></section><section class="user-section full"><div class="user-title"><span>Mon compte</span><span>${u.role==='owner'?'Propriétaire':'Membre'}</span></div><div class="pref"><div><strong>${u.displayName}</strong><div class="muted">${u.email}</div></div><button class="btn" id="logoutBtn">Déconnexion</button></div>${admin}<div class="pref"><div><strong>Supprimer le compte</strong></div><button class="btn danger" id="deleteAccountBtn">Supprimer</button></div></section></div>`;open('userModal');}
 function openTop50(){
-  const r=completeRanking(),lastUrgentFrom=Math.max(51,r.length-9);
+  const r=completeRanking();
+  const classableCount=r.filter(isClassableProfile).length;
+  const heatSpan=Math.max(1,Math.min(50,classableCount)-1);
+  const lastUrgentFrom=Math.max(classableCount+1,r.length-9);
   const rows=r.map((p,i)=>{
     const classable=isClassableProfile(p),rank=i+1,searchText=`${p.name} ${p.handle||''} ${p.category||''}`.toLowerCase();
     const scoreCell=classable?formatTrendScore(score(p)):'À vérifier';
@@ -679,12 +682,12 @@ function openTop50(){
     let tone='rank-beyond unranked',style=`--row-i:${i}`,detail;
     if(classable&&rank<=50){
       tone=`rank-chart${rank<=10?' rank-elite':''}`;
-      style+=`;--rank-t:${((rank-1)/49).toFixed(3)}`;
+      style+=`;--rank-t:${((rank-1)/heatSpan).toFixed(3)}`;
       detail=rank<=10?'Top 10':'Top 50';
     }else if(rank>=lastUrgentFrom){
       tone='rank-danger';
       style+=`;--rank-i:${((rank-lastUrgentFrom)/Math.max(1,r.length-lastUrgentFrom)).toFixed(3)}`;
-      detail='Hors Top 50 · zone critique';
+      detail='Hors classement · zone critique';
     }else{
       detail=classable?'Hors Top 50':'Profil recensé · données à compléter';
     }
