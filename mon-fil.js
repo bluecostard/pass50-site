@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.2';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.3';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -199,7 +199,8 @@
     const selected = String(item.selectedProfileId) === String(a.profileId) ? profileA : profileB;
     const matched = [profileA, profileB].filter(profile => state.following.includes(String(profile.id)));
     const because = matched.length ? `Parce que vous suivez ${matched.map(profile => profile.name).join(' et ')}` : 'Duel lié à vos suivis';
-    return `<article class="feed-card duel-audio-feed-card"><div class="duel-audio-feed-head"><div class="duel-audio-avatars">${avatarHtml(profileA)}<span>VS</span>${avatarHtml(profileB)}</div><div><div class="duel-audio-kicker">🎙 LES COULÉS · AUDIO PUBLIC</div><strong>${esc(profileA.name)} VS ${esc(profileB.name)}</strong><div class="feed-meta">${esc(because)} · ${esc(relativeDate(item.publishedAt))}</div></div></div><div class="duel-audio-feed-body"><h2>Un membre PASS50 commente son vote pour ${esc(selected.name)}</h2><div class="duel-audio-player"><span>${durationLabel(item.durationMs)}</span><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio du duel"></audio></div><div class="feed-meta">Identité non affichée · Audio publié volontairement lors du partage</div><div class="feed-actions"><a class="btn primary" href="./?section=coules">Voir le duel</a><a class="btn" href="./?profile=${encodeURIComponent(selected.id || '')}">Voir la fiche de ${esc(selected.name)}</a></div></div></article>`;
+    const author = String(item.authorPseudo || 'Membre PASS50').trim() || 'Membre PASS50';
+    return `<article class="feed-card duel-audio-feed-card"><div class="duel-audio-feed-head"><div class="duel-audio-avatars">${avatarHtml(profileA)}<span>VS</span>${avatarHtml(profileB)}</div><div><div class="duel-audio-kicker">🎙 LES COULÉS · ${esc(author)}</div><strong>${esc(profileA.name)} VS ${esc(profileB.name)}</strong><div class="feed-meta">${esc(because)} · ${esc(relativeDate(item.publishedAt))}</div></div></div><div class="duel-audio-feed-body"><h2>${esc(author)} commente son vote pour ${esc(selected.name)}</h2><div class="duel-audio-player"><span>${durationLabel(item.durationMs)}</span><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio de ${attr(author)}"></audio></div><div class="feed-meta">Pseudo issu de son compte utilisateur PASS50 · Audio publié volontairement lors du partage</div><div class="feed-actions"><a class="btn primary" href="./?section=coules">Voir le duel</a><a class="btn" href="./?profile=${encodeURIComponent(selected.id || '')}">Voir la fiche de ${esc(selected.name)}</a></div></div></article>`;
   }
 
   function feedCard(item) {
