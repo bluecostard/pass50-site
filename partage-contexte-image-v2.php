@@ -74,9 +74,21 @@ function p50_og_v2_initials(string $name): string {
     foreach(array_slice($parts,0,2) as $part)$value.=mb_substr($part,0,1);
     return mb_strtoupper($value!==''?$value:'P50','UTF-8');
 }
+function p50_og_v2_cached_asset(?array $profile): ?array {
+    if(!$profile)return null;
+    $reference=p50_share_photo_reference($profile);
+    if($reference==='')return null;
+    $data=p50_share_photo_data_asset($reference);if($data)return $data;
+    $local=p50_share_photo_local_asset($reference);if($local)return $local;
+    return preg_match('#^https?://#i',$reference)?p50_share_photo_cached_asset($reference):null;
+}
 function p50_og_v2_avatar(GdImage $canvas,?array $profile,int $x,int $y,int $size,int $accent,int $white): void {
-    $source=null;
-    if($profile){$asset=p50_share_photo_asset_for_profile($profile);if($asset)$source=@imagecreatefromstring((string)$asset['bytes']);}
+    $source=null;$asset=p50_og_v2_cached_asset($profile);
+    if($asset){
+        $bytes=(string)($asset['bytes']??'');$info=$bytes!==''?@getimagesizefromstring($bytes):false;
+        $width=is_array($info)?(int)($info[0]??0):0;$height=is_array($info)?(int)($info[1]??0):0;
+        if($width>0&&$height>0&&$width<=12000&&$height<=12000&&$width*$height<=40000000)$source=@imagecreatefromstring($bytes);
+    }
     $mask=imagecreatetruecolor($size,$size);$transparent=imagecolorallocate($mask,1,2,1);imagefill($mask,0,0,$transparent);imagecolortransparent($mask,$transparent);
     if($source instanceof GdImage){
         $w=imagesx($source);$h=imagesy($source);$side=min($w,$h);$sx=(int)(($w-$side)/2);$sy=(int)(($h-$side)/2);
