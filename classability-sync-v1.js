@@ -1,9 +1,11 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.2';
+  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.3';
   const METRIC_SOURCE = /(?:^|\b)MR-V1\.0(?:\b|$)/i;
   const PUBLISHED_MR_STATUS = 'published_mr_v1';
+  const VERIFIED_LINK_STATUSES = new Set(['owner_verified', 'manual_verified', 'ok', 'verified']);
+  const MIN_VERIFIED_LINKS = 1;
   let syncing = false;
 
   function profiles() {
@@ -18,6 +20,50 @@
     const engine = profileItem?.dataEngine || {};
     return METRIC_SOURCE.test(String(engine.algorithmVersion || ''))
       && String(engine.scoreStatus || '') === PUBLISHED_MR_STATUS;
+  }
+
+  function isDirectOfficialUrl(platform, url) {
+    try {
+      if (typeof p50v9IsDirectPlatformLink === 'function') return p50v9IsDirectPlatformLink(platform, url);
+    } catch (_) {}
+    const value = String(url || '');
+    if (!/^https?:\/\//i.test(value)) return false;
+    if (/results\?|search\/top|\/search\?/i.test(value)) return false;
+    return true;
+  }
+
+  function verifiedOfficialLinkCount(profileItem) {
+    const links = profileItem?.links && typeof profileItem.links === 'object' ? profileItem.links : {};
+    const checks = profileItem?.linkChecks && typeof profileItem.linkChecks === 'object' ? profileItem.linkChecks : {};
+    let count = 0;
+    Object.entries(links).forEach(([platform, url]) => {
+      if (!isDirectOfficialUrl(platform, url)) return;
+      const status = String(checks[platform]?.status || '');
+      if (VERIFIED_LINK_STATUSES.has(status)) count += 1;
+    });
+    return count;
+  }
+
+  function promoteFromVerifiedLinks(profileItem) {
+    if (!profileItem || typeof profileItem !== 'object' || profileItem.alive === false) return false;
+    // Ne pas écraser une exclusion MR publiée.
+    if (metricsControlsClassability(profileItem) && profileItem.classable === false) return false;
+    if (verifiedOfficialLinkCount(profileItem) < MIN_VERIFIED_LINKS) return false;
+    let changed = false;
+    if (profileItem.eligible !== true) {
+      profileItem.eligible = true;
+      changed = true;
+    }
+    if (!metricsControlsClassability(profileItem) && profileItem.classable !== true) {
+      profileItem.classable = true;
+      changed = true;
+    }
+    if (changed) {
+      profileItem.eligibilitySource = 'verified_official_links';
+      profileItem.classabilitySource = 'verified_official_links';
+      profileItem.classabilityUpdatedAt = new Date().toISOString();
+    }
+    return changed;
   }
 
   function expectedLegacyClassability(profileItem) {
@@ -48,9 +94,10 @@
   function repairProfile(profileItem, { adminSave = false } = {}) {
     if (!profileItem || typeof profileItem !== 'object') return false;
 
+    let changed = promoteFromVerifiedLinks(profileItem);
+
     const metricsControlled = metricsControlsClassability(profileItem);
     const editorialEligible = Boolean(profileItem.eligible === true && profileItem.alive !== false);
-    let changed = false;
 
     if (profileItem.editorialEligible !== editorialEligible) {
       profileItem.editorialEligible = editorialEligible;
@@ -65,7 +112,7 @@
         profileItem.classable = expected;
         changed = true;
       }
-      if (changed || adminSave) {
+      if ((changed || adminSave) && profileItem.classabilitySource !== 'verified_official_links') {
         profileItem.classabilitySource = 'admin_eligibility';
         profileItem.classabilityUpdatedAt = new Date().toISOString();
       }
@@ -83,13 +130,20 @@
       publishedMrClassable: 0,
       publishedMrExcluded: 0,
       legacyEligibleRepaired: 0,
+      verifiedLinkPromoted: 0,
+      verifiedLinkReadyButBlocked: 0,
     };
 
     profiles().forEach(profileItem => {
       summary.total += 1;
+      const verifiedReady = verifiedOfficialLinkCount(profileItem) >= MIN_VERIFIED_LINKS;
+      if (profileItem?.eligibilitySource === 'verified_official_links' || profileItem?.classabilitySource === 'verified_official_links') {
+        summary.verifiedLinkPromoted += 1;
+      }
       const eligible = expectedLegacyClassability(profileItem);
       if (!eligible) {
         summary.ineligible += 1;
+        if (verifiedReady) summary.verifiedLinkReadyButBlocked += 1;
         return;
       }
       summary.eligible += 1;
@@ -147,7 +201,7 @@
     const changed = repairProfile(item, { adminSave: true });
     // La source et la date doivent être sauvegardées même si le booléen était
     // déjà cohérent : cela distingue désormais la validation administrative.
-    if (changed || item.classabilitySource === 'admin_eligibility') {
+    if (changed || item.classabilitySource === 'admin_eligibility' || item.classabilitySource === 'verified_official_links') {
       persistAndRender();
       window.PASS50_CLASSABILITY_DIAGNOSTIC = Object.freeze(diagnose());
       return true;
@@ -163,6 +217,15 @@
       if (!(form instanceof HTMLFormElement) || form.id !== 'profileForm') return;
       const profileId = form.dataset.id || '';
       setTimeout(() => repairSavedProfile(profileId), 0);
+    });
+  }
+
+  function installLinkSaveBridge() {
+    document.addEventListener('click', event => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (!target.closest('.save-links, .check-links, #recoverProfileLinks, #recoverAllLinks')) return;
+      setTimeout(() => repairAll({ forceRender: true }), 80);
     });
   }
 
@@ -183,6 +246,7 @@
   function init() {
     installAuthoritativeRule();
     installProfileFormBridge();
+    installLinkSaveBridge();
     repairAll({ forceRender: true });
     installCloudRepairWindow();
     window.addEventListener('storage', () => setTimeout(() => repairAll({ forceRender: true }), 0));
@@ -193,6 +257,8 @@
       diagnose,
       metricsControlsClassability,
       authoritativeIsClassableProfile,
+      verifiedOfficialLinkCount,
+      promoteFromVerifiedLinks,
       installAuthoritativeRule,
     });
   }

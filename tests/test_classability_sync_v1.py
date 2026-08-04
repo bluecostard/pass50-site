@@ -181,11 +181,100 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("published_mr_v1", SYNC)
 
     def test_loader_and_cache_are_versioned(self):
-        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.2", SYNC)
-        self.assertIn("classability-sync-v1.js?v=1.2", LOADER)
+        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.3", SYNC)
+        self.assertIn("classability-sync-v1.js?v=1.3", LOADER)
         self.assertIn("data-pass50-classability-sync", LOADER)
-        self.assertIn("classability-sync-v1.js?v=1.2", SW)
-        self.assertIn("pass50-v68-mass-classability-fix", SW)
+        self.assertIn("classability-sync-v1.js?v=1.3", SW)
+        self.assertIn("pass50-v69-verified-link-promote", SW)
+
+    def test_verified_official_links_auto_promote_eligibility(self):
+        script = textwrap.dedent(
+            r"""
+            const fs = require('fs');
+            const vm = require('vm');
+            const source = fs.readFileSync('classability-sync-v1.js', 'utf8');
+            let domReady = null;
+            const context = {
+              console,
+              addEventListener() {},
+              document: {
+                readyState: 'loading',
+                addEventListener(name, callback) { if (name === 'DOMContentLoaded') domReady = callback; }
+              },
+              HTMLFormElement: function HTMLFormElement() {},
+              setInterval() { return 1; },
+              clearInterval() {},
+              setTimeout(callback) { callback(); return 1; },
+              render() {},
+              save() {},
+              p50v9IsDirectPlatformLink(platform, url) {
+                return /^https?:\/\//i.test(String(url || '')) && !/search/i.test(String(url || ''));
+              },
+              db: {
+                profiles: [
+                  {
+                    id: 'african-ryou',
+                    eligible: false,
+                    alive: true,
+                    classable: false,
+                    links: { TikTok: 'https://www.tiktok.com/@african_ryou', Instagram: 'https://www.instagram.com/african_ryou/' },
+                    linkChecks: {
+                      TikTok: { status: 'manual_verified' },
+                      Instagram: { status: 'owner_verified' }
+                    }
+                  },
+                  {
+                    id: 'no-links',
+                    eligible: false,
+                    alive: true,
+                    classable: false,
+                    links: {},
+                    linkChecks: {}
+                  },
+                  {
+                    id: 'published-mr-excluded',
+                    eligible: false,
+                    alive: true,
+                    classable: false,
+                    links: { YouTube: 'https://www.youtube.com/@x' },
+                    linkChecks: { YouTube: { status: 'ok' } },
+                    dataEngine: { algorithmVersion: 'MR-V1.0', scoreStatus: 'published_mr_v1' }
+                  }
+                ]
+              }
+            };
+            context.window = context;
+            context.__pass50CloudReady = true;
+            context.isClassableProfile = profile => Boolean(profile?.eligible) && profile.classable !== false;
+            vm.createContext(context);
+            vm.runInContext(source, context);
+            domReady();
+
+            const api = context.PASS50_CLASSABILITY_SYNC;
+            const byId = Object.fromEntries(context.db.profiles.map(profile => [profile.id, profile]));
+
+            if (byId['african-ryou'].eligible !== true || byId['african-ryou'].classable !== true) {
+              throw new Error('verified links did not promote african-ryou');
+            }
+            if (!api.authoritativeIsClassableProfile(byId['african-ryou'])) {
+              throw new Error('promoted profile still rejected');
+            }
+            if (byId['african-ryou'].classabilitySource !== 'verified_official_links') {
+              throw new Error('missing verified_official_links source');
+            }
+            if (byId['no-links'].eligible !== false) throw new Error('profile without links was promoted');
+            if (byId['published-mr-excluded'].classable !== false) {
+              throw new Error('published MR exclusion was overwritten by link promotion');
+            }
+            """
+        )
+        subprocess.run(
+            ["node", "-e", script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
 
 
 if __name__ == "__main__":
