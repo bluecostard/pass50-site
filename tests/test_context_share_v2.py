@@ -62,7 +62,8 @@ class ContextShareV2Tests(unittest.TestCase):
         self.assertIn("partage-contexte-image-v2.php", self.landing)
         self.assertIn("og:image", self.landing)
         self.assertIn("p50_og_v2_avatar", self.og)
-        self.assertIn("p50_share_photo_asset_for_profile", self.og)
+        self.assertIn("p50_og_v2_cached_asset", self.og)
+        self.assertIn("p50_share_photo_cached_asset", self.og)
         for kind in ("ranking-top3", "ranking-top10", "ranking-top50", "feed-post", "duel-audio"):
             self.assertIn(f"'{kind}'", self.landing)
             self.assertIn(f"'{kind}'", self.og)
