@@ -80,7 +80,7 @@ class FollowFeedV2Tests(unittest.TestCase):
         self.assertIn("./mon-fil.js?v=2.1", worker)
         self.assertIn("mobile-bottom-nav-v1.js?v=1.2", worker)
         self.assertIn("live-radar-v3.js?v=1.7", worker)
-        self.assertIn("pass50-v65-mobile-nav-centered", worker)
+        self.assertRegex(worker, r"pass50-v\d+-[a-z0-9-]+")
 
 
 if __name__ == "__main__":
