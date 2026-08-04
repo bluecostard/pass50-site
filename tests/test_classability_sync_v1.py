@@ -181,11 +181,13 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("published_mr_v1", SYNC)
 
     def test_loader_and_cache_are_versioned(self):
-        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.3", SYNC)
-        self.assertIn("classability-sync-v1.js?v=1.3", LOADER)
+        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.4", SYNC)
+        self.assertIn("classability-sync-v1.js?v=1.4", LOADER)
         self.assertIn("data-pass50-classability-sync", LOADER)
-        self.assertIn("classability-sync-v1.js?v=1.3", SW)
-        self.assertIn("pass50-v69-verified-link-promote", SW)
+        self.assertIn("classability-sync-v1.js?v=1.4", SW)
+        self.assertIn("pass50-v71-fix-verify-links", SW)
+        self.assertIn("PASS50_LINK_SAVE_RUNNING", SYNC)
+        self.assertNotIn("repairAll({ forceRender: true }), 80", SYNC)
 
     def test_verified_official_links_auto_promote_eligibility(self):
         script = textwrap.dedent(

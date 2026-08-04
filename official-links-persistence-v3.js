@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='3.2';
+const VERSION='3.3';
 const INTEGRITY_KEY='pass50_official_links_integrity_v3';
 let installed=false;
 let integrityRunning=false;
@@ -38,15 +38,34 @@ function resumeCloudWrite(){
   window.PASS50_LINK_SAVE_RUNNING=false;
 }
 
-function collectCardLinks(card){
+function collectCardLinks(card,profileItem){
   const links={};
   const invalid=[];
   card.querySelectorAll('[data-link-platform]').forEach(input=>{
     const platform=String(input.dataset.linkPlatform||'').trim();
     const url=String(input.value||'').trim();
     if(!platform||!url)return; // Un champ vide ne supprime plus une donnée enregistrée.
-    if(!directLink(platform,url))invalid.push(platform);
-    else links[platform]=url;
+    if(directLink(platform,url)){
+      links[platform]=url;
+      return;
+    }
+    invalid.push(platform);
+    // Les pages de recherche ne doivent ni bloquer les autres plateformes,
+    // ni rester stockées comme si elles étaient officielles.
+    if(profileItem){
+      profileItem.links=profileItem.links||{};
+      profileItem.linkChecks=profileItem.linkChecks||{};
+      const existing=String(profileItem.links[platform]||'');
+      if(!existing||!directLink(platform,existing)){
+        delete profileItem.links[platform];
+        input.value='';
+      }
+      profileItem.linkChecks[platform]={
+        status:'search_not_official',
+        checkedAt:new Date().toISOString(),
+        message:'Page de recherche ou lien générique : colle l’URL exacte du profil (ex. tiktok.com/@compte).',
+      };
+    }
   });
   return {links,invalid};
 }
@@ -137,24 +156,36 @@ function rememberIntegritySignature(restoredCount=0){
   try{localStorage.setItem(INTEGRITY_KEY,JSON.stringify({signature:currentIntegritySignature(),at:Date.now(),restored:Number(restoredCount||0)}))}catch{}
 }
 
+function refreshLinksPanel(){
+  persistLocal();
+  if(typeof render==='function')render();
+  if(typeof p50v9RenderLinks==='function'&&typeof ui==='object'&&ui.adminTab==='links')p50v9RenderLinks();
+}
+
+function skippedSearchToast(invalid){
+  if(!invalid.length||typeof toast!=='function')return;
+  toast(`Ignoré (page de recherche, pas un profil) : ${invalid.join(', ')}. Colle l’URL exacte du compte.`);
+}
+
 async function durableSaveLinks(id,card,options={}){
   const profileItem=profileById(id);
   if(!profileItem||!card)return null;
   const confirmed=options.confirmedOverride??Boolean(card.querySelector('.confirm-all-links')?.checked);
-  const {links,invalid}=collectCardLinks(card);
+  const {links,invalid}=collectCardLinks(card,profileItem);
 
-  if(invalid.length){
-    if(typeof toast==='function')toast(`Lien direct invalide : ${invalid.join(', ')}`);
-    return null;
-  }
   if(!Object.keys(links).length){
-    if(typeof toast==='function')toast('Aucun nouveau lien à enregistrer. Les champs vides ne suppriment plus les anciens liens.');
+    refreshLinksPanel();
+    if(!options.silent&&typeof toast==='function'){
+      toast(invalid.length
+        ?`Aucun profil officiel direct à ${confirmed?'valider':'enregistrer'}. Remplace les pages RECHERCHE par l’URL exacte du compte.`
+        :'Aucun nouveau lien à enregistrer. Les champs vides ne suppriment plus les anciens liens.');
+    }
     return null;
   }
 
   keepDraft(profileItem,links,confirmed);
   stopPendingCloudWrite();
-  setButtons(card,true,'ENREGISTREMENT SERVEUR…');
+  setButtons(card,true,confirmed?'VALIDATION SERVEUR…':'ENREGISTREMENT SERVEUR…');
 
   try{
     const data=await apiFetch('official-links-bulk.php',{
@@ -163,19 +194,19 @@ async function durableSaveLinks(id,card,options={}){
     });
     setCloudRevision(data.stateRevision);
     applyServerUpdate(profileItem,data.updates?.[id],confirmed);
-    persistLocal();
     rememberIntegritySignature();
     try{PASS50_V9.socialHydrated.delete(id)}catch{}
-    if(typeof render==='function')render();
-    if(typeof p50v9RenderLinks==='function'&&typeof ui==='object'&&ui.adminTab==='links')p50v9RenderLinks();
-    if(!options.silent&&typeof toast==='function')toast(confirmed?'✓ Liens officiels enregistrés durablement sur le serveur':'✓ Liens enregistrés durablement sur le serveur');
+    refreshLinksPanel();
+    if(!options.silent&&typeof toast==='function'){
+      const base=confirmed?'✓ Liens officiels validés et enregistrés sur le serveur':'✓ Liens enregistrés durablement sur le serveur';
+      toast(invalid.length?`${base} · ${invalid.length} page(s) de recherche ignorée(s)`:base);
+    }else if(options.silent)skippedSearchToast(invalid);
     return data;
   }catch(error){
     Object.keys(links).forEach(platform=>{
       profileItem.linkChecks[platform]={status:'pending',checkedAt:new Date().toISOString(),message:'Brouillon conservé dans ce navigateur. Enregistrement serveur à relancer.'};
     });
-    persistLocal();
-    if(typeof render==='function')render();
+    refreshLinksPanel();
     if(!options.silent&&typeof toast==='function')toast(error?.message||'Serveur indisponible : les liens restent conservés dans ce navigateur');
     console.error('Sauvegarde durable des liens officiels',error);
     return null;
@@ -191,9 +222,16 @@ async function durableCheckLinks(id,card){
   const confirmed=Boolean(card.querySelector('.confirm-all-links')?.checked);
   if(confirmed)return durableSaveLinks(id,card,{confirmedOverride:true});
 
-  const {links,invalid}=collectCardLinks(card);
-  if(invalid.length){if(typeof toast==='function')toast(`Lien direct invalide : ${invalid.join(', ')}`);return null;}
-  if(!Object.keys(links).length){if(typeof toast==='function')toast('Aucun lien à vérifier');return null;}
+  const {links,invalid}=collectCardLinks(card,profileItem);
+  if(!Object.keys(links).length){
+    refreshLinksPanel();
+    if(typeof toast==='function'){
+      toast(invalid.length
+        ?`Aucun profil direct à vérifier. Remplace les pages RECHERCHE (${invalid.join(', ')}) par l’URL exacte du compte.`
+        :'Aucun lien à vérifier');
+    }
+    return null;
+  }
 
   const button=card.querySelector('.check-links');
   if(button){button.disabled=true;button.textContent='VÉRIFICATION…';}
@@ -205,7 +243,10 @@ async function durableCheckLinks(id,card){
     });
     persistLocal();
     const saved=await durableSaveLinks(id,card,{confirmedOverride:false,silent:true});
-    if(saved&&typeof toast==='function')toast('Liens vérifiés et enregistrés sur le serveur. Coche la confirmation pour les publier comme officiels.');
+    if(saved&&typeof toast==='function'){
+      const base='Liens vérifiés et enregistrés sur le serveur. Coche la confirmation pour les publier comme officiels.';
+      toast(invalid.length?`${base} · ${invalid.length} page(s) de recherche ignorée(s)`:base);
+    }else if(!saved)skippedSearchToast(invalid);
     return saved;
   }catch(error){
     if(typeof toast==='function')toast(error?.message||'Vérification indisponible');
