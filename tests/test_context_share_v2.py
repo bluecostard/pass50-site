@@ -25,7 +25,7 @@ class ContextShareV2Tests(unittest.TestCase):
         self.assertIn("p50-ranking-share-fab", self.js)
         self.assertIn("p50-ranking-share-toggle", self.js)
         for size in (3, 10, 50):
-            self.assertIn(f'data-p50-ranking-share-size=\\"{size}\\"', self.js)
+            self.assertIn(f'data-p50-ranking-share-size="{size}"', self.js)
         self.assertIn("openPayload(rankingPayload", self.js)
         self.assertNotIn("Partager le Top 3", self.js)
         self.assertNotIn("Partager le Top 10", self.js)
@@ -79,7 +79,7 @@ class ContextShareV2Tests(unittest.TestCase):
 
     def test_loader_and_cache_publish_v2_without_breaking_legacy_contracts(self):
         self.assertIn("context-share-v2.js?v=2.0", self.nav)
-        self.assertIn("data.pass50ContextShare", self.nav)
+        self.assertIn("dataset.pass50ContextShare", self.nav)
         self.assertIn("context-share-v1.js?v=1.0", self.nav)
         self.assertIn("context-share-v2.js?v=2.0", self.worker)
         self.assertIn("pass50-v77-context-share", self.worker)
