@@ -103,6 +103,15 @@
     grid.prepend(section);
   }
 
+  function loadContextShare() {
+    if (window.PASS50_CONTEXT_SHARE || document.querySelector('script[data-pass50-context-share]')) return;
+    const script = document.createElement('script');
+    script.src = './context-share-v1.js?v=1.0';
+    script.async = false;
+    script.dataset.pass50ContextShare = '1.0';
+    document.head.appendChild(script);
+  }
+
   function callWhenReady(name, callback, attempts = 100) {
     let count = 0;
     const timer = setInterval(() => {
@@ -140,6 +149,7 @@
   function init() {
     injectStyles();
     injectNav();
+    loadContextShare();
     installEvents();
     const userBody = document.getElementById('userBody');
     if (userBody) {
