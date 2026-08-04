@@ -11,13 +11,15 @@ INDEX = (ROOT / "index.html").read_text(encoding="utf-8")
 
 
 class ClassabilitySyncV1Tests(unittest.TestCase):
-    def test_authoritative_rule_repairs_tma_like_legacy_profile(self):
+    def test_mass_repair_ignores_stale_or_experimental_mr_markers(self):
         script = textwrap.dedent(
             r"""
             const fs = require('fs');
             const vm = require('vm');
             const source = fs.readFileSync('classability-sync-v1.js', 'utf8');
             let domReady = null;
+            let saveCalls = 0;
+            let renderCalls = 0;
             const context = {
               console,
               addEventListener() {},
@@ -29,8 +31,32 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
               setInterval() { return 1; },
               clearInterval() {},
               setTimeout(callback) { callback(); return 1; },
-              render() {},
-              save() {},
+              render() { renderCalls += 1; },
+              save() { saveCalls += 1; },
+              db: {
+                profiles: [
+                  {
+                    id: 'tma-crush', eligible: true, alive: true, classable: false,
+                    algorithmVersion: 'MR-V1.0', scores: { '2H': 66 }
+                  },
+                  {
+                    id: 'melanie-tms', eligible: true, alive: true, classable: false,
+                    rankingAlgorithmVersion: 'MR-V1.0', scores: { '2H': 0 }
+                  },
+                  {
+                    id: 'legacy-experimental', eligible: true, alive: true, classable: false,
+                    classabilitySource: 'MR-V1.0 experimental',
+                    dataEngine: { algorithmVersion: 'MR-V1.0', scoreStatus: 'experimental' }
+                  },
+                  {
+                    id: 'published-mr-excluded', eligible: true, alive: true, classable: false,
+                    dataEngine: { algorithmVersion: 'MR-V1.0', scoreStatus: 'published_mr_v1' }
+                  },
+                  {
+                    id: 'disabled', eligible: false, alive: true, classable: true
+                  }
+                ]
+              }
             };
             context.window = context;
             context.__pass50CloudReady = true;
@@ -38,27 +64,30 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
             vm.createContext(context);
             vm.runInContext(source, context);
             domReady();
+
             const api = context.PASS50_CLASSABILITY_SYNC;
+            const byId = Object.fromEntries(context.db.profiles.map(profile => [profile.id, profile]));
 
-            const tmaLike = {
-              eligible: true,
-              alive: true,
-              classable: false,
-              algorithmVersion: '15C-v1',
-              scores: { '2H': 66 },
-              links: { TikTok: 'https://tiktok.com/@tma' }
-            };
-            if (!api.repairProfile(tmaLike)) throw new Error('legacy profile was not repaired');
-            if (tmaLike.classable !== true) throw new Error('eligible legacy profile remains non classable');
-            if (!api.authoritativeIsClassableProfile(tmaLike)) throw new Error('authoritative rule rejects eligible legacy profile');
-            if (!context.isClassableProfile(tmaLike)) throw new Error('public rule was not replaced');
-            if (tmaLike.editorialEligible !== true) throw new Error('editorial eligibility was not copied');
-            if (tmaLike.classabilitySource !== 'admin_eligibility') throw new Error('repair source missing');
+            for (const id of ['tma-crush', 'melanie-tms', 'legacy-experimental']) {
+              if (byId[id].classable !== true) throw new Error(id + ' remains blocked');
+              if (!api.authoritativeIsClassableProfile(byId[id])) throw new Error(id + ' rejected by public rule');
+              if (!context.isClassableProfile(byId[id])) throw new Error(id + ' rejected by installed global rule');
+            }
 
-            const disabled = { eligible: false, alive: true, classable: true, algorithmVersion: '15C-v1' };
-            api.repairProfile(disabled);
-            if (disabled.classable !== false) throw new Error('disabled profile remains classable');
-            if (api.authoritativeIsClassableProfile(disabled)) throw new Error('disabled profile accepted');
+            if (byId['published-mr-excluded'].classable !== false) {
+              throw new Error('published MR exclusion was overwritten');
+            }
+            if (api.authoritativeIsClassableProfile(byId['published-mr-excluded'])) {
+              throw new Error('published MR exclusion was ignored');
+            }
+            if (byId.disabled.classable !== false) throw new Error('ineligible profile remains classable');
+
+            const diagnostic = api.diagnose();
+            if (diagnostic.total !== 5) throw new Error('wrong diagnostic total');
+            if (diagnostic.eligible !== 4) throw new Error('wrong eligible count');
+            if (diagnostic.classable !== 3) throw new Error('wrong classable count');
+            if (diagnostic.publishedMrExcluded !== 1) throw new Error('wrong published MR exclusion count');
+            if (saveCalls < 1 || renderCalls < 1) throw new Error('repair was not persisted and rendered');
             """
         )
         subprocess.run(
@@ -69,7 +98,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
             text=True,
         )
 
-    def test_only_applied_mr_publication_keeps_metric_decision(self):
+    def test_only_applied_mr_publication_controls_classability(self):
         script = textwrap.dedent(
             r"""
             const fs = require('fs');
@@ -89,6 +118,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
               setTimeout(callback) { callback(); return 1; },
               render() {},
               save() {},
+              db: { profiles: [] }
             };
             context.window = context;
             context.__pass50CloudReady = true;
@@ -97,27 +127,31 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
             domReady();
             const api = context.PASS50_CLASSABILITY_SYNC;
 
+            const markerOnly = {
+              eligible: true,
+              alive: true,
+              classable: false,
+              algorithmVersion: 'MR-V1.0',
+              rankingAlgorithmVersion: 'MR-V1.0',
+              classabilitySource: 'MR-V1.0'
+            };
+            if (api.metricsControlsClassability(markerOnly)) {
+              throw new Error('stale top-level MR marker still controls classability');
+            }
+            api.repairProfile(markerOnly);
+            if (markerOnly.classable !== true) throw new Error('marker-only profile remains blocked');
+
             const publishedMr = {
               eligible: true,
               alive: true,
               classable: false,
-              algorithmVersion: '15C-v1',
               dataEngine: { algorithmVersion: 'MR-V1.0', scoreStatus: 'published_mr_v1' }
             };
+            if (!api.metricsControlsClassability(publishedMr)) {
+              throw new Error('published MR decision is not detected');
+            }
             api.repairProfile(publishedMr);
             if (publishedMr.classable !== false) throw new Error('published MR decision was overwritten');
-            if (api.authoritativeIsClassableProfile(publishedMr)) throw new Error('published MR exclusion was ignored');
-
-            const experimentalOnly = {
-              eligible: true,
-              alive: true,
-              classable: false,
-              algorithmVersion: '15C-v1',
-              dataEngine: { algorithmVersion: 'MR-V1.0', scoreStatus: 'experimental' }
-            };
-            api.repairProfile(experimentalOnly);
-            if (experimentalOnly.classable !== true) throw new Error('experimental marker blocked public legacy profile');
-            if (!api.authoritativeIsClassableProfile(experimentalOnly)) throw new Error('experimental-only profile remains excluded');
             """
         )
         subprocess.run(
@@ -134,21 +168,24 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("repairAll({ forceRender: true })", SYNC)
         self.assertIn("profileItem.classable = expected", SYNC)
         self.assertIn("profileItem.editorialEligible = editorialEligible", SYNC)
+        self.assertIn("PASS50_CLASSABILITY_DIAGNOSTIC", SYNC)
 
-    def test_public_rule_is_replaced_without_editing_ranking_engine(self):
+    def test_public_rule_binding_is_replaced_directly(self):
         self.assertIn("function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false;}", INDEX)
+        self.assertIn("isClassableProfile = authoritativeIsClassableProfile", SYNC)
         self.assertIn("window.isClassableProfile = authoritativeIsClassableProfile", SYNC)
         self.assertIn("function authoritativeIsClassableProfile", SYNC)
-        self.assertIn("profileItem?.dataEngine", SYNC)
+        self.assertNotIn("profileItem?.rankingAlgorithmVersion", SYNC)
+        self.assertNotIn("profileItem?.algorithmVersion", SYNC)
+        self.assertIn("engine.scoreStatus", SYNC)
         self.assertIn("published_mr_v1", SYNC)
-        self.assertIn("return true;", SYNC)
 
     def test_loader_and_cache_are_versioned(self):
-        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.1", SYNC)
-        self.assertIn("classability-sync-v1.js?v=1.1", LOADER)
+        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.2", SYNC)
+        self.assertIn("classability-sync-v1.js?v=1.2", LOADER)
         self.assertIn("data-pass50-classability-sync", LOADER)
-        self.assertIn("classability-sync-v1.js?v=1.1", SW)
-        self.assertIn("pass50-v67-authoritative-classability", SW)
+        self.assertIn("classability-sync-v1.js?v=1.2", SW)
+        self.assertIn("pass50-v68-mass-classability-fix", SW)
 
 
 if __name__ == "__main__":
