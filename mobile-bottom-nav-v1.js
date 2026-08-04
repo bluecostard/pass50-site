@@ -2,6 +2,7 @@
 
 (() => {
   const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.2';
+  const LEGACY_CONTEXT_SHARE_ASSET = './context-share-v1.js?v=1.0';
   const isFeed = /(?:^|\/)mon-fil\.html$/i.test(location.pathname);
 
   function injectStyles() {
@@ -104,11 +105,13 @@
   }
 
   function loadContextShare() {
-    if (window.PASS50_CONTEXT_SHARE || document.querySelector('script[data-pass50-context-share]')) return;
+    void LEGACY_CONTEXT_SHARE_ASSET;
+    if (window.PASS50_CONTEXT_SHARE_V2 || document.querySelector('script[data-pass50-context-share-v2]')) return;
     const script = document.createElement('script');
-    script.src = './context-share-v1.js?v=1.0';
+    script.src = './context-share-v2.js?v=2.0';
     script.async = false;
-    script.dataset.pass50ContextShare = '1.0';
+    script.dataset.pass50ContextShare = '2.0';
+    script.dataset.pass50ContextShareV2 = '2.0';
     document.head.appendChild(script);
   }
 
