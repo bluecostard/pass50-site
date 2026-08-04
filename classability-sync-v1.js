@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.3';
+  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.4';
   const METRIC_SOURCE = /(?:^|\b)MR-V1\.0(?:\b|$)/i;
   const PUBLISHED_MR_STATUS = 'published_mr_v1';
   const VERIFIED_LINK_STATUSES = new Set(['owner_verified', 'manual_verified', 'ok', 'verified']);
@@ -225,7 +225,16 @@
       const target = event.target instanceof Element ? event.target : null;
       if (!target) return;
       if (!target.closest('.save-links, .check-links, #recoverProfileLinks, #recoverAllLinks')) return;
-      setTimeout(() => repairAll({ forceRender: true }), 80);
+      // Ne pas forceRender ici : cela réaffichait le panneau Liens pendant
+      // Enregistrer/Vérifier et annulait la validation en cours.
+      const run = () => {
+        if (window.PASS50_LINK_SAVE_RUNNING) {
+          setTimeout(run, 200);
+          return;
+        }
+        repairAll();
+      };
+      setTimeout(run, 500);
     });
   }
 

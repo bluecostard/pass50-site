@@ -65,11 +65,26 @@ class OfficialLinksPersistenceV3Tests(unittest.TestCase):
     def test_old_parallel_backups_are_disabled(self):
         self.assertIn("pass50_v227_confirmed_links_backup", CONFIG)
         self.assertIn("pass50_v226_nolimit_links_seeded", CONFIG)
-        self.assertIn("official-links-persistence-v3.js?v=3.2", CONFIG)
+        self.assertIn("official-links-persistence-v3.js?v=3.3", CONFIG)
 
     def test_cache_keeps_the_persistence_module(self):
         self.assertIn("const CACHE='pass50-v", SW)
-        self.assertIn("official-links-persistence-v3.js?v=3.2", SW)
+        self.assertIn("official-links-persistence-v3.js?v=3.3", SW)
+
+    def test_search_urls_do_not_abort_whole_verification(self):
+        self.assertIn("collectCardLinks(card,profileItem)", CLIENT)
+        self.assertIn("Page de recherche ou lien générique", CLIENT)
+        self.assertIn("page(s) de recherche ignorée(s)", CLIENT)
+        self.assertNotIn("Lien direct invalide", CLIENT)
+        save_block = CLIENT.split("async function durableSaveLinks", 1)[1].split("async function durableCheckLinks", 1)[0]
+        self.assertIn("if(!Object.keys(links).length)", save_block)
+        self.assertLess(save_block.index("collectCardLinks(card,profileItem)"), save_block.index("keepDraft(profileItem,links,confirmed)"))
+
+    def test_check_proceeds_with_direct_links_when_search_fields_present(self):
+        check_block = CLIENT.split("async function durableCheckLinks", 1)[1].split("async function runIntegritySync", 1)[0]
+        self.assertIn("collectCardLinks(card,profileItem)", check_block)
+        self.assertIn("link-check.php", check_block)
+        self.assertIn("Remplace les pages RECHERCHE", check_block)
 
 
 if __name__ == "__main__":
