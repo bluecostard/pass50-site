@@ -2384,5 +2384,29 @@
         "confidence": 96
       }
     }
+  },
+  {
+    "id": "census-andrea-naomi-ng-guessan",
+    "name": "N’Guessan Andréa Naomi",
+    "known_alias": "Andrea Naomi Nguessan / N'Guessan Andrea Naomi",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Voyage / Tourisme / Aventure / Lifestyle / Authenticité",
+    "census_status": "Recensé confirmé — réseaux à compléter",
+    "verification_priority": "P1",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {},
+    "source": {
+      "publisher": "Exclusif.net",
+      "date": "2024-04-19",
+      "url": "https://www.exclusif.net/N-guessan-Andrea-Naomi-Au-dela-des-apparences-l-authenticite-triomphe_a49153.html"
+    },
+    "notes": "Ajout approuvé PASS50 le 4 août 2026. Influenceuse ivoirienne associée aux découvertes touristiques, à l’aventure, au lifestyle et aux contenus d’authenticité. Aucun compte social n’est enregistré tant qu’une URL officielle directe n’a pas été recoupée. Profil non classable jusqu’à validation des réseaux et des métriques récentes.",
+    "research_queries": [
+      "\"N’Guessan Andréa Naomi\" compte officiel Instagram TikTok Facebook",
+      "\"N'Guessan Andrea Naomi\" voyage aventure influenceuse ivoirienne",
+      "\"Andrea Naomi Nguessan\" vidéo récente vues abonnés"
+    ]
   }
 ]

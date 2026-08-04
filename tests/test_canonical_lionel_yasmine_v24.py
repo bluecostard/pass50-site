@@ -32,9 +32,9 @@ class CanonicalLionelYasmineV24Tests(unittest.TestCase):
         self.assertGreaterEqual(len(profile['official_socials']), 5)
 
     def test_browser_fetches_the_new_census_revision(self):
-        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.7', V9)
-        self.assertIn("const CENSUS_VERSION='92-v24'", V9)
-        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.7', SW)
+        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.8', V9)
+        self.assertIn("const CENSUS_VERSION='93-v25'", V9)
+        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.8', SW)
         self.assertRegex(SW, r"const CACHE='pass50-v\d+-[a-z0-9-]+'")
 
     def test_public_loader_is_cache_busted(self):
