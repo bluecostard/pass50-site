@@ -21,11 +21,9 @@ class ContextShareV1Tests(unittest.TestCase):
 
     def test_rankings_have_explicit_share_actions(self):
         self.assertIn("PASS50-CONTEXT-SHARE-V1.0", self.js)
-        self.assertIn("Partager le Top 3", self.js)
-        self.assertIn("Partager le Top 10", self.js)
-        self.assertIn("Partager le Top 50", self.js)
         for size in (3, 10, 50):
-            self.assertIn(f"rankingPayload({size}", self.js)
+            self.assertIn(f"Partager le Top {size}", self.js)
+            self.assertIn(f"'ranking', {size}", self.js)
         self.assertIn("#buzz .hero-intro", self.js)
         self.assertIn("#top10 .section-head", self.js)
         self.assertIn("#top50Modal .modal-head", self.js)
@@ -78,7 +76,7 @@ class ContextShareV1Tests(unittest.TestCase):
         self.assertIn("context-share-v1.js?v=1.0", self.loader)
         self.assertIn("data-pass50-context-share", self.loader)
         self.assertIn("context-share-v1.js?v=1.0", self.nav)
-        self.assertIn("data.pass50ContextShare", self.nav)
+        self.assertIn("dataset.pass50ContextShare", self.nav)
         self.assertIn("context-share-v1.js?v=1.0", self.worker)
         self.assertIn("pass50-v77-context-share", self.worker)
         self.assertRegex(self.worker, r"pass50-v\d+-[a-z0-9-]+")
