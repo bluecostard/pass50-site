@@ -5,21 +5,52 @@ const PASS50_V9={photoCandidates:[],photoProfileId:null,preview:null,previewEven
 function p50v9IsGenericLink(url=''){
   try{
     const u=new URL(url),path=u.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
-    return !path||/(^|\/)(search|results|explore\/search)(\/|$)/i.test(path)||/^(accounts\/)?login(\/|$)/i.test(path)||/^(home|feed|watch)(\/|$)/i.test(path)||u.searchParams.has('search_query')||u.searchParams.has('q');
+    const searchPath=/(^|\/)(search|results|explore\/search)(\/|$)/i.test(path);
+    if(!path||searchPath||/^(accounts\/)?login(\/|$)/i.test(path)||/^(home|feed|watch)(\/|$)/i.test(path))return true;
+    if(u.searchParams.has('search_query'))return true;
+    // `q` n'est une recherche que sur les chemins de recherche, pas sur un profil.
+    if(u.searchParams.has('q')&&(searchPath||/(^|\/)(search|explore)(\/|$)/i.test(path)))return true;
+    return false;
   }catch{return true}
 }
-function p50v9IsDirectPlatformLink(platform,url=''){
-  if(!url||p50v9IsGenericLink(url))return false;
+function p50v9NormalizeOfficialLink(platform,url=''){
+  let value=String(url||'').trim();
+  if(!value)return '';
+  if(!/^https?:\/\//i.test(value))value='https://'+value.replace(/^\/\//,'');
   try{
-    const u=new URL(url),h=u.hostname.toLowerCase().replace(/^www\./,''),path=u.pathname.replace(/\/+$/,'')||'/',segments=path.split('/').filter(Boolean),first=(segments[0]||'').toLowerCase();
-    const reservedInstagram=new Set(['accounts','about','developer','developers','direct','directory','explore','legal','privacy','reel','reels','stories','terms']);
+    const u=new URL(value);
+    ['hl','lang','igsh','igshid','si','fbclid','utm_source','utm_medium','utm_campaign','utm_content','utm_term','is_from_webapp','sender_device','_r','tt_from'].forEach(key=>u.searchParams.delete(key));
+    let host=u.hostname.toLowerCase().replace(/^www\./,'');
+    let path=u.pathname.replace(/\/+$/,'')||'/';
+    const segments=path.split('/').filter(Boolean);
+    const reservedTikTok=new Set(['search','explore','video','videos','live','login','signup','foryou','following','activity','messages','share']);
+    if(platform==='TikTok'&&host.endsWith('tiktok.com')&&segments.length===1&&!segments[0].startsWith('@')&&!reservedTikTok.has(segments[0].toLowerCase())&&/^[A-Za-z0-9._-]+$/.test(segments[0])){
+      path='/@'+segments[0];
+    }
+    if(platform==='Instagram'&&host.endsWith('instagram.com'))host='instagram.com';
+    if(platform==='TikTok'&&host.endsWith('tiktok.com'))host='tiktok.com';
+    if(platform==='Facebook'&&host.endsWith('facebook.com'))host='facebook.com';
+    if(platform==='YouTube'&&(host.endsWith('youtube.com')||host==='youtu.be'))host=host==='youtu.be'?'youtube.com':host.replace(/^m\./,'');
+    if(platform==='X'&&(host==='twitter.com'||host==='x.com'||host==='mobile.twitter.com'))host='x.com';
+    if(platform==='Snapchat'&&host.endsWith('snapchat.com'))host='snapchat.com';
+    let query='';
+    if(platform==='Facebook'&&/^\/profile\.php$/i.test(path)&&u.searchParams.get('id'))query='?id='+encodeURIComponent(u.searchParams.get('id'));
+    return 'https://'+host+path+query;
+  }catch{return value}
+}
+function p50v9IsDirectPlatformLink(platform,url=''){
+  const normalized=p50v9NormalizeOfficialLink(platform,url)||url;
+  if(!normalized||p50v9IsGenericLink(normalized))return false;
+  try{
+    const u=new URL(normalized),h=u.hostname.toLowerCase().replace(/^www\./,''),path=u.pathname.replace(/\/+$/,'')||'/',segments=path.split('/').filter(Boolean),first=(segments[0]||'').toLowerCase();
+    const reservedInstagram=new Set(['accounts','about','developer','developers','direct','directory','explore','legal','privacy','reel','reels','stories','terms','p','tv']);
     const reservedFacebook=new Set(['login','home','watch','groups','marketplace','gaming','events','reel','reels','share','sharer','photo','photos','videos','help','privacy','settings']);
     const reservedX=new Set(['home','explore','notifications','messages','i','search','settings','compose']);
     const rules={
       Instagram:()=>h.endsWith('instagram.com')&&segments.length===1&&!reservedInstagram.has(first)&&/^[A-Za-z0-9._-]+$/.test(segments[0]),
       TikTok:()=>h.endsWith('tiktok.com')&&segments.length===1&&/^@[A-Za-z0-9._-]+$/.test(segments[0]),
       YouTube:()=>h.endsWith('youtube.com')&&(/^\/@[A-Za-z0-9._-]+$/.test(path)||/^\/(?:channel|c|user)\/[A-Za-z0-9._-]+$/i.test(path)),
-      Facebook:()=>h.endsWith('facebook.com')&&((segments.length===1&&!reservedFacebook.has(first)&&/^[A-Za-z0-9._-]+$/.test(segments[0]))||(first==='profile.php'&&/^\d+$/.test(u.searchParams.get('id')||''))||(segments.length===3&&first==='pages'&&/^\d+$/.test(segments[2]))),
+      Facebook:()=>h.endsWith('facebook.com')&&((segments.length===1&&!reservedFacebook.has(first)&&/^[A-Za-z0-9._-]+$/.test(segments[0]))||(first==='profile.php'&&/^\d+$/.test(u.searchParams.get('id')||''))||(segments.length===3&&first==='pages'&&/^\d+$/.test(segments[2]))||(segments.length===3&&first==='people'&&/^\d+$/.test(segments[2]))),
       LinkedIn:()=>h.endsWith('linkedin.com')&&/^\/(?:in|company)\/[A-Za-z0-9._-]+$/i.test(path),
       Snapchat:()=>h.endsWith('snapchat.com')&&/^\/add\/[A-Za-z0-9._-]+$/i.test(path),
       X:()=> (h==='x.com'||h==='twitter.com')&&segments.length===1&&!reservedX.has(first)&&/^[A-Za-z0-9_]+$/.test(segments[0])
@@ -212,10 +243,11 @@ render();
 
   const oldDirect=p50v9IsDirectPlatformLink;
   p50v9IsDirectPlatformLink=function(platform,url=''){
+    const normalized=typeof p50v9NormalizeOfficialLink==='function'?p50v9NormalizeOfficialLink(platform,url):url;
     if(platform==='Snapchat'){
-      try{const u=new URL(url);return u.hostname.toLowerCase().endsWith('snapchat.com')&&/^\/add\/[^/]+\/?$/i.test(u.pathname)}catch{return false}
+      try{const u=new URL(normalized||url);return u.hostname.toLowerCase().endsWith('snapchat.com')&&/^\/add\/[^/]+\/?$/i.test(u.pathname)}catch{return false}
     }
-    return oldDirect(platform,url);
+    return oldDirect(platform,normalized||url);
   };
 
   function p50RankMeta(p){const i=ranking().findIndex(x=>x.id===p.id);return {rank:i>=0?i+1:null,top50:i>=0&&i<50};}

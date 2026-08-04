@@ -479,6 +479,7 @@ function p50_de_rebuild_fact(string $profileId, string $factKey): void {
 
 function p50_de_normalize_social_url(string $platform, string $url): string {
     $url = trim($url);
+    if ($url !== '' && !preg_match('#^https?://#i', $url)) $url = 'https://'.ltrim($url, '/');
     if (!filter_var($url,FILTER_VALIDATE_URL)) return '';
     $parts = parse_url($url);
     if (!$parts || empty($parts['host'])) return '';
@@ -489,7 +490,14 @@ function p50_de_normalize_social_url(string $platform, string $url): string {
     $path = $path === '/' ? '/' : rtrim($path,'/');
     $platform = strtolower($platform);
     if ($platform === 'instagram') $host='instagram.com';
-    elseif ($platform === 'tiktok') $host='tiktok.com';
+    elseif ($platform === 'tiktok') {
+        $host='tiktok.com';
+        $segments = array_values(array_filter(explode('/',trim($path,'/')),static fn($x)=>$x!==''));
+        $reserved = ['search','explore','video','videos','live','login','signup','foryou','following','activity','messages','share'];
+        if (count($segments)===1 && !str_starts_with($segments[0],'@') && !in_array(strtolower($segments[0]),$reserved,true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])) {
+            $path='/@'.$segments[0];
+        }
+    }
     elseif ($platform === 'facebook') $host='facebook.com';
     elseif ($platform === 'youtube') $host='youtube.com';
     elseif ($platform === 'x') $host='x.com';
@@ -510,10 +518,10 @@ function p50_de_direct_social_path(string $platform, string $url): bool {
     if ($path === '' || preg_match('#^(search|explore|results|home|watch|feed|login)(/|$)#i',$path)) return false;
     if (str_contains($query,'search_query=')) return false;
     return match($p) {
-        'instagram' => count($segments)===1 && !in_array($first,['accounts','about','developer','developers','direct','directory','explore','legal','privacy','reel','reels','stories','terms'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1,
+        'instagram' => count($segments)===1 && !in_array($first,['accounts','about','developer','developers','direct','directory','explore','legal','privacy','reel','reels','stories','terms','p','tv'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1,
         'tiktok' => count($segments)===1 && preg_match('/^@[A-Za-z0-9._-]+$/',$segments[0])===1,
         'youtube' => preg_match('#^(@[A-Za-z0-9._-]+|(channel|c|user)/[A-Za-z0-9._-]+)$#i',$path)===1,
-        'facebook' => (count($segments)===1 && !in_array($first,['login','home','watch','groups','marketplace','gaming','events','reel','reels','share','sharer','photo','photos','videos','help','privacy','settings','checkpoint'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1) || ($first==='profile.php' && isset($segments[0]) && preg_match('/(?:^|&)id=\d+(?:&|$)/',$query)===1) || (count($segments)===3 && $first==='pages' && ctype_digit((string)$segments[2])),
+        'facebook' => (count($segments)===1 && !in_array($first,['login','home','watch','groups','marketplace','gaming','events','reel','reels','share','sharer','photo','photos','videos','help','privacy','settings','checkpoint'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[0])===1) || ($first==='profile.php' && preg_match('/(?:^|&)id=\d+(?:&|$)/',$query)===1) || (count($segments)===3 && $first==='pages' && ctype_digit((string)$segments[2])) || (count($segments)===3 && $first==='people' && ctype_digit((string)$segments[2])),
         'x' => count($segments)===1 && !in_array($first,['home','explore','notifications','messages','i','search','settings','compose'],true) && preg_match('/^[A-Za-z0-9_]+$/',$segments[0])===1,
         'snapchat' => count($segments)===2 && strtolower($segments[0])==='add' && preg_match('/^[A-Za-z0-9._-]+$/',$segments[1])===1,
         'linkedin' => count($segments)===2 && in_array(strtolower($segments[0]),['in','company'],true) && preg_match('/^[A-Za-z0-9._-]+$/',$segments[1])===1,

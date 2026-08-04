@@ -212,8 +212,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-official-links-persistence]')) return;
   var script = document.createElement('script');
-  script.src = './official-links-persistence-v3.js?v=3.3';
-  script.dataset.pass50OfficialLinksPersistence = '3.3';
+  script.src = './official-links-persistence-v3.js?v=3.4';
+  script.dataset.pass50OfficialLinksPersistence = '3.4';
   document.head.appendChild(script);
 })();
 
