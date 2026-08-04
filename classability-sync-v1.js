@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.1';
+  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.2';
   const METRIC_SOURCE = /(?:^|\b)MR-V1\.0(?:\b|$)/i;
   const PUBLISHED_MR_STATUS = 'published_mr_v1';
   let syncing = false;
@@ -16,18 +16,8 @@
 
   function metricsControlsClassability(profileItem) {
     const engine = profileItem?.dataEngine || {};
-    const publishedByEngine = METRIC_SOURCE.test(String(engine.algorithmVersion || ''))
+    return METRIC_SOURCE.test(String(engine.algorithmVersion || ''))
       && String(engine.scoreStatus || '') === PUBLISHED_MR_STATUS;
-    if (publishedByEngine) return true;
-
-    const explicitSources = [
-      profileItem?.classabilitySource,
-      profileItem?.publicRankingSource,
-      profileItem?.rankingAlgorithmVersion,
-      profileItem?.algorithmVersion,
-      profileItem?.rankingPublication?.algorithmVersion,
-    ];
-    return explicitSources.some(value => METRIC_SOURCE.test(String(value || '')));
   }
 
   function expectedLegacyClassability(profileItem) {
@@ -37,13 +27,18 @@
   function authoritativeIsClassableProfile(profileItem) {
     if (!profileItem || profileItem.alive === false || profileItem.eligible !== true) return false;
     if (metricsControlsClassability(profileItem)) return profileItem.classable !== false;
-    // Sur l'ancien classement public, la case administrative Éligible est la
-    // décision de classement. Un classable:false hérité ne doit plus la contredire.
+    // Tant qu'aucune publication MR-V1.0 n'a réellement été appliquée à cette
+    // fiche, la décision administrative Vivant + Éligible reste autoritaire.
     return true;
   }
 
   function installAuthoritativeRule() {
     try {
+      // Affectation directe du binding global utilisé par ranking(),
+      // completeRanking() et openTop50().
+      if (typeof isClassableProfile === 'function') {
+        isClassableProfile = authoritativeIsClassableProfile;
+      }
       window.isClassableProfile = authoritativeIsClassableProfile;
     } catch (error) {
       console.warn('PASS50 classability rule', error);
@@ -62,8 +57,8 @@
       changed = true;
     }
 
-    // Une publication MR-V1.0 réellement appliquée garde sa propre décision.
-    // Les profils historiques restent pilotés par la case Éligible.
+    // Seule une publication MR-V1.0 réellement appliquée garde sa propre
+    // décision technique. Les marqueurs historiques ou expérimentaux sont ignorés.
     if (!metricsControlled) {
       const expected = expectedLegacyClassability(profileItem);
       if (profileItem.classable !== expected) {
@@ -77,6 +72,37 @@
     }
 
     return changed;
+  }
+
+  function diagnose() {
+    const summary = {
+      total: 0,
+      eligible: 0,
+      classable: 0,
+      ineligible: 0,
+      publishedMrClassable: 0,
+      publishedMrExcluded: 0,
+      legacyEligibleRepaired: 0,
+    };
+
+    profiles().forEach(profileItem => {
+      summary.total += 1;
+      const eligible = expectedLegacyClassability(profileItem);
+      if (!eligible) {
+        summary.ineligible += 1;
+        return;
+      }
+      summary.eligible += 1;
+      if (metricsControlsClassability(profileItem)) {
+        if (profileItem.classable === false) summary.publishedMrExcluded += 1;
+        else summary.publishedMrClassable += 1;
+      } else if (profileItem.classable === true) {
+        summary.legacyEligibleRepaired += 1;
+      }
+      if (authoritativeIsClassableProfile(profileItem)) summary.classable += 1;
+    });
+
+    return summary;
   }
 
   function renderOnly() {
@@ -107,6 +133,7 @@
       });
       if (repaired > 0) persistAndRender();
       else if (forceRender) renderOnly();
+      window.PASS50_CLASSABILITY_DIAGNOSTIC = Object.freeze(diagnose());
       return repaired;
     } finally {
       syncing = false;
@@ -122,9 +149,11 @@
     // déjà cohérent : cela distingue désormais la validation administrative.
     if (changed || item.classabilitySource === 'admin_eligibility') {
       persistAndRender();
+      window.PASS50_CLASSABILITY_DIAGNOSTIC = Object.freeze(diagnose());
       return true;
     }
     renderOnly();
+    window.PASS50_CLASSABILITY_DIAGNOSTIC = Object.freeze(diagnose());
     return false;
   }
 
@@ -161,6 +190,7 @@
       contract: CONTRACT,
       repairAll,
       repairProfile,
+      diagnose,
       metricsControlsClassability,
       authoritativeIsClassableProfile,
       installAuthoritativeRule,
