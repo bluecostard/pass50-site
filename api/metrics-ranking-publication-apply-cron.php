@@ -45,16 +45,23 @@ try{
         $preview['durationMs']=(int)round((microtime(true)-$started)*1000);
         json_response($preview);
     }
-    // Keys are sorted alphabetically: action, confirm, dispatchId.
-    if($keys!==['action','confirm','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
+    // Keys sorted: action, confirm, dispatchId — optional bootstrap for recovery.
+    $forceBootstrap=array_key_exists('bootstrap',$input);
+    if($forceBootstrap){
+        if($keys!==['action','bootstrap','confirm','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
+        if($input['bootstrap']!==true)json_response(['error'=>'bootstrap invalide.'],422);
+    }elseif($keys!==['action','confirm','dispatchId']){
+        json_response(['error'=>'Corps JSON invalide.'],422);
+    }
     if(empty($input['confirm']))json_response(['error'=>'Confirmation requise.'],422);
     if(!$cfg['automaticPublicationEnabled'])json_response(['error'=>'Publication automatique désactivée.','skipped'=>true,'reason'=>'automatic_disabled'],200);
+    if($forceBootstrap&&!$cfg['bootstrapAllowed'])json_response(['error'=>'Bootstrap désactivé.','skipped'=>true,'reason'=>'bootstrap_disabled'],200);
     $result=p50_mrp_apply_execute($pdo,[
         'mode'=>'automatic',
         'dispatchId'=>$dispatchId,
-        'appliedBy'=>'cron-automatic',
+        'appliedBy'=>$forceBootstrap?'cron-bootstrap-recovery':'cron-automatic',
         'confirm'=>true,
-        'bootstrap'=>false,
+        'bootstrap'=>$forceBootstrap,
     ]);
     $result['durationMs']=(int)round((microtime(true)-$started)*1000);
     json_response($result);

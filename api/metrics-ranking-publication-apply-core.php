@@ -146,12 +146,12 @@ function p50_mrp_apply_is_skippable_plan(array $plan): bool {
     return true;
 }
 
-function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $now=null): array {
+function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $now=null,bool $forceBootstrap=false): array {
     $cfg=p50_mrp_apply_config();
     p50_mrp_apply_ensure_schema($pdo);
     $now=$now??new DateTimeImmutable('now',new DateTimeZone('UTC'));
     $periods=$periods?:P50_MRP_APPLY_PERIODS;
-    $bootstrap=$cfg['bootstrapAllowed']&&!p50_mrp_apply_has_prior_success($pdo);
+    $bootstrap=$cfg['bootstrapAllowed']&&($forceBootstrap||!p50_mrp_apply_has_prior_success($pdo));
     $plans=[];$publishPlans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;$skipped=[];
     foreach($periods as $period){
         if(!array_key_exists($period,p50_mr_periods()))continue;
@@ -314,11 +314,12 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
     try{
         $prior=p50_mrp_apply_has_prior_success($pdo);
         $bootstrap=($forceBootstrap||!$prior)&&$cfg['bootstrapAllowed'];
-        if($mode==='automatic'&&$bootstrap&&!$cfg['bootstrapAllowed']){
+        if($mode==='automatic'&&$forceBootstrap&&!$cfg['bootstrapAllowed']){
             throw new RuntimeException('Bootstrap automatique refusé.');
         }
 
-        $preview=p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now);
+        // forceBootstrap doit assouplir exit/entry/movement dans la preview, sinon la recovery reste bloquée.
+        $preview=p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now,$forceBootstrap);
         $reasons=(array)($preview['summary']['reasons']??[]);
         $blockedPeriods=(array)($preview['summary']['blockedPeriods']??[]);
         if(($preview['status']??'')==='blocked'||empty($preview['runUuid'])||empty($preview['publicationEligible'])){

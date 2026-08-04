@@ -1,0 +1,118 @@
+name: Metrics Ranking Publication Apply Bootstrap
+
+# Passage de recovery unique : assouplit exit/entry/movement (bootstrap)
+# pour réaligner le classement public quand les captures sont encore partielles.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-metrics-ranking-publication-apply
+  cancel-in-progress: false
+
+jobs:
+  apply-bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - name: Apply MR-V1.0 ranking with bootstrap recovery
+        id: apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Secrets PASS50 metrics cron manquants."
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              APPLY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
+              exit 1
+              ;;
+          esac
+
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-publication-bootstrap"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"apply",dispatchId:$dispatchId,confirm:true,bootstrap:true}')"
+          response_file="publication-apply-bootstrap.json"
+          http_code="000"
+
+          timestamp="$(date +%s)"
+          signature="$(
+            printf '%s\n%s' "$timestamp" "$body" |
+              openssl dgst -sha256 -hmac "$CRON_SECRET" -r |
+              awk '{print $1}'
+          )"
+
+          set +e
+          http_code="$(
+            curl --silent --show-error --max-time 180 \
+              --output "$response_file" \
+              --write-out '%{http_code}' \
+              -H "Content-Type: application/json" \
+              -H "X-P50-Timestamp: $timestamp" \
+              -H "X-P50-Signature: $signature" \
+              --data "$body" \
+              "$APPLY_URL"
+          )"
+          curl_status=$?
+          set -e
+
+          if [ "$curl_status" -ne 0 ]; then
+            echo "::error::Transport interrompu (curl $curl_status, HTTP ${http_code:-000})."
+            cat "$response_file" 2>/dev/null || true
+            exit 1
+          fi
+          if [ "$http_code" != "200" ]; then
+            echo "::error::Publication bootstrap refusée (HTTP $http_code)."
+            cat "$response_file" || true
+            exit 1
+          fi
+          jq -e '.ok == true' "$response_file" >/dev/null || {
+            echo "::error::Réponse bootstrap invalide."
+            cat "$response_file" || true
+            exit 1
+          }
+
+          skipped="$(jq -r '.skipped // false' "$response_file")"
+          writes="$(jq -r '.publicStateWrites // 0' "$response_file")"
+          scores="$(jq -r '.scoresWritten // 0' "$response_file")"
+          revision="$(jq -r '.publicStateRevision // 0' "$response_file")"
+          reason="$(jq -r '.reason // .error // "—"' "$response_file")"
+          bootstrap="$(jq -r '.bootstrap // false' "$response_file")"
+
+          if [ "$skipped" = "true" ]; then
+            echo "::warning::Bootstrap non appliqué : $reason"
+          elif [ "$writes" = "0" ]; then
+            echo "::warning::Bootstrap OK mais aucune écriture publique."
+          else
+            echo "::notice::Classement public publié (bootstrap=$bootstrap, scores=$scores, révision=$revision)."
+          fi
+
+          {
+            printf '### Publication bootstrap MR-V1.0\n'
+            printf -- '- dispatchId : `%s`\n' "$dispatch_id"
+            printf -- '- skipped : `%s`\n' "$skipped"
+            printf -- '- bootstrap : `%s`\n' "$bootstrap"
+            printf -- '- reason : %s\n' "$reason"
+            printf -- '- scores écrits : %s\n' "$scores"
+            printf -- '- écritures app_state : `%s`\n' "$writes"
+            printf -- '- révision publique : `%s`\n' "$revision"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Archive bootstrap apply result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-apply-bootstrap-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publication-apply-bootstrap.json
+          if-no-files-found: ignore
+          retention-days: 30
