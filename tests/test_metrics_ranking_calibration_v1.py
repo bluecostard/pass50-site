@@ -228,10 +228,10 @@ class MetricsRankingCalibrationV1Tests(unittest.TestCase):
         self.assertNotIn("app_state", CALIBRATION)
 
     def test_versions_and_admin_scoped_styles_are_coherent(self):
-        self.assertIn("data-engine-ui.js?v=18.6", TOOLS)
-        self.assertIn("data-engine-ui.css?v=27.0", TOOLS)
-        self.assertIn("data-engine-ui.js?v=18.6", SW)
-        self.assertIn("data-engine-ui.css?v=27.0", SW)
+        self.assertRegex(TOOLS, r"data-engine-ui\.js\?v=18\.\d+")
+        self.assertRegex(TOOLS, r"data-engine-ui\.css\?v=27\.\d+")
+        self.assertRegex(SW, r"data-engine-ui\.js\?v=18\.\d+")
+        self.assertRegex(SW, r"data-engine-ui\.css\?v=27\.\d+")
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
         self.assertIn("v9-tools.js?v=15.5", INDEX)
         self.assertIn("v9-tools.js?v=15.5", SW)

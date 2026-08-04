@@ -5,13 +5,17 @@ on:
     paths:
       - 'api/content-intelligence-core.php'
       - 'api/content-intelligence-cron.php'
+      - 'api/content-freshness-cron.php'
       - 'api/content-feed.php'
+      - 'api/metrics-collector-facebook.php'
       - 'api/news-discover.php'
       - 'api/news-validate.php'
       - 'content-intelligence.js'
       - 'app-config.js'
+      - 'sw.js'
       - 'tests/test_content_intelligence_v1.py'
       - '.github/workflows/content-intelligence-15m.yml'
+      - '.github/workflows/content-freshness-5m.yml'
       - '.github/workflows/validate-content-intelligence-v1.yml'
 
 permissions:
@@ -29,11 +33,13 @@ jobs:
         run: |
           php -l api/content-intelligence-core.php
           php -l api/content-intelligence-cron.php
+          php -l api/content-freshness-cron.php
           php -l api/content-feed.php
+          php -l api/metrics-collector-facebook.php
           php -l api/news-discover.php
           php -l api/news-validate.php
       - name: JavaScript syntax
-        run: node --check content-intelligence.js && node --check app-config.js
+        run: node --check content-intelligence.js && node --check app-config.js && node --check sw.js
       - name: Contract tests
         run: python3 -m unittest tests.test_content_intelligence_v1 -v
       - name: Diff check
