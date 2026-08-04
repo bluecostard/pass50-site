@@ -27,6 +27,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Publication scheduling contract
         run: python3 -m unittest tests.test_metrics_ranking_publication_apply_schedule_gate_v1 -v
       - name: Workflow diff safety
