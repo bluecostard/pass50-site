@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REPLACEMENTS = {
     "live-radar-v3.js?v=1.6": "live-radar-v3.js?v=1.7",
+    "live-experience-v4-1.js?v=1.3": "live-experience-v4-1.js?v=1.4",
     "v9-tools.js?v=15.3": "v9-tools.js?v=15.5",
     "v9-tools.js?v=15.4": "v9-tools.js?v=15.5",
 }
