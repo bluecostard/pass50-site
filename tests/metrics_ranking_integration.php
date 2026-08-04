@@ -46,6 +46,7 @@ mr_must(array_values(p50_mr_percentiles([10,20]))==[25.0,75.0],'Percentiles de d
 mr_must(array_values(p50_mr_percentiles([10,10]))==[50.0,50.0],'Percentiles de deux profils égaux');
 mr_must(array_values(p50_mr_percentiles([10,10,20]))==[25.0,25.0,100.0],'Percentiles de trois profils avec égalité basse');
 mr_must(array_values(p50_mr_percentiles([10,20,20]))==[0.0,75.0,75.0],'Percentiles de trois profils avec égalité haute');
+mr_must(abs(p50_mr_profile_coverage([['coverage'=>25.0],['coverage'=>97.0]],41.0)-97.0)<0.001,'Une plateforme partielle ne réduit jamais la meilleure couverture officielle');
 
 $first=p50_mr_calculate($pdo,['24H'],'integration_fixture');
 $rows=p50_mr_read($pdo,'24H',100)['rows'];$byId=[];foreach($rows as $row)$byId[$row['profileId']]=$row;
