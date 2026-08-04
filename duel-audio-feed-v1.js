@@ -3,7 +3,7 @@
 
 if(window.PASS50_DUEL_AUDIO_FEED)return;
 
-const CONTRACT='PASS50-DUEL-AUDIO-FEED-V1.0';
+const CONTRACT='PASS50-DUEL-AUDIO-FEED-V1.1';
 const API='./api/duel-audio.php';
 const MAX_DUEL_AUDIOS=3;
 const SHARE_EVENTS=new Set(['native_share_triggered','download','platform_selected']);
@@ -57,9 +57,10 @@ function renderDuelAudios(){
   const list=items.length?items.map((item,index)=>{
     const a=item.candidateA||{},b=item.candidateB||{};
     const selected=String(item.selectedProfileId)===String(a.profileId)?a:b;
-    return `<article class="p50-duel-audio-card"><div><div class="p50-duel-audio-kicker">🎙 AUDIO #${index+1} · COMMENTAIRE ANONYME</div><strong>${esc(a.name||'Influenceur')} VS ${esc(b.name||'Influenceur')}</strong><div class="p50-duel-audio-meta">Vote commenté pour ${esc(selected.name||'un influenceur')} · ${durationLabel(item.durationMs)} · ${esc(relativeDate(item.publishedAt))}</div></div><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio du duel"></audio></article>`;
+    const author=String(item.authorPseudo||'Membre PASS50').trim()||'Membre PASS50';
+    return `<article class="p50-duel-audio-card"><div><div class="p50-duel-audio-kicker">🎙 AUDIO #${index+1} · ${esc(author)}</div><strong>${esc(a.name||'Influenceur')} VS ${esc(b.name||'Influenceur')}</strong><div class="p50-duel-audio-meta">${esc(author)} a commenté son vote pour ${esc(selected.name||'un influenceur')} · ${durationLabel(item.durationMs)} · ${esc(relativeDate(item.publishedAt))}</div></div><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio de ${attr(author)}"></audio></article>`;
   }).join(''):'<div class="p50-duel-audio-empty">Aucun commentaire audio public pour ce duel pour le moment.</div>';
-  section.innerHTML=`<div class="p50-duel-audios-head"><div><div class="p50-duel-audios-title">🎙 Les 3 derniers audios du duel</div><div class="p50-duel-audios-note">Commentaires publiés volontairement lors du partage. L’identité du membre n’est pas affichée.</div></div><div class="p50-duel-audios-note">Maximum ${MAX_DUEL_AUDIOS}</div></div><div class="p50-duel-audio-list">${list}</div>`;
+  section.innerHTML=`<div class="p50-duel-audios-head"><div><div class="p50-duel-audios-title">🎙 Les 3 derniers audios du duel</div><div class="p50-duel-audios-note">Chaque audio est attribué au pseudo public du compte PASS50 qui l’a publié.</div></div><div class="p50-duel-audios-note">Maximum ${MAX_DUEL_AUDIOS}</div></div><div class="p50-duel-audio-list">${list}</div>`;
 }
 
 async function fetchDuelAudios(force=false){
@@ -87,7 +88,7 @@ function injectConsent(){
     audioPanel.appendChild(box);
   }
   const status=state.status.get(key)||'';
-  box.innerHTML=`<label><input type="checkbox" data-p50-duel-audio-publish ${state.consent.get(key)!==false?'checked':''}><span><strong>Publier aussi cet audio dans PASS50</strong><br>Il sera visible sous ce duel et dans Mon fil des membres qui suivent l’un des deux influenceurs, pendant 30 jours.</span></label><small class="${status.startsWith('✓')?'ok':status.startsWith('Erreur')?'bad':''}">${esc(status||'Votre nom et votre compte ne seront pas affichés.')}</small>`;
+  box.innerHTML=`<label><input type="checkbox" data-p50-duel-audio-publish ${state.consent.get(key)!==false?'checked':''}><span><strong>Publier aussi cet audio dans PASS50</strong><br>Il sera visible sous ce duel et dans Mon fil des membres qui suivent l’un des deux influenceurs, pendant 30 jours.</span></label><small class="${status.startsWith('✓')?'ok':status.startsWith('Erreur')?'bad':''}">${esc(status||'Votre pseudo public PASS50 sera affiché avec cet audio.')}</small>`;
 }
 
 function audioDurationMs(blob){
@@ -112,7 +113,7 @@ async function publishCurrentAudio(trigger='share'){
       const form=new FormData();form.append('shareId',shareId);form.append('durationMs',String(durationMs));form.append('publishConsent','1');form.append('trigger',trigger);form.append('audio',blob,`pass50-duel-audio.${extensionFor(blob.type)}`);
       const headers={Accept:'application/json'};const auth=token();if(auth)headers.Authorization=`Bearer ${auth}`;
       const response=await fetch(API,{method:'POST',headers,body:form});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Publication audio impossible.');
-      state.uploaded.add(key);state.status.set(shareId,'✓ Audio publié dans le duel et Mon fil');injectConsent();notify('Audio publié dans le duel');
+      state.uploaded.add(key);state.status.set(shareId,'✓ Audio publié avec votre pseudo dans le duel et Mon fil');injectConsent();notify('Audio publié avec votre pseudo');
       await fetchDuelAudios(true);return data;
     }catch(error){state.status.set(shareId,`Erreur : ${error.message||'publication impossible'}`);injectConsent();console.warn('Publication audio duel',error);return null;}
     finally{state.uploading.delete(key);}
