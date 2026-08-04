@@ -109,21 +109,31 @@ jobs:
           next_attempt="$(jq -r '.queue.p1NextAttemptAt // "—"' <<<"$response")"
           next_platform="$(jq -r '.queue.p1NextJob.platform // "—"' <<<"$response")"
           next_attempts="$(jq -r 'if .queue.p1NextJob == null then "—" else ((.queue.p1NextJob.attempts|tostring) + "/" + (.queue.p1NextJob.maxAttempts|tostring)) end' <<<"$response")"
-          if [ -s p1-work-diagnostics.jsonl ]; then diagnostics="$(jq -s '.' p1-work-diagnostics.jsonl)"; else diagnostics='[]'; fi
-          captures_recorded="$(jq '[.[].capturesRecorded] | add // 0' <<<"$diagnostics")"
-          duplicates_skipped="$(jq '[.[].duplicatesSkipped] | add // 0' <<<"$diagnostics")"
-          quarantined="$(jq '[.[].quarantined] | add // 0' <<<"$diagnostics")"
-          contents_found="$(jq '[.[].contentsFound] | add // 0' <<<"$diagnostics")"
-          by_platform="$(jq 'group_by(.platform) | map({key:(.[0].platform // "unknown"),value:{tasks:length,captures:(map(.capturesRecorded)|add//0),duplicates:(map(.duplicatesSkipped)|add//0),quarantined:(map(.quarantined)|add//0)}}) | from_entries' <<<"$diagnostics")"
+
+          if [ -s p1-work-diagnostics.jsonl ]; then
+            jq -s '.' p1-work-diagnostics.jsonl > p1-diagnostics.json
+          else
+            printf '[]\n' > p1-diagnostics.json
+          fi
+          printf '%s\n' "$response" > p1-final-response.json
+          jq 'group_by(.platform) | map({key:(.[0].platform // "unknown"),value:{tasks:length,captures:(map(.capturesRecorded)|add//0),duplicates:(map(.duplicatesSkipped)|add//0),quarantined:(map(.quarantined)|add//0)}}) | from_entries' \
+            p1-diagnostics.json > p1-by-platform.json
+
+          captures_recorded="$(jq '[.[].capturesRecorded] | add // 0' p1-diagnostics.json)"
+          duplicates_skipped="$(jq '[.[].duplicatesSkipped] | add // 0' p1-diagnostics.json)"
+          quarantined="$(jq '[.[].quarantined] | add // 0' p1-diagnostics.json)"
+          contents_found="$(jq '[.[].contentsFound] | add // 0' p1-diagnostics.json)"
+          by_platform="$(jq -c . p1-by-platform.json)"
 
           jq -nc \
             --arg dispatchId "$dispatch_id" --argjson processed "$processed" --argjson completed "$completed" \
             --argjson partial "$partial" --argjson retried "$retried" --argjson skipped "$skipped" --argjson failed "$failed" \
             --argjson iterations "$iteration" --argjson p1Remaining "$p1_remaining" --argjson globalRemaining "$global_remaining" \
             --argjson capturesRecorded "$captures_recorded" --argjson duplicatesSkipped "$duplicates_skipped" \
-            --argjson quarantined "$quarantined" --argjson contentsFound "$contents_found" --argjson byPlatform "$by_platform" \
-            --argjson diagnostics "$diagnostics" --argjson final "$response" \
-            '{ok:true,diagnosticsVersion:"WORK-DIAG-V1.0",dispatchId:$dispatchId,processed:$processed,completed:$completed,partial:$partial,retried:$retried,skipped:$skipped,failed:$failed,iterations:$iterations,p1Remaining:$p1Remaining,globalRemaining:$globalRemaining,capturesRecorded:$capturesRecorded,duplicatesSkipped:$duplicatesSkipped,quarantined:$quarantined,contentsFound:$contentsFound,byPlatform:$byPlatform,diagnostics:$diagnostics,final:$final}' \
+            --argjson quarantined "$quarantined" --argjson contentsFound "$contents_found" \
+            --slurpfile byPlatform p1-by-platform.json --slurpfile diagnostics p1-diagnostics.json \
+            --slurpfile final p1-final-response.json \
+            '{ok:true,diagnosticsVersion:"WORK-DIAG-V1.0",dispatchId:$dispatchId,processed:$processed,completed:$completed,partial:$partial,retried:$retried,skipped:$skipped,failed:$failed,iterations:$iterations,p1Remaining:$p1Remaining,globalRemaining:$globalRemaining,capturesRecorded:$capturesRecorded,duplicatesSkipped:$duplicatesSkipped,quarantined:$quarantined,contentsFound:$contentsFound,byPlatform:$byPlatform[0],diagnostics:$diagnostics[0],final:$final[0]}' \
             > metrics-p1-result.json
 
           {
@@ -133,7 +143,7 @@ jobs:
             printf -- '- Terminées / partielles / ignorées / échouées : %s / %s / %s / %s\n' "$completed" "$partial" "$skipped" "$failed"
             printf -- '- Captures nouvelles / doublons / quarantaine : %s / %s / %s\n' "$captures_recorded" "$duplicates_skipped" "$quarantined"
             printf -- '- Contenus observés : %s\n' "$contents_found"
-            printf -- '- Diagnostic par plateforme : `%s`\n' "$(jq -c . <<<"$by_platform")"
+            printf -- '- Diagnostic par plateforme : `%s`\n' "$by_platform"
             printf -- '- Réessais programmés : %s\n' "$retried"
             printf -- '- File P1 restante / globale : %s / %s\n' "$p1_remaining" "$global_remaining"
             printf -- '- P1 en retry_wait : %s\n' "$retry_wait"
