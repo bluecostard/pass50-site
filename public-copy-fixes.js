@@ -23,4 +23,5 @@
   if(!document.querySelector('script[data-pass50-profile-lionel-pcs]')){const script=document.createElement('script');script.src='./profile-lionel-pcs.js?v=1.0';script.dataset.pass50ProfileLionelPcs='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-profile-yasmine-fofana]')){const script=document.createElement('script');script.src='./profile-yasmine-fofana.js?v=1.0';script.dataset.pass50ProfileYasmineFofana='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-fictive-ranking-admin]')){const script=document.createElement('script');script.src='./admin-fictive-ranking-v1.js?v=1.0';script.dataset.pass50FictiveRankingAdmin='1.0';document.head.appendChild(script);}
+  if(!document.querySelector('script[data-pass50-follow-watch]')){const script=document.createElement('script');script.src='./follow-feed-v1.js?v=1.0';script.async=false;script.dataset.pass50FollowWatch='1.0';document.head.appendChild(script);}
 })();
