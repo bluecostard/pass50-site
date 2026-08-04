@@ -15,7 +15,8 @@ try{
     require_method('POST');
     $in=json_input();
     $action=trim((string)($in['action']??'preview'));
-    if($action==='preview')json_response(p50_mrp_apply_preview($pdo));
+    $forceBootstrap=!empty($in['bootstrap']);
+    if($action==='preview')json_response(p50_mrp_apply_preview($pdo,null,null,$forceBootstrap));
     if($action==='rollback'){
         $applyUuid=trim((string)($in['applyUuid']??''));
         if($applyUuid==='')json_response(['error'=>'applyUuid requis.'],422);
@@ -27,7 +28,7 @@ try{
         'dispatchId'=>trim((string)($in['dispatchId']??('admin-'.bin2hex(random_bytes(8))))),
         'appliedBy'=>(string)($user['id']??'admin'),
         'confirm'=>!empty($in['confirm']),
-        'bootstrap'=>!empty($in['bootstrap']),
+        'bootstrap'=>$forceBootstrap,
     ]);
     json_response($result);
 }catch(InvalidArgumentException $error){

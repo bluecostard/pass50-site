@@ -30,7 +30,15 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("automaticPublicationEnabled", cron)
         # After sort($keys), confirm comes before dispatchId alphabetically.
         self.assertIn("'action','confirm','dispatchId'", cron)
+        self.assertIn("'action','bootstrap','confirm','dispatchId'", cron)
+        self.assertIn("'bootstrap'=>$forceBootstrap", cron)
         self.assertNotIn("'action','dispatchId','confirm'", cron)
+
+    def test_force_bootstrap_flows_into_preview(self):
+        core = read("api/metrics-ranking-publication-apply-core.php")
+        self.assertIn("bool $forceBootstrap=false", core)
+        self.assertIn("p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now,$forceBootstrap)", core)
+        self.assertIn("$forceBootstrap||!p50_mrp_apply_has_prior_success($pdo)", core)
 
     def test_config_exposes_publication_flags(self):
         example = read("api/config.example.php")
