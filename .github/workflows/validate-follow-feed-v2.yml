@@ -1,0 +1,28 @@
+name: Validate Follow Feed V2
+
+on:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: JavaScript syntax
+        run: |
+          node --check mon-fil.js
+          node --check mobile-bottom-nav-v1.js
+          node --check public-copy-fixes.js
+          node --check sw.js
+      - name: Static feed tests
+        run: python3 -m unittest tests.test_follow_feed_v1
+      - name: Page contract smoke test
+        run: |
+          grep -F 'id="feedLiveRadarBtn"' mon-fil.html
+          grep -F 'data-p50-tab="feed"' mobile-bottom-nav-v1.js
+          if grep -F 'data-p50-tab="live"' mobile-bottom-nav-v1.js; then exit 1; fi
+          if grep -F 'id="liveSection"' mon-fil.html; then exit 1; fi
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
