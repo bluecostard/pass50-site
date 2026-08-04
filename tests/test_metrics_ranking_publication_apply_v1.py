@@ -28,7 +28,9 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("p50_mrp_apply_execute", admin)
         self.assertIn("p50_mo_verify_cron_signature", cron)
         self.assertIn("automaticPublicationEnabled", cron)
-        self.assertIn("'action','dispatchId','confirm'", cron)
+        # After sort($keys), confirm comes before dispatchId alphabetically.
+        self.assertIn("'action','confirm','dispatchId'", cron)
+        self.assertNotIn("'action','dispatchId','confirm'", cron)
 
     def test_config_exposes_publication_flags(self):
         example = read("api/config.example.php")

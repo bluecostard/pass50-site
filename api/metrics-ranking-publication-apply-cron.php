@@ -45,7 +45,8 @@ try{
         $preview['durationMs']=(int)round((microtime(true)-$started)*1000);
         json_response($preview);
     }
-    if($keys!==['action','dispatchId','confirm'])json_response(['error'=>'Corps JSON invalide.'],422);
+    // Keys are sorted alphabetically: action, confirm, dispatchId.
+    if($keys!==['action','confirm','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
     if(empty($input['confirm']))json_response(['error'=>'Confirmation requise.'],422);
     if(!$cfg['automaticPublicationEnabled'])json_response(['error'=>'Publication automatique désactivée.','skipped'=>true,'reason'=>'automatic_disabled'],200);
     $result=p50_mrp_apply_execute($pdo,[
