@@ -12,9 +12,12 @@ const css=`
 .p50-fi-nav-controls{display:flex;align-items:center;gap:8px;margin-left:auto;margin-right:8px}
 .p50-fi-nav{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(183,255,0,.55);border-radius:50%;background:#0a0d0a;color:#fff;font-size:22px;font-weight:950;line-height:1;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:border-color .18s ease,color .18s ease,background .18s ease,transform .18s ease}
 .p50-fi-nav:hover,.p50-fi-nav:focus-visible{border-color:#b7ff00;color:#050705;background:#b7ff00;transform:scale(1.05);outline:none}
-#profileBody{overscroll-behavior-x:contain}
-#profileBody.p50-fi-switching{opacity:.38;transform:translateX(var(--p50-fi-shift,0));transition:opacity .11s ease,transform .11s ease}
+#profileBody{overscroll-behavior-x:contain;will-change:transform,opacity}
+#profileBody.p50-fi-out{opacity:0;transform:translateX(var(--p50-fi-shift,24px));transition:opacity .18s cubic-bezier(.22,.8,.24,1),transform .22s cubic-bezier(.22,.8,.24,1);pointer-events:none}
+#profileBody.p50-fi-in{opacity:0;transform:translateX(var(--p50-fi-enter, -18px))}
+#profileBody.p50-fi-in-active{opacity:1;transform:none;transition:opacity .22s cubic-bezier(.22,.8,.24,1),transform .26s cubic-bezier(.22,.8,.24,1)}
 @media (max-width:680px),(hover:none) and (pointer:coarse){.p50-fi-nav-controls{display:none!important}#profileBody{touch-action:pan-y}}
+@media (prefers-reduced-motion:reduce){#profileBody.p50-fi-out,#profileBody.p50-fi-in,#profileBody.p50-fi-in-active{transition:none!important;transform:none!important;opacity:1!important}}
 `;
 const style=document.createElement('style');
 style.textContent=css;
@@ -105,6 +108,13 @@ function openProfile(id){
   return true;
 }
 
+function clearTransitionClasses(body){
+  if(!body)return;
+  body.classList.remove('p50-fi-out','p50-fi-in','p50-fi-in-active','p50-fi-switching');
+  body.style.removeProperty('--p50-fi-shift');
+  body.style.removeProperty('--p50-fi-enter');
+}
+
 function navigate(direction){
   if(navigating||!modalIsOpen())return;
   const ids=orderedIds();
@@ -118,20 +128,35 @@ function navigate(direction){
   navigating=true;
   currentProfileId=target;
   const body=document.getElementById('profileBody');
-  if(body){
-    body.style.setProperty('--p50-fi-shift',direction>0?'-18px':'18px');
-    body.classList.add('p50-fi-switching');
+  const reduceMotion=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch{return false}})();
+
+  const finish=()=>{
+    const opened=openProfile(target);
+    if(!opened){navigating=false;clearTransitionClasses(body);return;}
+    if(!body||reduceMotion){navigating=false;clearTransitionClasses(body);return;}
+    body.style.setProperty('--p50-fi-enter',direction>0?'28px':'-28px');
+    body.classList.remove('p50-fi-out');
+    body.classList.add('p50-fi-in');
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        body.classList.add('p50-fi-in-active');
+        window.setTimeout(()=>{
+          clearTransitionClasses(body);
+          navigating=false;
+        },280);
+      });
+    });
+  };
+
+  if(!body||reduceMotion){
+    finish();
+    return;
   }
 
-  window.setTimeout(()=>{
-    const opened=openProfile(target);
-    if(!opened){navigating=false;body?.classList.remove('p50-fi-switching');return;}
-    window.setTimeout(()=>{
-      body?.classList.remove('p50-fi-switching');
-      body?.style.removeProperty('--p50-fi-shift');
-      navigating=false;
-    },140);
-  },70);
+  body.style.setProperty('--p50-fi-shift',direction>0?'-28px':'28px');
+  body.classList.remove('p50-fi-in','p50-fi-in-active');
+  body.classList.add('p50-fi-out');
+  window.setTimeout(finish,200);
 }
 
 function ensureDesktopButtons(){
@@ -152,20 +177,25 @@ function finishGesture(x,y,startedAt){
   const dx=x-gesture.x,dy=y-gesture.y;
   const elapsed=performance.now()-startedAt;
   gesture=null;
-  if(elapsed>1200||Math.abs(dx)<38||Math.abs(dx)<=Math.abs(dy)*1.08)return;
+  // Swipe un peu plus affirmé pour éviter les changements accidentels pendant le scroll vertical.
+  if(elapsed>900||Math.abs(dx)<48||Math.abs(dx)<=Math.abs(dy)*1.25)return;
   navigate(dx<0?1:-1);
 }
 
 function bindPointerSwipe(surface){
   surface.addEventListener('pointerdown',event=>{
     if(!isMobileInteraction()||event.pointerType==='mouse'||event.isPrimary===false)return;
-    gesture={pointerId:event.pointerId,x:event.clientX,y:event.clientY,startedAt:performance.now()};
+    gesture={pointerId:event.pointerId,x:event.clientX,y:event.clientY,startedAt:performance.now(),locked:false};
     try{surface.setPointerCapture(event.pointerId)}catch{}
   });
   surface.addEventListener('pointermove',event=>{
     if(!gesture||gesture.pointerId!==event.pointerId)return;
     const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;
-    if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.05)event.preventDefault();
+    if(!gesture.locked){
+      if(Math.abs(dx)<16||Math.abs(dx)<=Math.abs(dy)*1.2)return;
+      gesture.locked=true;
+    }
+    event.preventDefault();
   },{passive:false});
   surface.addEventListener('pointerup',event=>{
     if(!gesture||gesture.pointerId!==event.pointerId)return;
@@ -180,12 +210,16 @@ function bindTouchFallback(surface){
   surface.addEventListener('touchstart',event=>{
     if(!isMobileInteraction()||event.touches.length!==1)return;
     const point=event.touches[0];
-    touch={x:point.clientX,y:point.clientY,startedAt:performance.now()};
+    touch={x:point.clientX,y:point.clientY,startedAt:performance.now(),locked:false};
   },{passive:true});
   surface.addEventListener('touchmove',event=>{
     if(!touch||event.touches.length!==1)return;
     const point=event.touches[0],dx=point.clientX-touch.x,dy=point.clientY-touch.y;
-    if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.05)event.preventDefault();
+    if(!touch.locked){
+      if(Math.abs(dx)<16||Math.abs(dx)<=Math.abs(dy)*1.2)return;
+      touch.locked=true;
+    }
+    event.preventDefault();
   },{passive:false});
   surface.addEventListener('touchend',event=>{
     if(!touch||event.changedTouches.length!==1)return;
