@@ -1,4 +1,5 @@
 // Connecteurs privés repliables, isolés du classement public.
+// Compatibilité de migration : ancien cache pass50-v71-fix-verify-links.
 const CACHE='pass50-v72-content-freshness';
 const ASSETS=[
   './','./index.html','./mon-fil.html','./app-config.js','./content-intelligence.js?v=1.2','./mon-fil.js?v=2.1','./classability-sync-v1.js?v=1.4','./mobile-bottom-nav-v1.js?v=1.1','./mobile-bottom-nav-v1.js?v=1.2','./share-center-v1.js?v=1.0','./coules-share-simple-v1.js?v=1.0','./fi-navigation-v3.js?v=1.2','./fi-engagement-v3.js?v=1.3','./live-modal-layout-v1.js?v=1.0',
