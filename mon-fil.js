@@ -1,11 +1,12 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.1';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.3';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
   const NEWS_PER_PROFILE = 2;
+  const DUEL_AUDIO_LIMIT = 12;
   const PERIODS = { '2H': '2h', '24H': '24h', '48H': '48h', '7J': '7d', '15J': '15d' };
   const PERIOD_LABELS = { '2H': '2 h', '24H': '24 h', '48H': '48 h', '7J': '7 jours', '15J': '15 jours' };
   const state = { period: '24H', user: null, profiles: [], following: [], news: [], liveStreams: [] };
@@ -105,6 +106,11 @@
     return new Date(timestamp).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
+  function durationLabel(durationMs) {
+    const seconds = Math.max(1, Math.round(Number(durationMs || 0) / 1000));
+    return `00:${String(Math.min(59, seconds)).padStart(2, '0')}`;
+  }
+
   async function loadUser() {
     const token = localStorage.getItem('pass50_api_token') || '';
     if (token) {
@@ -137,18 +143,30 @@
     try {
       const data = await apiFetch(`content-feed.php?${query}`);
       const items = Array.isArray(data?.news) ? data.news.slice(0, NEWS_PER_PROFILE) : [];
-      return items.map(item => ({ ...item, profileId: String(profileId) }));
+      return items.map(item => ({ ...item, profileId: String(profileId), feedType: 'news' }));
     } catch (error) {
       console.warn('Actualité indisponible', profileId, error);
       return [];
     }
   }
 
+  async function loadDuelAudios() {
+    if (!state.following.length) return [];
+    const query = new URLSearchParams({ profileIds: state.following.join(','), limit: String(DUEL_AUDIO_LIMIT), _: String(Date.now()) });
+    try {
+      const data = await apiFetch(`duel-audio.php?${query}`);
+      return (Array.isArray(data?.items) ? data.items : []).map(item => ({ ...item, feedType: 'duel_audio' }));
+    } catch (error) {
+      console.warn('Audios des duels indisponibles', error);
+      return [];
+    }
+  }
+
   async function loadFeedNews() {
-    const batches = await Promise.all(state.following.map(loadNewsFor));
+    const [batches, duelAudios] = await Promise.all([Promise.all(state.following.map(loadNewsFor)), loadDuelAudios()]);
     const seen = new Set();
-    state.news = batches.flat().filter(item => {
-      const key = String(item.id || item.url || `${item.profileId}:${item.title}`);
+    state.news = [...batches.flat(), ...duelAudios].filter(item => {
+      const key = item.feedType === 'duel_audio' ? `audio:${item.id}` : `news:${String(item.id || item.url || `${item.profileId}:${item.title}`)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -173,7 +191,20 @@
     }).join('');
   }
 
+  function duelAudioCard(item) {
+    const a = item.candidateA || {};
+    const b = item.candidateB || {};
+    const profileA = profileFor(a.profileId) || { id: a.profileId, name: a.name || 'Influenceur', initials: 'A' };
+    const profileB = profileFor(b.profileId) || { id: b.profileId, name: b.name || 'Influenceur', initials: 'B' };
+    const selected = String(item.selectedProfileId) === String(a.profileId) ? profileA : profileB;
+    const matched = [profileA, profileB].filter(profile => state.following.includes(String(profile.id)));
+    const because = matched.length ? `Parce que vous suivez ${matched.map(profile => profile.name).join(' et ')}` : 'Duel lié à vos suivis';
+    const author = String(item.authorPseudo || 'Membre PASS50').trim() || 'Membre PASS50';
+    return `<article class="feed-card duel-audio-feed-card"><div class="duel-audio-feed-head"><div class="duel-audio-avatars">${avatarHtml(profileA)}<span>VS</span>${avatarHtml(profileB)}</div><div><div class="duel-audio-kicker">🎙 LES COULÉS · ${esc(author)}</div><strong>${esc(profileA.name)} VS ${esc(profileB.name)}</strong><div class="feed-meta">${esc(because)} · ${esc(relativeDate(item.publishedAt))}</div></div></div><div class="duel-audio-feed-body"><h2>${esc(author)} commente son vote pour ${esc(selected.name)}</h2><div class="duel-audio-player"><span>${durationLabel(item.durationMs)}</span><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio de ${attr(author)}"></audio></div><div class="feed-meta">Pseudo issu de son compte utilisateur PASS50 · Audio publié volontairement lors du partage</div><div class="feed-actions"><a class="btn primary" href="./?section=coules">Voir le duel</a><a class="btn" href="./?profile=${encodeURIComponent(selected.id || '')}">Voir la fiche de ${esc(selected.name)}</a></div></div></article>`;
+  }
+
   function feedCard(item) {
+    if (item.feedType === 'duel_audio') return duelAudioCard(item);
     const profile = profileFor(item.profileId) || { id: item.profileId, name: 'Influenceur', initials: 'P50' };
     const rank = rankFor(profile.id);
     const change = movement(profile);
@@ -199,7 +230,7 @@
       return;
     }
     if (!state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Aucune actualité récente validée.</strong>PASS50 ne remplit pas votre fil avec des contenus recommandés ou extérieurs à vos suivis.</div>';
+      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>PASS50 ne remplit pas votre fil avec des contenus recommandés ou extérieurs à vos suivis.</div>';
       end.classList.remove('hidden');
       return;
     }
@@ -207,9 +238,9 @@
     end.classList.remove('hidden');
   }
 
-  async function refreshFeed() {
+  async function refreshFeed({ silent = false } = {}) {
     const list = $('#feedList');
-    if (list) list.innerHTML = '<div class="loading">Actualisation de votre fil…</div>';
+    if (!silent && list) list.innerHTML = '<div class="loading">Actualisation de votre fil…</div>';
     renderFollowStrip();
     if (state.user && state.following.length) await loadFeedNews();
     else state.news = [];
@@ -283,6 +314,7 @@
     $('[data-close-live]')?.addEventListener('click', closeRadar);
     $('#feedLiveModal')?.addEventListener('click', event => { if (event.target.id === 'feedLiveModal') closeRadar(); });
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeRadar(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFeed({ silent: true }); });
   }
 
   async function init() {
@@ -293,7 +325,8 @@
     state.following = [...new Set(Array.isArray(user?.following) ? user.following.map(String) : [])].slice(0, MAX_FOLLOWED);
     await Promise.all([refreshFeed(), refreshRadar()]);
     setInterval(refreshRadar, 60000);
-    window.PASS50_FOLLOW_FEED_PAGE = Object.freeze({ contract: CONTRACT, maxFollowed: MAX_FOLLOWED, newsPerProfile: NEWS_PER_PROFILE });
+    setInterval(() => refreshFeed({ silent: true }), 60000);
+    window.PASS50_FOLLOW_FEED_PAGE = Object.freeze({ contract: CONTRACT, maxFollowed: MAX_FOLLOWED, newsPerProfile: NEWS_PER_PROFILE, duelAudio: true });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

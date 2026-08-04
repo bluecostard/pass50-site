@@ -120,3 +120,29 @@ CREATE TABLE p50_vote_share_events (
   INDEX idx_vote_share_event_date (event_name,created_at),
   INDEX idx_vote_share_session (share_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE p50_duel_audio_posts (
+  id CHAR(64) CHARACTER SET ascii PRIMARY KEY,
+  share_id CHAR(64) CHARACTER SET ascii NOT NULL,
+  user_id CHAR(36) NOT NULL,
+  poll_key VARCHAR(190) NOT NULL,
+  history_id CHAR(64) CHARACTER SET ascii NULL,
+  selected_profile_id VARCHAR(100) NOT NULL,
+  candidate_a_id VARCHAR(100) NOT NULL,
+  candidate_b_id VARCHAR(100) NOT NULL,
+  candidate_a_name VARCHAR(190) NOT NULL,
+  candidate_b_name VARCHAR(190) NOT NULL,
+  file_name VARCHAR(190) NOT NULL,
+  mime_type VARCHAR(80) NOT NULL,
+  duration_ms SMALLINT UNSIGNED NOT NULL,
+  bytes_size INT UNSIGNED NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'published',
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  expires_at DATETIME NOT NULL,
+  UNIQUE KEY uq_p50_duel_audio_share (share_id),
+  INDEX idx_p50_duel_audio_poll (poll_key,status,created_at),
+  INDEX idx_p50_duel_audio_a (candidate_a_id,status,created_at),
+  INDEX idx_p50_duel_audio_b (candidate_b_id,status,created_at),
+  INDEX idx_p50_duel_audio_user (user_id,created_at),
+  INDEX idx_p50_duel_audio_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

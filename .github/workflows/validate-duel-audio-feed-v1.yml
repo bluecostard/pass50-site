@@ -1,0 +1,38 @@
+name: Validate Duel Audio Feed V1
+
+on:
+  pull_request:
+    paths:
+      - 'api/duel-audio.php'
+      - 'duel-audio-feed-v1.js'
+      - 'mon-fil.js'
+      - 'mon-fil.html'
+      - 'public-copy-fixes.js'
+      - 'schema.sql'
+      - 'sw.js'
+      - 'tests/test_duel_audio_feed_v1.py'
+      - '.github/workflows/validate-duel-audio-feed-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: php -l api/duel-audio.php
+      - name: JavaScript syntax
+        run: |
+          node --check duel-audio-feed-v1.js
+          node --check mon-fil.js
+          node --check public-copy-fixes.js
+          node --check sw.js
+      - name: Contract tests
+        run: python3 -m unittest tests.test_duel_audio_feed_v1 -v
+      - name: Diff check
+        run: git diff --check origin/${{ github.base_ref }}...HEAD

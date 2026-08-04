@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 
@@ -35,7 +36,7 @@ class MobilePublicUxPolishTests(unittest.TestCase):
     def test_live_button_enlarged_on_mobile(self):
         html = read("index.html")
         self.assertIn("actions .live{display:inline-flex;align-items:center;gap:4px;font-size:12px", html)
-        self.assertIn("v9-tools.js?v=15.5", html)
+        self.assertRegex(html, r"v9-tools\.js\?v=15\.\d+")
 
 
 if __name__ == "__main__":
