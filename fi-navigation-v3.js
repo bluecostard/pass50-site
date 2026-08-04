@@ -4,7 +4,6 @@
 const MOBILE_QUERY='(max-width: 680px), (hover: none) and (pointer: coarse)';
 let currentProfileId='';
 let navigating=false;
-let coreOpenProfile=null;
 let gesture=null;
 let lastPointerGestureAt=0;
 
@@ -84,20 +83,20 @@ function afterProfileOpened(id){
 function installOpenProfileWrapper(){
   const candidate=window.openProfile;
   if(typeof candidate!=='function')return false;
-  if(candidate.__p50NavigationV3){
-    coreOpenProfile=candidate.__p50CoreOpenProfile||candidate;
-    return true;
-  }
-  coreOpenProfile=candidate;
+  // Déjà le wrapper courant : ne pas retoucher (évite une boucle avec d'autres hooks).
+  if(candidate.__p50NavigationV3)return true;
+  // Capturer la cible dans une const locale : un `let` partagé était réassigné par le
+  // MutationObserver après le wrap de content-intelligence → stack overflow à l'ouverture.
+  const core=candidate;
   const wrapped=function(id){
     const profileId=String(id||'');
     if(profileExists(profileId))currentProfileId=profileId;
-    const result=coreOpenProfile.apply(this,arguments);
+    const result=core.apply(this,arguments);
     requestAnimationFrame(()=>afterProfileOpened(profileId));
     return result;
   };
   Object.defineProperty(wrapped,'__p50NavigationV3',{value:true});
-  Object.defineProperty(wrapped,'__p50CoreOpenProfile',{value:coreOpenProfile});
+  Object.defineProperty(wrapped,'__p50CoreOpenProfile',{value:core});
   window.openProfile=wrapped;
   return true;
 }

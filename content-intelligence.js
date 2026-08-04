@@ -87,7 +87,13 @@
   }
 
   function installProfileHook(){
-    if(typeof window.openProfile!=='function'||window.openProfile.__p50ci)return;
+    if(P50CI.profileHookInstalled)return;
+    P50CI.profileHookInstalled=true;
+    // fi-navigation émet cet événement : pas besoin d’empiler un autre wrap openProfile.
+    document.addEventListener('p50:profile-opened',event=>{
+      const id=event?.detail?.profileId;if(id)setTimeout(()=>renderProfileNews(id),0);
+    });
+    if(typeof window.openProfile!=='function'||window.openProfile.__p50ci||window.openProfile.__p50NavigationV3)return;
     const original=window.openProfile;
     const wrapped=function(id){const result=original.apply(this,arguments);setTimeout(()=>renderProfileNews(id),0);return result;};
     wrapped.__p50ci=true;window.openProfile=wrapped;
