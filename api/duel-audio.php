@@ -4,7 +4,7 @@ declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require_once __DIR__.'/duel-history-core.php';
 
-const P50_DUEL_AUDIO_VERSION='DUEL-AUDIO-V1.0';
+const P50_DUEL_AUDIO_VERSION='DUEL-AUDIO-V1.1';
 const P50_DUEL_AUDIO_MAX_BYTES=3145728;
 const P50_DUEL_AUDIO_MAX_DURATION_MS=15000;
 const P50_DUEL_AUDIO_RETENTION_DAYS=30;
@@ -60,6 +60,8 @@ function p50_duel_audio_cleanup(PDO $pdo): void {
 }
 
 function p50_duel_audio_item(array $row): array {
+    $authorPseudo=trim((string)($row['author_display_name']??''));
+    if($authorPseudo==='')$authorPseudo='Membre PASS50';
     return [
         'id'=>(string)$row['id'],
         'pollKey'=>(string)$row['poll_key'],
@@ -70,7 +72,7 @@ function p50_duel_audio_item(array $row): array {
         'durationMs'=>(int)$row['duration_ms'],
         'publishedAt'=>gmdate('c',strtotime((string)$row['created_at'].' UTC')),
         'expiresAt'=>gmdate('c',strtotime((string)$row['expires_at'].' UTC')),
-        'authorLabel'=>'Un membre PASS50',
+        'authorPseudo'=>$authorPseudo,
     ];
 }
 
@@ -106,18 +108,27 @@ if($method==='GET'){
     $limit=max(1,min(20,(int)($_GET['limit']??12)));
     if($pollKey!==''){
         if(!preg_match('/^[A-Za-z0-9._:-]{1,100}__[A-Za-z0-9._:-]{1,100}$/',$pollKey))json_response(['error'=>'Duel invalide.'],422);
-        $stmt=$pdo->prepare("SELECT * FROM p50_duel_audio_posts WHERE poll_key=? AND status='published' AND expires_at>UTC_TIMESTAMP() ORDER BY created_at DESC LIMIT 3");
+        $stmt=$pdo->prepare("SELECT p.*,u.display_name author_display_name
+          FROM p50_duel_audio_posts p
+          JOIN users u ON u.id=p.user_id AND u.deleted_at IS NULL
+          WHERE p.poll_key=? AND p.status='published' AND p.expires_at>UTC_TIMESTAMP()
+          ORDER BY p.created_at DESC LIMIT 3");
         $stmt->execute([$pollKey]);
     }else{
         $ids=array_values(array_unique(array_filter(array_map('trim',explode(',',$profileIdsRaw)),static fn($id)=>$id!==''&&preg_match('/^[A-Za-z0-9._:-]{1,100}$/',$id))));
         $ids=array_slice($ids,0,5);
         if(!$ids)json_response(['error'=>'Influenceurs requis.'],422);
         $placeholders=implode(',',array_fill(0,count($ids),'?'));
-        $stmt=$pdo->prepare("SELECT * FROM p50_duel_audio_posts WHERE status='published' AND expires_at>UTC_TIMESTAMP() AND (candidate_a_id IN ($placeholders) OR candidate_b_id IN ($placeholders)) ORDER BY created_at DESC LIMIT ".$limit);
+        $stmt=$pdo->prepare("SELECT p.*,u.display_name author_display_name
+          FROM p50_duel_audio_posts p
+          JOIN users u ON u.id=p.user_id AND u.deleted_at IS NULL
+          WHERE p.status='published' AND p.expires_at>UTC_TIMESTAMP()
+            AND (p.candidate_a_id IN ($placeholders) OR p.candidate_b_id IN ($placeholders))
+          ORDER BY p.created_at DESC LIMIT ".$limit);
         $stmt->execute(array_merge($ids,$ids));
     }
     $items=array_map('p50_duel_audio_item',$stmt->fetchAll());
-    json_response(['ok'=>true,'version'=>P50_DUEL_AUDIO_VERSION,'items'=>$items,'rules'=>['lastPerDuel'=>3,'retentionDays'=>P50_DUEL_AUDIO_RETENTION_DAYS,'anonymousAuthor'=>true],'generatedAt'=>gmdate('c')]);
+    json_response(['ok'=>true,'version'=>P50_DUEL_AUDIO_VERSION,'items'=>$items,'rules'=>['lastPerDuel'=>3,'retentionDays'=>P50_DUEL_AUDIO_RETENTION_DAYS,'anonymousAuthor'=>false,'authorIdentity'=>'account_display_name'],'generatedAt'=>gmdate('c')]);
 }
 
 if($method!=='POST')json_response(['error'=>'Méthode refusée.'],405);
@@ -187,7 +198,10 @@ if($existing&&!empty($existing['file_name'])&&(string)$existing['file_name']!==$
     $old=$dir.'/'.basename((string)$existing['file_name']);
     if(is_file($old))@unlink($old);
 }
-$rowStmt=$pdo->prepare('SELECT * FROM p50_duel_audio_posts WHERE id=? LIMIT 1');
+$rowStmt=$pdo->prepare("SELECT p.*,u.display_name author_display_name
+  FROM p50_duel_audio_posts p
+  JOIN users u ON u.id=p.user_id AND u.deleted_at IS NULL
+  WHERE p.id=? LIMIT 1");
 $rowStmt->execute([$id]);
 $row=$rowStmt->fetch();
-json_response(['ok'=>true,'version'=>P50_DUEL_AUDIO_VERSION,'item'=>p50_duel_audio_item($row),'message'=>'Audio publié dans le duel et Mon fil.'],201);
+json_response(['ok'=>true,'version'=>P50_DUEL_AUDIO_VERSION,'item'=>p50_duel_audio_item($row),'message'=>'Audio publié avec votre pseudo dans le duel et Mon fil.'],201);
