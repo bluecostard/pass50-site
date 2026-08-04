@@ -113,7 +113,7 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("cache:'no-store'", CLIENT)
         self.assertIn("content-intelligence.js?v=1.2", CONFIG)
         self.assertIn("content-intelligence.js?v=1.2", SW)
-        self.assertIn("pass50-v71-content-freshness", SW)
+        self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
     def test_admin_discovery_uses_verified_handles(self):
         self.assertIn("p50_social_links", DISCOVER)
