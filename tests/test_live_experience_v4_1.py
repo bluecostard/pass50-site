@@ -41,7 +41,7 @@ class LiveExperienceV41Tests(unittest.TestCase):
         self.assertIn('appAwareLiveUrl', watch_click)
 
     def test_modules_are_loaded_and_cached(self):
-        self.assertIn("live-experience-v4-1.js?v=1.3", PUBLIC)
+        self.assertIn("live-experience-v4-1.js?v=1.4", PUBLIC)
         self.assertIn("live-dismiss-ui-v1.js?v=1.0", PUBLIC)
         self.assertIn("live-dismiss-ui-v1.js?v=1.0", SW)
         self.assertIn("share-center-v1.js?v=1.0", SW)

@@ -1,18 +1,26 @@
-name: Validate Canonical Lionel Yasmine V24
+name: Validate Canonical Profiles V25
 
 on:
   pull_request:
     paths:
       - 'pass50_nouveaux_candidats_90_v19.json'
       - 'v9-tools.js'
+      - 'index.html'
       - 'app-config.js'
       - 'sw.js'
       - 'tests/test_canonical_lionel_yasmine_v24.py'
+      - 'tests/test_andrea_naomi_canonical_profile.py'
+      - 'tests/test_live_radar_v3.py'
+      - 'tests/test_live_trust_gate_v1.py'
+      - 'tests/test_metrics_ranking_calibration_v1.py'
+      - 'tests/test_mobile_public_ux_polish.py'
       - '.github/workflows/validate-canonical-lionel-yasmine-v24.yml'
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
       - name: JSON valide
@@ -25,4 +33,12 @@ jobs:
           node --check profile-lionel-pcs.js
           node --check profile-yasmine-fofana.js
       - name: Présence canonique et cache
-        run: python3 -m unittest tests.test_canonical_lionel_yasmine_v24
+        run: |
+          python3 -m unittest tests.test_canonical_lionel_yasmine_v24
+          python3 -m unittest tests.test_andrea_naomi_canonical_profile
+      - name: Versions publiques cohérentes
+        run: |
+          python3 -m unittest tests.test_live_radar_v3
+          python3 -m unittest tests.test_live_trust_gate_v1
+          python3 -m unittest tests.test_metrics_ranking_calibration_v1
+          python3 -m unittest tests.test_mobile_public_ux_polish
