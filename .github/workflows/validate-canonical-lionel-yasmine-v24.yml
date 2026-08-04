@@ -11,46 +11,16 @@ on:
       - 'tests/test_canonical_lionel_yasmine_v24.py'
       - 'tests/test_andrea_naomi_canonical_profile.py'
       - 'tests/test_live_radar_v3.py'
+      - 'tests/test_live_trust_gate_v1.py'
       - 'tests/test_metrics_ranking_calibration_v1.py'
-      - 'scripts/update_stale_version_assertions.py'
+      - 'tests/test_mobile_public_ux_polish.py'
       - '.github/workflows/validate-canonical-lionel-yasmine-v24.yml'
 
-permissions:
-  contents: write
-
 jobs:
-  align_versions:
-    if: github.actor != 'github-actions[bot]'
+  validate:
     runs-on: ubuntu-latest
     env:
       PYTHONDONTWRITEBYTECODE: '1'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/add-andrea-naomi-ng-guessan
-          fetch-depth: 0
-      - name: Aligner les assertions périmées
-        run: python3 scripts/update_stale_version_assertions.py
-      - name: Vérifier les tests concernés
-        run: |
-          python3 -m unittest tests.test_live_radar_v3
-          python3 -m unittest tests.test_metrics_ranking_calibration_v1
-          python3 -m unittest tests.test_andrea_naomi_canonical_profile
-          git diff --check
-      - name: Publier l’alignement
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests
-          if git diff --cached --quiet; then
-            echo "Aucune modification à publier."
-            exit 0
-          fi
-          git commit -m "Aligner les assertions sur les versions actuelles"
-          git push origin HEAD:agent/add-andrea-naomi-ng-guessan
-
-  validate:
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: JSON valide
@@ -64,5 +34,11 @@ jobs:
           node --check profile-yasmine-fofana.js
       - name: Présence canonique et cache
         run: |
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests.test_canonical_lionel_yasmine_v24
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests.test_andrea_naomi_canonical_profile
+          python3 -m unittest tests.test_canonical_lionel_yasmine_v24
+          python3 -m unittest tests.test_andrea_naomi_canonical_profile
+      - name: Versions publiques cohérentes
+        run: |
+          python3 -m unittest tests.test_live_radar_v3
+          python3 -m unittest tests.test_live_trust_gate_v1
+          python3 -m unittest tests.test_metrics_ranking_calibration_v1
+          python3 -m unittest tests.test_mobile_public_ux_polish
