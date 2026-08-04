@@ -30,6 +30,28 @@ function liveFor(profileId,platform=''){
   return lives().find(item=>String(item.profileId)===id&&(!network||String(item.platform)===network))||null;
 }
 
+function profileIdFromBadge(badge){
+  if(!(badge instanceof Element))return '';
+  if(badge.dataset.liveProfile)return String(badge.dataset.liveProfile);
+  const owner=badge.closest('[data-profile]');
+  if(owner?.dataset?.profile)return String(owner.dataset.profile);
+  const body=badge.closest('#profileBody');
+  if(body?.dataset?.p50CurrentProfile)return String(body.dataset.p50CurrentProfile);
+  if(body||badge.closest?.('#profileModal')){
+    const name=String(document.querySelector('#profileBody h2')?.textContent||'').trim().toLowerCase();
+    const handle=String(document.querySelector('#profileBody .handle')?.textContent||'').trim().toLowerCase();
+    try{
+      const match=(db.profiles||[]).find(item=>{
+        const itemName=String(item.name||'').trim().toLowerCase();
+        const itemHandle=String(item.handle||'').trim().toLowerCase();
+        return (name&&itemName===name)||(handle&&itemHandle===handle);
+      });
+      if(match?.id)return String(match.id);
+    }catch{}
+  }
+  return '';
+}
+
 function profileName(profileId,live){
   try{return String(profile?.(profileId)?.name||live?.profileName||'Influenceur')}catch{return String(live?.profileName||'Influenceur')}
 }
@@ -127,7 +149,8 @@ function openLiveDestination(live,preferred=''){
     return true;
   }
 
-  return openNewTab(web);
+  // Desktop : toujours la page live HTTPS (pas un deep link app).
+  return openNewTab(web||destination);
 }
 
 function decorateWatchLink(watch,live){
@@ -236,8 +259,16 @@ function enhance(){
     const button=document.createElement('button');button.type='button';button.className='btn p50-share-live';button.textContent='PARTAGER LE LIVE';button.dataset.liveProfile=watch.dataset.liveProfile||'';button.dataset.livePlatform=watch.dataset.livePlatform||'';watch.insertAdjacentElement('afterend',button);
   });
   document.querySelectorAll('.badge.live-badge').forEach(badge=>{
-    const owner=badge.closest('[data-profile]'),live=owner?liveFor(owner.dataset.profile):null;if(!live)return;
-    badge.dataset.liveClickable='1';badge.setAttribute('role','link');badge.tabIndex=0;badge.title=`Regarder le live de ${profileName(live.profileId,live)}`;badge.setAttribute('aria-label',badge.title);
+    const profileId=profileIdFromBadge(badge);
+    const live=profileId?liveFor(profileId):null;
+    if(!live?.url)return;
+    badge.dataset.liveClickable='1';
+    badge.dataset.liveProfile=profileId;
+    if(live.platform)badge.dataset.livePlatform=String(live.platform);
+    badge.setAttribute('role','link');
+    badge.tabIndex=0;
+    badge.title=`Regarder le live de ${profileName(live.profileId,live)}`;
+    badge.setAttribute('aria-label',badge.title);
   });
 }
 
@@ -286,16 +317,21 @@ window.addEventListener('click',event=>{
     else if(live)renderShareModal(live);
     return;
   }
-  const badge=target.closest('.badge.live-badge[data-live-clickable="1"]');
+  const badge=target.closest('.badge.live-badge');
   if(badge){
-    event.preventDefault();event.stopImmediatePropagation();
-    const owner=badge.closest('[data-profile]'),live=owner?liveFor(owner.dataset.profile):null;
-    if(live){
-      // Badge : pas de <a> natif → ouvrir tout de suite, vérifier après (jamais await avant open).
-      if(typeof window.PASS50_OPEN_THEN_VERIFY_LIVE==='function')window.PASS50_OPEN_THEN_VERIFY_LIVE(live,live.url);
-      else if(typeof window.PASS50_VERIFY_THEN_OPEN_LIVE==='function')window.PASS50_VERIFY_THEN_OPEN_LIVE(live,live.url);
-      else{openLiveDestination(live);backgroundVerify(live);}
+    const profileId=profileIdFromBadge(badge);
+    const live=profileId?liveFor(profileId,badge.dataset.livePlatform||''):null;
+    if(!live?.url){
+      if(profileId)notify('Lien du live indisponible');
+      return;
     }
+    event.preventDefault();event.stopImmediatePropagation();
+    badge.dataset.liveClickable='1';
+    badge.dataset.liveProfile=profileId;
+    // Badge : pas de <a> natif → ouvrir tout de suite vers la page live, vérifier après.
+    if(typeof window.PASS50_OPEN_THEN_VERIFY_LIVE==='function')window.PASS50_OPEN_THEN_VERIFY_LIVE(live,live.url);
+    else if(typeof window.PASS50_VERIFY_THEN_OPEN_LIVE==='function')window.PASS50_VERIFY_THEN_OPEN_LIVE(live,live.url);
+    else{openLiveDestination(live,live.url);backgroundVerify(live);}
     return;
   }
   if(target.closest('.p50-live-share-close')||target.id==='p50LiveShareModal'){event.preventDefault();closeShare();return;}
@@ -306,7 +342,7 @@ window.addEventListener('click',event=>{
 
 window.addEventListener('keydown',event=>{
   const target=event.target instanceof Element?event.target:null;if(!target)return;
-  if((event.key==='Enter'||event.key===' ')&&target.matches('.badge.live-badge[data-live-clickable="1"]')){event.preventDefault();target.click();}
+  if((event.key==='Enter'||event.key===' ')&&target.closest('.badge.live-badge')){event.preventDefault();target.closest('.badge.live-badge').click();}
   if(event.key==='Escape')closeShare();
 },true);
 
