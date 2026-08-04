@@ -1,8 +1,9 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.0';
+  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.1';
   const METRIC_SOURCE = /(?:^|\b)MR-V1\.0(?:\b|$)/i;
+  const PUBLISHED_MR_STATUS = 'published_mr_v1';
   let syncing = false;
 
   function profiles() {
@@ -14,18 +15,39 @@
   }
 
   function metricsControlsClassability(profileItem) {
-    const sources = [
+    const engine = profileItem?.dataEngine || {};
+    const publishedByEngine = METRIC_SOURCE.test(String(engine.algorithmVersion || ''))
+      && String(engine.scoreStatus || '') === PUBLISHED_MR_STATUS;
+    if (publishedByEngine) return true;
+
+    const explicitSources = [
       profileItem?.classabilitySource,
       profileItem?.publicRankingSource,
       profileItem?.rankingAlgorithmVersion,
       profileItem?.algorithmVersion,
       profileItem?.rankingPublication?.algorithmVersion,
     ];
-    return sources.some(value => METRIC_SOURCE.test(String(value || '')));
+    return explicitSources.some(value => METRIC_SOURCE.test(String(value || '')));
   }
 
   function expectedLegacyClassability(profileItem) {
     return Boolean(profileItem?.eligible === true && profileItem?.alive !== false);
+  }
+
+  function authoritativeIsClassableProfile(profileItem) {
+    if (!profileItem || profileItem.alive === false || profileItem.eligible !== true) return false;
+    if (metricsControlsClassability(profileItem)) return profileItem.classable !== false;
+    // Sur l'ancien classement public, la case administrative Éligible est la
+    // décision de classement. Un classable:false hérité ne doit plus la contredire.
+    return true;
+  }
+
+  function installAuthoritativeRule() {
+    try {
+      window.isClassableProfile = authoritativeIsClassableProfile;
+    } catch (error) {
+      console.warn('PASS50 classability rule', error);
+    }
   }
 
   function repairProfile(profileItem, { adminSave = false } = {}) {
@@ -40,8 +62,8 @@
       changed = true;
     }
 
-    // MR-V1.0 garde sa propre décision technique. Cette réparation ne concerne
-    // que l'ancien classement public piloté manuellement par la case Éligible.
+    // Une publication MR-V1.0 réellement appliquée garde sa propre décision.
+    // Les profils historiques restent pilotés par la case Éligible.
     if (!metricsControlled) {
       const expected = expectedLegacyClassability(profileItem);
       if (profileItem.classable !== expected) {
@@ -57,12 +79,7 @@
     return changed;
   }
 
-  function persistAndRender() {
-    try {
-      if (typeof save === 'function') save();
-    } catch (error) {
-      console.warn('PASS50 classability save', error);
-    }
+  function renderOnly() {
     try {
       if (typeof render === 'function') render();
     } catch (error) {
@@ -70,15 +87,26 @@
     }
   }
 
-  function repairAll() {
+  function persistAndRender() {
+    try {
+      if (typeof save === 'function') save();
+    } catch (error) {
+      console.warn('PASS50 classability save', error);
+    }
+    renderOnly();
+  }
+
+  function repairAll({ forceRender = false } = {}) {
     if (syncing) return 0;
     syncing = true;
     try {
+      installAuthoritativeRule();
       let repaired = 0;
       profiles().forEach(profileItem => {
         if (repairProfile(profileItem)) repaired += 1;
       });
       if (repaired > 0) persistAndRender();
+      else if (forceRender) renderOnly();
       return repaired;
     } finally {
       syncing = false;
@@ -86,6 +114,7 @@
   }
 
   function repairSavedProfile(profileId) {
+    installAuthoritativeRule();
     const item = profiles().find(profileItem => String(profileItem?.id) === String(profileId));
     if (!item) return false;
     const changed = repairProfile(item, { adminSave: true });
@@ -95,6 +124,7 @@
       persistAndRender();
       return true;
     }
+    renderOnly();
     return false;
   }
 
@@ -114,22 +144,26 @@
       repairAll();
       if (attempts >= 80 || (typeof window.__pass50CloudReady !== 'undefined' && window.__pass50CloudReady)) {
         clearInterval(timer);
-        // La fusion cloud peut se terminer dans la même boucle d'événement.
-        setTimeout(repairAll, 150);
+        // Le classement cloud vient d'être fusionné : réinstaller la règle puis
+        // réparer et réafficher la liste sur l'état final, pas sur l'état local initial.
+        setTimeout(() => repairAll({ forceRender: true }), 150);
       }
     }, 250);
   }
 
   function init() {
+    installAuthoritativeRule();
     installProfileFormBridge();
-    repairAll();
+    repairAll({ forceRender: true });
     installCloudRepairWindow();
-    window.addEventListener('storage', () => setTimeout(repairAll, 0));
+    window.addEventListener('storage', () => setTimeout(() => repairAll({ forceRender: true }), 0));
     window.PASS50_CLASSABILITY_SYNC = Object.freeze({
       contract: CONTRACT,
       repairAll,
       repairProfile,
       metricsControlsClassability,
+      authoritativeIsClassableProfile,
+      installAuthoritativeRule,
     });
   }
 
