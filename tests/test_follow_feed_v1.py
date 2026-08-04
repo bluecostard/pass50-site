@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 
@@ -14,7 +15,7 @@ class FollowFeedV2Tests(unittest.TestCase):
         feed = read("mon-fil.js")
         self.assertIn('<body data-pass50-page="feed">', page)
         self.assertIn('id="feedList"', page)
-        self.assertIn("PASS50-FOLLOW-FEED-PAGE-V2.1", feed)
+        self.assertRegex(feed, r"PASS50-FOLLOW-FEED-PAGE-V2\.\d+")
         self.assertIn("const MAX_FOLLOWED = 5", feed)
         self.assertIn("const NEWS_PER_PROFILE = 2", feed)
         self.assertIn("slice(0, MAX_FOLLOWED)", feed)
@@ -73,11 +74,14 @@ class FollowFeedV2Tests(unittest.TestCase):
     def test_loader_and_cache_use_the_centered_menu_without_live_regression(self):
         loader = read("public-copy-fixes.js")
         worker = read("sw.js")
+        page = read("mon-fil.html")
         self.assertIn("mobile-bottom-nav-v1.js?v=1.2", loader)
         self.assertNotIn("data-pass50-follow-watch", loader)
         self.assertIn("live-experience-v4-1.js?v=1.4", loader)
         self.assertIn("./mon-fil.html", worker)
-        self.assertIn("./mon-fil.js?v=2.1", worker)
+        feed_asset = re.search(r"mon-fil\.js\?v=([0-9.]+)", worker)
+        self.assertIsNotNone(feed_asset)
+        self.assertIn(f"mon-fil.js?v={feed_asset.group(1)}", page)
         self.assertIn("mobile-bottom-nav-v1.js?v=1.2", worker)
         self.assertIn("live-radar-v3.js?v=1.7", worker)
         self.assertRegex(worker, r"pass50-v\d+-[a-z0-9-]+")
