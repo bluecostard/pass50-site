@@ -20,6 +20,13 @@ function p50_mr_weights(): array {
 function p50_mr_platform_weights(): array { return [0.70,0.20,0.10]; }
 function p50_mr_freshness_hours(): array { return ['2H'=>3,'24H'=>6,'48H'=>8,'7J'=>18,'15J'=>18]; }
 
+
+function p50_mr_profile_coverage(array $platforms,?float $weightedCoverage): float {
+    $best=0.0;
+    foreach($platforms as $platform)$best=max($best,(float)($platform['coverage']??0));
+    return max(0.0,min(100.0,max((float)($weightedCoverage??0),$best)));
+}
+
 function p50_mr_schema_sql(): array {
     return [
         "CREATE TABLE IF NOT EXISTS p50_metric_ranking_runs (
@@ -295,7 +302,7 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
         $profileId=(string)$profile['profile_id'];$platforms=$platformsByProfile[$profileId]??[];usort($platforms,fn($a,$b)=>$b['score']<=>$a['score']?:strcmp($a['platform'],$b['platform']));$platforms=array_slice($platforms,0,3);
         $selectedWeights=array_slice(p50_mr_platform_weights(),0,count($platforms));$den=array_sum($selectedWeights);
         $aggregate=function(string $field)use($platforms,$selectedWeights,$den): ?float {if(!$platforms||$den<=0)return null;$v=0;foreach($platforms as $i=>$p)$v+=$p[$field]*$selectedWeights[$i];return $v/$den;};
-        $score=$aggregate('score');$base=$aggregate('baseScore');$coverage=$aggregate('coverage')??0;$confidence=$aggregate('confidence')??0;
+        $score=$aggregate('score');$base=$aggregate('baseScore');$weightedCoverage=$aggregate('coverage')??0;$coverage=p50_mr_profile_coverage($platforms,$weightedCoverage);$confidence=$aggregate('confidence')??0;
         $contentCount=array_sum(array_column(array_column($platforms,'raw'),'contentCount'));$captureCount=array_sum(array_column(array_column($platforms,'raw'),'captureCount'));
         $latest=null;$reachRaw=0.0;foreach($platforms as $platform){$candidate=$platform['raw']['latestCaptureAt'];if($candidate&&($latest===null||$candidate>$latest))$latest=$candidate;$reachRaw+=(float)($platform['raw']['reachRaw']??0);}
         $official=count(array_filter($accountsByProfile[$profileId]??[],fn($account)=>p50_mr_is_official_account($account)))>0;
