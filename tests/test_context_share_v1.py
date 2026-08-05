@@ -72,13 +72,13 @@ class ContextShareV1Tests(unittest.TestCase):
         self.assertIn("partage-contexte-image.php", self.endpoint)
         self.assertNotRegex(self.endpoint, r"\b(?:INSERT|UPDATE|DELETE)\b")
 
-    def test_loader_and_cache_are_wired_on_both_pages(self):
-        self.assertIn("context-share-v1.js?v=1.0", self.loader)
-        self.assertIn("data-pass50-context-share", self.loader)
+    def test_v1_is_kept_only_as_a_legacy_asset_not_loaded_by_runtime(self):
+        self.assertIn("LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0'", self.loader)
+        self.assertIn("context-share-v2.js?v=2.1", self.loader)
+        self.assertIn("data-pass50-context-share-v2", self.loader)
+        self.assertNotIn("loadScript('script[data-pass50-context-share]','./context-share-v1.js", self.loader)
         self.assertIn("context-share-v1.js?v=1.0", self.nav)
-        self.assertIn("dataset.pass50ContextShare", self.nav)
         self.assertIn("context-share-v1.js?v=1.0", self.worker)
-        self.assertIn("pass50-v77-context-share", self.worker)
         self.assertRegex(self.worker, r"pass50-v\d+-[a-z0-9-]+")
 
 
