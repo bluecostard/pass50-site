@@ -172,28 +172,33 @@
 
     .toast{
       position:fixed;left:50%;bottom:calc(108px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);
-      opacity:0;pointer-events:none;z-index:90;
+      opacity:0;pointer-events:none;z-index:150;
       background:#0d120d;border:1px solid rgba(183,255,0,.35);border-radius:999px;
       padding:11px 16px;font-size:12px;font-weight:800;transition:.22s var(--ease);
     }
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-    .modal{position:fixed;inset:0;z-index:70;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(8px)}
+    /* Au-dessus de la nav mobile (z 120) et du FAB share (z 118) */
+    .modal{position:fixed;inset:0;z-index:140;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
     .modal.show{display:flex}
     .modal-box{
       width:min(480px,100%);background:linear-gradient(180deg,#141a14,#0a0d0a);
       border:1px solid var(--line);border-radius:22px 22px 0 0;
-      padding:20px 18px calc(18px + env(safe-area-inset-bottom));
+      padding:20px 18px calc(22px + env(safe-area-inset-bottom));
+      max-height:min(88dvh,640px);overflow:auto;-webkit-overflow-scrolling:touch;
     }
     .modal-box strong{font-family:"Archivo Black",Impact,sans-serif;font-size:20px;letter-spacing:-.02em}
     .durations{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
     .durations button{
       border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px 10px;
-      background:#0a0d0a;color:var(--ink);font-weight:800;
+      background:#0a0d0a;color:var(--ink);font-weight:800;min-height:48px;
     }
     .durations button.active{border-color:var(--lime);background:var(--lime-dim);color:var(--lime)}
-
-    .diapo{position:fixed;inset:0;z-index:80;display:none;background:#050705;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))}
+    .modal-box .actions{margin-top:6px}
+    .modal-box .actions .btn{flex:1;min-height:48px;justify-content:center}
+    body.p50-status-open .p50-bottom-nav,
+    body.p50-status-open .p50-ranking-share-fab{visibility:hidden!important;pointer-events:none!important}
+    .diapo{position:fixed;inset:0;z-index:145;display:none;background:#050705;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))}
     .diapo.show{display:grid;grid-template-rows:auto 1fr;gap:10px}
     .diapo-bars{display:flex;gap:4px}
     .diapo-bars i{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
@@ -351,6 +356,6 @@
 
   <div class="toast" id="toast"></div>
   <script src="./mobile-bottom-nav-v1.js?v=1.4"></script>
-  <script src="./pronostics.js?v=2.0"></script>
+  <script src="./pronostics.js?v=2.1"></script>
 </body>
 </html>
