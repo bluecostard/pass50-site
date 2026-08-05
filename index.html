@@ -67,11 +67,11 @@
     /* PASS50 Premium UI */
     .hero-intro{isolation:isolate;background:linear-gradient(180deg,rgba(8,11,8,.28),rgba(8,11,8,.42))!important;border-color:rgba(183,255,0,.18)}
     .hero-intro>*{position:relative;z-index:3}
-    .hero-intro .eyebrow{color:rgba(183,255,0,.72)}
-    .hero-intro .buzz-title{color:rgba(255,255,255,.78);text-shadow:0 2px 18px rgba(5,7,5,.45)}
-    .hero-intro .buzz-title span{color:rgba(183,255,0,.78)}
-    .hero-intro .metric{color:rgba(183,255,0,.78)}
-    .hero-intro .muted,.hero-intro .up{color:rgba(189,197,186,.68)}
+    .hero-intro .eyebrow{color:rgba(183,255,0,.52)}
+    .hero-intro .buzz-title{color:rgba(255,255,255,.54);text-shadow:0 2px 16px rgba(5,7,5,.35)}
+    .hero-intro .buzz-title span{color:rgba(183,255,0,.56)}
+    .hero-intro .metric{color:rgba(183,255,0,.56)}
+    .hero-intro .muted,.hero-intro .up{color:rgba(189,197,186,.48)}
     .hero-backdrop{position:absolute;inset:0;z-index:0;overflow:hidden;background:#0a0e0a}
     .hero-backdrop::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 78% 34%,rgba(183,255,0,.06),transparent 40%);z-index:1;pointer-events:none}
     .hero-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,7,5,.42) 0%,rgba(5,7,5,.22) 36%,rgba(5,7,5,.08) 68%,rgba(5,7,5,.04) 100%),linear-gradient(180deg,rgba(5,7,5,.06),rgba(5,7,5,.16));z-index:1;pointer-events:none}
@@ -116,7 +116,7 @@
       #accountBtn,#shareBtn{display:none}.actions .live{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:1000;white-space:nowrap;padding:10px 13px;min-height:42px}.icon-btn{min-width:40px}
       .demo-banner{margin-top:10px;padding:8px 9px;line-height:1.35;text-align:center}
       .filters{display:grid;grid-template-columns:1fr;gap:9px;padding:12px 0}.filters .spacer{display:none}.seg{width:100%;-webkit-overflow-scrolling:touch;scrollbar-width:none}.seg::-webkit-scrollbar{display:none}.seg button{min-height:42px;padding:9px 13px;flex:0 0 auto;font-size:11px}
-      .hero{display:block}.hero-intro{min-height:330px;padding:22px 18px;margin-bottom:11px;border-radius:19px}.hero-slide{background-position:center center!important}.buzz-title{font-size:clamp(43px,13vw,55px);letter-spacing:-3px}.metric{font-size:38px}
+      .hero{display:block}.hero-intro{min-height:330px;padding:22px 18px;margin-bottom:11px;border-radius:19px}.hero-slide{background-position:center center!important;background-size:182% auto!important}.buzz-title{font-size:clamp(43px,13vw,55px);letter-spacing:-3px}.metric{font-size:38px}
       .rank-card{min-height:auto;padding:12px;margin-bottom:11px;border-radius:19px}.rank-card .avatar{height:min(68vw,270px);margin-bottom:12px}.rank-num{font-size:51px}.rank-name{font-size:19px}.score{font-size:30px}
       .section{margin-top:13px;padding:12px;border-radius:19px}.section-head{align-items:center;gap:8px}.section-title{font-size:19px;line-height:1.15}.section-head .btn,.top50-cta{flex:0 0 auto}.top50-cta{height:32px;padding:0 12px;font-size:11px}
       .top10{display:flex;grid-template-columns:none;gap:8px;margin-right:0;padding-bottom:10px;padding-right:max(12px,env(safe-area-inset-right));overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scroll-padding-inline:max(10px,env(safe-area-inset-left));overscroll-behavior-x:contain}.mini{flex:0 0 132px;min-width:132px;padding:9px;scroll-snap-align:start;scroll-snap-stop:normal}.mini .avatar{height:84px}
@@ -572,7 +572,7 @@ function renderHero(){
     'assets/hero-media-6.jpg'  // Y'a Problème
   ];
   const slidePositions=['center center','center center','center center','center center','center center','center center'];
-  const bust=`?v=83`;
+  const bust=`?v=84`;
   $('#buzz').innerHTML=`<div class="panel hero-intro"><div class="hero-backdrop">${slides.map((src,i)=>`<div class="hero-slide" style="background-image:url('${src}${bust}');background-position:${slidePositions[i]||'center center'}"></div>`).join('')}</div><div><div class="eyebrow">⚡ BUZZ NOW · ${periodLabels[ui.period]}</div><h1 class="buzz-title">LE BUZZ<br><span>MAINTENANT</span></h1></div><div><div class="metric score-animate">${total}/300</div><div class="muted">SCORE CUMULÉ DU TOP 3</div><div class="up" style="margin-top:7px">↗ Classement actualisé • ${publishedTime()}</div></div></div>${top.map(heroCard).join('')}`;
   animateScoreCounters($('#buzz'));
 }
@@ -843,7 +843,7 @@ $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)close(m.i
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const visible=[...document.querySelectorAll('.modal.show')].pop();if(visible)close(visible.id)});
 window.addEventListener('storage',()=>{db=load();render()});
 normalizeLiveStreams();refreshLiveStatus();setInterval(refreshLiveStatus,60000);setInterval(()=>{normalizeLiveStreams();renderLiveHeader();if($('#liveModal')?.classList.contains('show'))openLives();},30000);
-if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=83').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=84').catch(()=>{});
 
 // --- Adaptateur IONOS + MySQL + Brevo ---
 const apiConfig=window.PASS50_API||{};
