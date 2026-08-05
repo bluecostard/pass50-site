@@ -69,7 +69,9 @@ jobs:
           put -O "$REMOTE_DIR" .deploy/mobile-bottom-nav-v1.js
           put -O "$REMOTE_DIR" .deploy/v9-tools.js
           put -O "$REMOTE_DIR" .deploy/v9-tools.css
+          put -O "$REMOTE_DIR" .deploy/facebook-video-player-v1.js
           put -O "$REMOTE_DIR" .deploy/deployment-version.json
+          put -O "$REMOTE_DIR/api" .deploy/api/content-feed.php
           put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-platform-audit-cron-v2.php
           put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-cron-v4.php
           put -O "$REMOTE_DIR/api" .deploy/api/metrics-collector-facebook.php
@@ -89,6 +91,7 @@ jobs:
               worker="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/sw.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
               runtime="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/public-copy-fixes.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
               share="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/context-share-v2.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              content="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/facebook-video-player-v1.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
               page="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/?health=$GITHUB_SHA&attempt=$attempt" || true)"
               if jq -e --arg sha "$GITHUB_SHA" '.commit == $sha and .frontend == "v82-share-v2-only"' >/dev/null 2>&1 <<<"$marker" \
                 && grep -q "pass50-v81-service-worker-disabled" <<<"$worker" \
@@ -96,9 +99,10 @@ jobs:
                 && grep -q "context-share-v2.js?v=2.3" <<<"$runtime" \
                 && ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" <<<"$runtime" \
                 && grep -q "PASS50-CONTEXT-SHARE-V2.0" <<<"$share" \
+                && grep -q "PASS50-FACEBOOK-VIDEO-PLAYER-V1.0" <<<"$content" \
                 && grep -q "PASS50" <<<"$page"; then
                 ready=true
-                echo "$site sert bien l’interface V82 et uniquement le partage V2."
+                echo "$site sert bien l’interface V82, le partage V2 et le lecteur Facebook."
                 break
               fi
               echo "Propagation V82 en attente pour $site ($attempt/30)."
@@ -113,6 +117,7 @@ jobs:
             echo '### Déploiement PASS50 V82'
             echo "- Commit vérifié : \`$GITHUB_SHA\`"
             echo '- Interface : `V82 share-v2-only`'
+            echo '- Lecteur des vidéos Facebook : `V1.0`'
             echo '- Runtimes actualité V4 : déploiement prioritaire forcé'
             echo '- Service worker : désactivé temporairement (`V81`)'
             echo '- Cache HTTP HTML/JS/CSS : désactivé temporairement'

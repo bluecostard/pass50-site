@@ -11,11 +11,14 @@ FACEBOOK = (ROOT / "api/metrics-collector-facebook.php").read_text()
 VALIDATE = (ROOT / "api/news-validate.php").read_text()
 DISCOVER = (ROOT / "api/news-discover.php").read_text()
 CLIENT = (ROOT / "content-intelligence.js").read_text()
+PLAYER = (ROOT / "facebook-video-player-v1.js").read_text()
+PUBLIC_COPY = (ROOT / "public-copy-fixes.js").read_text()
 CONFIG = (ROOT / "app-config.js").read_text()
 SW = (ROOT / "sw.js").read_text()
 WORKFLOW = (ROOT / ".github/workflows/content-intelligence-15m.yml").read_text()
 FAST_WORKFLOW = (ROOT / ".github/workflows/content-freshness-5m.yml").read_text()
-ALL = CORE + FEED + CRON + FRESH + FACEBOOK + VALIDATE + DISCOVER + CLIENT + CONFIG + SW + WORKFLOW + FAST_WORKFLOW
+DEPLOY = (ROOT / ".github/workflows/deploy-ionos.yml").read_text()
+ALL = CORE + FEED + CRON + FRESH + FACEBOOK + VALIDATE + DISCOVER + CLIENT + PLAYER + PUBLIC_COPY + CONFIG + SW + WORKFLOW + FAST_WORKFLOW + DEPLOY
 
 
 class ContentIntelligenceV1Tests(unittest.TestCase):
@@ -96,6 +99,23 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("Aperçu lisible dans Pass50", CLIENT)
         self.assertIn("Ouvrir Facebook", CLIENT)
         self.assertIn("$titleLength<12&&$thumbnail===''", FEED)
+
+    def test_public_facebook_videos_can_play_inside_pass50_with_external_fallback(self):
+        self.assertIn("p50_content_feed_facebook_playable", FEED)
+        self.assertIn("['video','reel','live']", FEED)
+        self.assertIn("'playableInPass50'", FEED)
+        self.assertIn("facebookVideoPlaybackInPass50'=>true", FEED)
+        self.assertIn("PASS50-FACEBOOK-VIDEO-PLAYER-V1.0", PLAYER)
+        self.assertIn("https://www.facebook.com/plugins/video.php", PLAYER)
+        self.assertIn("data-p50fb-play", PLAYER)
+        self.assertIn("▶ Lire la vidéo", PLAYER)
+        self.assertIn("allowfullscreen", PLAYER)
+        self.assertIn("host.endsWith('.facebook.com')", PLAYER)
+        self.assertIn("Ouvrir Facebook", PLAYER)
+        self.assertIn("facebook-video-player-v1.js?v=1.0", PUBLIC_COPY)
+        self.assertIn('.deploy/facebook-video-player-v1.js', DEPLOY)
+        self.assertIn('.deploy/api/content-feed.php', DEPLOY)
+        self.assertIn("PASS50-FACEBOOK-VIDEO-PLAYER-V1.0", DEPLOY)
 
     def test_small_accounts_are_normalized(self):
         self.assertIn("follower_count", CORE)
