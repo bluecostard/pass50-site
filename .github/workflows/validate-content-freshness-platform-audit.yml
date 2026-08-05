@@ -5,6 +5,7 @@ on:
     paths:
       - 'api/content-freshness-platform-audit-cron-v2.php'
       - '.github/workflows/content-freshness-platform-audit.yml'
+      - '.github/workflows/deploy-ionos.yml'
       - 'tests/test_content_freshness_platform_audit.py'
       - '.github/workflows/validate-content-freshness-platform-audit.yml'
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - 'api/content-freshness-platform-audit-cron-v2.php'
       - '.github/workflows/content-freshness-platform-audit.yml'
+      - '.github/workflows/deploy-ionos.yml'
       - 'tests/test_content_freshness_platform_audit.py'
       - '.github/workflows/validate-content-freshness-platform-audit.yml'
 
@@ -43,7 +45,12 @@ jobs:
           grep -q 'p50_cpa2_x_health' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'authorizedOauthProfiles' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'youtubeSharePercent' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'platform-wait-probe-v21' .github/workflows/content-freshness-platform-audit.yml
+          grep -q 'contentFreshnessRuntime=="CONTENT-FRESHNESS-V4.0"' .github/workflows/content-freshness-platform-audit.yml
           grep -q 'content-freshness-cron-v4.php' .github/workflows/content-freshness-platform-audit.yml
+          grep -q 'put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-platform-audit-cron-v2.php' .github/workflows/deploy-ionos.yml
+          grep -q 'put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-cron-v4.php' .github/workflows/deploy-ionos.yml
+          grep -q 'put -O "$REMOTE_DIR/api" .deploy/api/metrics-collector-facebook.php' .github/workflows/deploy-ionos.yml
           ! grep -q 'actions: write' .github/workflows/content-freshness-platform-audit.yml
           ! grep -q 'UPDATE app_state' api/content-freshness-platform-audit-cron-v2.php
           ! grep -q "'profileId'=>" api/content-freshness-platform-audit-cron-v2.php
