@@ -13,11 +13,76 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: JavaScript syntax
         run: node --check mobile-modal-video-progress-v1.js
       - name: Mobile modal and video progress contract
         run: python3 -m unittest tests.test_mobile_modal_video_progress_v1
+      - name: Test production Apoutchou Facebook
+        shell: bash
+        run: |
+          set -euo pipefail
+          feed='apoutchou-production-feed.json'; ready=false
+          for attempt in $(seq 1 18); do
+            player="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "https://www.pass50.store/facebook-video-player-v1.js?verify=${GITHUB_RUN_ID}-${attempt}" || true)"
+            curl --location --silent --show-error --max-time 30 -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' \
+              "https://www.pass50.store/api/content-feed.php?period=24h&profileId=apoutchou&newsLimit=30&verify=${GITHUB_RUN_ID}-${attempt}" > "$feed" || true
+            if grep -q 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.1' <<<"$player" \
+              && jq -e '.ok==true and .ready==true and .rules.facebookEmbedRouting==true' "$feed" >/dev/null 2>&1; then
+              ready=true; break
+            fi
+            echo "Propagation du lecteur V1.1 en attente ($attempt/18)."
+            sleep 5
+          done
+          [ "$ready" = true ] || { echo '::error::Le lecteur Facebook V1.1 ou son API ne sont pas servis'; exit 1; }
+
+          item="$(jq -c '[.news[] | select((.platform|ascii_downcase)=="facebook" and .playableInPass50==true)][0] // empty' "$feed")"
+          [ -n "$item" ] || { echo '::error::Aucune actualité Facebook lisible sur la fiche Apoutchou'; exit 1; }
+          source="$(jq -r '.url' <<<"$item")"
+          route="$(jq -r '.facebookEmbedType // "missing"' <<<"$item")"
+          item_type="$(jq -r '.itemType // "unknown"' <<<"$item")"
+          [ "$route" = post ] || [ "$route" = video ] || { echo "::error::Routage invalide: $route"; exit 1; }
+
+          safe_path="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+u=urllib.parse.urlparse(sys.argv[1])
+print((u.hostname or '') + (u.path or '/'))
+PY
+)"
+          encoded="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=''))
+PY
+)"
+
+          for plugin in post video; do
+            show_text=false; [ "$plugin" = post ] && show_text=true
+            plugin_url="https://www.facebook.com/plugins/${plugin}.php?href=${encoded}&show_text=${show_text}&width=820"
+            body="facebook-${plugin}.html"
+            code="$(curl --location --silent --show-error --max-time 40 --output "$body" --write-out '%{http_code}' -H 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.8' "$plugin_url" || true)"
+            bytes="$(wc -c < "$body" 2>/dev/null || printf 0)"
+            unavailable=false
+            if grep -Eqi "ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible" "$body" 2>/dev/null; then unavailable=true; fi
+            login_wall=false
+            if grep -Eqi "connectez-vous|log in to facebook|connexion à facebook" "$body" 2>/dev/null; then login_wall=true; fi
+            printf 'APOUTCHOU_PLUGIN plugin=%s http=%s bytes=%s unavailable=%s loginWall=%s\n' "$plugin" "$code" "$bytes" "$unavailable" "$login_wall"
+            printf '%s' "$unavailable" > "${plugin}-unavailable.txt"
+          done
+
+          post_unavailable="$(cat post-unavailable.txt)"
+          video_unavailable="$(cat video-unavailable.txt)"
+          printf 'APOUTCHOU_RESULT itemType=%s route=%s postUnavailable=%s videoUnavailable=%s path=%s\n' \
+            "$item_type" "$route" "$post_unavailable" "$video_unavailable" "$safe_path"
+
+          if [ "$route" = post ] && [ "$post_unavailable" = true ]; then
+            echo '::error::Le lecteur post sélectionné pour Apoutchou renvoie encore contenu indisponible.'
+            exit 1
+          fi
+          if [ "$route" = video ] && [ "$video_unavailable" = true ]; then
+            echo '::error::Le lecteur vidéo sélectionné pour Apoutchou renvoie encore contenu indisponible.'
+            exit 1
+          fi
       - name: Diff check
         run: git diff --check
