@@ -1,0 +1,232 @@
+name: Metrics Ranking Public State Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/metrics-ranking-public-state-audit-cron-v1.php'
+      - '.github/workflows/metrics-ranking-public-state-audit.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-metrics-ranking-public-state-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - name: Wait for public-state audit endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Secrets métriques incomplets."
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              AUDIT_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-public-state-audit-cron-v1.php"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
+              exit 1
+              ;;
+          esac
+          ready=false
+          for attempt in $(seq 1 30); do
+            code="$(curl --location --silent --show-error --max-time 15 \
+              --output /dev/null --write-out '%{http_code}' \
+              -H 'Cache-Control: no-cache, no-store' \
+              "$AUDIT_URL?contract=MR-PUBLIC-STATE-AUDIT-V1.0&attempt=$attempt" || true)"
+            if [ "$code" = '405' ]; then ready=true; break; fi
+            echo "Endpoint d’audit public en attente ($attempt/30, HTTP ${code:-000})."
+            sleep 10
+          done
+          if [ "$ready" != 'true' ]; then
+            echo "::error::L’endpoint d’audit public n’est pas servi après cinq minutes."
+            exit 1
+          fi
+
+      - name: Probe public-state audit contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CRON_URL" in
+            */metrics-cron.php) AUDIT_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-public-state-audit-cron-v1.php" ;;
+            *) exit 1 ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-public-state-probe"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
+          timestamp="$(date +%s)"
+          signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+          curl --fail-with-body --silent --show-error --max-time 55 \
+            -H 'Content-Type: application/json' \
+            -H "X-P50-Timestamp: $timestamp" \
+            -H "X-P50-Signature: $signature" \
+            --data "$body" "$AUDIT_URL" > public-ranking-state-probe.json
+          jq -e '
+            .ok == true and
+            .action == "probe" and
+            .contract == "MR-PUBLIC-STATE-AUDIT-V1.0" and
+            .readOnly == true and
+            .publicStateWrites == 0
+          ' public-ranking-state-probe.json >/dev/null
+
+      - name: Audit current public ranking state
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CRON_URL" in
+            */metrics-cron.php) AUDIT_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-public-state-audit-cron-v1.php" ;;
+            *) exit 1 ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-public-state-audit"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"audit",dispatchId:$dispatchId}')"
+          response_file='public-ranking-state-audit.json'
+          http_code='000'
+          for attempt in $(seq 1 5); do
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            set +e
+            http_code="$(curl --silent --show-error --max-time 90 \
+              --output "$response_file" --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              -H "X-P50-Timestamp: $timestamp" \
+              -H "X-P50-Signature: $signature" \
+              --data "$body" "$AUDIT_URL")"
+            curl_status=$?
+            set -e
+            if [ "$curl_status" -eq 0 ] && [ "$http_code" = '200' ]; then break; fi
+            if [ "$attempt" -lt 5 ] && { [ "$http_code" = '000' ] || [ "$http_code" = '502' ] || [ "$http_code" = '503' ] || [ "$http_code" = '504' ]; }; then
+              echo "IONOS temporairement indisponible (HTTP ${http_code:-000}), tentative $attempt/5."
+              sleep 15
+              continue
+            fi
+            echo "::error::Audit du classement public refusé (curl $curl_status, HTTP ${http_code:-000})."
+            cat "$response_file" 2>/dev/null || true
+            exit 1
+          done
+          jq -e '
+            .ok == true and
+            .action == "audit" and
+            .contract == "MR-PUBLIC-STATE-AUDIT-V1.0" and
+            .readOnly == true and
+            .publicStateWrites == 0 and
+            (.state.periods | type == "object") and
+            (.comparison | type == "object")
+          ' "$response_file" >/dev/null
+
+          revision="$(jq -r '.state.stateRevision // 0' "$response_file")"
+          updated_at="$(jq -r '.state.updatedAt // "—"' "$response_file")"
+          total="$(jq -r '.state.profiles.total // 0' "$response_file")"
+          alive="$(jq -r '.state.profiles.alive // 0' "$response_file")"
+          eligible="$(jq -r '.state.profiles.eligible // 0' "$response_file")"
+          classable="$(jq -r '.state.profiles.classable // 0' "$response_file")"
+          primary_score="$(jq -r '.state.profiles.primaryScore // 0' "$response_file")"
+          auto_score="$(jq -r '.state.profiles.autoScore // 0' "$response_file")"
+          meta_version="$(jq -r '.state.metricsRankingMeta.version // "—"' "$response_file")"
+          meta_algorithm="$(jq -r '.state.metricsRankingMeta.algorithmVersion // "—"' "$response_file")"
+          meta_run="$(jq -r '.state.metricsRankingMeta.runUuid // "—"' "$response_file")"
+          meta_published="$(jq -r '.state.metricsRankingMeta.publishedAt // "—"' "$response_file")"
+          meta_periods="$(jq -r '(.state.metricsRankingMeta.periods // []) | join(", ")' "$response_file")"
+          latest_run="$(jq -r '.latestApplied.runUuid // "—"' "$response_file")"
+          latest_after="$(jq -r '.latestApplied.publicRevisionAfter // 0' "$response_file")"
+          match="$(jq -r '.comparison.metadataMatchesLatestAppliedRun // false' "$response_file")"
+          references="$(jq -r '.comparison.profilesReferencingLatestAppliedRun // 0' "$response_file")"
+          delta="$(jq -r '.comparison.revisionDeltaAfterLatestApply // 0' "$response_file")"
+          rollback_match="$(jq -r '.comparison.rollbackRevisionStillMatches // false' "$response_file")"
+          p2h="$(jq -r '.state.periods["2H"].rankableCount // 0' "$response_file")"
+          p24h="$(jq -r '.state.periods["24H"].rankableCount // 0' "$response_file")"
+          p48h="$(jq -r '.state.periods["48H"].rankableCount // 0' "$response_file")"
+          p7j="$(jq -r '.state.periods["7J"].rankableCount // 0' "$response_file")"
+          p15j="$(jq -r '.state.periods["15J"].rankableCount // 0' "$response_file")"
+          run_counts="$(jq -c '.state.runReferenceCounts // {}' "$response_file")"
+          score_statuses="$(jq -c '.state.scoreStatuses // {}' "$response_file")"
+
+          {
+            echo '### Audit agrégé du classement public'
+            printf -- '- Révision / mise à jour : `%s` / %s\n' "$revision" "$updated_at"
+            printf -- '- Profils total / vivants / éligibles / classables : %s / %s / %s / %s\n' "$total" "$alive" "$eligible" "$classable"
+            printf -- '- Score principal / autoScore : %s / %s\n' "$primary_score" "$auto_score"
+            printf -- '- Classables par période 2H / 24H / 48H / 7J / 15J : %s / %s / %s / %s / %s\n' "$p2h" "$p24h" "$p48h" "$p7j" "$p15j"
+            printf -- '- Métadonnées MR : `%s` · `%s`\n' "$meta_version" "$meta_algorithm"
+            printf -- '- runUuid public : `%s`\n' "$meta_run"
+            printf -- '- Publié le / périodes : %s / %s\n' "$meta_published" "${meta_periods:-—}"
+            printf -- '- Dernier run appliqué : `%s` · révision après `%s`\n' "$latest_run" "$latest_after"
+            printf -- '- Métadonnées = dernier run appliqué : `%s`\n' "$match"
+            printf -- '- Profils référant encore ce run : %s\n' "$references"
+            printf -- '- Révisions intervenues depuis : %s\n' "$delta"
+            printf -- '- Rollback direct encore sûr : `%s`\n' "$rollback_match"
+            printf -- '- Références de runs agrégées : `%s`\n' "$run_counts"
+            printf -- '- Statuts de score agrégés : `%s`\n' "$score_statuses"
+            echo '- Profils individuels exposés : `non`'
+            echo '- Écriture app_state : `0`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            printf 'revision=%s\n' "$revision"
+            printf 'meta_run=%s\n' "$meta_run"
+            printf 'latest_run=%s\n' "$latest_run"
+            printf 'match=%s\n' "$match"
+            printf 'references=%s\n' "$references"
+            printf 'delta=%s\n' "$delta"
+            printf 'rollback_match=%s\n' "$rollback_match"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish sanitized audit status
+        if: ${{ always() }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+          REVISION: ${{ steps.audit.outputs.revision }}
+          MATCH: ${{ steps.audit.outputs.match }}
+          REFERENCES: ${{ steps.audit.outputs.references }}
+          DELTA: ${{ steps.audit.outputs.delta }}
+          ROLLBACK_MATCH: ${{ steps.audit.outputs.rollback_match }}
+        run: |
+          set -euo pipefail
+          state='success'
+          description="rev ${REVISION:-0} · run match ${MATCH:-false} · ${REFERENCES:-0} refs · delta ${DELTA:-0} · app_state 0"
+          if [ "${AUDIT_OUTCOME:-failure}" != 'success' ]; then
+            state='failure'
+            description='audit état public interrompu · app_state inchangé'
+          elif [ "${ROLLBACK_MATCH:-false}" != 'true' ]; then
+            state='pending'
+            description="rev ${REVISION:-0} · rollback direct non sûr · ${REFERENCES:-0} refs · app_state 0"
+          fi
+          payload="$(jq -nc \
+            --arg state "$state" \
+            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg description "$description" \
+            --arg context 'pass50/public-ranking-state-audit' \
+            '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archive public-state audit
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-ranking-state-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            public-ranking-state-probe.json
+            public-ranking-state-audit.json
+          if-no-files-found: ignore
+          retention-days: 30
