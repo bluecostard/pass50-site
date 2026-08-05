@@ -159,21 +159,25 @@
       const payout = opt.payout ?? Math.round(stake * odd);
       const pct = Number(opt.votePercent || 0);
       return `<button type="button" class="opt ${selected === opt.key ? 'selected' : ''}" data-vote="${esc(item.id)}" data-opt="${esc(opt.key)}">
-        <span><strong>${esc(opt.label)}</strong>${showTally ? `<span class="pct">${esc(pct)}% · ${esc(opt.voteCount || 0)} joueurs</span>` : ''}${showTally ? `<div class="bar"><i style="width:${Math.min(100, pct)}%"></i></div>` : ''}</span>
-        <span class="odd">${esc(fmtOdd(odd))}<span class="pct">+${esc(payout)}</span></span>
+        <span>
+          <span class="label">${esc(opt.label)}</span>
+          ${showTally ? `<span class="pct">${esc(pct)}% · ${esc(opt.voteCount || 0)} joueurs</span><div class="bar"><i style="width:${Math.min(100, pct)}%"></i></div>` : ''}
+        </span>
+        <span class="odd-block"><span class="cote">${esc(fmtOdd(odd))}</span><span class="gain">+${esc(payout)} pts</span></span>
       </button>`;
     }).join('');
     const locked = item.myVote?.potentialPayout
       ? `Ta cote ${fmtOdd(item.myVote.oddLocked)} · +${item.myVote.potentialPayout} pts si correct`
       : `Mise ${stake} pts · gain = mise × cote`;
     return `<article class="card" data-qid="${esc(item.id)}">
+      <p class="card-kicker">${esc(closesLabel(item.closesAt))}${item.totalVotes ? ` · ${esc(item.totalVotes)} joueurs` : ''}</p>
       <h2>${esc(item.title)}</h2>
       ${item.context ? `<div class="ctx">${esc(item.context)}</div>` : ''}
       <div class="opts">${opts}</div>
-      <div class="meta">${esc(timingMeta(item))} · ${esc(locked)} · ${esc(item.totalVotes || 0)} joueurs · Sans argent réel</div>
+      <div class="meta">${esc(measureLabel(item.measureAt) || 'Résolution à la date de mesure')} · ${esc(locked)} · Sans argent réel</div>
       <div class="actions">
         ${voted ? `<button type="button" class="btn primary" data-publish="${esc(item.id)}">Publier en statut</button>
-        <button type="button" class="btn" data-share="${esc(item.id)}">Partager</button>` : '<span class="meta">Choisis une cote</span>'}
+        <button type="button" class="btn" data-share="${esc(item.id)}">Partager</button>` : '<span class="meta" style="margin:0">Choisis une cote</span>'}
       </div>
     </article>`;
   }
@@ -276,9 +280,10 @@
     const win = item.options?.find((o) => o.key === item.winningOptionKey)?.label || item.winningOptionKey || '—';
     const badge = item.won ? `+${item.pointsEarned || 0} pts` : '0 pt';
     return `<article class="card">
+      <p class="card-kicker">${item.won ? 'Bon prono' : 'À côté'} · ${esc(badge)}</p>
       <h2>${esc(item.title)}</h2>
       <div class="ctx">Ton choix : ${esc(mine)} · Gagnant : ${esc(win)}</div>
-      <div class="meta">${esc(badge)} · ${item.won ? 'Bon prono' : 'À côté'} · Sans argent réel</div>
+      <div class="meta">Sans argent réel</div>
     </article>`;
   }
 
