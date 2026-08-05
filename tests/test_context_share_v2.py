@@ -38,8 +38,9 @@ class ContextShareV2Tests(unittest.TestCase):
         self.assertIn("removeLegacyShareUi", self.js)
 
     def test_coules_container_is_tighter_and_not_black_panel(self):
-        self.assertIn("#coules.section{padding:0!important;background:transparent!important", self.js)
+        self.assertIn("#coules.section{padding:12px!important;background:transparent!important", self.js)
         self.assertIn("#coules .coules-banner", self.js)
+        self.assertIn("display:flex!important;align-items:center!important", self.js)
         self.assertIn("#coules .sunk-duel", self.js)
         self.assertIn("linear-gradient(145deg,#2a1014,#12090b", self.js)
         self.assertIn("#coules .sunk{padding:12px!important", self.js)
