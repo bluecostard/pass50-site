@@ -89,9 +89,13 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn("name: Metrics Ranking Experimental", WORKFLOW)
         self.assertIn("cron: '57 */2 * * *'", WORKFLOW)
         self.assertIn("workflow_dispatch:", WORKFLOW)
+        self.assertIn("push:", WORKFLOW)
+        self.assertIn("branches:\n      - main", WORKFLOW)
+        self.assertIn("api/metrics-ranking-cron.php", WORKFLOW)
+        self.assertIn("api/metrics-ranking-fresh-capture-core.php", WORKFLOW)
         self.assertIn("group: pass50-metrics-ranking-experimental", WORKFLOW)
         self.assertIn("cancel-in-progress: false", WORKFLOW)
-        self.assertIn("timeout-minutes: 10", WORKFLOW)
+        self.assertIn("timeout-minutes: 15", WORKFLOW)
         secret_names = set(re.findall(r"secrets\.([A-Z0-9_]+)", WORKFLOW))
         self.assertEqual(
             secret_names,
@@ -100,6 +104,21 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn('*/metrics-cron.php)', WORKFLOW)
         self.assertIn('${CRON_URL%/metrics-cron.php}/metrics-ranking-cron.php', WORKFLOW)
         self.assertIn("dispatch_id=\"${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-ranking\"", WORKFLOW)
+
+    def test_push_waits_for_the_exact_production_commit_and_gate(self):
+        self.assertIn("Wait for deployed MR fresh-capture contract", WORKFLOW)
+        self.assertIn("github.event_name == 'push'", WORKFLOW)
+        self.assertIn("deployment-version.json", WORKFLOW)
+        self.assertIn("metrics-ranking-fresh-capture-core.php", WORKFLOW)
+        self.assertIn(".commit == $sha", WORKFLOW)
+        self.assertIn("$GITHUB_SHA", WORKFLOW)
+        self.assertIn("gate_code", WORKFLOW)
+        self.assertIn("[ \"$gate_code\" = \"200\" ]", WORKFLOW)
+        self.assertIn("MR-FRESH-CAPTURE-V1.0", WORKFLOW)
+        self.assertLess(
+            WORKFLOW.index("Wait for deployed MR fresh-capture contract"),
+            WORKFLOW.index("Calculate experimental ranking"),
+        )
 
     def test_stale_readiness_dispatches_p1_without_dispatching_simulation(self):
         for reason in ("p1_not_observed", "p1_stale", "p1_future_timestamp"):
@@ -122,6 +141,8 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertNotIn("$CRON_SECRET\"", WORKFLOW[ranking_call_end:])
         for field in ("dispatchId", "runUuid", "Algorithme", "Périodes", "Profils classables", "Scores écrits", "Durée"):
             self.assertIn(field, WORKFLOW)
+        self.assertIn("Garde de fraîcheur", WORKFLOW)
+        self.assertIn("Recalcul anticipé par capture nouvelle", WORKFLOW)
 
     def test_no_public_state_or_publication_path_is_added(self):
         combined = CORE + FRESH_GATE + ENDPOINT + WORKFLOW
