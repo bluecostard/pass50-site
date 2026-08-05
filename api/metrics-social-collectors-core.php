@@ -12,8 +12,25 @@ function p50_mc_env_bool(string $name,bool $fallback=false): bool {
     return filter_var($value,FILTER_VALIDATE_BOOLEAN,FILTER_NULL_ON_FAILURE)??$fallback;
 }
 
+/** Kill switch plateforme : false explicite coupe même OAuth / tokens présents. */
+function p50_mc_platform_enabled(string $platform): bool {
+    global $config;$metrics=(array)($config['metrics']??[]);$prefix=strtolower($platform);
+    if($prefix==='')return true;
+    $key=$prefix.'_enabled';
+    if(array_key_exists($key,$metrics))return (bool)filter_var($metrics[$key],FILTER_VALIDATE_BOOLEAN);
+    $env='PASS50_'.strtoupper($prefix).'_ENABLED';
+    $raw=getenv($env);
+    if($raw!==false&&trim((string)$raw)!=='')return (bool)filter_var($raw,FILTER_VALIDATE_BOOLEAN);
+    return true;
+}
+
 function p50_mc_credentials(string $platform,string $profileId): array {
     global $config;$metrics=(array)($config['metrics']??[]);$perProfile=(array)($metrics['social_credentials'][$platform][$profileId]??[]);
+    if(!p50_mc_platform_enabled($platform)){
+        return ['configured'=>false,'authorized'=>false,'mode'=>'disabled','authorizationRequired'=>false,'secret'=>'',
+            'accountId'=>'','pageId'=>'','discoveryAccountId'=>'','storiesAuthorized'=>false,'insightsAuthorized'=>false,
+            'graphVersion'=>'','disabled'=>true];
+    }
     $read=static function(string $key,string $env='') use($metrics,$perProfile): string {
         foreach([$perProfile[$key]??null,$metrics[$key]??null,$env!==''?getenv($env):null] as $candidate){
             $value=trim((string)($candidate??''));if($value!=='')return $value;
