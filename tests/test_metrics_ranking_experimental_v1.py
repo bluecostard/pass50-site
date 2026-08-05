@@ -1,5 +1,8 @@
+import json
 import re
 import unittest
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 
@@ -157,6 +160,64 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         for variable in ("P50_TEST_DSN", "P50_TEST_DB_USER", "P50_TEST_DB_PASSWORD"):
             self.assertIn(variable, WORKFLOW)
         self.assertNotIn("PASS50_TEST_", WORKFLOW)
+
+    def test_apoutchou_facebook_embed_in_production(self):
+        feed_url = (
+            "https://www.pass50.store/api/content-feed.php?period=24h&profileId=apoutchou"
+            "&newsLimit=30&verify=python-diagnostic"
+        )
+        request = urllib.request.Request(
+            feed_url,
+            headers={"Accept": "application/json", "Cache-Control": "no-cache, no-store", "User-Agent": "PASS50-CI-Diagnostic/1.0"},
+        )
+        with urllib.request.urlopen(request, timeout=30) as response:
+            feed = json.loads(response.read().decode("utf-8"))
+        self.assertTrue(feed.get("ok"))
+        self.assertTrue(feed.get("ready"))
+        self.assertTrue((feed.get("rules") or {}).get("facebookEmbedRouting"))
+        items = [
+            item for item in feed.get("news", [])
+            if str(item.get("platform", "")).lower() == "facebook" and item.get("playableInPass50") is True
+        ]
+        self.assertTrue(items, "Aucune actualité Facebook lisible sur la fiche Apoutchou")
+        item = items[0]
+        source = str(item.get("url", ""))
+        route = str(item.get("facebookEmbedType", "missing"))
+        item_type = str(item.get("itemType", "unknown"))
+        self.assertIn(route, {"post", "video"})
+        parsed = urllib.parse.urlparse(source)
+        safe_path = f"{parsed.hostname or ''}{parsed.path or '/'}"
+        results = {}
+        for plugin in ("post", "video"):
+            params = urllib.parse.urlencode({
+                "href": source,
+                "show_text": "true" if plugin == "post" else "false",
+                "width": "820",
+            })
+            plugin_request = urllib.request.Request(
+                f"https://www.facebook.com/plugins/{plugin}.php?{params}",
+                headers={"Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8", "User-Agent": "Mozilla/5.0"},
+            )
+            with urllib.request.urlopen(plugin_request, timeout=40) as response:
+                body = response.read().decode("utf-8", "replace")
+                status = response.status
+            unavailable = bool(re.search(
+                r"ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible",
+                body,
+                flags=re.IGNORECASE,
+            ))
+            results[plugin] = {"http": status, "bytes": len(body.encode("utf-8")), "unavailable": unavailable}
+            print(f"APOUTCHOU_PLUGIN plugin={plugin} http={status} bytes={results[plugin]['bytes']} unavailable={str(unavailable).lower()}")
+        print(
+            "APOUTCHOU_RESULT "
+            f"itemType={item_type} route={route} "
+            f"postUnavailable={str(results['post']['unavailable']).lower()} "
+            f"videoUnavailable={str(results['video']['unavailable']).lower()} path={safe_path}"
+        )
+        self.assertFalse(
+            results[route]["unavailable"],
+            f"Le lecteur {route} sélectionné pour Apoutchou renvoie encore contenu indisponible",
+        )
 
     @staticmethod
     def _function(name):
