@@ -1,53 +1,54 @@
-# Sécurité PASS50 — diagnostic V24
+# Sécurité PASS50 — état au 5 août 2026
 
-## Priorité critique : HTTPS
+## Diagnostic actuel
 
-La mention « Non sécurisé » indique que la visite actuelle n’est pas protégée par une connexion HTTPS valide. Tant que ce point n’est pas corrigé, les mots de passe, jetons de connexion et actions d’administration peuvent être exposés à l’interception ou à la modification sur le réseau.
+| Point | État |
+|--------|------|
+| Certificat SSL (Sectigo `*.pass50.store`) | ✅ Valide jusqu’au 17 janv. 2027 |
+| `https://pass50.store` | ✅ Répond en HTTP/2 |
+| Redirection `http://` → `https://` | ⚠️ À déployer (corrigée dans `.htaccess`) |
+| En-têtes HSTS / XSS / clickjacking | ⚠️ À déployer (corrigés dans `.htaccess`) |
+| Contenu mixte (HTTP dans page HTTPS) | ✅ Pas de blocage observé |
 
-Ordre correct :
+**Pourquoi Chrome/Safari affichent « Non sécurisé »**  
+Souvent parce que l’utilisateur arrive en `http://pass50.store` : le certificat existe, mais **sans redirection forcée** le navigateur reste en HTTP clair.
 
-1. Activer/attribuer le certificat SSL à `pass50.store` dans IONOS.
-2. Tester directement `https://pass50.store`.
-3. Forcer la redirection permanente HTTP → HTTPS.
-4. Éliminer les éventuels contenus mixtes.
-5. Activer progressivement HSTS.
+## Correctif livré dans le dépôt
 
-## Protections déjà observées dans PASS50
+Fichier `.htaccess` :
+1. Redirection 301 `www` → `pass50.store`
+2. Redirection 301 HTTP → HTTPS (y compris via `X-Forwarded-Proto`)
+3. HSTS `max-age=86400` (1 jour — passer à `31536000` après 1 semaine stable)
+4. `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`
+5. CSP en **Report-Only** (ne casse pas l’UI ; à durcir ensuite)
+6. Blocage HTTP de `install.php`, `config.php`, `.env`, `.sql`, dossiers `private/`, etc.
 
-- Plusieurs endpoints sensibles imposent une authentification et un rôle `owner` ou `admin`.
-- Les collectes d’URL publiques possèdent des contrôles destinés à limiter les requêtes vers des adresses privées.
-- Le moteur cron prévoit un jeton secret côté serveur.
+API (`api/bootstrap.php`) : mêmes en-têtes de base + HSTS si HTTPS.
 
-Ces contrôles sont utiles, mais ils ne compensent pas l’absence de HTTPS.
+## Déploiement IONOS (obligatoire)
 
-## Deuxième priorité : jeton de connexion
+1. Pousser / téléverser le nouveau `.htaccess` à la **racine web** `pass50.store`
+2. Vérifier :
+   ```bash
+   curl -sI http://pass50.store/ | head -5
+   # attendu : HTTP/1.1 301 → https://pass50.store/
+   curl -sI https://pass50.store/ | rg -i 'strict-transport|x-frame|x-content'
+   ```
+3. Ouvrir le site en navigation privée : cadenas 🔒
+4. Après 7 jours stables, monter HSTS :
+   `Strict-Transport-Security "max-age=31536000; includeSubDomains"`
 
-La version actuelle enregistre le jeton Bearer dans `localStorage`. Une faille XSS permettrait à un script malveillant de lire ce stockage et de voler une session. Après le passage HTTPS, la prochaine évolution recommandée est :
+## Si la redirection ne prend pas chez IONOS
 
-- session serveur via cookie `Secure`;
-- cookie `HttpOnly`;
-- `SameSite=Lax` ou `Strict` selon les parcours;
-- durée de session courte et rotation du jeton;
-- déconnexion/révocation côté serveur.
+Dans le panneau IONOS → Domaines → SSL :
+- certificat actif sur `pass50.store` **et** `www.pass50.store`
+- option « Forcer HTTPS » si proposée (complète le `.htaccess`)
 
-## Content Security Policy
+`mod_rewrite` et `mod_headers` doivent être actifs (standard IONOS Apache).
 
-Le correctif installe d’abord une CSP en mode `Report-Only`, car la page actuelle contient beaucoup de JavaScript et de CSS intégrés. Une CSP stricte appliquée immédiatement casserait l’interface. La phase suivante consistera à déplacer les scripts intégrés dans des fichiers séparés, puis à retirer `unsafe-inline`.
+## Prochaine priorité code (après HTTPS)
 
-## Fichiers sensibles
+Le jeton Bearer est encore dans `localStorage` → sensible au XSS.  
+Évolution recommandée : cookie de session `Secure` + `HttpOnly` + `SameSite=Lax`.
 
-Le bloc fourni :
-
-- désactive l’indexation des dossiers;
-- bloque les fichiers `.sql`, `.env`, `.ini`, journaux et sauvegardes;
-- bloque `install.php` maintenant que l’installation est terminée;
-- ajoute des protections contre le clickjacking et le MIME sniffing;
-- empêche la mise en cache des réponses PHP sensibles.
-
-## Vérifications après déploiement
-
-- Safari/Chrome affiche un cadenas ou l’indicateur de connexion sécurisée.
-- `http://pass50.store` redirige vers `https://pass50.store`.
-- l’inscription, la connexion, l’administration et les images fonctionnent;
-- aucune erreur « mixed content » dans la console;
-- `install.php` et les migrations SQL ne sont plus accessibles publiquement.
+Puis CSP stricte (retirer `unsafe-inline` en sortant les scripts inline).

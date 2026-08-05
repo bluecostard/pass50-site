@@ -1,14 +1,74 @@
-# PASS50 V82 — neutralisation temporaire des caches d’interface pendant la remise en ligne.
+# PASS50 — sécurité + cache UI
+# SSL IONOS déjà actif (Sectigo *.pass50.store). Ce fichier force HTTPS.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Canonique : https://pass50.store (sans www)
+  RewriteCond %{HTTP_HOST} ^www\.pass50\.store$ [NC]
+  RewriteRule ^ https://pass50.store%{REQUEST_URI} [L,R=301]
+
+  # Proxy / reverse-proxy IONOS
+  RewriteCond %{HTTP:X-Forwarded-Proto} =http [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Accès HTTP direct
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
 <IfModule mod_headers.c>
+  # HSTS : 1 jour au démarrage (passer à 31536000 après 1 semaine stable)
+  Header always set Strict-Transport-Security "max-age=86400; includeSubDomains"
+
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+  Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+  Header always unset X-Powered-By
+
+  # CSP en observation d’abord (ne bloque pas ; à durcir ensuite)
+  Header always set Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https:; worker-src 'self' blob:; upgrade-insecure-requests"
+
   <FilesMatch "\.(html?|js|css|json|webmanifest)$">
     Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
     Header always set Pragma "no-cache"
     Header always set Expires "0"
+  </FilesMatch>
+
+  <FilesMatch "\.(php)$">
+    Header always set Cache-Control "no-store"
   </FilesMatch>
 </IfModule>
 
 <IfModule mod_expires.c>
   ExpiresActive Off
 </IfModule>
+
+# Fichiers sensibles (accès HTTP refusé ; include PHP reste possible)
+<FilesMatch "(?i)\.(env|sql|sqlite|bak|old|log|ini)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "(?i)^(install\.php|config\.php|config\.example\.php|composer\.(json|lock)|package(-lock)?\.json)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Dossiers hors web
+RedirectMatch 404 (?i)^/(private|emails|mobile|live-scout-standalone|node_modules)/
 
 DirectoryIndex index.html
