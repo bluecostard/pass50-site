@@ -10,7 +10,8 @@ FRESHNESS = (ROOT / ".github/workflows/content-freshness-5m.yml").read_text(enco
 class ContentFreshnessPlatformAuditV21Tests(unittest.TestCase):
     def test_endpoint_is_strict_hmac_read_only_and_versioned(self):
         self.assertIn("CONTENT-PLATFORM-AUDIT-V2.1", ENDPOINT)
-        self.assertIn("CONTENT-FRESHNESS-V3.2", ENDPOINT)
+        self.assertIn("CONTENT-FRESHNESS-V4.0", ENDPOINT)
+        self.assertNotIn("CONTENT-FRESHNESS-V3.2", ENDPOINT)
         self.assertIn("p50_mo_verify_cron_signature", ENDPOINT)
         self.assertIn("['probe','audit']", ENDPOINT)
         self.assertIn("'readOnly'=>true", ENDPOINT)
@@ -34,6 +35,7 @@ class ContentFreshnessPlatformAuditV21Tests(unittest.TestCase):
         self.assertIn("'scheduledCyclesPerBucket'=>1", ENDPOINT)
         self.assertNotIn("collectionIdempotencyBucketMinutes'=>15", ENDPOINT)
         self.assertIn("cron: '*/5 * * * *'", FRESHNESS)
+        self.assertIn("content-freshness-cron-v4.php", FRESHNESS)
 
     def test_x_health_uses_the_real_social_link_primary_key(self):
         self.assertIn("function p50_cpa2_x_health", ENDPOINT)
@@ -87,11 +89,12 @@ class ContentFreshnessPlatformAuditV21Tests(unittest.TestCase):
         for period in ('"2h"', '"24h"', '"48h"', '"7d"', '"15d"'):
             self.assertIn(period, WORKFLOW)
 
-    def test_workflow_uses_v21_and_only_reads_diagnostics(self):
+    def test_workflow_uses_v21_with_v4_runtime_and_only_reads_diagnostics(self):
         self.assertIn("content-freshness-platform-audit-cron-v2.php", WORKFLOW)
         self.assertIn("CONTENT-PLATFORM-AUDIT-V2.1", WORKFLOW)
         self.assertNotIn("CONTENT-PLATFORM-AUDIT-V2.0", WORKFLOW)
-        self.assertIn("CONTENT-FRESHNESS-V3.2", WORKFLOW)
+        self.assertIn("CONTENT-FRESHNESS-V4.0", WORKFLOW)
+        self.assertNotIn("CONTENT-FRESHNESS-V3.2", WORKFLOW)
         self.assertIn("collectionBucketMinutes==5", WORKFLOW)
         self.assertIn("Santé X", WORKFLOW)
         self.assertIn("Profils TikTok OAuth autorisés", WORKFLOW)

@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - 'api/content-freshness-platform-audit-cron-v2.php'
-      - 'api/content-freshness-cron-v3.php'
+      - 'api/content-freshness-cron-v4.php'
       - 'api/metrics-collector-facebook.php'
       - '.github/workflows/content-freshness-platform-audit.yml'
       - 'tests/test_content_freshness_platform_audit.py'
@@ -56,7 +56,7 @@ jobs:
           timestamp="$(date +%s)"
           signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
           curl --fail-with-body --silent --show-error --max-time 55 -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$AUDIT_URL" > content-platform-probe.json
-          jq -e '.ok==true and .action=="probe" and .contract=="CONTENT-PLATFORM-AUDIT-V2.1" and .contentFreshnessRuntime=="CONTENT-FRESHNESS-V3.2" and .collectionBucketMinutes==5 and .readOnly==true and .profilesExposed==false and .secretsExposed==false and .publicStateWrites==0' content-platform-probe.json >/dev/null
+          jq -e '.ok==true and .action=="probe" and .contract=="CONTENT-PLATFORM-AUDIT-V2.1" and .contentFreshnessRuntime=="CONTENT-FRESHNESS-V4.0" and .collectionBucketMinutes==5 and .readOnly==true and .profilesExposed==false and .secretsExposed==false and .publicStateWrites==0' content-platform-probe.json >/dev/null
 
       - name: Audit FI, Top 5 and source health
         id: audit
@@ -78,7 +78,7 @@ jobs:
             if [ "$attempt" -lt 5 ] && [[ "$http_code" =~ ^(000|502|503|504)$ ]]; then sleep 15; else break; fi
           done
           [ "$success" = true ] || { echo '::error::Audit multiréseau V2.1 interrompu'; cat "$response_file" 2>/dev/null || true; exit 1; }
-          jq -e '.ok==true and .action=="audit" and .contract=="CONTENT-PLATFORM-AUDIT-V2.1" and .readOnly==true and .profilesExposed==false and .secretsExposed==false and .publicStateWrites==0' "$response_file" >/dev/null
+          jq -e '.ok==true and .action=="audit" and .contract=="CONTENT-PLATFORM-AUDIT-V2.1" and .runtime.contentFreshnessVersion=="CONTENT-FRESHNESS-V4.0" and .runtime.scheduleMinutes==5 and .runtime.collectionBucketMinutes==5 and .readOnly==true and .profilesExposed==false and .secretsExposed==false and .publicStateWrites==0' "$response_file" >/dev/null
 
           ready="$(jq -r '.ready // false' "$response_file")"
           coverage="$(jq -r '.fiNews.coveragePercent // 0' "$response_file")"
