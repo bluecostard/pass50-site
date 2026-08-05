@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# Pages privées / outils
+Disallow: /admin-pronostics.html
+Disallow: /classement-fictif.html
+Disallow: /live-scout.html
+Disallow: /live-scout-standalone/
+Disallow: /offline.html
+Disallow: /api/
+Disallow: /private/
+Disallow: /emails/
+Disallow: /mobile/
+Disallow: /index-snippet-
+
+Sitemap: https://pass50.store/sitemap.xml
