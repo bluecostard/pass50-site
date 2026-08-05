@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require dirname(__DIR__).'/api/metrics-ranking-fresh-capture-core.php';
+require dirname(__DIR__).'/api/metrics-ranking-fresh-capture-v2-core.php';
 
 $dsn=getenv('P50_TEST_DSN');
 if(!$dsn){fwrite(STDERR,"P50_TEST_DSN absent\n");exit(77);}
@@ -32,27 +32,27 @@ $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
 $at=static fn(int $minutes): string=>$now->modify(($minutes>=0?'+':'').$minutes.' minutes')->format('Y-m-d H:i:s');
 $account=p50_metrics_upsert_account($pdo,[
     'profileId'=>'A','platform'=>'YouTube','platformAccountId'=>'UCA','canonicalUrl'=>'https://youtube.com/@fixturea',
-    'status'=>'active','confidence'=>95,'sourceType'=>'manual_owner','observedAt'=>$at(-1600),'provenance'=>['fixture'=>'fresh-capture'],
+    'status'=>'active','confidence'=>95,'sourceType'=>'manual_owner','observedAt'=>$at(-1600),'provenance'=>['fixture'=>'fresh-capture-v2'],
 ]);
 $content=p50_metrics_upsert_content($pdo,[
     'accountId'=>$account['id'],'platformContentId'=>'video-a','canonicalUrl'=>'https://youtube.com/watch?v=fixturea',
     'contentType'=>'video','publishedAt'=>$at(-3000),'status'=>'active','confidence'=>95,'sourceType'=>'manual_owner',
-    'observedAt'=>$at(-1600),'provenance'=>['fixture'=>'fresh-capture'],
+    'observedAt'=>$at(-1600),'provenance'=>['fixture'=>'fresh-capture-v2'],
 ]);
 p50_metrics_record_capture($pdo,[
     'accountId'=>$account['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$at(-60),
-    'followers'=>1000,'confidence'=>95,'provenance'=>['fixture'=>'fresh-capture'],
+    'followers'=>1000,'confidence'=>95,'provenance'=>['fixture'=>'fresh-capture-v2'],
 ]);
 p50_metrics_record_capture($pdo,[
     'accountId'=>$account['id'],'contentId'=>$content['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$at(-1500),
-    'views'=>100,'likes'=>10,'comments'=>10,'shares'=>10,'saves'=>10,'confidence'=>95,'provenance'=>['fixture'=>'fresh-capture'],
+    'views'=>100,'likes'=>10,'comments'=>10,'shares'=>10,'saves'=>10,'confidence'=>95,'provenance'=>['fixture'=>'fresh-capture-v2'],
 ]);
 p50_metrics_record_capture($pdo,[
     'accountId'=>$account['id'],'contentId'=>$content['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$at(-60),
-    'views'=>1000,'likes'=>100,'comments'=>100,'shares'=>100,'saves'=>100,'confidence'=>95,'provenance'=>['fixture'=>'fresh-capture'],
+    'views'=>1000,'likes'=>100,'comments'=>100,'shares'=>100,'saves'=>100,'confidence'=>95,'provenance'=>['fixture'=>'fresh-capture-v2'],
 ]);
 
-$first=p50_mr_calculate($pdo,['24H'],'fresh_capture_fixture_initial');
+$first=p50_mr_calculate($pdo,['24H'],'fresh_capture_v2_fixture_initial');
 fresh_must(($first['ok']??false)===true,'Le premier calcul MR doit réussir');
 $recentFinished=$at(-30);
 $pdo->prepare("UPDATE p50_metric_ranking_runs SET finished_at=? WHERE algorithm_version=? AND status='success'")
@@ -60,28 +60,27 @@ $pdo->prepare("UPDATE p50_metric_ranking_runs SET finished_at=? WHERE algorithm_
 $pdo->prepare("UPDATE p50_metric_captures SET captured_at=?")->execute([$at(-45)]);
 
 $successBefore=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION]);
-$withoutFresh=p50_mr_calculate_if_due_with_fresh_captures($pdo,$now,90,'fresh-no-new-capture');
+$withoutFresh=p50_mr_v2_calculate_if_due($pdo,$now,90,'fresh-v2-no-new-capture');
 fresh_must(($withoutFresh['skipped']??false)===true&&($withoutFresh['reason']??'')==='recent_success','Sans nouvelle ingestion, le succès récent reste protégé');
+fresh_must(($withoutFresh['freshCaptureGateVersion']??'')===P50_MR_FRESH_CAPTURE_GATE_V2_VERSION,'Le skip doit exposer le garde V2');
 fresh_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION])===$successBefore,'Le skip ne crée aucun run');
 
-// L'observation sociale est antérieure au dernier MR, mais la ligne est ingérée maintenant.
-// Elle peut compléter une série historique et doit donc déclencher un recalcul.
 p50_metrics_record_capture($pdo,[
     'accountId'=>$account['id'],'contentId'=>$content['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$at(-120),
-    'views'=>700,'likes'=>70,'comments'=>70,'shares'=>70,'saves'=>70,'confidence'=>99,'provenance'=>['fixture'=>'fresh-capture'],
+    'views'=>700,'likes'=>70,'comments'=>70,'shares'=>70,'saves'=>70,'confidence'=>99,'provenance'=>['fixture'=>'fresh-capture-v2'],
 ]);
 $gateNow=new DateTimeImmutable('now',new DateTimeZone('UTC'));
-$withFresh=p50_mr_calculate_if_due_with_fresh_captures($pdo,$gateNow,90,'fresh-capture-override');
-fresh_must(($withFresh['ok']??false)===true&&($withFresh['skipped']??true)===false,'Une capture nouvellement ingérée doit autoriser le recalcul');
-fresh_must(($withFresh['freshCaptureOverride']??false)===true,'Le recalcul doit signaler le passage par le garde de fraîcheur');
-fresh_must(($withFresh['freshCaptureGateVersion']??'')===P50_MR_FRESH_CAPTURE_GATE_VERSION,'La version du garde doit être exposée');
+$withFresh=p50_mr_v2_calculate_if_due($pdo,$gateNow,90,'fresh-v2-capture-override');
+fresh_must(($withFresh['ok']??false)===true&&($withFresh['skipped']??true)===false,'Une capture nouvellement ingérée doit autoriser le recalcul V2');
+fresh_must(($withFresh['freshCaptureOverride']??false)===true,'Le recalcul doit signaler le passage par le garde V2');
+fresh_must(($withFresh['freshCaptureGateVersion']??'')===P50_MR_FRESH_CAPTURE_GATE_V2_VERSION,'La version V2 doit être exposée');
 fresh_must(!empty($withFresh['latestUsableCaptureRecordedAt']),'La date d’ingestion déclenchante doit être exposée');
 fresh_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION])===$successBefore+1,'Un nouveau run MR doit être écrit');
 
 $afterFreshNow=new DateTimeImmutable('now',new DateTimeZone('UTC'));
-$secondSkip=p50_mr_calculate_if_due_with_fresh_captures($pdo,$afterFreshNow,90,'fresh-second-skip');
-fresh_must(($secondSkip['skipped']??false)===true&&($secondSkip['reason']??'')==='recent_success','Après intégration, le garde anti-doublon redevient actif');
+$secondSkip=p50_mr_v2_calculate_if_due($pdo,$afterFreshNow,90,'fresh-v2-second-skip');
+fresh_must(($secondSkip['skipped']??false)===true&&($secondSkip['reason']??'')==='recent_success','Après intégration, le garde anti-doublon V2 redevient actif');
 $appStateAfter=$pdo->query("SELECT state_json,version FROM app_state WHERE id=1")->fetch();
 fresh_must($appStateAfter===$appStateBefore,'Le recalcul expérimental ne modifie jamais app_state');
 
-echo "metrics ranking fresh capture integration ok\n";
+echo "metrics ranking fresh capture v2 integration ok\n";
