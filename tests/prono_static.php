@@ -56,9 +56,17 @@ foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sa
 }
 
 $admin = file_get_contents($root.'/admin-pronostics.html');
-foreach (['voteDays', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 'stake'] as $needle) {
+foreach (['voteDays', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 'stake', 'authGate'] as $needle) {
     if (!str_contains($admin, $needle)) {
         fwrite(STDERR, "ADMIN-UI missing $needle\n");
+        exit(1);
+    }
+}
+
+$de = file_get_contents($root.'/data-engine-ui.js');
+foreach (["['pronostics','Pronostics']", 'deRenderPronosticsAdmin', 'admin-pronostics.html'] as $needle) {
+    if (!str_contains($de, $needle)) {
+        fwrite(STDERR, "DATA-ENGINE missing $needle\n");
         exit(1);
     }
 }

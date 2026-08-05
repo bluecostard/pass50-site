@@ -27,6 +27,11 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 <div class="shell">
   <h1>Admin · Pronostics</h1>
   <p class="muted">Créer / publier. Cotes éditoriales · mise × cote = gain points. Durée vote 2/3/7 j + date de mesure. Sans argent réel.</p>
+  <div class="card" id="authGate" style="display:none;border-color:#664;background:#1a1208">
+    <strong>Connexion requise (owner / admin)</strong>
+    <p class="muted" style="margin:8px 0 0">Connecte-toi d’abord sur la page d’accueil PASS50 avec ton compte propriétaire, puis reviens ici. Le token reste dans le navigateur.</p>
+    <p style="margin:12px 0 0"><a href="./" style="color:#b7ff00">→ Se connecter sur pass50.store</a></p>
+  </div>
 
   <div class="card">
     <label>Question</label>
@@ -133,10 +138,18 @@ function renderList(items){
 }
 async function loadList(){
   const box=document.getElementById('qList');
+  const gate=document.getElementById('authGate');
   try{
     const data=await api('prono-admin-list.php');
+    if(gate)gate.style.display='none';
     renderList(data.items||[]);
-  }catch(e){box.textContent=e.message;}
+  }catch(e){
+    const msg=String(e.message||'Erreur');
+    box.textContent=msg;
+    if(gate&&(/auth|connect|rôle|role|droit|owner|admin|403|401|insuffisant|non autor/i.test(msg)||!(localStorage.getItem('pass50_api_token')||''))){
+      gate.style.display='block';
+    }
+  }
 }
 document.getElementById('qList').onclick=(e)=>{
   const copy=e.target.closest('[data-copy]');

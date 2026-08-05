@@ -263,6 +263,8 @@ Si user no-show (règle à définir avec FI) :
 | `POST prono-admin-save.php` | Créer / éditer (durée 2/3/7 + measureAt) |
 | `POST prono-admin-resolve.php` | Clôturer et payer |
 
+**UI admin :** Espace user → Administration → carte / onglet **Pronostics** → `admin-pronostics.html` (créer questions, cotes `key|label|cote`, publier, résoudre).
+
 Auth : user connecté pour jouer ; owner/admin pour admin.
 
 ---
