@@ -1,0 +1,165 @@
+name: Déployer le lecteur Facebook V1.2
+
+on:
+  pull_request:
+    paths:
+      - 'facebook-video-player-v1.js'
+      - 'public-copy-fixes.js'
+      - 'api/content-feed.php'
+      - '.github/workflows/deploy-facebook-viewer-v12.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'facebook-video-player-v1.js'
+      - 'public-copy-fixes.js'
+      - 'api/content-feed.php'
+      - '.github/workflows/deploy-facebook-viewer-v12.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-facebook-viewer-production-deploy
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: JavaScript et PHP
+        run: |
+          node --check facebook-video-player-v1.js
+          node --check public-copy-fixes.js
+          php -l api/content-feed.php
+      - name: Contrat V1.2
+        run: |
+          grep -q 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.2' facebook-video-player-v1.js
+          grep -q 'Voir dans Pass50' facebook-video-player-v1.js
+          grep -q '▶ Lire la vidéo' facebook-video-player-v1.js
+          grep -q 'facebook-video-player-v1.js?v=1.2' public-copy-fixes.js
+          ! grep -q 'item.playableInPass50!==true' facebook-video-player-v1.js
+          grep -q 'facebookEmbedRouting' api/content-feed.php
+      - name: Diff
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier les fichiers à publier
+        run: |
+          set -euo pipefail
+          node --check facebook-video-player-v1.js
+          node --check public-copy-fixes.js
+          php -l api/content-feed.php
+          grep -q 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.2' facebook-video-player-v1.js
+          grep -q 'Voir dans Pass50' facebook-video-player-v1.js
+          grep -q 'facebook-video-player-v1.js?v=1.2' public-copy-fixes.js
+
+      - name: Installer SFTP
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Transférer le lecteur Facebook
+        env:
+          HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          USER: ${{ secrets.IONOS_SFTP_USER }}
+          PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOST:-}" ] || [ -z "${USER:-}" ] || [ -z "${PASSWORD:-}" ] || [ -z "${REMOTE_DIR:-}" ]; then
+            echo '::error::Configuration SFTP IONOS incomplète.'
+            exit 1
+          fi
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 20
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          put -O "$REMOTE_DIR" facebook-video-player-v1.js
+          put -O "$REMOTE_DIR" public-copy-fixes.js
+          put -O "$REMOTE_DIR/api" api/content-feed.php
+          bye
+          LFTP
+
+      - name: Vérifier Apoutchou en production
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 30); do
+            viewer="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' \
+              "https://www.pass50.store/facebook-video-player-v1.js?deploy=${GITHUB_SHA}-${attempt}" || true)"
+            loader="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' \
+              "https://www.pass50.store/public-copy-fixes.js?deploy=${GITHUB_SHA}-${attempt}" || true)"
+            if grep -q 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.2' <<<"$viewer" \
+              && grep -q 'Voir dans Pass50' <<<"$viewer" \
+              && grep -q 'facebook-video-player-v1.js?v=1.2' <<<"$loader" \
+              && ! grep -q 'item.playableInPass50!==true' <<<"$viewer"; then
+              ready=true
+              break
+            fi
+            echo "Propagation V1.2 en attente ($attempt/30)."
+            sleep 5
+          done
+          [ "$ready" = true ] || { echo '::error::Le lecteur Facebook V1.2 n’est pas servi'; exit 1; }
+
+          curl --fail-with-body --location --silent --show-error --max-time 30 \
+            -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' \
+            "https://www.pass50.store/api/content-feed.php?period=24h&profileId=apoutchou&newsLimit=30&deploy=${GITHUB_SHA}" \
+            > apoutchou-feed.json
+          jq -e '.ok==true and .ready==true' apoutchou-feed.json >/dev/null
+          jq '[.news[] | select((.platform|ascii_downcase)=="facebook")]' apoutchou-feed.json > apoutchou-facebook.json
+          count="$(jq 'length' apoutchou-facebook.json)"
+          [ "$count" -gt 0 ] || { echo '::error::Aucune publication Facebook sur la fiche Apoutchou'; exit 1; }
+
+          source="$(jq -r '.[0].url // ""' apoutchou-facebook.json)"
+          item_type="$(jq -r '.[0].itemType // "unknown"' apoutchou-facebook.json)"
+          playable="$(jq -r '.[0].playableInPass50 // false' apoutchou-facebook.json)"
+          encoded="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=''))
+PY
+)"
+          curl --location --silent --show-error --max-time 40 \
+            -H 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.8' \
+            "https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=820" \
+            > facebook-post.html
+          unavailable=false
+          if grep -Eqi "ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible" facebook-post.html; then unavailable=true; fi
+          [ "$unavailable" = false ] || { echo '::error::La publication réelle d’Apoutchou reste indisponible dans post.php'; exit 1; }
+
+          {
+            printf 'count=%s\n' "$count"
+            printf 'item_type=%s\n' "$item_type"
+            printf 'playable=%s\n' "$playable"
+          } >> "$GITHUB_OUTPUT"
+          printf 'APOUTCHOU_V12_DEPLOYED count=%s itemType=%s oldPlayable=%s postUnavailable=%s\n' \
+            "$count" "$item_type" "$playable" "$unavailable"
+
+      - name: Publier le statut du déploiement
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          COUNT: ${{ steps.verify.outputs.count }}
+          ITEM_TYPE: ${{ steps.verify.outputs.item_type }}
+          PLAYABLE: ${{ steps.verify.outputs.playable }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="Lecteur Facebook V1.2 servi · Apoutchou ${COUNT:-0} publication(s) · type ${ITEM_TYPE:-?} · ancien playable ${PLAYABLE:-?}"
+          if [ "${VERIFY_OUTCOME:-failure}" != success ]; then state=failure; description='Déploiement ciblé du lecteur Facebook V1.2 interrompu'; fi
+          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/facebook-viewer-deploy' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
