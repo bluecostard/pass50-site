@@ -3,13 +3,13 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-ranking-core.php';
 
-const P50_MR_FRESH_CAPTURE_GATE_VERSION='MR-FRESH-CAPTURE-V1.0';
+const P50_MR_FRESH_CAPTURE_GATE_VERSION='MR-FRESH-CAPTURE-V1.1';
 
 function p50_mr_latest_usable_capture_after(PDO $pdo,DateTimeImmutable $after,DateTimeImmutable $now): ?DateTimeImmutable {
     if(!p50_metrics_table_exists($pdo,'p50_metric_captures'))return null;
-    $stmt=$pdo->prepare("SELECT MAX(observed_at) FROM p50_metric_captures
-        WHERE quality_status='usable' AND confidence>=70 AND profile_id<>''
-          AND observed_at>? AND observed_at<=?");
+    $stmt=$pdo->prepare("SELECT MAX(captured_at) FROM p50_metric_captures
+        WHERE quality_status='usable' AND confidence>=70
+          AND captured_at>? AND captured_at<=?");
     $stmt->execute([$after->format('Y-m-d H:i:s'),$now->format('Y-m-d H:i:s')]);
     $value=$stmt->fetchColumn();
     if(!is_string($value)||trim($value)==='')return null;
@@ -31,8 +31,8 @@ function p50_mr_calculate_if_due_with_fresh_captures(PDO $pdo,DateTimeImmutable 
         return p50_mr_calculate_if_due($pdo,$now,$minimumMinutes,$dispatchId);
     }
 
-    $latestCapture=p50_mr_latest_usable_capture_after($pdo,$finishedAt,$now);
-    if($latestCapture===null)return [
+    $latestCaptureRecordedAt=p50_mr_latest_usable_capture_after($pdo,$finishedAt,$now);
+    if($latestCaptureRecordedAt===null)return [
         'ok'=>true,'skipped'=>true,'reason'=>'recent_success',
         'latestFinishedAt'=>$finishedAt->format(DATE_ATOM),
         'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
@@ -47,6 +47,6 @@ function p50_mr_calculate_if_due_with_fresh_captures(PDO $pdo,DateTimeImmutable 
         'freshCaptureOverride'=>true,
         'freshCaptureGateVersion'=>P50_MR_FRESH_CAPTURE_GATE_VERSION,
         'latestPreviousFinishedAt'=>$finishedAt->format(DATE_ATOM),
-        'latestUsableCaptureAt'=>$latestCapture->format(DATE_ATOM),
+        'latestUsableCaptureRecordedAt'=>$latestCaptureRecordedAt->format(DATE_ATOM),
     ],$result);
 }

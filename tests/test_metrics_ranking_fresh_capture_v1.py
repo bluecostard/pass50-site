@@ -8,26 +8,29 @@ WORKFLOW = (ROOT / ".github/workflows/validate-metrics-ranking-fresh-capture-v1.
 
 
 class MetricsRankingFreshCaptureV1Tests(unittest.TestCase):
-    def test_gate_preserves_recent_success_without_new_capture(self):
-        self.assertIn("MR-FRESH-CAPTURE-V1.0", GATE)
+    def test_gate_preserves_recent_success_without_new_ingestion(self):
+        self.assertIn("MR-FRESH-CAPTURE-V1.1", GATE)
         self.assertIn("reason'=>'recent_success'", GATE)
         self.assertIn("$finishedAt<=$now->modify", GATE)
-        self.assertIn("if($latestCapture===null)return", GATE)
+        self.assertIn("if($latestCaptureRecordedAt===null)return", GATE)
 
-    def test_only_new_usable_confident_captures_override_delay(self):
+    def test_only_new_usable_confident_ingestions_override_delay(self):
         self.assertIn("quality_status='usable'", GATE)
         self.assertIn("confidence>=70", GATE)
-        self.assertIn("profile_id<>''", GATE)
-        self.assertIn("observed_at>? AND observed_at<=?", GATE)
+        self.assertIn("MAX(captured_at)", GATE)
+        self.assertIn("captured_at>? AND captured_at<=?", GATE)
+        self.assertNotIn("MAX(observed_at)", GATE)
         self.assertIn("p50_mr_latest_usable_capture_after", GATE)
         self.assertIn("'freshCaptureOverride'=>true", GATE)
+        self.assertIn("'latestUsableCaptureRecordedAt'", GATE)
         self.assertIn("p50_mr_calculate($pdo,array_keys(p50_mr_periods())", GATE)
 
-    def test_cron_uses_fresh_capture_gate(self):
+    def test_cron_uses_and_exposes_fresh_capture_gate(self):
         self.assertIn("metrics-ranking-fresh-capture-core.php", CRON)
         self.assertIn("p50_mr_calculate_if_due_with_fresh_captures", CRON)
         self.assertIn("freshCaptureGateVersion", CRON)
         self.assertIn("freshCaptureOverride", CRON)
+        self.assertIn("latestUsableCaptureRecordedAt", CRON)
         self.assertNotIn("p50_mr_calculate_if_due($pdo,$now,90,$dispatchId)", CRON)
 
     def test_no_public_state_write(self):

@@ -54,23 +54,28 @@ p50_metrics_record_capture($pdo,[
 
 $first=p50_mr_calculate($pdo,['24H'],'fresh_capture_fixture_initial');
 fresh_must(($first['ok']??false)===true,'Le premier calcul MR doit réussir');
-$recentFinished=$now->modify('-30 minutes')->format('Y-m-d H:i:s');
+$recentFinished=$at(-30);
 $pdo->prepare("UPDATE p50_metric_ranking_runs SET finished_at=? WHERE algorithm_version=? AND status='success'")
     ->execute([$recentFinished,P50_MR_ALGORITHM_VERSION]);
+$pdo->prepare("UPDATE p50_metric_captures SET captured_at=?")->execute([$at(-45)]);
 
 $successBefore=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION]);
 $withoutFresh=p50_mr_calculate_if_due_with_fresh_captures($pdo,$now,90,'fresh-no-new-capture');
-fresh_must(($withoutFresh['skipped']??false)===true&&($withoutFresh['reason']??'')==='recent_success','Sans nouvelle capture, le succès récent reste protégé');
+fresh_must(($withoutFresh['skipped']??false)===true&&($withoutFresh['reason']??'')==='recent_success','Sans nouvelle ingestion, le succès récent reste protégé');
 fresh_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION])===$successBefore,'Le skip ne crée aucun run');
 
+// L'observation sociale est antérieure au dernier MR, mais la ligne est ingérée maintenant.
+// Elle peut compléter une série historique et doit donc déclencher un recalcul.
 p50_metrics_record_capture($pdo,[
-    'accountId'=>$account['id'],'contentId'=>$content['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$at(-1),
-    'views'=>1600,'likes'=>160,'comments'=>160,'shares'=>160,'saves'=>160,'confidence'=>99,'provenance'=>['fixture'=>'fresh-capture'],
+    'accountId'=>$account['id'],'contentId'=>$content['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$at(-120),
+    'views'=>700,'likes'=>70,'comments'=>70,'shares'=>70,'saves'=>70,'confidence'=>99,'provenance'=>['fixture'=>'fresh-capture'],
 ]);
-$withFresh=p50_mr_calculate_if_due_with_fresh_captures($pdo,$now,90,'fresh-capture-override');
-fresh_must(($withFresh['ok']??false)===true&&($withFresh['skipped']??true)===false,'Une capture plus récente doit autoriser le recalcul');
+$gateNow=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+$withFresh=p50_mr_calculate_if_due_with_fresh_captures($pdo,$gateNow,90,'fresh-capture-override');
+fresh_must(($withFresh['ok']??false)===true&&($withFresh['skipped']??true)===false,'Une capture nouvellement ingérée doit autoriser le recalcul');
 fresh_must(($withFresh['freshCaptureOverride']??false)===true,'Le recalcul doit signaler le passage par le garde de fraîcheur');
 fresh_must(($withFresh['freshCaptureGateVersion']??'')===P50_MR_FRESH_CAPTURE_GATE_VERSION,'La version du garde doit être exposée');
+fresh_must(!empty($withFresh['latestUsableCaptureRecordedAt']),'La date d’ingestion déclenchante doit être exposée');
 fresh_must((int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION])===$successBefore+1,'Un nouveau run MR doit être écrit');
 
 $afterFreshNow=new DateTimeImmutable('now',new DateTimeZone('UTC'));

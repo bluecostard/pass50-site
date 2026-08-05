@@ -56,7 +56,7 @@ try{
     $response['skipped']=(bool)($result['skipped']??false);
     $response['freshCaptureOverride']=(bool)($result['freshCaptureOverride']??false);
     if(isset($result['latestPreviousFinishedAt']))$response['latestPreviousFinishedAt']=$result['latestPreviousFinishedAt'];
-    if(isset($result['latestUsableCaptureAt']))$response['latestUsableCaptureAt']=$result['latestUsableCaptureAt'];
+    if(isset($result['latestUsableCaptureRecordedAt']))$response['latestUsableCaptureRecordedAt']=$result['latestUsableCaptureRecordedAt'];
     if($response['skipped']){
         $response['reason']=(string)($result['reason']??'recent_success');
         $response['latestFinishedAt']=$result['latestFinishedAt']??null;
