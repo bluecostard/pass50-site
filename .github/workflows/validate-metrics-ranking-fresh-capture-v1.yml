@@ -1,18 +1,18 @@
-name: Validate Metrics Ranking Fresh Capture V1
+name: Validate Metrics Ranking Fresh Capture V2
 
 on:
   pull_request:
     paths:
-      - 'api/metrics-ranking-cron.php'
-      - 'api/metrics-ranking-fresh-capture-core.php'
+      - 'api/metrics-ranking-cron-v2.php'
+      - 'api/metrics-ranking-fresh-capture-v2-core.php'
       - 'tests/test_metrics_ranking_fresh_capture_v1.py'
       - 'tests/metrics_ranking_fresh_capture_integration.php'
       - '.github/workflows/validate-metrics-ranking-fresh-capture-v1.yml'
   push:
     branches: [main]
     paths:
-      - 'api/metrics-ranking-cron.php'
-      - 'api/metrics-ranking-fresh-capture-core.php'
+      - 'api/metrics-ranking-cron-v2.php'
+      - 'api/metrics-ranking-fresh-capture-v2-core.php'
       - 'tests/test_metrics_ranking_fresh_capture_v1.py'
       - 'tests/metrics_ranking_fresh_capture_integration.php'
       - '.github/workflows/validate-metrics-ranking-fresh-capture-v1.yml'
@@ -45,8 +45,8 @@ jobs:
           fetch-depth: 0
       - name: PHP lint
         run: |
-          php -l api/metrics-ranking-fresh-capture-core.php
-          php -l api/metrics-ranking-cron.php
+          php -l api/metrics-ranking-fresh-capture-v2-core.php
+          php -l api/metrics-ranking-cron-v2.php
           php -l tests/metrics_ranking_fresh_capture_integration.php
       - name: Static contract
         run: python3 -m unittest tests.test_metrics_ranking_fresh_capture_v1 -v

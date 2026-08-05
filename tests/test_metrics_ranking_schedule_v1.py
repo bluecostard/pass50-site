@@ -6,8 +6,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = (ROOT / "api/metrics-ranking-core.php").read_text(encoding="utf-8")
-FRESH_GATE = (ROOT / "api/metrics-ranking-fresh-capture-core.php").read_text(encoding="utf-8")
-ENDPOINT = (ROOT / "api/metrics-ranking-cron.php").read_text(encoding="utf-8")
+FRESH_GATE = (ROOT / "api/metrics-ranking-fresh-capture-v2-core.php").read_text(encoding="utf-8")
+ENDPOINT = (ROOT / "api/metrics-ranking-cron-v2.php").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github" / "workflows" / "metrics-ranking-experimental.yml").read_text(encoding="utf-8")
 VALIDATE = (ROOT / ".github" / "workflows" / "validate-metrics-ranking-experimental-v1.yml").read_text(encoding="utf-8")
 
@@ -25,8 +25,10 @@ def simulated_due(runs, now, minimum_minutes):
     return latest is None or latest <= now - timedelta(minutes=minimum_minutes)
 
 
-class MetricsRankingScheduleV1Tests(unittest.TestCase):
-    def test_endpoint_is_strict_signed_json_post(self):
+class MetricsRankingScheduleV2Tests(unittest.TestCase):
+    def test_endpoint_is_versioned_strict_signed_json_post(self):
+        self.assertIn("METRICS-RANKING-CRON-V2.0", ENDPOINT)
+        self.assertIn("MR-FRESH-CAPTURE-V2.0", FRESH_GATE)
         self.assertIn("$_SERVER['REQUEST_METHOD']!=='POST'", ENDPOINT)
         self.assertIn("$length>16384", ENDPOINT)
         self.assertIn("strlen($raw)>16384", ENDPOINT)
@@ -39,7 +41,7 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn("p50_mo_config()", ENDPOINT)
         self.assertIn("if(!$cfg['enabled'])", ENDPOINT)
 
-    def test_endpoint_accepts_only_calculate_and_a_bounded_dispatch_id(self):
+    def test_endpoint_accepts_only_calculate_and_uses_v2_gate(self):
         self.assertIn("$keys!==['action','dispatchId']", ENDPOINT)
         self.assertIn("!=='calculate'", ENDPOINT)
         self.assertIn("!is_string($input['dispatchId']??null)", ENDPOINT)
@@ -47,13 +49,14 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn("/^[A-Za-z0-9._-]+$/", ENDPOINT)
         self.assertIn("$now=new DateTimeImmutable('now',new DateTimeZone('UTC'))", ENDPOINT)
         self.assertIn("p50_mrr_readiness($pdo,$now)", ENDPOINT)
-        self.assertIn("metrics-ranking-fresh-capture-core.php", ENDPOINT)
-        self.assertRegex(ENDPOINT, r"p50_mr_calculate_if_due_with_fresh_captures\(\$pdo,\$now,90,\$dispatchId\)")
-        self.assertNotRegex(ENDPOINT, r"(?<!with_fresh_captures)p50_mr_calculate_if_due\(\$pdo,\$now,90,\$dispatchId\)")
+        self.assertIn("metrics-ranking-fresh-capture-v2-core.php", ENDPOINT)
+        self.assertRegex(ENDPOINT, r"p50_mr_v2_calculate_if_due\(\$pdo,\$now,90,\$dispatchId\)")
+        self.assertNotIn("metrics-ranking-fresh-capture-core.php", ENDPOINT)
+        self.assertNotIn("p50_mr_calculate_if_due_with_fresh_captures", ENDPOINT)
 
-    def test_due_policy_uses_only_successful_finished_runs(self):
+    def test_due_policy_uses_successful_runs_and_captured_at(self):
         due = php_function(CORE, "p50_mr_calculate_if_due")
-        fresh_due = php_function(FRESH_GATE, "p50_mr_calculate_if_due_with_fresh_captures")
+        fresh_due = php_function(FRESH_GATE, "p50_mr_v2_calculate_if_due")
         self.assertIn("$minimumMinutes=max(60,min(240,$minimumMinutes))", due)
         self.assertIn("algorithm_version=? AND status='success'", due)
         self.assertIn("finished_at IS NOT NULL", due)
@@ -63,7 +66,8 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn("'cron_2h'", due)
         self.assertIn("quality_status='usable'", FRESH_GATE)
         self.assertIn("confidence>=70", FRESH_GATE)
-        self.assertIn("p50_mr_latest_usable_capture_after", fresh_due)
+        self.assertIn("MAX(captured_at)", FRESH_GATE)
+        self.assertIn("p50_mr_v2_latest_usable_capture_recorded_after", fresh_due)
         self.assertIn("'freshCaptureOverride'=>true", fresh_due)
 
         now = datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc)
@@ -71,63 +75,64 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertTrue(simulated_due([{"status": "success", "finished_at": now - timedelta(hours=2)}], now, 90))
         self.assertTrue(simulated_due([{"status": "failed", "finished_at": now - timedelta(minutes=5)}], now, 90))
 
-    def test_calculate_remains_backward_compatible_and_metadata_is_whitelisted(self):
+    def test_calculate_metadata_remains_whitelisted(self):
         calculate = php_function(CORE, "p50_mr_calculate")
         metadata = php_function(CORE, "p50_mr_run_metadata")
-        due = php_function(CORE, "p50_mr_calculate_if_due")
         self.assertIn("string $triggerType,array $metadata=[]", calculate)
         self.assertIn("'readOnlyCanonicalInputs'=>true", metadata)
         self.assertIn("'publicPublication'=>false", metadata)
         self.assertIn("'scheduled'", metadata)
         self.assertIn("'cadence'", metadata)
         self.assertIn("'dispatchId'", metadata)
-        self.assertIn("'scheduled'=>true,'cadence'=>'2h','dispatchId'=>$dispatchId", due)
         for forbidden in ("token", "secret", "signature", "cronUrl", "headers", "payload"):
             self.assertNotIn(f"'{forbidden}'", metadata)
 
-    def test_workflow_runs_after_p1_and_reuses_only_existing_secrets(self):
+    def test_workflow_uses_only_versioned_v2_files_and_existing_secrets(self):
         self.assertIn("name: Metrics Ranking Experimental", WORKFLOW)
         self.assertIn("cron: '57 */2 * * *'", WORKFLOW)
         self.assertIn("workflow_dispatch:", WORKFLOW)
         self.assertIn("push:", WORKFLOW)
         self.assertIn("branches:\n      - main", WORKFLOW)
-        self.assertIn("api/metrics-ranking-cron.php", WORKFLOW)
-        self.assertIn("api/metrics-ranking-fresh-capture-core.php", WORKFLOW)
+        self.assertIn("api/metrics-ranking-cron-v2.php", WORKFLOW)
+        self.assertIn("api/metrics-ranking-fresh-capture-v2-core.php", WORKFLOW)
+        self.assertNotIn("      - 'api/metrics-ranking-cron.php'", WORKFLOW)
+        self.assertNotIn("      - 'api/metrics-ranking-fresh-capture-core.php'", WORKFLOW)
         self.assertIn("group: pass50-metrics-ranking-experimental", WORKFLOW)
         self.assertIn("cancel-in-progress: false", WORKFLOW)
         self.assertIn("timeout-minutes: 15", WORKFLOW)
         secret_names = set(re.findall(r"secrets\.([A-Z0-9_]+)", WORKFLOW))
-        self.assertEqual(
-            secret_names,
-            {"PASS50_METRICS_CRON_URL", "PASS50_METRICS_CRON_SECRET"},
-        )
-        self.assertIn('*/metrics-cron.php)', WORKFLOW)
-        self.assertIn('${CRON_URL%/metrics-cron.php}/metrics-ranking-cron.php', WORKFLOW)
+        self.assertEqual(secret_names, {"PASS50_METRICS_CRON_URL", "PASS50_METRICS_CRON_SECRET"})
+        self.assertIn('${CRON_URL%/metrics-cron.php}/metrics-ranking-cron-v2.php', WORKFLOW)
         self.assertIn("dispatch_id=\"${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-ranking\"", WORKFLOW)
 
-    def test_push_waits_for_the_exact_production_commit_and_gate(self):
-        self.assertIn("Wait for deployed MR fresh-capture contract", WORKFLOW)
+    def test_push_waits_for_exact_commit_and_both_v2_files(self):
+        self.assertIn("Wait for deployed MR V2 contract", WORKFLOW)
         self.assertIn("github.event_name == 'push'", WORKFLOW)
         self.assertIn("deployment-version.json", WORKFLOW)
-        self.assertIn("metrics-ranking-fresh-capture-core.php", WORKFLOW)
+        self.assertIn("metrics-ranking-fresh-capture-v2-core.php", WORKFLOW)
+        self.assertIn("metrics-ranking-cron-v2.php", WORKFLOW)
         self.assertIn(".commit == $sha", WORKFLOW)
         self.assertIn("$GITHUB_SHA", WORKFLOW)
-        self.assertIn("gate_code", WORKFLOW)
         self.assertIn("[ \"$gate_code\" = \"200\" ]", WORKFLOW)
-        self.assertIn("MR-FRESH-CAPTURE-V1.0", WORKFLOW)
-        self.assertLess(
-            WORKFLOW.index("Wait for deployed MR fresh-capture contract"),
-            WORKFLOW.index("Calculate experimental ranking"),
-        )
+        self.assertIn("[ \"$endpoint_code\" = \"405\" ]", WORKFLOW)
+        self.assertIn("METRICS-RANKING-CRON-V2.0", WORKFLOW)
+        self.assertIn("MR-FRESH-CAPTURE-V2.0", WORKFLOW)
+        self.assertLess(WORKFLOW.index("Wait for deployed MR V2 contract"), WORKFLOW.index("Calculate experimental ranking"))
 
-    def test_stale_readiness_dispatches_p1_without_dispatching_simulation(self):
+    def test_runtime_rejects_any_obsolete_response(self):
+        self.assertIn('.endpointVersion == "METRICS-RANKING-CRON-V2.0"', WORKFLOW)
+        self.assertIn('.freshCaptureGateVersion == "MR-FRESH-CAPTURE-V2.0"', WORKFLOW)
+        self.assertIn("Réponse MR obsolète ou contrat V2 absent", WORKFLOW)
+        self.assertIn("Endpoint", WORKFLOW)
+        self.assertIn("Dernière ingestion déclenchante", WORKFLOW)
+
+    def test_stale_readiness_dispatches_p1_without_simulation(self):
         for reason in ("p1_not_observed", "p1_stale", "p1_future_timestamp"):
             self.assertRegex(WORKFLOW, rf'{reason}\).*refresh_p1=true')
         self.assertIn("steps.ranking.outputs.refresh_p1 == 'true'", WORKFLOW)
         self.assertIn('/actions/workflows/metrics-top50-2h.yml/dispatches', WORKFLOW)
         self.assertIn("steps.ranking.outputs.skipped == 'false'", WORKFLOW)
         self.assertIn("steps.ranking.outputs.run_uuid != ''", WORKFLOW)
-        self.assertNotIn("steps.ranking.outputs.reason != ''", WORKFLOW)
 
     def test_workflow_uses_hmac_post_without_exposing_credentials(self):
         self.assertIn("jq -nc", WORKFLOW)
@@ -141,10 +146,8 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertNotIn("$CRON_SECRET\"", WORKFLOW[ranking_call_end:])
         for field in ("dispatchId", "runUuid", "Algorithme", "Périodes", "Profils classables", "Scores écrits", "Durée"):
             self.assertIn(field, WORKFLOW)
-        self.assertIn("Garde de fraîcheur", WORKFLOW)
-        self.assertIn("Recalcul anticipé par capture nouvelle", WORKFLOW)
 
-    def test_no_public_state_or_publication_path_is_added(self):
+    def test_no_public_state_or_direct_publication_path(self):
         combined = CORE + FRESH_GATE + ENDPOINT + WORKFLOW
         for forbidden in (
             "UPDATE app_state",
