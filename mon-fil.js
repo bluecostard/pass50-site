@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.4';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.6';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -9,7 +9,18 @@
   const DUEL_AUDIO_LIMIT = 12;
   const PERIODS = { '2H': '2h', '24H': '24h', '48H': '48h', '7J': '7d', '15J': '15d' };
   const PERIOD_LABELS = { '2H': '2 h', '24H': '24 h', '48H': '48 h', '7J': '7 jours', '15J': '15 jours' };
-  const state = { period: '24H', user: null, profiles: [], following: [], news: [], liveStreams: [] };
+  const state = {
+    period: '24H',
+    user: null,
+    profiles: [],
+    following: [],
+    news: [],
+    pronoStatuses: [],
+    liveStreams: [],
+    diapoIndex: 0,
+    diapoTimer: null,
+    seenPronos: new Set(),
+  };
   const $ = selector => document.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const attr = value => esc(value).replace(/`/g, '&#96;');
@@ -95,6 +106,43 @@
     return `<div class="avatar">${image ? `<img src="${attr(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : esc(initials(profile))}</div>`;
   }
 
+  function pseudoInitials(pseudo) {
+    const clean = String(pseudo || 'P50').replace(/[^a-zA-Z0-9àâäéèêëïîôùûüç]/gi, ' ').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return clean.slice(0, 2).toUpperCase() || 'P50';
+  }
+
+  function hashHue(value) {
+    let hash = 0;
+    for (const char of String(value || '')) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+    return hash % 360;
+  }
+
+  function syntheticPhoto(pseudo) {
+    const ini = pseudoInitials(pseudo);
+    const hue = hashHue(pseudo);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(${hue} 58% 34%)"/><stop offset="1" stop-color="hsl(${(hue + 48) % 360} 42% 14%)"/></linearGradient></defs><rect width="128" height="128" rx="64" fill="url(#g)"/><text x="64" y="76" text-anchor="middle" fill="#f6f8f4" font-family="system-ui,sans-serif" font-size="42" font-weight="800">${ini}</text></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }
+
+  function communityFaces() {
+    return state.profiles.map(profile => photo(profile)).filter(Boolean);
+  }
+
+  function enrichPronoPhoto(item, index = 0) {
+    const direct = String(item.authorPhoto || item.authorAvatar || item.photoUrl || '').trim();
+    if (direct) return { ...item, authorPhoto: direct };
+    const faces = communityFaces();
+    if (faces.length) return { ...item, authorPhoto: faces[index % faces.length] };
+    return { ...item, authorPhoto: syntheticPhoto(item.authorPseudo || item.id || 'pass50') };
+  }
+
+  function memberAvatarHtml(pseudo, photoUrl, className = 'prono-story-avatar') {
+    const src = String(photoUrl || '').trim() || syntheticPhoto(pseudo);
+    return `<span class="${className}"><img src="${attr(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='${attr(syntheticPhoto(pseudo))}'"></span>`;
+  }
+
   function relativeDate(value) {
     if (!value) return 'Date non précisée';
     const timestamp = Date.parse(value);
@@ -164,18 +212,24 @@
 
   function samplePronoStatuses() {
     const now = Date.now();
-    return [
+    const faces = communityFaces();
+    const base = [
       { id: 'sample-prono-1', feedType: 'prono_status', sample: true, authorPseudo: 'fan_abidjan', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 300 000', optionKey: 'b', likeCount: 18, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 20 * 60000).toISOString(), expiresAt: new Date(now + 20 * 3600000).toISOString() },
       { id: 'sample-prono-2', feedType: 'prono_status', sample: true, authorPseudo: 'koffi_buzz', questionTitle: 'Josey finit-il dans le Top 3 PASS50 ?', optionLabel: 'Oui, Top 3', optionKey: 'yes', likeCount: 42, likedByMe: false, durationHours: 12, publishedAt: new Date(now - 55 * 60000).toISOString(), expiresAt: new Date(now + 8 * 3600000).toISOString() },
       { id: 'sample-prono-3', feedType: 'prono_status', sample: true, authorPseudo: 'aya_ci', questionTitle: 'Lo Père finit-il sa 2ᵉ maison dans 6 mois ?', optionLabel: 'Oui', optionKey: 'y', likeCount: 7, likedByMe: false, durationHours: 48, publishedAt: new Date(now - 2 * 3600000).toISOString(), expiresAt: new Date(now + 40 * 3600000).toISOString() },
       { id: 'sample-prono-4', feedType: 'prono_status', sample: true, authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', optionKey: 'a', likeCount: 11, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 3 * 3600000).toISOString(), expiresAt: new Date(now + 18 * 3600000).toISOString() },
+      { id: 'sample-prono-5', feedType: 'prono_status', sample: true, authorPseudo: 'yves_rank', questionTitle: 'Josey finit-il dans le Top 3 PASS50 ?', optionLabel: 'Non, hors Top 3', optionKey: 'no', likeCount: 3, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 4 * 3600000).toISOString(), expiresAt: new Date(now + 16 * 3600000).toISOString() },
     ];
+    return base.map((item, index) => enrichPronoPhoto({
+      ...item,
+      authorPhoto: faces[index % Math.max(faces.length, 1)] || syntheticPhoto(item.authorPseudo),
+    }, index));
   }
 
   async function loadPronoStatuses() {
     try {
       const data = await apiFetch(`prono-statuses-feed.php?limit=20&_=${Date.now()}`, { auth: true });
-      const items = (Array.isArray(data?.items) ? data.items : []).map(item => ({ ...item, feedType: 'prono_status' }));
+      const items = (Array.isArray(data?.items) ? data.items : []).map((item, index) => enrichPronoPhoto({ ...item, feedType: 'prono_status' }, index));
       return items.length ? items : samplePronoStatuses();
     } catch (error) {
       console.warn('Statuts prono indisponibles', error);
@@ -189,13 +243,12 @@
       loadDuelAudios(),
       loadPronoStatuses(),
     ]);
+    state.pronoStatuses = pronoStatuses;
     const seen = new Set();
-    state.news = [...batches.flat(), ...duelAudios, ...pronoStatuses].filter(item => {
+    state.news = [...batches.flat(), ...duelAudios].filter(item => {
       const key = item.feedType === 'duel_audio'
         ? `audio:${item.id}`
-        : item.feedType === 'prono_status'
-          ? `prono:${item.id}`
-          : `news:${String(item.id || item.url || `${item.profileId}:${item.title}`)}`;
+        : `news:${String(item.id || item.url || `${item.profileId}:${item.title}`)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -220,6 +273,112 @@
     }).join('');
   }
 
+  function renderPronoStories() {
+    const strip = $('#pronoStoriesStrip');
+    const section = $('#pronoStoriesSection');
+    if (!strip) return;
+    if (!state.user) {
+      if (section) section.classList.add('hidden');
+      return;
+    }
+    if (section) section.classList.remove('hidden');
+    if (!state.pronoStatuses.length) {
+      strip.innerHTML = '<div class="prono-stories-empty">Aucun statut prono pour le moment · <a href="./pronostics.html" style="color:var(--lime);font-weight:900">Jouer</a></div>';
+      return;
+    }
+    strip.innerHTML = state.pronoStatuses.map((item, index) => {
+      const seen = state.seenPronos.has(String(item.id));
+      return `<button type="button" class="prono-story" data-prono-diapo="${index}" aria-label="Voir le prono de ${attr(item.authorPseudo || 'membre')}">
+        <span class="prono-story-ring ${seen ? 'seen' : ''}">${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}</span>
+        <span>${esc(item.authorPseudo || 'Membre')}</span>
+      </button>`;
+    }).join('');
+  }
+
+  function stopPronoDiapoTimer() {
+    if (state.diapoTimer) {
+      clearTimeout(state.diapoTimer);
+      state.diapoTimer = null;
+    }
+  }
+
+  function renderPronoDiapo() {
+    const item = state.pronoStatuses[state.diapoIndex];
+    if (!item) return closePronoDiapo();
+    state.seenPronos.add(String(item.id));
+    const author = $('#pronoDiapoAuthor');
+    if (author) {
+      author.innerHTML = `${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}<div><strong>${esc(item.authorPseudo || 'Membre')}</strong><small>Prono · ${esc(item.durationHours)} h · expire ${esc(relativeDate(item.expiresAt))}</small></div>`;
+    }
+    const question = $('#pronoDiapoQuestion');
+    if (question) question.textContent = item.questionTitle || 'Pronostic';
+    const choice = $('#pronoDiapoChoice');
+    if (choice) choice.textContent = item.optionLabel || item.optionKey || '—';
+    const like = $('#pronoDiapoLike');
+    if (like) {
+      like.textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
+      like.classList.toggle('liked', Boolean(item.likedByMe));
+      like.disabled = Boolean(item.sample || item.likedByMe);
+    }
+    const meta = $('#pronoDiapoMeta');
+    if (meta) meta.textContent = item.sample ? 'Ambiance · sans argent réel' : 'Sans argent réel';
+    const bars = $('#pronoDiapoBars');
+    if (bars) {
+      bars.innerHTML = state.pronoStatuses.map((_, index) => {
+        const cls = index < state.diapoIndex ? 'done' : index === state.diapoIndex ? 'active' : '';
+        return `<i class="${cls}"><b></b></i>`;
+      }).join('');
+    }
+    renderPronoStories();
+    stopPronoDiapoTimer();
+    state.diapoTimer = setTimeout(() => nextPronoDiapo(), 5000);
+  }
+
+  function openPronoDiapo(index = 0) {
+    if (!state.pronoStatuses.length) return;
+    state.diapoIndex = Math.max(0, Math.min(index, state.pronoStatuses.length - 1));
+    $('#pronoDiapo')?.classList.add('show');
+    renderPronoDiapo();
+  }
+
+  function closePronoDiapo() {
+    stopPronoDiapoTimer();
+    $('#pronoDiapo')?.classList.remove('show');
+    renderPronoStories();
+  }
+
+  function nextPronoDiapo() {
+    if (state.diapoIndex >= state.pronoStatuses.length - 1) return closePronoDiapo();
+    state.diapoIndex += 1;
+    renderPronoDiapo();
+  }
+
+  function prevPronoDiapo() {
+    if (state.diapoIndex <= 0) return;
+    state.diapoIndex -= 1;
+    renderPronoDiapo();
+  }
+
+  async function likeCurrentPronoDiapo() {
+    const item = state.pronoStatuses[state.diapoIndex];
+    if (!item || item.sample || item.likedByMe) return;
+    try {
+      const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+      const token = localStorage.getItem('pass50_api_token') || '';
+      if (!token) return toast('Connecte-toi pour liker');
+      headers.Authorization = `Bearer ${token}`;
+      const response = await fetch('./api/prono-status-like.php', { method: 'POST', headers, body: JSON.stringify({ statusId: item.id }), cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Like impossible');
+      item.likedByMe = true;
+      item.likeCount = Number(data.likeCount || item.likeCount || 0);
+      renderPronoDiapo();
+      toast(data.alreadyLiked ? 'Déjà liké' : 'Like envoyé · +0,25 pt pour l’auteur');
+    } catch (error) {
+      toast(error.message || 'Like impossible');
+    }
+  }
+
   function duelAudioCard(item) {
     const a = item.candidateA || {};
     const b = item.candidateB || {};
@@ -232,32 +391,8 @@
     return `<article class="feed-card duel-audio-feed-card"><div class="duel-audio-feed-head"><div class="duel-audio-avatars">${avatarHtml(profileA)}<span>VS</span>${avatarHtml(profileB)}</div><div><div class="duel-audio-kicker">🎙 LES COULÉS · ${esc(author)}</div><strong>${esc(profileA.name)} VS ${esc(profileB.name)}</strong><div class="feed-meta">${esc(because)} · ${esc(relativeDate(item.publishedAt))}</div></div></div><div class="duel-audio-feed-body"><h2>${esc(author)} commente son vote pour ${esc(selected.name)}</h2><div class="duel-audio-player"><span>${durationLabel(item.durationMs)}</span><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio de ${attr(author)}"></audio></div><div class="feed-meta">Pseudo issu de son compte utilisateur PASS50 · Audio publié volontairement lors du partage</div><div class="feed-actions"><a class="btn primary" href="./?section=coules">Voir le duel</a><a class="btn" href="./?profile=${encodeURIComponent(selected.id || '')}">Voir la fiche de ${esc(selected.name)}</a></div></div></article>`;
   }
 
-  function pronoStatusCard(item) {
-    const expires = relativeDate(item.expiresAt);
-    const liked = item.likedByMe ? 'liked' : '';
-    const sample = item.sample ? ' · ambiance' : '';
-    return `<article class="feed-card prono-status-card" data-prono-status="${esc(item.id)}">
-      <div class="feed-head">
-        <div class="avatar">🎯</div>
-        <div class="feed-person"><strong>${esc(item.authorPseudo || 'Membre')}</strong><span>Prono · statut ${esc(item.durationHours)} h${sample}</span></div>
-        <div class="feed-position"><span class="up">PRONO</span><br>expire ${esc(expires)}</div>
-      </div>
-      <div class="feed-body">
-        <h2>${esc(item.questionTitle || 'Pronostic')}</h2>
-        <div class="feed-meta">Choix : <strong>${esc(item.optionLabel || item.optionKey)}</strong> · Sans argent réel</div>
-        <div class="feed-actions">
-          ${item.sample
-            ? `<a class="btn primary" href="./pronostics.html">Jouer aussi</a>`
-            : `<button type="button" class="btn ${liked}" data-prono-like="${esc(item.id)}">${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${esc(item.likeCount || 0)}</button>`}
-          <a class="btn" href="./pronostics.html">Voir les pronos</a>
-        </div>
-      </div>
-    </article>`;
-  }
-
   function feedCard(item) {
     if (item.feedType === 'duel_audio') return duelAudioCard(item);
-    if (item.feedType === 'prono_status') return pronoStatusCard(item);
     const profile = profileFor(item.profileId) || { id: item.profileId, name: 'Influenceur', initials: 'P50' };
     const rank = rankFor(profile.id);
     const change = movement(profile);
@@ -272,18 +407,19 @@
     const list = $('#feedList');
     const end = $('#feedEnd');
     if (!list || !end) return;
+    renderPronoStories();
     if (!state.user) {
       list.innerHTML = '<div class="empty"><strong>Connexion nécessaire.</strong>Connectez-vous pour retrouver les influenceurs que vous suivez.<div style="margin-top:13px"><a class="btn primary" href="./?open=account">Se connecter</a></div></div>';
       end.classList.add('hidden');
       return;
     }
     if (!state.following.length && !state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Votre fil est vide.</strong>Suis jusqu’à 5 influenceurs, ou ouvre les Pronostics pour voir la communauté.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./pronostics.html">Ouvrir Pronostics</a><a class="btn" href="./">Voir le classement</a></div></div>';
+      list.innerHTML = '<div class="empty"><strong>Votre fil d’actualités est vide.</strong>Suis jusqu’à 5 influenceurs. Les statuts prono de la communauté restent au-dessus.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./pronostics.html">Ouvrir Pronostics</a><a class="btn" href="./">Voir le classement</a></div></div>';
       end.classList.add('hidden');
       return;
     }
     if (!state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>PASS50 ne remplit pas votre fil avec des contenus recommandés ou extérieurs à vos suivis.<div style="margin-top:13px"><a class="btn primary" href="./pronostics.html">Voir les Pronostics</a></div></div>';
+      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>Les statuts prono de la communauté sont au-dessus.<div style="margin-top:13px"><a class="btn primary" href="./pronostics.html">Voir les Pronostics</a></div></div>';
       end.classList.remove('hidden');
       return;
     }
@@ -366,30 +502,24 @@
     $('#feedLiveRadarBtn')?.addEventListener('click', openRadar);
     $('[data-close-live]')?.addEventListener('click', closeRadar);
     $('#feedLiveModal')?.addEventListener('click', event => { if (event.target.id === 'feedLiveModal') closeRadar(); });
-    $('#feedList')?.addEventListener('click', async event => {
-      const btn = event.target.closest('[data-prono-like]');
-      if (!btn) return;
-      const statusId = btn.getAttribute('data-prono-like');
-      try {
-        const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
-        const token = localStorage.getItem('pass50_api_token') || '';
-        if (!token) return toast('Connecte-toi pour liker');
-        headers.Authorization = `Bearer ${token}`;
-        const response = await fetch('./api/prono-status-like.php', { method: 'POST', headers, body: JSON.stringify({ statusId }), cache: 'no-store' });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Like impossible');
-        const item = state.news.find(row => row.feedType === 'prono_status' && String(row.id) === String(statusId));
-        if (item) {
-          item.likedByMe = true;
-          item.likeCount = Number(data.likeCount || item.likeCount || 0);
-        }
-        renderFeed();
-        toast(data.alreadyLiked ? 'Déjà liké' : 'Like envoyé · +0,25 pt pour l’auteur');
-      } catch (error) {
-        toast(error.message || 'Like impossible');
-      }
+    $('#pronoStoriesStrip')?.addEventListener('click', event => {
+      const chip = event.target.closest('[data-prono-diapo]');
+      if (!chip) return;
+      openPronoDiapo(Number(chip.getAttribute('data-prono-diapo')));
     });
-    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeRadar(); });
+    $('#pronoDiapoPrev')?.addEventListener('click', prevPronoDiapo);
+    $('#pronoDiapoNext')?.addEventListener('click', nextPronoDiapo);
+    $('#pronoDiapoClose')?.addEventListener('click', closePronoDiapo);
+    $('#pronoDiapoLike')?.addEventListener('click', likeCurrentPronoDiapo);
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        if ($('#pronoDiapo')?.classList.contains('show')) closePronoDiapo();
+        else closeRadar();
+      }
+      if (!$('#pronoDiapo')?.classList.contains('show')) return;
+      if (event.key === 'ArrowRight') nextPronoDiapo();
+      if (event.key === 'ArrowLeft') prevPronoDiapo();
+    });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFeed({ silent: true }); });
   }
 

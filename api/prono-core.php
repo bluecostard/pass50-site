@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const P50_PRONO_VERSION = 'PRONO-V1.2';
+const P50_PRONO_VERSION = 'PRONO-V1.3';
 const P50_PRONO_POINTS_CORRECT = 100; // mise nominale (gain = mise × cote)
 const P50_PRONO_STARTING_BALANCE = 1000;
 const P50_PRONO_BALANCE_FLOOR = 100; // jamais en dessous — on peut toujours jouer
@@ -11,6 +11,7 @@ const P50_PRONO_POINTS_STREAK_7 = 600;
 const P50_PRONO_POINTS_STATUS_LIKE = 0.25;
 const P50_PRONO_STATUS_LIKE_CAP = 200; // max likes counted per status (50 pts max)
 const P50_PRONO_STATUS_DURATIONS = [12, 24, 48];
+const P50_PRONO_VOTE_HOURS = [6, 12, 24]; // fenêtre de vote courte → action
 const P50_PRONO_ODD_MIN = 1.10;
 const P50_PRONO_ODD_MAX = 25.00;
 

@@ -32,7 +32,7 @@ foreach ($required as $rel) {
 }
 
 $core = file_get_contents($root.'/api/prono-core.php');
-foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked'] as $needle) {
+foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked', 'P50_PRONO_VOTE_HOURS', '[6, 12, 24]'] as $needle) {
     if (!str_contains($core, $needle)) {
         fwrite(STDERR, "CORE missing $needle\n");
         exit(1);
@@ -40,7 +40,7 @@ foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_
 }
 
 $save = file_get_contents($root.'/api/prono-admin-save.php');
-foreach (['voteDurationDays', 'measureAt', '[2, 3, 7]'] as $needle) {
+foreach (['voteDurationHours', 'measureAt', 'P50_PRONO_VOTE_HOURS'] as $needle) {
     if (!str_contains($save, $needle)) {
         fwrite(STDERR, "ADMIN-SAVE missing $needle\n");
         exit(1);
@@ -56,7 +56,7 @@ foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sa
 }
 
 $admin = file_get_contents($root.'/admin-pronostics.html');
-foreach (['voteDays', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 'stake', 'authGate'] as $needle) {
+foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 'stake', 'authGate'] as $needle) {
     if (!str_contains($admin, $needle)) {
         fwrite(STDERR, "ADMIN-UI missing $needle\n");
         exit(1);
@@ -72,9 +72,17 @@ foreach (["['pronostics','Pronostics']", 'deRenderPronosticsAdmin', 'admin-prono
 }
 
 $fil = file_get_contents($root.'/mon-fil.js');
-foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php'] as $needle) {
+foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'pronoStoriesStrip', 'openPronoDiapo', 'memberAvatarHtml', 'PASS50-FOLLOW-FEED-PAGE-V2.6'] as $needle) {
     if (!str_contains($fil, $needle)) {
         fwrite(STDERR, "MON-FIL missing $needle\n");
+        exit(1);
+    }
+}
+
+$filHtml = file_get_contents($root.'/mon-fil.html');
+foreach (['pronoStoriesStrip', 'pronoDiapo', 'mon-fil.js?v=2.6'] as $needle) {
+    if (!str_contains($filHtml, $needle)) {
+        fwrite(STDERR, "MON-FIL-HTML missing $needle\n");
         exit(1);
     }
 }
@@ -95,6 +103,12 @@ $pronoHtml = file_get_contents($root.'/pronostics.html');
 if (preg_match('/href="\.\/"[^>]*>\s*Classement\s*</u', $pronoHtml)) {
     fwrite(STDERR, "PRONO page still has Classement button\n");
     exit(1);
+}
+foreach (['Statut prono', 'Qui fait quoi'] as $needle) {
+    if (!str_contains($pronoHtml, $needle)) {
+        fwrite(STDERR, "PRONO-HTML missing $needle\n");
+        exit(1);
+    }
 }
 
 echo "OK prono Phase A static checks\n";
