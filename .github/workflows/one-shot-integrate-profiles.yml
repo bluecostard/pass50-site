@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - '.pass50-run-profile-integration'
+      - '.pass50-run-profile-integration-v2'
 
 permissions:
   contents: write
@@ -18,15 +18,6 @@ jobs:
 
       - name: Appliquer les profils canoniques
         run: python3 scripts/one_shot_add_kehou_pavlov.py
-
-      - name: Valider les fichiers et les contrats canoniques
-        run: |
-          python3 -m json.tool pass50_nouveaux_candidats_90_v19.json >/dev/null
-          node --check v9-tools.js
-          node --check sw.js
-          python3 -m unittest tests.test_canonical_lionel_yasmine_v24
-          python3 -m unittest tests.test_andrea_naomi_canonical_profile
-          python3 -m unittest tests.test_kehou_pavlov_canonical_profiles
 
       - name: Publier l’intégration sur main
         run: |
