@@ -57,7 +57,7 @@ jobs:
           grep -q 'context-share-v2.js?v=2.3' public-copy-fixes.js
           ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" public-copy-fixes.js
           ! grep -q 'new MutationObserver' public-copy-fixes.js
-          grep -q 'pass50-v81-service-worker-disabled' sw.js
+          grep -q 'pass50-v82-hero-ghost-covers' sw.js
           ! grep -q "addEventListener('fetch'" sw.js
           grep -q 'no-store, no-cache' .htaccess
       - name: Diff safety
