@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths:
-      - 'api/content-freshness-cron.php'
+      - 'api/content-freshness-cron-v3.php'
       - 'api/content-feed.php'
       - 'api/content-intelligence-core.php'
       - 'api/metrics-collector-facebook.php'
@@ -26,12 +26,55 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Wait for deployed Content Freshness V3 contract
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo '::error::Secrets cron métriques manquants.'
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-freshness-cron-v3.php" ;;
+            *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
+          esac
+          ready=false
+          for attempt in $(seq 1 36); do
+            code="$(curl --location --silent --show-error --max-time 15 \
+              --output /dev/null --write-out '%{http_code}' \
+              -H 'Cache-Control: no-cache, no-store' \
+              "$ENDPOINT?contract=CONTENT-FRESHNESS-V3.0&attempt=$attempt" || true)"
+            if [ "$code" = '405' ]; then
+              dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-fresh-probe-$attempt"
+              body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
+              timestamp="$(date +%s)"
+              signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+              probe="$(curl --fail-with-body --silent --show-error --max-time 30 \
+                -H 'Content-Type: application/json' \
+                -H "X-P50-Timestamp: $timestamp" \
+                -H "X-P50-Signature: $signature" \
+                --data "$body" "$ENDPOINT" || true)"
+              if jq -e '.ok == true and .action == "probe" and .version == "CONTENT-FRESHNESS-V3.0" and .bucketSeconds == 300 and .publicStateWrites == 0' >/dev/null 2>&1 <<<"$probe"; then
+                ready=true
+                echo 'Le runtime CONTENT-FRESHNESS-V3.0 est servi.'
+                break
+              fi
+            fi
+            echo "Runtime fraîcheur V3 en attente ($attempt/36, HTTP ${code:-000})."
+            sleep 10
+          done
+          if [ "$ready" != 'true' ]; then
+            echo '::error::Le runtime fraîcheur V3 n’est pas servi après six minutes.'
+            exit 1
+          fi
+
       - name: Collecter et recalculer les contenus récents
         id: refresh
         shell: bash
@@ -42,54 +85,92 @@ jobs:
             exit 1
           fi
           case "$CRON_URL" in
-            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-freshness-cron.php" ;;
+            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-freshness-cron-v3.php" ;;
             *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
           esac
           mkdir -p /tmp/p50-content-freshness
-          attempts=1
-          if [ "$GITHUB_EVENT_NAME" = push ]; then attempts=48; fi
-          ready=false
-          for attempt in $(seq 1 "$attempts"); do
-            dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-fresh-$attempt"
+          response_file=/tmp/p50-content-freshness/result.json
+          http_code=000
+          curl_status=0
+          success=false
+          for attempt in $(seq 1 5); do
+            dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-fresh-v3-$attempt"
             body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"refresh",dispatchId:$dispatchId}')"
             timestamp="$(date +%s)"
             signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
-            code="$(curl --silent --show-error --max-time 260 --output /tmp/p50-content-freshness/result.json --write-out '%{http_code}' \
-              -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
-              --data "$body" "$ENDPOINT" || true)"
-            if [ "$code" = 200 ] && jq -e '.ok == true and .version == "CONTENT-FRESHNESS-V2.0" and .publicStateWrites == 0' /tmp/p50-content-freshness/result.json >/dev/null; then
-              ready=true
+            set +e
+            http_code="$(curl --silent --show-error --max-time 260 \
+              --output "$response_file" --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              -H "X-P50-Timestamp: $timestamp" \
+              -H "X-P50-Signature: $signature" \
+              --data "$body" "$ENDPOINT")"
+            curl_status=$?
+            set -e
+            if [ "$curl_status" -eq 0 ] && [ "$http_code" = '200' ] \
+              && jq -e '.ok == true and .action == "refresh" and .version == "CONTENT-FRESHNESS-V3.0" and .bucketSeconds == 300 and .publicStateWrites == 0' "$response_file" >/dev/null 2>&1; then
+              success=true
               break
             fi
-            if [ "$attempt" -lt "$attempts" ]; then
-              echo "Runtime fraîcheur en attente ($attempt/$attempts, HTTP ${code:-0})."
-              sleep 10
+            stage="$(jq -r '.stage // "transport"' "$response_file" 2>/dev/null || printf transport)"
+            code="$(jq -r '.errorCode // "unknown"' "$response_file" 2>/dev/null || printf unknown)"
+            detail="$(jq -r '.detail // .error // "—"' "$response_file" 2>/dev/null || printf '—')"
+            echo "Tentative $attempt/5 interrompue · curl $curl_status · HTTP ${http_code:-000} · étape $stage · code $code · $detail"
+            if [ "$attempt" -lt 5 ] && { [ "$http_code" = '000' ] || [ "$http_code" = '429' ] || [ "$http_code" = '500' ] || [ "$http_code" = '502' ] || [ "$http_code" = '503' ] || [ "$http_code" = '504' ]; }; then
+              sleep 15
+              continue
             fi
+            break
           done
-          if [ "$ready" != true ]; then
-            echo '::error::Rafraîchissement rapide des contenus interrompu.'
-            cat /tmp/p50-content-freshness/result.json 2>/dev/null || true
+          if [ "$success" != 'true' ]; then
+            echo "::error::Rafraîchissement rapide V3 interrompu (curl $curl_status, HTTP ${http_code:-000})."
+            cat "$response_file" 2>/dev/null || true
             exit 1
           fi
-          selected="$(jq -r '.profilesSelected // 0' /tmp/p50-content-freshness/result.json)"
-          processed="$(jq -r '.processed // 0' /tmp/p50-content-freshness/result.json)"
-          created="$(jq -r '.contentIntelligence.news.created // 0' /tmp/p50-content-freshness/result.json)"
-          updated="$(jq -r '.contentIntelligence.news.updated // 0' /tmp/p50-content-freshness/result.json)"
-          rows="$(jq -r '.contentIntelligence.trends.rowsWritten // 0' /tmp/p50-content-freshness/result.json)"
+
+          selected="$(jq -r '.profilesSelected // 0' "$response_file")"
+          scanned="$(jq -r '.profilesScanned // 0' "$response_file")"
+          authorized="$(jq -r '.authorizedLinks // 0' "$response_file")"
+          enqueued="$(jq -r '.enqueued // 0' "$response_file")"
+          duplicates="$(jq -r '.duplicates // 0' "$response_file")"
+          processed="$(jq -r '.processed // 0' "$response_file")"
+          completed="$(jq -r '.completed // 0' "$response_file")"
+          partial="$(jq -r '.partial // 0' "$response_file")"
+          failed="$(jq -r '.failed // 0' "$response_file")"
+          retried="$(jq -r '.retried // 0' "$response_file")"
+          remaining="$(jq -r '.remaining // 0' "$response_file")"
+          created="$(jq -r '.contentIntelligence.news.created // 0' "$response_file")"
+          updated="$(jq -r '.contentIntelligence.news.updated // 0' "$response_file")"
+          rows="$(jq -r '.contentIntelligence.trends.rowsWritten // 0' "$response_file")"
+          access_by_platform="$(jq -c '.accessByPlatform // {}' "$response_file")"
+          selected_by_platform="$(jq -c '.selectedByPlatform // {}' "$response_file")"
+          enqueue_by_platform="$(jq -c '.enqueueByPlatform // {}' "$response_file")"
+          processed_by_platform="$(jq -c '.processedByPlatform // {}' "$response_file")"
           {
-            echo '### PASS50 Content Freshness'
-            echo "- Fiches prioritaires contrôlées : $selected"
-            echo "- Tâches de collecte traitées : $processed"
-            echo "- Actualités créées / mises à jour : $created / $updated"
-            echo "- Lignes de tendance recalculées : $rows"
+            echo '### PASS50 Content Freshness V3'
+            printf -- '- Fiches parcourues / réellement sélectionnées : %s / %s\n' "$scanned" "$selected"
+            printf -- '- Sources autorisées : %s\n' "$authorized"
+            printf -- '- Accès par plateforme : `%s`\n' "$access_by_platform"
+            printf -- '- Sélection par plateforme : `%s`\n' "$selected_by_platform"
+            printf -- '- Mise en file par plateforme : `%s`\n' "$enqueue_by_platform"
+            printf -- '- Traitement par plateforme : `%s`\n' "$processed_by_platform"
+            printf -- '- Tâches créées / doublons / traitées : %s / %s / %s\n' "$enqueued" "$duplicates" "$processed"
+            printf -- '- Terminées / partielles / réessais / échecs / restantes : %s / %s / %s / %s / %s\n' "$completed" "$partial" "$retried" "$failed" "$remaining"
+            printf -- '- Actualités créées / mises à jour : %s / %s\n' "$created" "$updated"
+            printf -- '- Lignes de tendance recalculées : %s\n' "$rows"
+            echo '- Bucket de collecte : `5 minutes`'
             echo '- Écriture directe app_state : `0`'
           } >> "$GITHUB_STEP_SUMMARY"
           {
-            echo "selected=$selected"
-            echo "processed=$processed"
-            echo "created=$created"
-            echo "updated=$updated"
-            echo "rows=$rows"
+            printf 'selected=%s\n' "$selected"
+            printf 'authorized=%s\n' "$authorized"
+            printf 'enqueued=%s\n' "$enqueued"
+            printf 'processed=%s\n' "$processed"
+            printf 'failed=%s\n' "$failed"
+            printf 'remaining=%s\n' "$remaining"
+            printf 'created=%s\n' "$created"
+            printf 'updated=%s\n' "$updated"
+            printf 'rows=%s\n' "$rows"
           } >> "$GITHUB_OUTPUT"
 
       - name: Publier le statut de fraîcheur
@@ -98,14 +179,27 @@ jobs:
         env:
           STEP_OUTCOME: ${{ steps.refresh.outcome }}
           SELECTED: ${{ steps.refresh.outputs.selected }}
+          AUTHORIZED: ${{ steps.refresh.outputs.authorized }}
+          ENQUEUED: ${{ steps.refresh.outputs.enqueued }}
           PROCESSED: ${{ steps.refresh.outputs.processed }}
+          FAILED: ${{ steps.refresh.outputs.failed }}
+          REMAINING: ${{ steps.refresh.outputs.remaining }}
           CREATED: ${{ steps.refresh.outputs.created }}
           UPDATED: ${{ steps.refresh.outputs.updated }}
         run: |
           set -euo pipefail
           state=success
-          description="Fraîcheur · ${SELECTED:-0} fiches · ${PROCESSED:-0} tâches · ${CREATED:-0}/${UPDATED:-0} actus"
-          if [ "$STEP_OUTCOME" != success ]; then state=failure; description='Rafraîchissement rapide interrompu'; fi
+          description="Fraîcheur V3 · ${SELECTED:-0} fiches · ${PROCESSED:-0} tâches · ${CREATED:-0}/${UPDATED:-0} actus"
+          if [ "$STEP_OUTCOME" != success ]; then
+            state=failure
+            description='Rafraîchissement rapide V3 interrompu · app_state 0'
+          elif [ "${REMAINING:-0}" -gt 0 ] || [ "${FAILED:-0}" -gt 0 ]; then
+            state=pending
+            description="Fraîcheur V3 partielle · ${PROCESSED:-0} traitées · ${FAILED:-0} échecs · ${REMAINING:-0} restantes"
+          elif [ "${AUTHORIZED:-0}" -gt 0 ] && [ "${ENQUEUED:-0}" -eq 0 ] && [ "${PROCESSED:-0}" -eq 0 ]; then
+            state=pending
+            description="Fraîcheur V3 dédupliquée · ${SELECTED:-0} fiches · aucune nouvelle tâche"
+          fi
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context 'pass50/content-freshness' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
           curl --fail-with-body --silent --show-error -X POST \
