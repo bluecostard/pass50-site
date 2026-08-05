@@ -70,7 +70,8 @@ p50_metrics_record_capture($pdo,[
     'accountId'=>$account['id'],'contentId'=>$content['id'],'collector'=>'fixture','sourceType'=>'fixture','observedAt'=>$at(-120),
     'views'=>700,'likes'=>70,'comments'=>70,'shares'=>70,'saves'=>70,'confidence'=>99,'provenance'=>['fixture'=>'fresh-capture'],
 ]);
-$withFresh=p50_mr_calculate_if_due_with_fresh_captures($pdo,$now,90,'fresh-capture-override');
+$gateNow=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+$withFresh=p50_mr_calculate_if_due_with_fresh_captures($pdo,$gateNow,90,'fresh-capture-override');
 fresh_must(($withFresh['ok']??false)===true&&($withFresh['skipped']??true)===false,'Une capture nouvellement ingérée doit autoriser le recalcul');
 fresh_must(($withFresh['freshCaptureOverride']??false)===true,'Le recalcul doit signaler le passage par le garde de fraîcheur');
 fresh_must(($withFresh['freshCaptureGateVersion']??'')===P50_MR_FRESH_CAPTURE_GATE_VERSION,'La version du garde doit être exposée');
