@@ -31,24 +31,33 @@ if (!in_array((string)$question['status'], ['open', 'locked'], true)) {
     json_response(['error' => 'Ce prono ne peut pas être résolu (statut '.$question['status'].').'], 409);
 }
 
-$validKeys = array_column(p50_prono_options($question['options_json'] ?? []), 'key');
+$options = p50_prono_options($question['options_json'] ?? []);
+$validKeys = array_column($options, 'key');
 if (!in_array($winningKey, $validKeys, true)) {
     json_response(['error' => 'Option gagnante invalide.'], 400);
 }
 
-$points = (int)($question['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
+$stake = (int)($question['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
+$fallbackOdd = p50_prono_option_odd($options, $winningKey);
+
 $pdo->beginTransaction();
 try {
     $pdo->prepare("UPDATE p50_prono_questions SET status='resolved', winning_option_key=?, evidence_json=?, resolved_at=UTC_TIMESTAMP() WHERE id=?")
         ->execute([$winningKey, json_encode($evidence, JSON_UNESCAPED_UNICODE), $questionId]);
 
-    $votes = $pdo->prepare('SELECT id,user_id,option_key FROM p50_prono_votes WHERE question_id=?');
+    $votes = $pdo->prepare('SELECT id,user_id,option_key,odd_locked FROM p50_prono_votes WHERE question_id=?');
     $votes->execute([$questionId]);
     $winners = 0;
+    $pointsPaid = 0;
     foreach ($votes->fetchAll() ?: [] as $vote) {
         if ((string)$vote['option_key'] !== $winningKey) continue;
-        p50_prono_credit($pdo, (string)$vote['user_id'], $points, 'prono_correct', $questionId);
+        $odd = isset($vote['odd_locked']) && (float)$vote['odd_locked'] > 0
+            ? p50_prono_normalize_odd($vote['odd_locked'])
+            : $fallbackOdd;
+        $payout = p50_prono_payout($stake, $odd);
+        p50_prono_credit($pdo, (string)$vote['user_id'], $payout, 'prono_correct', $questionId);
         $winners++;
+        $pointsPaid += $payout;
     }
     $pdo->commit();
 } catch (Throwable $e) {
@@ -62,5 +71,7 @@ json_response([
     'questionId' => $questionId,
     'winningOptionKey' => $winningKey,
     'winnersPaid' => $winners,
-    'pointsEach' => $points,
+    'stake' => $stake,
+    'pointsPaidTotal' => $pointsPaid,
+    'pointsEach' => $winners > 0 ? (int)round($pointsPaid / $winners) : p50_prono_payout($stake, $fallbackOdd),
 ]);

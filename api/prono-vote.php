@@ -27,10 +27,15 @@ if ((string)$question['status'] !== 'open' || (string)$question['opens_at'] > $n
     json_response(['error' => 'Ce prono n’est plus ouvert.'], 409);
 }
 
-$validKeys = array_column(p50_prono_options($question['options_json'] ?? []), 'key');
+$options = p50_prono_options($question['options_json'] ?? []);
+$validKeys = array_column($options, 'key');
 if (!in_array($optionKey, $validKeys, true)) {
     json_response(['error' => 'Option invalide.'], 400);
 }
+
+$oddLocked = p50_prono_option_odd($options, $optionKey);
+$stake = (int)($question['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
+$potential = p50_prono_payout($stake, $oddLocked);
 
 $userId = (string)$user['id'];
 $existing = $pdo->prepare('SELECT id FROM p50_prono_votes WHERE question_id=? AND user_id=? LIMIT 1');
@@ -42,13 +47,13 @@ try {
     $streakInfo = p50_prono_touch_streak($pdo, $userId);
     if ($voteRow) {
         $voteId = (string)$voteRow['id'];
-        $pdo->prepare('UPDATE p50_prono_votes SET option_key=?, updated_at=UTC_TIMESTAMP(6) WHERE id=?')
-            ->execute([$optionKey, $voteId]);
+        $pdo->prepare('UPDATE p50_prono_votes SET option_key=?, odd_locked=?, updated_at=UTC_TIMESTAMP(6) WHERE id=?')
+            ->execute([$optionKey, $oddLocked, $voteId]);
         $created = false;
     } else {
         $voteId = p50_prono_uuid();
-        $pdo->prepare('INSERT INTO p50_prono_votes(id,question_id,user_id,option_key) VALUES(?,?,?,?)')
-            ->execute([$voteId, $questionId, $userId, $optionKey]);
+        $pdo->prepare('INSERT INTO p50_prono_votes(id,question_id,user_id,option_key,odd_locked) VALUES(?,?,?,?,?)')
+            ->execute([$voteId, $questionId, $userId, $optionKey, $oddLocked]);
         $created = true;
     }
     $pdo->commit();
@@ -58,15 +63,22 @@ try {
     json_response(['error' => 'Impossible d’enregistrer le prono.'], 500);
 }
 
+$tallies = p50_prono_vote_tallies($pdo, $questionId, $options);
+
 json_response([
     'ok' => true,
     'voteId' => $voteId,
     'created' => $created,
     'optionKey' => $optionKey,
     'optionLabel' => p50_prono_option_label($question, $optionKey),
+    'oddLocked' => $oddLocked,
+    'stake' => $stake,
+    'potentialPayout' => $potential,
+    'totalVotes' => $tallies['totalVotes'],
+    'tallies' => $tallies['tallies'],
     'balance' => p50_prono_balance($pdo, $userId),
     'streak' => $streakInfo,
-    'message' => 'Prono enregistré — sans argent réel.',
+    'message' => 'Prono enregistré — cote '.$oddLocked.' · +'.$potential.' pts si correct · sans argent réel.',
     'canPublishStatus' => true,
     'statusDurations' => P50_PRONO_STATUS_DURATIONS,
 ]);

@@ -26,7 +26,7 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 <body>
 <div class="shell">
   <h1>Admin · Pronostics</h1>
-  <p class="muted">Créer / publier une question actu. Durée vote 2/3/7 j + date de mesure. Résolution manuelle. Sans argent réel.</p>
+  <p class="muted">Créer / publier. Cotes éditoriales · mise × cote = gain points. Durée vote 2/3/7 j + date de mesure. Sans argent réel.</p>
 
   <div class="card">
     <label>Question</label>
@@ -35,10 +35,15 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <textarea id="context" rows="2" placeholder="Actu / précision"></textarea>
     <label>Profile ID FI (optionnel)</label>
     <input id="profileId" placeholder="himra">
-    <label>Options (2 à 4, une par ligne : key|label)</label>
-    <textarea id="options" rows="4">y|Oui
-n|Non</textarea>
+    <label>Options (2 à 4, une par ligne : key|label|cote)</label>
+    <textarea id="options" rows="4">y|Oui|1.70
+n|Non|2.20</textarea>
+    <p class="muted" style="margin:6px 0 0;font-size:12px">Gain si correct = mise × cote (ex. 100 × 1.70 = 170 pts). Sans argent réel.</p>
     <div class="row">
+      <div>
+        <label>Mise (points)</label>
+        <input id="stake" type="number" min="1" max="5000" value="100">
+      </div>
       <div>
         <label>Durée des votes</label>
         <select id="voteDays">
@@ -47,9 +52,14 @@ n|Non</textarea>
           <option value="7">7 jours</option>
         </select>
       </div>
+    </div>
+    <div class="row">
       <div>
         <label>Date de mesure</label>
         <input id="measureAt" type="date" required>
+      </div>
+      <div><label>Statut</label>
+        <select id="status"><option value="open">open</option><option value="draft">draft</option></select>
       </div>
     </div>
     <p class="muted" style="margin:8px 0 0;font-size:12px">Votes clos après 2/3/7 j. Résolution / points à la date de mesure (peut être bien plus tard).</p>
@@ -64,9 +74,7 @@ n|Non</textarea>
           <option value="score_threshold">score_threshold</option>
         </select>
       </div>
-      <div><label>Statut</label>
-        <select id="status"><option value="open">open</option><option value="draft">draft</option></select>
-      </div>
+      <div></div>
     </div>
     <button type="button" id="saveBtn">Enregistrer / publier</button>
     <div class="toast" id="saveMsg"></div>
@@ -109,12 +117,12 @@ function renderList(items){
   const box=document.getElementById('qList');
   if(!items.length){box.innerHTML='Aucune question.';return;}
   box.innerHTML=items.map(item=>{
-    const opts=(item.options||[]).map(o=>`${o.key}=${o.label}`).join(' · ');
+    const opts=(item.options||[]).map(o=>`${o.key} ${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
     const canResolve=item.status==='open'||item.status==='locked';
     return `<div class="q" data-id="${item.id}">
       <strong>${item.title||'—'}</strong>
       <span class="badge">${item.status}</span>
-      <div class="meta">${item.voteCount||0} vote(s) · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
+      <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
       <div class="meta">${opts}</div>
       <div class="actions">
         <button type="button" class="ghost" data-copy="${item.id}">Copier ID</button>
@@ -150,8 +158,11 @@ document.getElementById('saveBtn').onclick=async()=>{
   const msg=document.getElementById('saveMsg');
   try{
     const options=document.getElementById('options').value.split(/\n+/).map(line=>{
-      const [key,...rest]=line.split('|');
-      return {key:(key||'').trim(),label:rest.join('|').trim()||(key||'').trim()};
+      const parts=line.split('|').map(s=>s.trim());
+      const key=parts[0]||'';
+      const label=parts[1]||key;
+      const odd=parts[2]!==undefined&&parts[2]!==''?Number(parts[2]):undefined;
+      return {key,label,odd};
     }).filter(o=>o.key&&o.label);
     const measureRaw=document.getElementById('measureAt').value.trim();
     if(!measureRaw)throw new Error('Date de mesure requise');
@@ -163,7 +174,8 @@ document.getElementById('saveBtn').onclick=async()=>{
       metricType:document.getElementById('metricType').value,
       status:document.getElementById('status').value,
       voteDurationDays:Number(document.getElementById('voteDays').value),
-      measureAt:measureRaw+'T23:59:59Z'
+      measureAt:measureRaw+'T23:59:59Z',
+      pointsCorrect:Number(document.getElementById('stake').value)||100
     };
     const data=await api('prono-admin-save.php',payload);
     msg.textContent='OK · id '+data.item.id;

@@ -33,7 +33,7 @@
     .app{max-width:1480px;margin:auto;padding:0 22px 42px}.muted{color:var(--muted)}
     header{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 0;background:linear-gradient(180deg,rgba(5,7,5,.98),rgba(5,7,5,.88));backdrop-filter:blur(18px);border-bottom:1px solid rgba(183,255,0,.14)}
     .brand{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:170px;line-height:1}.brand-wordmark{display:flex;align-items:baseline;white-space:nowrap;font-size:34px;font-weight:1000;letter-spacing:-2.2px}.brand-wordmark .pass{color:#fff}.brand-wordmark .fifty{color:var(--lime);margin-left:1px}.tagline{font-size:8px;letter-spacing:1.45px;color:#d7ddd4;text-transform:uppercase;white-space:nowrap;margin-left:2px}.footer-brand{display:inline-flex;align-items:baseline;font-size:23px;font-weight:1000;letter-spacing:-1.4px}.footer-brand .pass{color:#fff}.footer-brand .fifty{color:var(--lime)}
-    nav{display:flex;align-items:center;gap:22px}.nav-btn{border:0;background:transparent;color:#cdd4ca;font-weight:900;padding:10px 0}.nav-btn.active{color:var(--lime);border-bottom:3px solid var(--lime)}
+    nav{display:flex;align-items:center;gap:22px}.nav-btn{border:0;background:transparent;color:#cdd4ca;font-weight:900;padding:10px 0;text-decoration:none}.nav-btn.active{color:var(--lime);border-bottom:3px solid var(--lime)}
     .actions{display:flex;gap:9px;align-items:center}.btn,.icon-btn{border:1px solid var(--line);background:#0a0d0a;color:var(--text);border-radius:14px;padding:11px 14px;font-weight:850}.btn:hover,.icon-btn:hover{border-color:var(--lime)}.btn.primary{background:var(--lime);color:#050705;border-color:var(--lime)}.btn.danger{color:#ff9696;border-color:#7a2828}.btn.small{padding:8px 10px;font-size:12px}.live{color:var(--lime);border-color:var(--lime);box-shadow:0 0 22px rgba(183,255,0,.2)}
     .demo-banner{display:flex;align-items:center;justify-content:center;gap:8px;margin:15px 0 0;padding:9px 12px;border:1px dashed #536052;border-radius:13px;color:#cbd3c8;font-size:12px;background:rgba(255,255,255,.02)}
     .filters{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:20px 0}.seg{display:flex;background:#0b0e0b;border:1px solid var(--line);border-radius:15px;overflow:auto;max-width:100%}.seg button{white-space:nowrap;border:0;border-right:1px solid var(--line);background:transparent;color:#d7ded4;padding:12px 19px;font-weight:950}.seg button:last-child{border-right:0}.seg button.active{background:linear-gradient(135deg,var(--lime),#71ff00);color:#040604}.spacer{flex:1}
@@ -147,7 +147,7 @@
 <div class="app">
   <header>
     <a class="brand" href="./" aria-label="PASS50 — Accueil"><div class="brand-wordmark" aria-hidden="true"><span class="pass">PASS</span><span class="fifty">50</span></div><div class="tagline">Qui dit quoi, qui va où ?</div></a>
-    <nav><button class="nav-btn active" data-scroll="buzz">BUZZ</button><button class="nav-btn" data-scroll="top10">TOP 10</button><button class="nav-btn" data-scroll="tendance">TENDANCES</button><button class="nav-btn" data-scroll="coules">LES COULÉS</button></nav>
+    <nav><button class="nav-btn active" data-scroll="buzz">BUZZ</button><button class="nav-btn" data-scroll="top10">TOP 10</button><button class="nav-btn" data-scroll="tendance">TENDANCES</button><a class="nav-btn" href="./pronostics.html" data-nav="prono">PRONOSTICS</a><button class="nav-btn" data-scroll="coules">LES COULÉS</button></nav>
     <div class="actions"><button class="icon-btn" id="shareBtn" aria-label="Partager">↗</button><button class="icon-btn" id="notificationCenterBtn" aria-label="Notifications">🔔 <span id="unreadCount"></span></button><button class="btn" id="accountBtn">Mon espace</button><button class="btn live" id="liveBtn"><span class="live-dot" style="color:var(--red)">●</span> LIVE <span id="liveCount"></span></button></div>
   </header>
 
@@ -164,6 +164,7 @@
   <section class="hero" id="buzz"></section>
   <section class="section" id="top10"><div class="section-head"><div class="section-title">📈 TOP 10</div><button type="button" class="top50-cta" id="top50Btn" aria-label="Ouvrir le Top 50">TOP 50 <span aria-hidden="true">→</span></button></div><div class="top10" id="top10Grid"></div></section>
   <section class="section" id="tendance"><div class="section-head"><div class="section-title">🔥 TOP 5 CONTENUS TENDANCE</div><div class="muted">Liens directs</div></div><div class="content-grid" id="contentGrid"></div></section>
+  <section class="section" id="pronostics" aria-label="Pronostics PASS50"><div class="section-head"><div class="section-title">🎯 PRONOSTICS</div><a class="top50-cta" href="./pronostics.html" aria-label="Ouvrir les Pronostics">JOUER <span aria-hidden="true">→</span></a></div><p class="muted" style="margin:0;line-height:1.45">Cotes sur l’actu. Tu choisis, tu gagnes des points — <strong style="color:var(--text)">sans argent réel</strong>.</p></section>
   <section class="section" id="coules" aria-label="LES COULÉS — LE DUEL">
     <header class="coules-banner">
       <div class="coules-banner-icon" aria-hidden="true">

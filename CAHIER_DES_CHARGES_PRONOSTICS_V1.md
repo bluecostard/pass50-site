@@ -40,6 +40,7 @@ Le gain = **statut + accès réel**, pas de l’argent.
 - **Prono actu uniquement** (question éditoriale créée par l’admin)
 - Votes **sans limite** sur toutes les questions ouvertes
 - Durée de vote admin **2 / 3 / 7 j** + **date de mesure** séparée
+- **Cotes** éditoriales (admin) + répartition des votes
 - Clôture, scoring points, streak
 - Solde points + historique
 - **Statut prono dans Mon fil** (durée 12 / 24 / 48 h) + likes (+0,25 pt)
@@ -49,7 +50,7 @@ Le gain = **statut + accès réel**, pas de l’argent.
 
 ### Exclus V1 (plus tard)
 - Rituel fixe quotidien (Top 3 / climber / LIVE)
-- **Cotes** / boosts de cote / cash-out
+- Boosts de cote / cash-out / mises variables user
 - Argent réel
 - Paris entre users (P2P)
 - Commentaires texte ou audio sur statut
@@ -63,9 +64,10 @@ Le gain = **statut + accès réel**, pas de l’argent.
 Une question publiée avec :
 - titre / contexte actu
 - FI concernée (optionnelle mais recommandée)
-- 2 à 4 réponses exclusives
+- 2 à 4 réponses exclusives avec **cote** décimale
 - **durée de vote** fixe : **2 / 3 / 7 jours** → `closes_at`
 - **date de mesure** séparée (`measure_at`) — quand on résout / paye
+- gain = **mise × cote** (cote figée au moment du vote)
 - **règle de résolution** (métrique + seuil)
 - statut : `draft` → `open` → `locked` → `resolved` → `archived`
 
@@ -171,7 +173,7 @@ Une question n’est publiable que si elle mappe une métrique PASS50 :
 ### Gains
 | Action | Points |
 |--------|--------|
-| Bonne réponse prono actu | +500 |
+| Bonne réponse prono actu | **mise × cote** (mise défaut 100 pts) |
 | Streak 3 jours | +200 bonus |
 | Streak 7 jours | +600 bonus |
 | Premier prono du jour | +50 |
@@ -291,7 +293,7 @@ Auth : user connecté pour jouer ; owner/admin pour admin.
 
 ## 15. Copy produit (à respecter)
 
-- Dire **Pronostics** / **grille** / **points** — pas « mise », « cote », « gain d’argent »
+- Dire **Pronostics** / **cotes** / **points** — jamais « argent », « cash », « bookmaker »
 - Toujours : **« Sans argent réel »**
 - Rencontre : **« Accès organisé par PASS50 avec la FI »** — pas une garantie de disponibilité 24/7
 
@@ -306,7 +308,7 @@ Auth : user connecté pour jouer ; owner/admin pour admin.
 | 3 | FI rencontre | **Influenceur au choix** (orga encore floue — Phase B) |
 | 4 | Plateforme métriques abonnés | Source PASS50 la plus fiable au moment de la résolution |
 | 5 | Âge 18+ pour rencontre | Non obligatoire en V1 |
-| 6 | **Cotes** | **Non** pour l’instant (ni cotes, ni boost cote) |
+| 6 | **Cotes** | **Oui** — cotes éditoriales admin ; gain = **mise × cote** (cote figée au vote) |
 | 7 | Limite de votes | **Aucune** — l’user peut jouer toutes les questions ouvertes |
 | 8 | **Statut prono** | Après vote, option de publier en statut **dans Mon fil** |
 | 9 | Durée du statut | Choix user : **12 h / 24 h / 48 h** |
@@ -352,7 +354,7 @@ La page **Pronostics** = jouer (questions, solde, résultats).
 
 | Action | Points |
 |--------|--------|
-| Bonne réponse prono actu | **+500** |
+| Bonne réponse prono actu | **mise × cote** (défaut mise 100) |
 | Streak 3 jours | **+200** bonus |
 | Streak 7 jours | **+600** bonus |
 | Premier prono du jour (même si faux) | **+50** |
@@ -372,7 +374,7 @@ Ordre de grandeur (hors likes) : ~1 prono / jour, ~50 % de bonnes réponses → 
 |-------|---------|
 | **A** | Questions admin + vote + résolution + points + streak + **statut Mon fil** + likes + share |
 | **B** | Rencontre 100k pts (FI au choix) + file admin |
-| **C** (plus tard) | Rituel quotidien + commentaires + éventuel bonus éditorial (sans « cote ») |
+| **C** (plus tard) | Rituel quotidien + commentaires + boosts de cote / cash-out |
 
 ---
 

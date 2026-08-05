@@ -13,7 +13,7 @@ $pdo = db();
 $userId = (string)$user['id'];
 $limit = max(1, min(40, (int)($_GET['limit'] ?? 20)));
 
-$stmt = $pdo->prepare("SELECT q.*, v.option_key AS my_option_key, v.updated_at AS voted_at
+$stmt = $pdo->prepare("SELECT q.*, v.option_key AS my_option_key, v.odd_locked AS my_odd_locked, v.updated_at AS voted_at
   FROM p50_prono_votes v
   JOIN p50_prono_questions q ON q.id=v.question_id
   WHERE v.user_id=? AND q.status='resolved'
@@ -26,12 +26,17 @@ $items = [];
 foreach ($rows as $row) {
     $vote = [
         'option_key' => (string)$row['my_option_key'],
+        'odd_locked' => $row['my_odd_locked'] ?? null,
         'updated_at' => (string)$row['voted_at'],
     ];
-    $item = p50_prono_question_public($row, $vote);
+    $options = p50_prono_options($row['options_json'] ?? []);
+    $tallies = p50_prono_vote_tallies($pdo, (string)$row['id'], $options);
+    $item = p50_prono_question_public($row, $vote, $tallies);
     $won = (string)$row['my_option_key'] === (string)($row['winning_option_key'] ?? '');
+    $stake = (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
+    $odd = p50_prono_normalize_odd($row['my_odd_locked'] ?? null, p50_prono_option_odd($options, (string)$row['my_option_key']));
     $item['won'] = $won;
-    $item['pointsEarned'] = $won ? (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT) : 0;
+    $item['pointsEarned'] = $won ? p50_prono_payout($stake, $odd) : 0;
     $items[] = $item;
 }
 

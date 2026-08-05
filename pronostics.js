@@ -44,40 +44,46 @@
           id: 'demo-1',
           title: 'Himra — perte d’abonnés TikTok en 7 jours ?',
           context: 'Après la polémique de la semaine, quel scénario te semble le plus probable ?',
+          stake: 100,
           options: [
-            { key: 'a', label: '+ de 400 000' },
-            { key: 'b', label: '+ de 300 000' },
-            { key: 'c', label: 'moins de 250 000' },
+            { key: 'a', label: '+ de 400 000', odd: 3.4, payout: 340, votePercent: 18, voteCount: 9 },
+            { key: 'b', label: '+ de 300 000', odd: 2.1, payout: 210, votePercent: 41, voteCount: 21 },
+            { key: 'c', label: 'moins de 250 000', odd: 1.65, payout: 165, votePercent: 41, voteCount: 21 },
           ],
+          totalVotes: 51,
           closesAt: new Date(Date.now() + 7 * 86400000).toISOString(),
           measureAt: new Date(Date.now() + 7 * 86400000).toISOString(),
-          pointsCorrect: 500,
+          pointsCorrect: 100,
           myVote: null,
         },
         {
           id: 'demo-2',
           title: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?',
           context: 'Classement public Côte d’Ivoire + diaspora.',
+          stake: 100,
           options: [
-            { key: 'yes', label: 'Oui, Top 3' },
-            { key: 'no', label: 'Non, hors Top 3' },
+            { key: 'yes', label: 'Oui, Top 3', odd: 1.85, payout: 185, votePercent: 62, voteCount: 31 },
+            { key: 'no', label: 'Non, hors Top 3', odd: 2.05, payout: 205, votePercent: 38, voteCount: 19 },
           ],
+          totalVotes: 50,
           closesAt: new Date(Date.now() + 2 * 86400000).toISOString(),
           measureAt: new Date(Date.now() + 2 * 86400000).toISOString(),
-          pointsCorrect: 500,
-          myVote: { optionKey: 'yes' },
+          pointsCorrect: 100,
+          myVote: { optionKey: 'yes', oddLocked: 1.85, potentialPayout: 185 },
         },
         {
           id: 'demo-3',
           title: 'Lo Père Daloa finit-il sa 2ᵉ maison dans 6 mois ?',
           context: 'Votes ouverts 3 jours — mesure dans 6 mois.',
+          stake: 100,
           options: [
-            { key: 'y', label: 'Oui' },
-            { key: 'n', label: 'Non' },
+            { key: 'y', label: 'Oui', odd: 1.55, payout: 155, votePercent: 0, voteCount: 0 },
+            { key: 'n', label: 'Non', odd: 2.45, payout: 245, votePercent: 0, voteCount: 0 },
           ],
+          totalVotes: 0,
           closesAt: closes3,
           measureAt: measureFar,
-          pointsCorrect: 500,
+          pointsCorrect: 100,
           myVote: null,
         },
       ],
@@ -138,20 +144,36 @@
     $('#balStreak').textContent = String(state.balance.streak || 0);
   }
 
+  function fmtOdd(odd) {
+    const n = Number(odd);
+    return Number.isFinite(n) ? n.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1') : '—';
+  }
+
   function card(item) {
     const selected = item.myVote?.optionKey || '';
-    const opts = (item.options || []).map((opt) =>
-      `<button type="button" class="opt ${selected === opt.key ? 'selected' : ''}" data-vote="${esc(item.id)}" data-opt="${esc(opt.key)}">${esc(opt.label)}</button>`
-    ).join('');
     const voted = Boolean(selected);
+    const stake = item.stake || item.pointsCorrect || 100;
+    const showTally = voted || Number(item.totalVotes || 0) > 0;
+    const opts = (item.options || []).map((opt) => {
+      const odd = opt.odd ?? 2;
+      const payout = opt.payout ?? Math.round(stake * odd);
+      const pct = Number(opt.votePercent || 0);
+      return `<button type="button" class="opt ${selected === opt.key ? 'selected' : ''}" data-vote="${esc(item.id)}" data-opt="${esc(opt.key)}">
+        <span><strong>${esc(opt.label)}</strong>${showTally ? `<span class="pct">${esc(pct)}% · ${esc(opt.voteCount || 0)} joueurs</span>` : ''}${showTally ? `<div class="bar"><i style="width:${Math.min(100, pct)}%"></i></div>` : ''}</span>
+        <span class="odd">${esc(fmtOdd(odd))}<span class="pct">+${esc(payout)}</span></span>
+      </button>`;
+    }).join('');
+    const locked = item.myVote?.potentialPayout
+      ? `Ta cote ${fmtOdd(item.myVote.oddLocked)} · +${item.myVote.potentialPayout} pts si correct`
+      : `Mise ${stake} pts · gain = mise × cote`;
     return `<article class="card" data-qid="${esc(item.id)}">
       <h2>${esc(item.title)}</h2>
       ${item.context ? `<div class="ctx">${esc(item.context)}</div>` : ''}
       <div class="opts">${opts}</div>
-      <div class="meta">${esc(timingMeta(item))} · +${esc(item.pointsCorrect || 500)} pts si correct · Sans argent réel</div>
+      <div class="meta">${esc(timingMeta(item))} · ${esc(locked)} · ${esc(item.totalVotes || 0)} joueurs · Sans argent réel</div>
       <div class="actions">
         ${voted ? `<button type="button" class="btn primary" data-publish="${esc(item.id)}">Publier en statut</button>
-        <button type="button" class="btn" data-share="${esc(item.id)}">Partager</button>` : '<span class="meta">Choisis une réponse</span>'}
+        <button type="button" class="btn" data-share="${esc(item.id)}">Partager</button>` : '<span class="meta">Choisis une cote</span>'}
       </div>
     </article>`;
   }
@@ -361,9 +383,16 @@
   async function vote(questionId, optionKey) {
     if (state.demo) {
       const item = state.items.find((row) => row.id === questionId);
-      if (item) item.myVote = { optionKey, updatedAt: new Date().toISOString() };
-      renderList();
-      toast('Prono enregistré (démo) — sans argent réel');
+      if (item) {
+        const opt = (item.options || []).find((o) => o.key === optionKey);
+        const odd = Number(opt?.odd || 2);
+        const payout = opt?.payout ?? Math.round((item.stake || 100) * odd);
+        const hadVote = Boolean(item.myVote);
+        item.myVote = { optionKey, oddLocked: odd, potentialPayout: payout, updatedAt: new Date().toISOString() };
+        if (!hadVote) item.totalVotes = Number(item.totalVotes || 0) + 1;
+        renderList();
+        toast(`Prono enregistré · cote ${fmtOdd(odd)} · +${payout} pts si correct`);
+      }
       state.pendingQuestionId = questionId;
       $('#statusModal')?.classList.add('show');
       return;
@@ -372,7 +401,23 @@
       const data = await api('prono-vote.php', { method: 'POST', body: { questionId, optionKey } });
       state.balance = data.balance || state.balance;
       const item = state.items.find((row) => row.id === questionId);
-      if (item) item.myVote = { optionKey, updatedAt: new Date().toISOString() };
+      if (item) {
+        item.myVote = {
+          optionKey,
+          oddLocked: data.oddLocked,
+          potentialPayout: data.potentialPayout,
+          updatedAt: new Date().toISOString(),
+        };
+        if (Array.isArray(data.tallies)) {
+          item.totalVotes = data.totalVotes || 0;
+          const byKey = Object.fromEntries(data.tallies.map((t) => [t.key, t]));
+          item.options = (item.options || []).map((opt) => ({
+            ...opt,
+            voteCount: byKey[opt.key]?.count || 0,
+            votePercent: byKey[opt.key]?.percent || 0,
+          }));
+        }
+      }
       renderBalance();
       renderList();
       toast(data.message || 'Prono enregistré');
@@ -408,7 +453,9 @@
   function shareProno(questionId) {
     const item = state.items.find((row) => row.id === questionId);
     if (!item) return;
-    const text = `Mon prono PASS50 : ${item.title}${item.myVote ? ` → ${item.options.find((o) => o.key === item.myVote.optionKey)?.label || ''}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
+    const opt = item.options?.find((o) => o.key === item.myVote?.optionKey);
+    const cote = item.myVote?.oddLocked ?? opt?.odd;
+    const text = `Mon prono PASS50 : ${item.title}${opt ? ` → ${opt.label}` : ''}${cote ? ` @${fmtOdd(cote)}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
     const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`;
     if (navigator.share) {
       navigator.share({ title: 'Prono PASS50', text, url }).catch(() => {});
