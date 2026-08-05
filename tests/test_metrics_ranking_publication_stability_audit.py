@@ -8,6 +8,13 @@ VALIDATE = (ROOT / ".github/workflows/validate-metrics-ranking-publication-stabi
 
 
 class MetricsRankingPublicationStabilityAuditTests(unittest.TestCase):
+    def test_endpoint_loads_runtime_dependencies_before_hmac_use(self):
+        orchestrator = "require __DIR__.'/metrics-orchestrator-core.php';"
+        self.assertIn(orchestrator, ENDPOINT)
+        self.assertIn("require __DIR__.'/metrics-ranking-publication-history-core.php';", ENDPOINT)
+        self.assertLess(ENDPOINT.index(orchestrator), ENDPOINT.index("$cfg=p50_mo_config()"))
+        self.assertLess(ENDPOINT.index(orchestrator), ENDPOINT.index("p50_mo_verify_cron_signature"))
+
     def test_endpoint_is_strict_signed_and_advisory_only(self):
         self.assertIn("MR-STABILITY-AUDIT-V1.0", ENDPOINT)
         self.assertIn("$_SERVER['REQUEST_METHOD']!=='POST'", ENDPOINT)

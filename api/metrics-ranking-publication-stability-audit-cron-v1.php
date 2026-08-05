@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__.'/bootstrap.php';
+require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/metrics-ranking-publication-history-core.php';
 
 const P50_MR_STABILITY_AUDIT_CONTRACT='MR-STABILITY-AUDIT-V1.0';
