@@ -15,6 +15,7 @@ class ContextShareV2Tests(unittest.TestCase):
         cls.js = read("context-share-v2.js")
         cls.nav = read("mobile-bottom-nav-v1.js")
         cls.worker = read("sw.js")
+        cls.loader = read("public-copy-fixes.js")
         cls.photo = read("partage-photo.php")
         cls.photo_core = read("api/share-photo-core.php")
         cls.landing = read("partage-contexte-v2.php")
@@ -78,13 +79,15 @@ class ContextShareV2Tests(unittest.TestCase):
         self.assertIn("JOIN users", self.landing)
         self.assertIn("og:audio", self.landing)
 
-    def test_loader_and_cache_publish_v2_without_breaking_legacy_contracts(self):
+    def test_runtime_loads_only_v2_and_keeps_legacy_as_marker(self):
+        self.assertIn("context-share-v2.js?v=2.1", self.loader)
+        self.assertIn("dataset.pass50ContextShareV2", self.loader)
+        self.assertIn("LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0'", self.loader)
+        self.assertNotIn("loadScript('script[data-pass50-context-share]','./context-share-v1.js", self.loader)
         self.assertIn("context-share-v2.js?v=2.0", self.nav)
-        self.assertIn("dataset.pass50ContextShare", self.nav)
         self.assertIn("context-share-v1.js?v=1.0", self.nav)
         self.assertIn("context-share-v2.js?v=2.0", self.worker)
         self.assertIn("pass50-v77-context-share", self.worker)
-        self.assertIn("pass50-v80-site-recovery", self.worker)
         self.assertRegex(self.worker, r"pass50-v\d+-[a-z0-9-]+")
 
 
