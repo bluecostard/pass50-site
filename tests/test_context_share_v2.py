@@ -84,7 +84,7 @@ class ContextShareV2Tests(unittest.TestCase):
         self.assertIn("context-share-v1.js?v=1.0", self.nav)
         self.assertIn("context-share-v2.js?v=2.0", self.worker)
         self.assertIn("pass50-v77-context-share", self.worker)
-        self.assertIn("pass50-v78-share-photo-layout", self.worker)
+        self.assertIn("pass50-v80-site-recovery", self.worker)
         self.assertRegex(self.worker, r"pass50-v\d+-[a-z0-9-]+")
 
 

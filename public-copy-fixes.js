@@ -9,8 +9,25 @@
     links.innerHTML='<a href="./privacy.html">Confidentialité</a><a href="./data-deletion.html">Suppression des données</a><a href="./terms.html">Conditions d’utilisation</a>';
     footer.appendChild(links);
   }
+  async function recoverServiceWorker(){
+    if(!('serviceWorker'in navigator)||!location.protocol.startsWith('http'))return;
+    try{
+      const registration=await navigator.serviceWorker.register('./sw.js?v=80',{updateViaCache:'none'});
+      await registration.update();
+      const candidate=registration.waiting||registration.installing;
+      if(candidate)candidate.postMessage({type:'SKIP_WAITING'});
+      if(navigator.serviceWorker.controller)navigator.serviceWorker.controller.postMessage({type:'PASS50_CLEAR_OLD_CACHES'});
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        const key='pass50-sw-v80-reloaded';
+        if(sessionStorage.getItem(key))return;
+        sessionStorage.setItem(key,'1');
+        location.reload();
+      });
+    }catch(error){console.warn('PASS50 service worker recovery',error);}
+  }
   const observer=new MutationObserver(()=>{replaceInternalCopy(document);installLegalLinks();});observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
-  document.addEventListener('DOMContentLoaded',()=>{replaceInternalCopy(document);installLegalLinks();});
+  document.addEventListener('DOMContentLoaded',()=>{replaceInternalCopy(document);installLegalLinks();recoverServiceWorker();});
+  if(document.readyState!=='loading')recoverServiceWorker();
   if(!document.querySelector('script[data-pass50-connector-sections]')){const script=document.createElement('script');script.src='./connector-sections-v1.js?v=1.1';script.dataset.pass50ConnectorSections='1.1';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-youtube-oauth-ui]')){const script=document.createElement('script');script.src='./youtube-oauth-ui-v1.js?v=1.0';script.dataset.pass50YoutubeOauthUi='1.0';document.head.appendChild(script);}
   if(!document.querySelector('script[data-pass50-youtube-click-hotfix-v3]')){const script=document.createElement('script');script.src='./youtube-oauth-click-hotfix-v2.js?v=3.0';script.dataset.pass50YoutubeClickHotfixV3='3.0';document.head.appendChild(script);}
