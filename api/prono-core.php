@@ -12,6 +12,7 @@ const P50_PRONO_POINTS_STATUS_LIKE = 0.25;
 const P50_PRONO_STATUS_LIKE_CAP = 200; // max likes counted per status (50 pts max)
 const P50_PRONO_STATUS_DURATIONS = [12, 24, 48];
 const P50_PRONO_VOTE_HOURS = [6, 12, 24]; // fenêtre de vote courte → action
+const P50_PRONO_MAX_OPEN_PER_SUBJECT = 6; // plusieurs pronos / FI ou actu, plafond
 const P50_PRONO_ODD_MIN = 1.10;
 const P50_PRONO_ODD_MAX = 25.00;
 
@@ -99,6 +100,12 @@ function p50_prono_ensure_schema(): void {
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'measure_at', 'DATETIME NULL AFTER closes_at');
     p50_prono_ensure_column($pdo, 'p50_prono_votes', 'odd_locked', 'DECIMAL(8,2) NOT NULL DEFAULT 1.00 AFTER option_key');
     p50_prono_ensure_column($pdo, 'p50_prono_votes', 'stake_locked', 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER odd_locked');
+    p50_prono_ensure_column($pdo, 'p50_prono_questions', 'subject_key', 'VARCHAR(120) NOT NULL DEFAULT \'\' AFTER profile_id');
+    try {
+        $pdo->exec("UPDATE p50_prono_questions SET subject_key=CONCAT('fi:', LOWER(profile_id)) WHERE subject_key='' AND profile_id<>''");
+    } catch (Throwable $e) {
+        // ignore if table not ready
+    }
 }
 
 function p50_prono_ensure_column(PDO $pdo, string $table, string $column, string $definition): void {
@@ -295,6 +302,32 @@ function p50_prono_touch_streak(PDO $pdo, string $userId): array {
     return ['streak' => $streak, 'dailyFirst' => true, 'bonus' => $bonus, 'bonusReason' => $bonusReason];
 }
 
+/** Clé de regroupement : FI ou actu (max P50_PRONO_MAX_OPEN_PER_SUBJECT ouverts). */
+function p50_prono_subject_key(string $profileId, string $subjectKey = ''): string {
+    $custom = trim($subjectKey);
+    if ($custom !== '') {
+        return mb_substr(mb_strtolower($custom), 0, 120);
+    }
+    $profileId = trim($profileId);
+    if ($profileId !== '') {
+        return 'fi:'.mb_substr(mb_strtolower($profileId), 0, 100);
+    }
+    return '';
+}
+
+function p50_prono_count_open_for_subject(PDO $pdo, string $subjectKey, string $excludeId = ''): int {
+    if ($subjectKey === '') return 0;
+    $sql = "SELECT COUNT(*) FROM p50_prono_questions WHERE subject_key=? AND status IN ('open','locked','draft')";
+    $params = [$subjectKey];
+    if ($excludeId !== '') {
+        $sql .= ' AND id<>?';
+        $params[] = $excludeId;
+    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return (int)$stmt->fetchColumn();
+}
+
 function p50_prono_question_public(array $row, ?array $vote = null, ?array $tallyBundle = null): array {
     $options = p50_prono_options($row['options_json'] ?? []);
     $stake = (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
@@ -307,6 +340,8 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
         'title' => (string)$row['title'],
         'context' => (string)($row['context_text'] ?? ''),
         'profileId' => (string)($row['profile_id'] ?? ''),
+        'subjectKey' => (string)($row['subject_key'] ?? ''),
+        'maxOpenPerSubject' => P50_PRONO_MAX_OPEN_PER_SUBJECT,
         'options' => $options,
         'metricType' => (string)($row['metric_type'] ?? 'manual'),
         'opensAt' => gmdate('c', strtotime((string)$row['opens_at'] . ' UTC')),

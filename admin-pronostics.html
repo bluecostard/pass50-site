@@ -26,7 +26,7 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 <body>
 <div class="shell">
   <h1>Admin · Pronostics</h1>
-  <p class="muted">Créer / publier. Cotes éditoriales · mise × cote = gain points. Durée vote 6/12/24 h + date de mesure. Sans argent réel.</p>
+  <p class="muted">Créer / publier. Jusqu’à <strong>6 pronos</strong> actifs par FI ou actu. Cotes · vote 6/12/24 h · date de mesure. Sans argent réel.</p>
   <div class="card" id="authGate" style="display:none;border-color:#664;background:#1a1208">
     <strong>Connexion requise (owner / admin)</strong>
     <p class="muted" style="margin:8px 0 0">Connecte-toi d’abord sur la page d’accueil PASS50 avec ton compte propriétaire, puis reviens ici. Le token reste dans le navigateur.</p>
@@ -38,8 +38,11 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <input id="title" placeholder="Ex. Lo Père finit sa 2ᵉ maison dans 6 mois ?">
     <label>Contexte</label>
     <textarea id="context" rows="2" placeholder="Actu / précision"></textarea>
-    <label>Profile ID FI (optionnel)</label>
+    <label>Profile ID FI (optionnel si clé actu)</label>
     <input id="profileId" placeholder="himra">
+    <label>Clé sujet actu (si pas de FI — ex. himra-perte-tiktok)</label>
+    <input id="subjectKey" placeholder="Auto = fi:{profileId}">
+    <p class="muted" style="margin:6px 0 0;font-size:12px">Plusieurs questions OK sur le même sujet · plafond 6 actifs (open/draft/locked).</p>
     <label>Options (2 à 4, une par ligne : key|label|cote)</label>
     <textarea id="options" rows="4">y|Oui|1.70
 n|Non|2.20</textarea>
@@ -183,6 +186,7 @@ document.getElementById('saveBtn').onclick=async()=>{
       title:document.getElementById('title').value.trim(),
       context:document.getElementById('context').value.trim(),
       profileId:document.getElementById('profileId').value.trim(),
+      subjectKey:document.getElementById('subjectKey').value.trim(),
       options,
       metricType:document.getElementById('metricType').value,
       status:document.getElementById('status').value,
