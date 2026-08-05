@@ -32,27 +32,40 @@
     .prono-story-avatar img{width:100%;height:100%;object-fit:cover;display:block}
     .prono-story > span{font-size:10px;font-weight:800;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);text-align:center}
     .prono-stories-empty{min-width:100%;padding:14px 12px;border:1px dashed var(--line);border-radius:16px;color:var(--muted);font-size:12px;text-align:center}
-    .prono-diapo{position:fixed;inset:0;z-index:170;display:none;background:#050705;color:#fff;padding:calc(12px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom))}
-    .prono-diapo.show{display:grid;grid-template-rows:auto 1fr}
-    .prono-diapo-bars{display:flex;gap:4px;margin-bottom:14px}
+    .prono-diapo{position:fixed;inset:0;z-index:170;display:none;background:#050705;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))}
+    .prono-diapo.show{display:grid;grid-template-rows:auto 1fr;gap:10px}
+    .prono-diapo-bars{display:flex;gap:4px}
     .prono-diapo-bars i{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
     .prono-diapo-bars i b{display:block;height:100%;width:0;background:var(--lime)}
-    .prono-diapo-bars i.done b{width:100%}.prono-diapo-bars i.active b{width:100%;animation:pronoDiapoFill 5s linear forwards}
+    .prono-diapo-bars i.done b{width:100%}.prono-diapo-bars i.active b{width:100%;animation:pronoDiapoFill 6s linear forwards}
     @keyframes pronoDiapoFill{from{width:0}to{width:100%}}
-    .prono-diapo-frame{position:relative;border:1px solid rgba(183,255,0,.28);border-radius:22px;padding:18px 16px 20px;background:radial-gradient(circle at 80% 0,rgba(183,255,0,.16),transparent 42%),linear-gradient(180deg,#141a10,#090c09);overflow:hidden;min-height:min(72dvh,560px);display:flex;flex-direction:column}
-    .prono-diapo-nav{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;z-index:1}
-    .prono-diapo-nav button{border:0;background:transparent;cursor:pointer}
-    .prono-diapo-top{position:relative;z-index:2;display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:22px}
+    .prono-diapo-frame{position:relative;border:1px solid rgba(183,255,0,.28);border-radius:22px;overflow:hidden;min-height:min(78dvh,640px);background:#0a0d0a;display:grid;grid-template-rows:minmax(220px,42%) minmax(0,1fr)}
+    .prono-diapo-media{position:relative;min-height:220px;background:#101610;overflow:hidden}
+    .prono-diapo-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+    .prono-diapo-media-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,5,.12),rgba(5,7,5,.92) 88%),radial-gradient(circle at 80% 10%,rgba(183,255,0,.2),transparent 42%)}
+    .prono-diapo-brand{position:absolute;left:14px;top:14px;z-index:2;font-size:10px;font-weight:1000;letter-spacing:.12em;color:var(--lime)}
+    .prono-diapo-odd-badge{position:absolute;right:14px;bottom:14px;z-index:2;min-width:88px;padding:12px 14px;border-radius:18px;background:rgba(5,7,5,.88);border:1px solid rgba(183,255,0,.55);text-align:center}
+    .prono-diapo-odd-badge span{display:block;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+    .prono-diapo-odd-badge strong{display:block;margin-top:2px;font-size:28px;font-weight:1000;color:var(--lime);letter-spacing:-.03em;line-height:1}
+    .prono-diapo-body{position:relative;z-index:2;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0}
+    .prono-diapo-nav{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;z-index:1;pointer-events:none}
+    .prono-diapo-nav button{border:0;background:transparent;cursor:pointer;pointer-events:auto}
+    .prono-diapo-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
     .prono-diapo-author{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center}
     .prono-diapo-author .prono-story-avatar{width:44px;height:44px;border-width:0}
     .prono-diapo-author strong{display:block;font-size:15px}.prono-diapo-author small{display:block;color:var(--muted);font-weight:700;margin-top:2px;font-size:11px}
-    .prono-diapo-close{position:relative;z-index:2;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:#0a0d0a;color:#fff;font-size:22px}
-    .prono-diapo-q{position:relative;z-index:2;font-size:clamp(22px,6vw,30px);font-weight:1000;letter-spacing:-.03em;line-height:1.15;margin:0 0 14px}
-    .prono-diapo-choice{position:relative;z-index:2;display:inline-flex;align-self:flex-start;border:1px solid rgba(183,255,0,.45);border-radius:999px;padding:10px 14px;background:rgba(183,255,0,.1);color:var(--lime);font-weight:950;font-size:14px}
-    .prono-diapo-foot{position:relative;z-index:2;display:flex;gap:8px;margin-top:auto;padding-top:22px;align-items:center;flex-wrap:wrap}
-    .prono-diapo-foot .meta{font-size:11px;color:var(--muted);font-weight:800}
+    .prono-diapo-close{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:#0a0d0a;color:#fff;font-size:22px}
+    .prono-diapo-q{font-size:clamp(20px,5.5vw,28px);font-weight:1000;letter-spacing:-.03em;line-height:1.15;margin:0}
+    .prono-diapo-ticket{margin-top:auto;padding:14px;border-radius:18px;background:linear-gradient(160deg,rgba(183,255,0,.14),rgba(10,13,10,.95));border:1px solid rgba(183,255,0,.38)}
+    .prono-diapo-ticket .lbl{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+    .prono-diapo-ticket .pick{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-top:8px}
+    .prono-diapo-ticket .pick strong{font-size:18px;line-height:1.2}
+    .prono-diapo-ticket .pick em{font-style:normal;font-size:26px;font-weight:1000;color:var(--lime);letter-spacing:-.03em}
+    .prono-diapo-ticket .ret{margin-top:8px;font-size:12px;font-weight:800;color:#c9d2c4}
+    .prono-diapo-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .prono-diapo-foot .btn{flex:1;min-width:96px;text-align:center}
     .prono-diapo-foot .btn.liked{border-color:var(--lime);color:var(--lime)}
-    .empty,.loading,.error{border:1px dashed var(--line);border-radius:18px;padding:28px 18px;text-align:center;color:var(--muted)}.empty strong,.error strong{display:block;color:var(--text);font-size:18px;margin-bottom:7px}.error{border-color:#613030}.end{margin:18px 0 5px;padding:20px 12px 4px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:11px}.end strong{color:var(--text);font-size:14px}.toast{position:fixed;left:50%;bottom:105px;z-index:160;transform:translate(-50%,14px);opacity:0;pointer-events:none;border:1px solid var(--line);background:#0c100c;color:var(--text);border-radius:999px;padding:10px 14px;font-size:12px;font-weight:900;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+    .empty,.loading,.error{border:1px dashed var(--line);border-radius:18px;padding:28px 18px;text-align:center;color:var(--muted)}.empty strong,.error strong{display:block;color:var(--text);font-size:18px;margin-bottom:7px}.error{border-color:#613030}.end{margin:18px 0 5px;padding:20px 12px 4px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:11px}.end strong{color:var(--text);font-size:14px}.toast{position:fixed;left:50%;bottom:105px;z-index:180;transform:translate(-50%,14px);opacity:0;pointer-events:none;border:1px solid var(--line);background:#0c100c;color:var(--text);border-radius:999px;padding:10px 14px;font-size:12px;font-weight:900;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
     .modal{position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px)}.modal.show{display:flex}.modal-box{width:min(760px,96vw);max-height:90vh;overflow:auto;border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,#111711,#070a07);box-shadow:var(--shadow)}.modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:rgba(8,11,8,.97);border-bottom:1px solid var(--line)}.modal-body{padding:14px}.close{width:42px;height:42px;border:1px solid var(--line);border-radius:12px;background:#0a0d0a;color:#fff;font-size:23px}.radar-list{display:grid;gap:10px}.radar-card{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:11px;align-items:center;border:1px solid rgba(255,75,75,.46);border-radius:17px;padding:11px;background:rgba(255,75,75,.07)}.radar-card .avatar{width:52px;height:52px}.radar-platform{color:#ff9e9e;font-size:10px;font-weight:1000}.radar-card strong{display:block;margin:2px 0}.radar-card p{margin:0;font-size:11px;color:var(--muted)}
     @media(max-width:680px){body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);padding-bottom:calc(78px + env(safe-area-inset-bottom))}.shell{padding:0 11px 28px}.topbar{padding:calc(11px + env(safe-area-inset-top)) 0 10px}.brand{font-size:27px}.page-name,.desktop-link{display:none}.top-actions{margin-left:auto}.live-radar{font-size:12px;padding:10px 13px;min-height:42px}.hero{padding:18px 15px;border-radius:19px}.hero h1{font-size:43px}.section-title{font-size:19px}.feed-media img{height:220px}.feed-actions{display:grid;grid-template-columns:1fr}.feed-actions .btn{width:100%}.follow-chip{flex-basis:165px}.modal{align-items:end;padding:0}.modal-box{width:100vw;max-width:100vw;max-height:94dvh;border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom)}.radar-card{grid-template-columns:48px minmax(0,1fr)}.radar-card .btn{grid-column:1/-1;text-align:center}.duel-audio-feed-head{grid-template-columns:1fr}.duel-audio-player{grid-template-columns:1fr}.duel-audio-player>span{text-align:left}}
   </style>
@@ -111,22 +124,34 @@
         <button type="button" id="pronoDiapoPrev" aria-label="Précédent"></button>
         <button type="button" id="pronoDiapoNext" aria-label="Suivant"></button>
       </div>
-      <div class="prono-diapo-top">
-        <div class="prono-diapo-author" id="pronoDiapoAuthor"></div>
-        <button class="prono-diapo-close" id="pronoDiapoClose" type="button" aria-label="Fermer">×</button>
+      <div class="prono-diapo-media">
+        <img id="pronoDiapoCover" alt="" loading="lazy" referrerpolicy="no-referrer">
+        <div class="prono-diapo-media-shade"></div>
+        <div class="prono-diapo-brand">PASS50 · STATUT PRONO</div>
+        <div class="prono-diapo-odd-badge"><span>Cote</span><strong id="pronoDiapoOdd">—</strong></div>
       </div>
-      <h2 class="prono-diapo-q" id="pronoDiapoQuestion">—</h2>
-      <div class="prono-diapo-choice" id="pronoDiapoChoice">—</div>
-      <div class="prono-diapo-foot">
-        <button class="btn" id="pronoDiapoLike" type="button">♡ Like</button>
-        <a class="btn primary" href="./pronostics.html">Jouer</a>
-        <span class="meta" id="pronoDiapoMeta"></span>
+      <div class="prono-diapo-body">
+        <div class="prono-diapo-top">
+          <div class="prono-diapo-author" id="pronoDiapoAuthor"></div>
+          <button class="prono-diapo-close" id="pronoDiapoClose" type="button" aria-label="Fermer">×</button>
+        </div>
+        <h2 class="prono-diapo-q" id="pronoDiapoQuestion">—</h2>
+        <div class="prono-diapo-ticket">
+          <div class="lbl">Son choix</div>
+          <div class="pick"><strong id="pronoDiapoChoice">—</strong><em id="pronoDiapoOddInline">@—</em></div>
+          <div class="ret" id="pronoDiapoReturn">Sans argent réel</div>
+        </div>
+        <div class="prono-diapo-foot">
+          <button class="btn" id="pronoDiapoLike" type="button">♡ Like</button>
+          <button class="btn" id="pronoDiapoShare" type="button">Partager</button>
+          <a class="btn primary" href="./pronostics.html">Jouer</a>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
   <script src="./mobile-bottom-nav-v1.js?v=1.3"></script>
-  <script src="./mon-fil.js?v=2.6"></script>
+  <script src="./mon-fil.js?v=2.7"></script>
 </body>
 </html>

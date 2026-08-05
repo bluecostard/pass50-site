@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.6';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.7';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -130,17 +130,50 @@
     return state.profiles.map(profile => photo(profile)).filter(Boolean);
   }
 
-  function enrichPronoPhoto(item, index = 0) {
-    const direct = String(item.authorPhoto || item.authorAvatar || item.photoUrl || '').trim();
-    if (direct) return { ...item, authorPhoto: direct };
-    const faces = communityFaces();
-    if (faces.length) return { ...item, authorPhoto: faces[index % faces.length] };
-    return { ...item, authorPhoto: syntheticPhoto(item.authorPseudo || item.id || 'pass50') };
-  }
-
   function memberAvatarHtml(pseudo, photoUrl, className = 'prono-story-avatar') {
     const src = String(photoUrl || '').trim() || syntheticPhoto(pseudo);
     return `<span class="${className}"><img src="${attr(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='${attr(syntheticPhoto(pseudo))}'"></span>`;
+  }
+
+  function fmtOdd(odd) {
+    const n = Number(odd);
+    return Number.isFinite(n) && n > 0 ? n.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1') : '—';
+  }
+
+  function statusCoverDataUri(item) {
+    const odd = fmtOdd(item.odd || 2);
+    const hue = hashHue(item.questionTitle || item.authorPseudo);
+    const title = String(item.optionLabel || 'PRONO').slice(0, 28).replace(/[<>&]/g, '');
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(${hue} 42% 16%)"/><stop offset="1" stop-color="#050705"/></linearGradient></defs><rect width="720" height="900" fill="url(#bg)"/><circle cx="560" cy="180" r="160" fill="hsl(${(hue + 70) % 360} 55% 28%)" opacity=".35"/><text x="48" y="120" fill="#b7ff00" font-family="Arial Black,Impact,sans-serif" font-size="28">PASS50</text><text x="48" y="420" fill="#f6f8f4" font-family="Arial Black,Impact,sans-serif" font-size="54">${odd}</text><text x="48" y="470" fill="#9da79b" font-family="Arial,sans-serif" font-size="22" font-weight="700">COTE</text><text x="48" y="560" fill="#f6f8f4" font-family="Arial,sans-serif" font-size="34" font-weight="800">${title}</text></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }
+
+  function statusCoverSrc(item) {
+    if (item.profileId) {
+      const fiPhoto = photo(profileFor(item.profileId));
+      if (fiPhoto) return fiPhoto;
+    }
+    const direct = String(item.coverPhoto || item.authorPhoto || '').trim();
+    if (direct) return direct;
+    return statusCoverDataUri(item);
+  }
+
+  function enrichPronoPhoto(item, index = 0) {
+    const odd = Number(item.odd) > 0 ? Number(item.odd) : 2;
+    const stake = Number(item.stake) > 0 ? Number(item.stake) : 100;
+    const payout = Number(item.potentialPayout) > 0 ? Number(item.potentialPayout) : Math.round(stake * odd);
+    const direct = String(item.authorPhoto || item.authorAvatar || item.photoUrl || '').trim();
+    const faces = communityFaces();
+    const authorPhoto = direct || (faces.length ? faces[index % faces.length] : syntheticPhoto(item.authorPseudo || item.id || 'pass50'));
+    const enriched = {
+      ...item,
+      odd,
+      stake,
+      potentialPayout: payout,
+      authorPhoto,
+    };
+    enriched.coverPhoto = String(item.coverPhoto || '').trim() || statusCoverSrc(enriched);
+    return enriched;
   }
 
   function relativeDate(value) {
@@ -214,11 +247,11 @@
     const now = Date.now();
     const faces = communityFaces();
     const base = [
-      { id: 'sample-prono-1', feedType: 'prono_status', sample: true, authorPseudo: 'fan_abidjan', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 300 000', optionKey: 'b', likeCount: 18, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 20 * 60000).toISOString(), expiresAt: new Date(now + 20 * 3600000).toISOString() },
-      { id: 'sample-prono-2', feedType: 'prono_status', sample: true, authorPseudo: 'koffi_buzz', questionTitle: 'Josey finit-il dans le Top 3 PASS50 ?', optionLabel: 'Oui, Top 3', optionKey: 'yes', likeCount: 42, likedByMe: false, durationHours: 12, publishedAt: new Date(now - 55 * 60000).toISOString(), expiresAt: new Date(now + 8 * 3600000).toISOString() },
-      { id: 'sample-prono-3', feedType: 'prono_status', sample: true, authorPseudo: 'aya_ci', questionTitle: 'Lo Père finit-il sa 2ᵉ maison dans 6 mois ?', optionLabel: 'Oui', optionKey: 'y', likeCount: 7, likedByMe: false, durationHours: 48, publishedAt: new Date(now - 2 * 3600000).toISOString(), expiresAt: new Date(now + 40 * 3600000).toISOString() },
-      { id: 'sample-prono-4', feedType: 'prono_status', sample: true, authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', optionKey: 'a', likeCount: 11, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 3 * 3600000).toISOString(), expiresAt: new Date(now + 18 * 3600000).toISOString() },
-      { id: 'sample-prono-5', feedType: 'prono_status', sample: true, authorPseudo: 'yves_rank', questionTitle: 'Josey finit-il dans le Top 3 PASS50 ?', optionLabel: 'Non, hors Top 3', optionKey: 'no', likeCount: 3, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 4 * 3600000).toISOString(), expiresAt: new Date(now + 16 * 3600000).toISOString() },
+      { id: 'sample-prono-1', feedType: 'prono_status', sample: true, authorPseudo: 'fan_abidjan', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 300 000', optionKey: 'b', odd: 2.1, stake: 100, potentialPayout: 210, likeCount: 18, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 20 * 60000).toISOString(), expiresAt: new Date(now + 20 * 3600000).toISOString() },
+      { id: 'sample-prono-2', feedType: 'prono_status', sample: true, authorPseudo: 'koffi_buzz', questionTitle: 'Josey finit-il dans le Top 3 PASS50 ?', optionLabel: 'Oui, Top 3', optionKey: 'yes', odd: 1.85, stake: 100, potentialPayout: 185, likeCount: 42, likedByMe: false, durationHours: 12, publishedAt: new Date(now - 55 * 60000).toISOString(), expiresAt: new Date(now + 8 * 3600000).toISOString() },
+      { id: 'sample-prono-3', feedType: 'prono_status', sample: true, authorPseudo: 'aya_ci', questionTitle: 'Lo Père finit-il sa 2ᵉ maison dans 6 mois ?', optionLabel: 'Oui', optionKey: 'y', odd: 1.7, stake: 100, potentialPayout: 170, likeCount: 7, likedByMe: false, durationHours: 48, publishedAt: new Date(now - 2 * 3600000).toISOString(), expiresAt: new Date(now + 40 * 3600000).toISOString() },
+      { id: 'sample-prono-4', feedType: 'prono_status', sample: true, authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', optionKey: 'a', odd: 3.4, stake: 100, potentialPayout: 340, likeCount: 11, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 3 * 3600000).toISOString(), expiresAt: new Date(now + 18 * 3600000).toISOString() },
+      { id: 'sample-prono-5', feedType: 'prono_status', sample: true, authorPseudo: 'yves_rank', questionTitle: 'Josey finit-il dans le Top 3 PASS50 ?', optionLabel: 'Non, hors Top 3', optionKey: 'no', odd: 2.05, stake: 100, potentialPayout: 205, likeCount: 3, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 4 * 3600000).toISOString(), expiresAt: new Date(now + 16 * 3600000).toISOString() },
     ];
     return base.map((item, index) => enrichPronoPhoto({
       ...item,
@@ -306,22 +339,33 @@
     const item = state.pronoStatuses[state.diapoIndex];
     if (!item) return closePronoDiapo();
     state.seenPronos.add(String(item.id));
+    const odd = fmtOdd(item.odd);
+    const payout = Math.round(Number(item.potentialPayout || 0));
+    const cover = $('#pronoDiapoCover');
+    if (cover) {
+      cover.src = statusCoverSrc(item);
+      cover.onerror = () => { cover.src = statusCoverDataUri(item); };
+    }
     const author = $('#pronoDiapoAuthor');
     if (author) {
-      author.innerHTML = `${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}<div><strong>${esc(item.authorPseudo || 'Membre')}</strong><small>Prono · ${esc(item.durationHours)} h · expire ${esc(relativeDate(item.expiresAt))}</small></div>`;
+      author.innerHTML = `${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}<div><strong>${esc(item.authorPseudo || 'Membre')}</strong><small>Statut prono · ${esc(item.durationHours)} h · expire ${esc(relativeDate(item.expiresAt))}</small></div>`;
     }
     const question = $('#pronoDiapoQuestion');
     if (question) question.textContent = item.questionTitle || 'Pronostic';
     const choice = $('#pronoDiapoChoice');
     if (choice) choice.textContent = item.optionLabel || item.optionKey || '—';
+    const oddEl = $('#pronoDiapoOdd');
+    if (oddEl) oddEl.textContent = odd;
+    const oddInline = $('#pronoDiapoOddInline');
+    if (oddInline) oddInline.textContent = `@${odd}`;
+    const ret = $('#pronoDiapoReturn');
+    if (ret) ret.textContent = payout > 0 ? `Gain pot. ${payout} pts · mise ${item.stake || 100} · sans argent réel` : 'Sans argent réel';
     const like = $('#pronoDiapoLike');
     if (like) {
       like.textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
       like.classList.toggle('liked', Boolean(item.likedByMe));
       like.disabled = Boolean(item.sample || item.likedByMe);
     }
-    const meta = $('#pronoDiapoMeta');
-    if (meta) meta.textContent = item.sample ? 'Ambiance · sans argent réel' : 'Sans argent réel';
     const bars = $('#pronoDiapoBars');
     if (bars) {
       bars.innerHTML = state.pronoStatuses.map((_, index) => {
@@ -331,7 +375,19 @@
     }
     renderPronoStories();
     stopPronoDiapoTimer();
-    state.diapoTimer = setTimeout(() => nextPronoDiapo(), 5000);
+    state.diapoTimer = setTimeout(() => nextPronoDiapo(), 6000);
+  }
+
+  function sharePronoStatus(item) {
+    if (!item) return;
+    const odd = fmtOdd(item.odd);
+    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd !== '—' ? ` @${odd}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
+    const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`;
+    if (navigator.share) {
+      navigator.share({ title: 'Statut prono PASS50', text, url }).catch(() => {});
+      return;
+    }
+    navigator.clipboard?.writeText(`${text}\n${url}`).then(() => toast('Lien copié')).catch(() => toast(text));
   }
 
   function openPronoDiapo(index = 0) {
@@ -511,6 +567,7 @@
     $('#pronoDiapoNext')?.addEventListener('click', nextPronoDiapo);
     $('#pronoDiapoClose')?.addEventListener('click', closePronoDiapo);
     $('#pronoDiapoLike')?.addEventListener('click', likeCurrentPronoDiapo);
+    $('#pronoDiapoShare')?.addEventListener('click', () => sharePronoStatus(state.pronoStatuses[state.diapoIndex]));
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         if ($('#pronoDiapo')?.classList.contains('show')) closePronoDiapo();
