@@ -8,8 +8,8 @@ on:
     branches:
       - main
     paths:
-      - 'api/metrics-ranking-cron.php'
-      - 'api/metrics-ranking-fresh-capture-core.php'
+      - 'api/metrics-ranking-cron-v2.php'
+      - 'api/metrics-ranking-fresh-capture-v2-core.php'
       - '.github/workflows/metrics-ranking-experimental.yml'
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
       STATUS_SHA: ${{ github.sha }}
     steps:
-      - name: Wait for deployed MR fresh-capture contract
+      - name: Wait for deployed MR V2 contract
         if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
@@ -50,7 +50,8 @@ jobs:
               ;;
           esac
           deployment_url="$SITE_BASE/deployment-version.json"
-          gate_url="$API_BASE/metrics-ranking-fresh-capture-core.php"
+          gate_url="$API_BASE/metrics-ranking-fresh-capture-v2-core.php"
+          endpoint_url="$API_BASE/metrics-ranking-cron-v2.php"
           deployed=false
           for attempt in $(seq 1 36); do
             marker="$(curl --location --silent --show-error --max-time 15 \
@@ -60,17 +61,21 @@ jobs:
               --output /dev/null --write-out '%{http_code}' \
               -H 'Cache-Control: no-cache, no-store' \
               "$gate_url?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+            endpoint_code="$(curl --location --silent --show-error --max-time 15 \
+              --output /dev/null --write-out '%{http_code}' \
+              -H 'Cache-Control: no-cache, no-store' \
+              "$endpoint_url?sha=$GITHUB_SHA&attempt=$attempt" || true)"
             if jq -e --arg sha "$GITHUB_SHA" '.commit == $sha' >/dev/null 2>&1 <<<"$marker" \
-              && [ "$gate_code" = "200" ]; then
+              && [ "$gate_code" = "200" ] && [ "$endpoint_code" = "405" ]; then
               deployed=true
-              echo "Le commit $GITHUB_SHA et le garde MR-FRESH-CAPTURE-V1.0 sont servis."
+              echo "Le commit $GITHUB_SHA, METRICS-RANKING-CRON-V2.0 et MR-FRESH-CAPTURE-V2.0 sont servis."
               break
             fi
-            echo "Déploiement MR en attente ($attempt/36, gate HTTP ${gate_code:-000})."
+            echo "Déploiement MR V2 en attente ($attempt/36, core ${gate_code:-000}, endpoint ${endpoint_code:-000})."
             sleep 10
           done
           if [ "$deployed" != "true" ]; then
-            echo "::error::Le contrat MR frais n'est pas servi après six minutes."
+            echo "::error::Le contrat MR V2 n'est pas servi après six minutes."
             exit 1
           fi
 
@@ -90,7 +95,7 @@ jobs:
 
           case "$CRON_URL" in
             */metrics-cron.php)
-              RANKING_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-cron.php"
+              RANKING_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-cron-v2.php"
               ;;
             *)
               echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
@@ -115,13 +120,20 @@ jobs:
               "$RANKING_URL"
           )"
           printf '%s\n' "$response" > ranking-experimental-result.json
+          if ! jq -e '.endpointVersion == "METRICS-RANKING-CRON-V2.0" and .freshCaptureGateVersion == "MR-FRESH-CAPTURE-V2.0"' >/dev/null 2>&1 <<<"$response"; then
+            echo "::error::Réponse MR obsolète ou contrat V2 absent."
+            cat ranking-experimental-result.json
+            exit 1
+          fi
 
           skipped="$(jq -r '.skipped // false' <<<"$response")"
           reason="$(jq -r '.reason // "executed"' <<<"$response")"
+          endpoint_version="$(jq -r '.endpointVersion // "—"' <<<"$response")"
           readiness_state="$(jq -r '.readiness.state // "unknown"' <<<"$response")"
           active_jobs="$(jq -r '.readiness.p1.activeJobs // 0' <<<"$response")"
           failed_jobs="$(jq -r '.readiness.p1.failedJobs // 0' <<<"$response")"
           latest_capture="$(jq -r '.readiness.latestUsableCaptureAt // "—"' <<<"$response")"
+          latest_recorded="$(jq -r '.latestUsableCaptureRecordedAt // "—"' <<<"$response")"
           p1_finished="$(jq -r '.readiness.p1.finishedAt // "—"' <<<"$response")"
           run_uuid="$(jq -r '.runUuid // ""' <<<"$response")"
           algorithm="$(jq -r '.algorithmVersion // "—"' <<<"$response")"
@@ -135,7 +147,7 @@ jobs:
 
           case "$reason" in
             executed) result="exécuté" ;;
-            recent_success) result="reporté : succès récent sans capture nouvelle" ;;
+            recent_success) result="reporté : succès récent sans capture nouvellement ingérée" ;;
             collection_pending) result="reporté : collecte P1 encore en cours" ;;
             no_new_captures) result="reporté : aucune nouvelle capture" ;;
             p1_not_observed) result="reporté : aucun cycle P1 observé"; refresh_p1=true ;;
@@ -149,11 +161,13 @@ jobs:
           {
             printf '### Classement métrique expérimental\n'
             printf -- '- dispatchId : `%s`\n' "$dispatch_id"
+            printf -- '- Endpoint : `%s`\n' "$endpoint_version"
             printf -- '- Calcul : %s\n' "$result"
             printf -- '- Disponibilité : `%s`\n' "$readiness_state"
             printf -- '- Fin du dernier P1 : %s\n' "$p1_finished"
             printf -- '- Jobs P1 actifs / échoués : %s / %s\n' "$active_jobs" "$failed_jobs"
             printf -- '- Dernière capture exploitable : %s\n' "$latest_capture"
+            printf -- '- Dernière ingestion déclenchante : %s\n' "$latest_recorded"
             printf -- '- Garde de fraîcheur : `%s`\n' "$fresh_gate"
             printf -- '- Recalcul anticipé par capture nouvelle : `%s`\n' "$fresh_override"
             printf -- '- runUuid : `%s`\n' "${run_uuid:-—}"
