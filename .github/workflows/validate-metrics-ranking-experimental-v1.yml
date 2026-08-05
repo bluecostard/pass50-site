@@ -31,9 +31,13 @@ jobs:
           php -l api/metrics-ranking-core.php
           php -l api/metrics-ranking.php
           php -l api/metrics-ranking-cron.php
+          php -l api/metrics-ranking-fresh-capture-core.php
+          php -l api/metrics-ranking-cron-v2.php
+          php -l api/metrics-ranking-fresh-capture-v2-core.php
           php -l api/metrics-ranking-calibration-core.php
           php -l api/metrics-ranking-calibration.php
           php -l tests/metrics_ranking_integration.php
+          php -l tests/metrics_ranking_fresh_capture_integration.php
       - name: JavaScript syntax
         run: |
           node --check data-engine-ui.js
@@ -42,11 +46,14 @@ jobs:
         run: |
           python3 -m unittest tests.test_metrics_ranking_experimental_v1
           python3 -m unittest tests.test_metrics_ranking_schedule_v1
+          python3 -m unittest tests.test_metrics_ranking_fresh_capture_v1
           python3 -m unittest tests.test_metrics_ranking_calibration_v1
           python3 -m unittest tests.test_metrics_schema_v1
           python3 -m unittest tests.test_metrics_observability_v1
           python3 -m unittest tests.test_metrics_orchestrator_v1
       - name: MariaDB integration
-        run: php tests/metrics_ranking_integration.php
+        run: |
+          php tests/metrics_ranking_integration.php
+          php tests/metrics_ranking_fresh_capture_integration.php
       - name: Diff check
         run: git diff --check origin/${{ github.base_ref }}...HEAD
