@@ -28,7 +28,7 @@ jobs:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
     steps:
-      - name: Wait for Content Platform Audit V2
+      - name: Wait for Content Platform Audit V2.1
         shell: bash
         run: |
           set -euo pipefail
@@ -39,24 +39,24 @@ jobs:
           [ -n "${CRON_SECRET:-}" ] || { echo '::error::Secret métrique absent'; exit 1; }
           ready=false
           for attempt in $(seq 1 30); do
-            code="$(curl --location --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$AUDIT_URL?contract=CONTENT-PLATFORM-AUDIT-V2.0&attempt=$attempt" || true)"
+            code="$(curl --location --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$AUDIT_URL?contract=CONTENT-PLATFORM-AUDIT-V2.1&attempt=$attempt" || true)"
             if [ "$code" = 405 ]; then ready=true; break; fi
-            echo "Audit V2 en attente ($attempt/30, HTTP ${code:-000})."
+            echo "Audit V2.1 en attente ($attempt/30, HTTP ${code:-000})."
             sleep 10
           done
-          [ "$ready" = true ] || { echo '::error::Audit V2 non servi'; exit 1; }
+          [ "$ready" = true ] || { echo '::error::Audit V2.1 non servi'; exit 1; }
 
       - name: Probe read-only contract
         shell: bash
         run: |
           set -euo pipefail
           AUDIT_URL="${CRON_URL%/metrics-cron.php}/content-freshness-platform-audit-cron-v2.php"
-          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-platform-probe-v2"
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-platform-probe-v21"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
           timestamp="$(date +%s)"
           signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
           curl --fail-with-body --silent --show-error --max-time 55 -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$AUDIT_URL" > content-platform-probe.json
-          jq -e '.ok==true and .action=="probe" and .contract=="CONTENT-PLATFORM-AUDIT-V2.0" and .contentFreshnessRuntime=="CONTENT-FRESHNESS-V3.2" and .collectionBucketMinutes==5 and .readOnly==true and .profilesExposed==false and .secretsExposed==false and .publicStateWrites==0' content-platform-probe.json >/dev/null
+          jq -e '.ok==true and .action=="probe" and .contract=="CONTENT-PLATFORM-AUDIT-V2.1" and .contentFreshnessRuntime=="CONTENT-FRESHNESS-V3.2" and .collectionBucketMinutes==5 and .readOnly==true and .profilesExposed==false and .secretsExposed==false and .publicStateWrites==0' content-platform-probe.json >/dev/null
 
       - name: Audit FI, Top 5 and source health
         id: audit
@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           AUDIT_URL="${CRON_URL%/metrics-cron.php}/content-freshness-platform-audit-cron-v2.php"
-          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-platform-audit-v2"
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-platform-audit-v21"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"audit",dispatchId:$dispatchId}')"
           response_file='content-platform-audit.json'; success=false
           for attempt in $(seq 1 5); do
@@ -77,8 +77,8 @@ jobs:
             if [ "$curl_status" -eq 0 ] && [ "$http_code" = 200 ]; then success=true; break; fi
             if [ "$attempt" -lt 5 ] && [[ "$http_code" =~ ^(000|502|503|504)$ ]]; then sleep 15; else break; fi
           done
-          [ "$success" = true ] || { echo '::error::Audit multiréseau V2 interrompu'; cat "$response_file" 2>/dev/null || true; exit 1; }
-          jq -e '.ok==true and .action=="audit" and .contract=="CONTENT-PLATFORM-AUDIT-V2.0" and .readOnly==true and .profilesExposed==false and .secretsExposed==false and .publicStateWrites==0' "$response_file" >/dev/null
+          [ "$success" = true ] || { echo '::error::Audit multiréseau V2.1 interrompu'; cat "$response_file" 2>/dev/null || true; exit 1; }
+          jq -e '.ok==true and .action=="audit" and .contract=="CONTENT-PLATFORM-AUDIT-V2.1" and .readOnly==true and .profilesExposed==false and .secretsExposed==false and .publicStateWrites==0' "$response_file" >/dev/null
 
           ready="$(jq -r '.ready // false' "$response_file")"
           coverage="$(jq -r '.fiNews.coveragePercent // 0' "$response_file")"
@@ -89,7 +89,7 @@ jobs:
           tiktok_authorized="$(jq -r '.sources.health.tiktok.authorizedOauthProfiles // 0' "$response_file")"
           non_youtube="$(jq -r '.trends.periods["24h"].nonYoutubeCandidatesAvailable // false' "$response_file")"
           {
-            echo '### Audit multiréseau PASS50 V2'
+            echo '### Audit multiréseau PASS50 V2.1'
             printf -- '- Runtime / cadence / bucket : `%s` · %s min · %s min\n' "$(jq -r '.runtime.contentFreshnessVersion' "$response_file")" "$(jq -r '.runtime.scheduleMinutes' "$response_file")" "$(jq -r '.runtime.collectionBucketMinutes' "$response_file")"
             printf -- '- Santé X : `%s` · HTTP `%s`\n' "$x_category" "$x_status"
             printf -- '- Profils TikTok OAuth autorisés : %s\n' "$tiktok_authorized"
@@ -126,8 +126,8 @@ jobs:
           TIKTOK: ${{ steps.audit.outputs.tiktok_authorized }}
         run: |
           set -euo pipefail
-          state=success; description="actualité V2 · FI ${COVERAGE:-0}% · X ${X_CATEGORY:-?} · TikTok ${TIKTOK:-0}"
-          if [ "${OUTCOME:-failure}" != success ]; then state=failure; description='audit actualité V2 interrompu · app_state 0';
+          state=success; description="actualité V2.1 · FI ${COVERAGE:-0}% · X ${X_CATEGORY:-?} · TikTok ${TIKTOK:-0}"
+          if [ "${OUTCOME:-failure}" != success ]; then state=failure; description='audit actualité V2.1 interrompu · app_state 0';
           elif [ "${READY:-false}" != true ] || [ -n "${YOUTUBE_PERIODS:-}" ]; then state=pending; description="Top 5 YouTube seul: ${YOUTUBE_PERIODS:-—} · X ${X_CATEGORY:-?} · TikTok ${TIKTOK:-0}"; fi
           payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/content-platform-audit' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
           curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
@@ -136,7 +136,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: content-platform-audit-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          name: content-platform-audit-v21-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             content-platform-probe.json
             content-platform-audit.json

@@ -7,9 +7,9 @@ WORKFLOW = (ROOT / ".github/workflows/content-freshness-platform-audit.yml").rea
 FRESHNESS = (ROOT / ".github/workflows/content-freshness-5m.yml").read_text(encoding="utf-8")
 
 
-class ContentFreshnessPlatformAuditV2Tests(unittest.TestCase):
+class ContentFreshnessPlatformAuditV21Tests(unittest.TestCase):
     def test_endpoint_is_strict_hmac_read_only_and_versioned(self):
-        self.assertIn("CONTENT-PLATFORM-AUDIT-V2.0", ENDPOINT)
+        self.assertIn("CONTENT-PLATFORM-AUDIT-V2.1", ENDPOINT)
         self.assertIn("CONTENT-FRESHNESS-V3.2", ENDPOINT)
         self.assertIn("p50_mo_verify_cron_signature", ENDPOINT)
         self.assertIn("['probe','audit']", ENDPOINT)
@@ -35,8 +35,14 @@ class ContentFreshnessPlatformAuditV2Tests(unittest.TestCase):
         self.assertNotIn("collectionIdempotencyBucketMinutes'=>15", ENDPOINT)
         self.assertIn("cron: '*/5 * * * *'", FRESHNESS)
 
-    def test_x_health_is_sanitized_and_exposes_only_http_category(self):
+    def test_x_health_uses_the_real_social_link_primary_key(self):
         self.assertIn("function p50_cpa2_x_health", ENDPOINT)
+        self.assertIn("ORDER BY s.confidence DESC,s.profile_id ASC LIMIT 1", ENDPOINT)
+        self.assertNotIn("ORDER BY s.confidence DESC,s.id", ENDPOINT)
+        self.assertNotIn("s.id LIMIT 1", ENDPOINT)
+        self.assertIn("array_replace($base,['category'=>'verified_source_missing'])", ENDPOINT)
+
+    def test_x_health_is_sanitized_and_exposes_only_http_category(self):
         self.assertIn("p50_mc_config('X')", ENDPOINT)
         self.assertIn("p50_mc_x_handle", ENDPOINT)
         self.assertIn("https://api.x.com/2/users/by/username/", ENDPOINT)
@@ -48,6 +54,7 @@ class ContentFreshnessPlatformAuditV2Tests(unittest.TestCase):
             "rate_limited",
             "server_error",
             "configuration_missing",
+            "verified_source_missing",
         ):
             self.assertIn(category, ENDPOINT)
         x_function = ENDPOINT[
@@ -80,9 +87,10 @@ class ContentFreshnessPlatformAuditV2Tests(unittest.TestCase):
         for period in ('"2h"', '"24h"', '"48h"', '"7d"', '"15d"'):
             self.assertIn(period, WORKFLOW)
 
-    def test_workflow_uses_v2_and_only_reads_diagnostics(self):
+    def test_workflow_uses_v21_and_only_reads_diagnostics(self):
         self.assertIn("content-freshness-platform-audit-cron-v2.php", WORKFLOW)
-        self.assertIn("CONTENT-PLATFORM-AUDIT-V2.0", WORKFLOW)
+        self.assertIn("CONTENT-PLATFORM-AUDIT-V2.1", WORKFLOW)
+        self.assertNotIn("CONTENT-PLATFORM-AUDIT-V2.0", WORKFLOW)
         self.assertIn("CONTENT-FRESHNESS-V3.2", WORKFLOW)
         self.assertIn("collectionBucketMinutes==5", WORKFLOW)
         self.assertIn("Santé X", WORKFLOW)
