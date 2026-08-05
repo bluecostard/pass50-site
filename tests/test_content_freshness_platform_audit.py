@@ -79,7 +79,7 @@ class ContentFreshnessPlatformAuditTests(unittest.TestCase):
         self.assertIn("action:\"audit\"", WORKFLOW)
         self.assertNotIn("action:\"refresh\"", WORKFLOW)
         self.assertNotIn("metrics-ranking-publication-apply", WORKFLOW)
-        self.assertIn("Profiles individuels exposés", WORKFLOW)
+        self.assertIn("Profils individuels exposés", WORKFLOW)
         self.assertIn("Écriture app_state : `0`", WORKFLOW)
 
 
