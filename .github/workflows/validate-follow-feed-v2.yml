@@ -6,6 +6,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,5 +25,57 @@ jobs:
           grep -F 'data-p50-tab="feed"' mobile-bottom-nav-v1.js
           if grep -F 'data-p50-tab="live"' mobile-bottom-nav-v1.js; then exit 1; fi
           if grep -F 'id="liveSection"' mon-fil.html; then exit 1; fi
+      - name: Vérifier Apoutchou avec le lecteur Facebook V1.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 24); do
+            viewer="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' \
+              "https://www.pass50.store/facebook-video-player-v1.js?verify=v12-${GITHUB_RUN_ID}-${attempt}" || true)"
+            loader="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' \
+              "https://www.pass50.store/public-copy-fixes.js?verify=v12-${GITHUB_RUN_ID}-${attempt}" || true)"
+            if grep -q 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.2' <<<"$viewer" \
+              && grep -q 'Voir dans Pass50' <<<"$viewer" \
+              && grep -q 'facebook-video-player-v1.js?v=1.2' <<<"$loader" \
+              && ! grep -q 'item.playableInPass50!==true' <<<"$viewer"; then
+              ready=true
+              break
+            fi
+            echo "Lecteur Facebook V1.2 en attente ($attempt/24)."
+            sleep 5
+          done
+          [ "$ready" = true ] || { echo '::error::Le lecteur Facebook V1.2 n’est pas servi'; exit 1; }
+
+          curl --fail-with-body --location --silent --show-error --max-time 30 \
+            -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' \
+            "https://www.pass50.store/api/content-feed.php?period=24h&profileId=apoutchou&newsLimit=30&verify=v12-${GITHUB_RUN_ID}" \
+            > apoutchou-feed.json
+          jq -e '.ok==true and .ready==true' apoutchou-feed.json >/dev/null
+          jq '[.news[] | select((.platform|ascii_downcase)=="facebook")]' apoutchou-feed.json > apoutchou-facebook.json
+          count="$(jq 'length' apoutchou-facebook.json)"
+          [ "$count" -gt 0 ] || { echo '::error::Aucune publication Facebook sur la fiche Apoutchou'; exit 1; }
+          source="$(jq -r '.[0].url // ""' apoutchou-facebook.json)"
+          item_type="$(jq -r '.[0].itemType // "unknown"' apoutchou-facebook.json)"
+          playable="$(jq -r '.[0].playableInPass50 // false' apoutchou-facebook.json)"
+          encoded="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=''))
+PY
+)"
+          path="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+u=urllib.parse.urlparse(sys.argv[1]); print((u.hostname or '')+(u.path or '/'))
+PY
+)"
+          curl --location --silent --show-error --max-time 40 \
+            -H 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.8' \
+            "https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=820" \
+            > facebook-post.html
+          unavailable=false
+          if grep -Eqi "ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible" facebook-post.html; then unavailable=true; fi
+          [ "$unavailable" = false ] || { echo '::error::La publication réelle d’Apoutchou reste indisponible dans post.php'; exit 1; }
+          printf 'APOUTCHOU_V12_RESULT count=%s itemType=%s playable=%s viewer=all-facebook-items postUnavailable=%s path=%s\n' \
+            "$count" "$item_type" "$playable" "$unavailable" "$path"
       - name: Diff check
         run: git diff --check origin/${{ github.base_ref }}...HEAD
