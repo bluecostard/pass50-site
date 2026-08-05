@@ -147,10 +147,10 @@ function p50_mrp_apply_is_skippable_plan(array $plan): bool {
     if(($plan['status']??'')!=='blocked')return false;
     $gates=array_values(array_unique(array_map('strval',(array)($plan['blockedGates']??[]))));
     if(!$gates)return false;
-    foreach($gates as $gate){
-        if(!in_array($gate,['candidate_non_empty','successful_run'],true))return false;
-    }
-    return true;
+    // Sans candidat / sans run : exit_ratio et mouvements extrêmes sont mécaniques → skip période.
+    if(!in_array('candidate_non_empty',$gates,true)&&!in_array('successful_run',$gates,true))return false;
+    $extra=array_values(array_diff($gates,['candidate_non_empty','successful_run','exit_ratio','entry_ratio','maximum_rank_movement']));
+    return $extra===[];
 }
 
 function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $now=null,bool $forceBootstrap=false): array {
