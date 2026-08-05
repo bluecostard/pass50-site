@@ -5,8 +5,10 @@
   const INTERNAL_TEXT='Lien original à valider dans Administration → Actualité';
   const PUBLIC_TEXT='Source en cours de validation';
   const LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0';
+  const FACEBOOK_VIEWER_DEPLOY_TRIGGER='V1.2-20260805';
   void PASS50_PUBLIC_RUNTIME;
   void LEGACY_CONTEXT_SHARE_DISABLED;
+  void FACEBOOK_VIEWER_DEPLOY_TRIGGER;
 
   function replaceInternalCopy(root=document){
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
