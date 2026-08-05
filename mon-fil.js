@@ -162,11 +162,29 @@
     }
   }
 
+  async function loadPronoStatuses() {
+    try {
+      const data = await apiFetch(`prono-statuses-feed.php?limit=20&_=${Date.now()}`, { auth: true });
+      return (Array.isArray(data?.items) ? data.items : []).map(item => ({ ...item, feedType: 'prono_status' }));
+    } catch (error) {
+      console.warn('Statuts prono indisponibles', error);
+      return [];
+    }
+  }
+
   async function loadFeedNews() {
-    const [batches, duelAudios] = await Promise.all([Promise.all(state.following.map(loadNewsFor)), loadDuelAudios()]);
+    const [batches, duelAudios, pronoStatuses] = await Promise.all([
+      Promise.all(state.following.map(loadNewsFor)),
+      loadDuelAudios(),
+      loadPronoStatuses(),
+    ]);
     const seen = new Set();
-    state.news = [...batches.flat(), ...duelAudios].filter(item => {
-      const key = item.feedType === 'duel_audio' ? `audio:${item.id}` : `news:${String(item.id || item.url || `${item.profileId}:${item.title}`)}`;
+    state.news = [...batches.flat(), ...duelAudios, ...pronoStatuses].filter(item => {
+      const key = item.feedType === 'duel_audio'
+        ? `audio:${item.id}`
+        : item.feedType === 'prono_status'
+          ? `prono:${item.id}`
+          : `news:${String(item.id || item.url || `${item.profileId}:${item.title}`)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -203,8 +221,29 @@
     return `<article class="feed-card duel-audio-feed-card"><div class="duel-audio-feed-head"><div class="duel-audio-avatars">${avatarHtml(profileA)}<span>VS</span>${avatarHtml(profileB)}</div><div><div class="duel-audio-kicker">🎙 LES COULÉS · ${esc(author)}</div><strong>${esc(profileA.name)} VS ${esc(profileB.name)}</strong><div class="feed-meta">${esc(because)} · ${esc(relativeDate(item.publishedAt))}</div></div></div><div class="duel-audio-feed-body"><h2>${esc(author)} commente son vote pour ${esc(selected.name)}</h2><div class="duel-audio-player"><span>${durationLabel(item.durationMs)}</span><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio de ${attr(author)}"></audio></div><div class="feed-meta">Pseudo issu de son compte utilisateur PASS50 · Audio publié volontairement lors du partage</div><div class="feed-actions"><a class="btn primary" href="./?section=coules">Voir le duel</a><a class="btn" href="./?profile=${encodeURIComponent(selected.id || '')}">Voir la fiche de ${esc(selected.name)}</a></div></div></article>`;
   }
 
+  function pronoStatusCard(item) {
+    const expires = relativeDate(item.expiresAt);
+    const liked = item.likedByMe ? 'liked' : '';
+    return `<article class="feed-card prono-status-card" data-prono-status="${esc(item.id)}">
+      <div class="feed-head">
+        <div class="avatar">🎯</div>
+        <div class="feed-person"><strong>${esc(item.authorPseudo || 'Membre')}</strong><span>Prono · statut ${esc(item.durationHours)} h</span></div>
+        <div class="feed-position"><span class="up">PRONO</span><br>expire ${esc(expires)}</div>
+      </div>
+      <div class="feed-body">
+        <h2>${esc(item.questionTitle || 'Pronostic')}</h2>
+        <div class="feed-meta">Choix : <strong>${esc(item.optionLabel || item.optionKey)}</strong> · Sans argent réel</div>
+        <div class="feed-actions">
+          <button type="button" class="btn ${liked}" data-prono-like="${esc(item.id)}">${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${esc(item.likeCount || 0)}</button>
+          <a class="btn" href="./pronostics.html">Voir les pronos</a>
+        </div>
+      </div>
+    </article>`;
+  }
+
   function feedCard(item) {
     if (item.feedType === 'duel_audio') return duelAudioCard(item);
+    if (item.feedType === 'prono_status') return pronoStatusCard(item);
     const profile = profileFor(item.profileId) || { id: item.profileId, name: 'Influenceur', initials: 'P50' };
     const rank = rankFor(profile.id);
     const change = movement(profile);
@@ -313,6 +352,29 @@
     $('#feedLiveRadarBtn')?.addEventListener('click', openRadar);
     $('[data-close-live]')?.addEventListener('click', closeRadar);
     $('#feedLiveModal')?.addEventListener('click', event => { if (event.target.id === 'feedLiveModal') closeRadar(); });
+    $('#feedList')?.addEventListener('click', async event => {
+      const btn = event.target.closest('[data-prono-like]');
+      if (!btn) return;
+      const statusId = btn.getAttribute('data-prono-like');
+      try {
+        const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+        const token = localStorage.getItem('pass50_api_token') || '';
+        if (!token) return toast('Connecte-toi pour liker');
+        headers.Authorization = `Bearer ${token}`;
+        const response = await fetch('./api/prono-status-like.php', { method: 'POST', headers, body: JSON.stringify({ statusId }), cache: 'no-store' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Like impossible');
+        const item = state.news.find(row => row.feedType === 'prono_status' && String(row.id) === String(statusId));
+        if (item) {
+          item.likedByMe = true;
+          item.likeCount = Number(data.likeCount || item.likeCount || 0);
+        }
+        renderFeed();
+        toast(data.alreadyLiked ? 'Déjà liké' : 'Like envoyé · +0,25 pt pour l’auteur');
+      } catch (error) {
+        toast(error.message || 'Like impossible');
+      }
+    });
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeRadar(); });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFeed({ silent: true }); });
   }
