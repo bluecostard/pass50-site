@@ -14,7 +14,7 @@ on:
       - 'tests/test_live_trust_gate_v1.py'
       - 'tests/test_metrics_ranking_calibration_v1.py'
       - 'tests/test_mobile_public_ux_polish.py'
-      - '.pass50-integrate-kehou-pavlov-v5'
+      - '.pass50-integrate-kehou-pavlov-v6'
       - '.github/workflows/validate-canonical-lionel-yasmine-v24.yml'
 
 permissions:
