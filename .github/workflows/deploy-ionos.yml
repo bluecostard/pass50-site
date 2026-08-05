@@ -58,7 +58,7 @@ jobs:
           set net:timeout 20
           set sftp:auto-confirm yes
           open -u "$USER","$PASSWORD" sftp://$HOST:22
-          mirror --reverse --verbose --ignore-time --ignore-size --parallel=4 .deploy/ "$REMOTE_DIR"
+          mirror --reverse --verbose --transfer-all --parallel=4 .deploy/ "$REMOTE_DIR"
           bye
           LFTP
 
