@@ -66,6 +66,7 @@ Une question publiée avec :
 - FI concernée (optionnelle mais recommandée)
 - 2 à 4 réponses exclusives avec **cote** décimale
 - **durée de vote** fixe : **6 / 12 / 24 heures** → `closes_at`
+- **plusieurs questions** par FI ou actu : **max 6** actifs (`subject_key`)
 - **date de mesure** séparée (`measure_at`) — quand on résout / paye
 - gain = **mise × cote** (cote figée au moment du vote)
 - **règle de résolution** (métrique + seuil)

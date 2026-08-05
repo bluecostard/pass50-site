@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.7';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.8';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -140,11 +140,17 @@
     return Number.isFinite(n) && n > 0 ? n.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1') : '—';
   }
 
-  function statusCoverDataUri(item) {
+  function statusCoverDataUri(item, mode = 'feed') {
     const odd = fmtOdd(item.odd || 2);
     const hue = hashHue(item.questionTitle || item.authorPseudo);
     const title = String(item.optionLabel || 'PRONO').slice(0, 28).replace(/[<>&]/g, '');
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(${hue} 42% 16%)"/><stop offset="1" stop-color="#050705"/></linearGradient></defs><rect width="720" height="900" fill="url(#bg)"/><circle cx="560" cy="180" r="160" fill="hsl(${(hue + 70) % 360} 55% 28%)" opacity=".35"/><text x="48" y="120" fill="#b7ff00" font-family="Arial Black,Impact,sans-serif" font-size="28">PASS50</text><text x="48" y="420" fill="#f6f8f4" font-family="Arial Black,Impact,sans-serif" font-size="54">${odd}</text><text x="48" y="470" fill="#9da79b" font-family="Arial,sans-serif" font-size="22" font-weight="700">COTE</text><text x="48" y="560" fill="#f6f8f4" font-family="Arial,sans-serif" font-size="34" font-weight="800">${title}</text></svg>`;
+    if (mode === 'share') {
+      // Palette partage hors app : plus vive, cote lisible en un coup d’œil
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(${hue} 55% 22%)"/><stop offset="1" stop-color="#050705"/></linearGradient></defs><rect width="720" height="900" fill="url(#bg)"/><circle cx="560" cy="160" r="180" fill="#b7ff00" opacity=".18"/><text x="48" y="110" fill="#b7ff00" font-family="Arial Black,Impact,sans-serif" font-size="30">PASS50</text><text x="48" y="400" fill="#b7ff00" font-family="Arial Black,Impact,sans-serif" font-size="72">${odd}</text><text x="48" y="450" fill="#f6f8f4" font-family="Arial,sans-serif" font-size="22" font-weight="700">COTE</text><text x="48" y="540" fill="#f6f8f4" font-family="Arial,sans-serif" font-size="36" font-weight="800">${title}</text><text x="48" y="820" fill="#9da79b" font-family="Arial,sans-serif" font-size="20">Sans argent réel</text></svg>`;
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
+    // Palette fil in-app : calme, charcoal — la cote n’est que dans le ticket
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900"><defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#151a15"/><stop offset="1" stop-color="#050705"/></linearGradient></defs><rect width="720" height="900" fill="url(#bg)"/><text x="48" y="120" fill="#6b7568" font-family="Arial,sans-serif" font-size="22" font-weight="800" letter-spacing="4">PASS50</text><text x="48" y="520" fill="#c9d2c4" font-family="Arial,sans-serif" font-size="40" font-weight="800">${title}</text></svg>`;
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
@@ -154,8 +160,8 @@
       if (fiPhoto) return fiPhoto;
     }
     const direct = String(item.coverPhoto || item.authorPhoto || '').trim();
-    if (direct) return direct;
-    return statusCoverDataUri(item);
+    if (direct && !String(direct).startsWith('data:image/svg')) return direct;
+    return statusCoverDataUri(item, 'feed');
   }
 
   function enrichPronoPhoto(item, index = 0) {
@@ -344,22 +350,20 @@
     const cover = $('#pronoDiapoCover');
     if (cover) {
       cover.src = statusCoverSrc(item);
-      cover.onerror = () => { cover.src = statusCoverDataUri(item); };
+      cover.onerror = () => { cover.src = statusCoverDataUri(item, 'feed'); };
     }
     const author = $('#pronoDiapoAuthor');
     if (author) {
-      author.innerHTML = `${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}<div><strong>${esc(item.authorPseudo || 'Membre')}</strong><small>Statut prono · ${esc(item.durationHours)} h · expire ${esc(relativeDate(item.expiresAt))}</small></div>`;
+      author.innerHTML = `${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}<div><strong>${esc(item.authorPseudo || 'Membre')}</strong><small>Statut · ${esc(item.durationHours)} h · expire ${esc(relativeDate(item.expiresAt))}</small></div>`;
     }
     const question = $('#pronoDiapoQuestion');
     if (question) question.textContent = item.questionTitle || 'Pronostic';
     const choice = $('#pronoDiapoChoice');
     if (choice) choice.textContent = item.optionLabel || item.optionKey || '—';
-    const oddEl = $('#pronoDiapoOdd');
-    if (oddEl) oddEl.textContent = odd;
     const oddInline = $('#pronoDiapoOddInline');
     if (oddInline) oddInline.textContent = `@${odd}`;
     const ret = $('#pronoDiapoReturn');
-    if (ret) ret.textContent = payout > 0 ? `Gain pot. ${payout} pts · mise ${item.stake || 100} · sans argent réel` : 'Sans argent réel';
+    if (ret) ret.textContent = payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel';
     const like = $('#pronoDiapoLike');
     if (like) {
       like.textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
@@ -383,8 +387,10 @@
     const odd = fmtOdd(item.odd);
     const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd !== '—' ? ` @${odd}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
     const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`;
+    // Hors app : on privilégie le texte + lien (carte partage = palette vive côté image si disponible)
     if (navigator.share) {
-      navigator.share({ title: 'Statut prono PASS50', text, url }).catch(() => {});
+      const payload = { title: 'Statut prono PASS50', text, url };
+      navigator.share(payload).catch(() => {});
       return;
     }
     navigator.clipboard?.writeText(`${text}\n${url}`).then(() => toast('Lien copié')).catch(() => toast(text));

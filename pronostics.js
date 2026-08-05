@@ -51,19 +51,25 @@
       { id: 'st-3', authorPseudo: 'aya_ci', questionTitle: 'Lo Père Daloa passera-t-il en LIVE sous 24 h ?', optionLabel: 'Oui', optionKey: 'y', odd: 1.7, stake: 100, potentialPayout: 170, likeCount: 7, likedByMe: true, durationHours: 48 },
       { id: 'st-4', authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', optionKey: 'a', odd: 3.4, stake: 100, potentialPayout: 340, likeCount: 11, likedByMe: false, durationHours: 24 },
       { id: 'st-5', authorPseudo: 'yves_rank', questionTitle: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Non, hors Top 3', optionKey: 'no', odd: 2.05, stake: 100, potentialPayout: 205, likeCount: 3, likedByMe: false, durationHours: 24 },
-    ].map((item) => ({ ...item, authorPhoto: syntheticPhoto(item.authorPseudo), coverPhoto: statusCoverDataUri(item) }));
+    ].map((item) => ({ ...item, authorPhoto: syntheticPhoto(item.authorPseudo), coverPhoto: statusCoverDataUri(item, 'feed') }));
   }
 
-  function statusCoverDataUri(item) {
+  function statusCoverDataUri(item, mode = 'feed') {
     const odd = fmtOdd(item.odd || 2);
     const hue = hashHue(item.questionTitle || item.authorPseudo);
     const title = String(item.optionLabel || 'PRONO').slice(0, 28);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(${hue} 42% 16%)"/><stop offset="1" stop-color="#050705"/></linearGradient></defs><rect width="720" height="900" fill="url(#bg)"/><circle cx="560" cy="180" r="160" fill="hsl(${(hue + 70) % 360} 55% 28%)" opacity=".35"/><text x="48" y="120" fill="#b7ff00" font-family="Arial Black,Impact,sans-serif" font-size="28">PASS50</text><text x="48" y="420" fill="#f6f8f4" font-family="Arial Black,Impact,sans-serif" font-size="54">${odd}</text><text x="48" y="470" fill="#9da79b" font-family="Arial,sans-serif" font-size="22" font-weight="700">COTE</text><text x="48" y="560" fill="#f6f8f4" font-family="Arial,sans-serif" font-size="34" font-weight="800">${title.replace(/[<>&]/g, '')}</text></svg>`;
+    if (mode === 'share') {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(${hue} 55% 22%)"/><stop offset="1" stop-color="#050705"/></linearGradient></defs><rect width="720" height="900" fill="url(#bg)"/><circle cx="560" cy="160" r="180" fill="#b7ff00" opacity=".18"/><text x="48" y="110" fill="#b7ff00" font-family="Arial Black,Impact,sans-serif" font-size="30">PASS50</text><text x="48" y="400" fill="#b7ff00" font-family="Arial Black,Impact,sans-serif" font-size="72">${odd}</text><text x="48" y="450" fill="#f6f8f4" font-family="Arial,sans-serif" font-size="22" font-weight="700">COTE</text><text x="48" y="540" fill="#f6f8f4" font-family="Arial,sans-serif" font-size="36" font-weight="800">${title.replace(/[<>&]/g, '')}</text><text x="48" y="820" fill="#9da79b" font-family="Arial,sans-serif" font-size="20">Sans argent réel</text></svg>`;
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900"><defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#151a15"/><stop offset="1" stop-color="#050705"/></linearGradient></defs><rect width="720" height="900" fill="url(#bg)"/><text x="48" y="120" fill="#6b7568" font-family="Arial,sans-serif" font-size="22" font-weight="800" letter-spacing="4">PASS50</text><text x="48" y="520" fill="#c9d2c4" font-family="Arial,sans-serif" font-size="40" font-weight="800">${title.replace(/[<>&]/g, '')}</text></svg>`;
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
   function statusCoverSrc(item) {
-    return String(item.coverPhoto || item.authorPhoto || '').trim() || statusCoverDataUri(item);
+    const direct = String(item.coverPhoto || item.authorPhoto || '').trim();
+    if (direct && !direct.startsWith('data:image/svg')) return direct;
+    return statusCoverDataUri(item, 'feed');
   }
 
   function demoFeed() {
@@ -252,17 +258,15 @@
     const cover = $('#diapoCover');
     if (cover) {
       cover.src = statusCoverSrc(item);
-      cover.onerror = () => { cover.src = statusCoverDataUri(item); };
+      cover.onerror = () => { cover.src = statusCoverDataUri(item, 'feed'); };
     }
-    $('#diapoAuthor').innerHTML = `${storyAvatarHtml(item)}<div>${esc(item.authorPseudo || 'Membre')}<small>Statut prono · ${esc(item.durationHours)} h</small></div>`;
+    $('#diapoAuthor').innerHTML = `${storyAvatarHtml(item)}<div>${esc(item.authorPseudo || 'Membre')}<small>Statut · ${esc(item.durationHours)} h</small></div>`;
     $('#diapoQuestion').textContent = item.questionTitle || 'Pronostic';
     $('#diapoChoice').textContent = item.optionLabel || item.optionKey || '—';
-    const oddEl = $('#diapoOdd');
-    if (oddEl) oddEl.textContent = odd;
     const oddInline = $('#diapoOddInline');
     if (oddInline) oddInline.textContent = `@${odd}`;
     const ret = $('#diapoReturn');
-    if (ret) ret.textContent = payout > 0 ? `Gain pot. ${payout} pts · mise ${item.stake || 100} · sans argent réel` : 'Sans argent réel';
+    if (ret) ret.textContent = payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel';
     const like = $('#diapoLike');
     if (like) like.textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
     const bars = $('#diapoBars');
@@ -413,7 +417,7 @@
       state.statuses = (items.length ? items : demoStatuses().map((s) => ({ ...s, sample: true }))).map((s) => ({
         ...s,
         authorPhoto: String(s.authorPhoto || '').trim() || syntheticPhoto(s.authorPseudo),
-        coverPhoto: String(s.coverPhoto || '').trim() || statusCoverDataUri(s),
+        coverPhoto: String(s.coverPhoto || '').trim() || statusCoverDataUri(s, 'feed'),
         odd: Number(s.odd) || 2,
         stake: Number(s.stake) || 100,
         potentialPayout: Number(s.potentialPayout) || Math.round((Number(s.stake) || 100) * (Number(s.odd) || 2)),
