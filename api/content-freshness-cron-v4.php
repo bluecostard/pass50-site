@@ -45,7 +45,7 @@ if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',
 function p50_cf4_x_fast_cycle_enabled(): bool {
     global $config;
     $value=$config['metrics']['x_fast_cycle_enabled']??getenv('PASS50_X_FAST_CYCLE_ENABLED');
-    if($value===false||$value===null||trim((string)$value==='')return false;
+    if($value===false||$value===null||trim((string)$value)==='')return false;
     return filter_var($value,FILTER_VALIDATE_BOOLEAN);
 }
 function p50_cf4_x_policy(): array {
