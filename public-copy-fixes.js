@@ -1,7 +1,12 @@
 (function(){
   'use strict';
+
+  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V82';
   const INTERNAL_TEXT='Lien original à valider dans Administration → Actualité';
   const PUBLIC_TEXT='Source en cours de validation';
+  const LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0';
+  void PASS50_PUBLIC_RUNTIME;
+  void LEGACY_CONTEXT_SHARE_DISABLED;
 
   function replaceInternalCopy(root=document){
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
@@ -23,6 +28,13 @@
     footer.appendChild(links);
   }
 
+  function removeLegacyShareUi(){
+    document.getElementById('shareBtn')?.remove();
+    document.querySelectorAll('[data-p50-context-share="ranking"]').forEach(node=>node.remove());
+    document.getElementById('p50ContextShareModal')?.remove();
+    document.getElementById('p50ContextShareStyles')?.remove();
+  }
+
   async function disableServiceWorkers(){
     if(!('serviceWorker' in navigator)||!location.protocol.startsWith('http'))return;
     try{
@@ -37,26 +49,10 @@
     }
   }
 
-  let scheduled=false;
-  function schedulePublicFixes(){
-    if(scheduled)return;
-    scheduled=true;
-    requestAnimationFrame(()=>{
-      scheduled=false;
-      replaceInternalCopy(document);
-      installLegalLinks();
-    });
-  }
-
-  const observer=new MutationObserver(schedulePublicFixes);
-  observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
-  document.addEventListener('DOMContentLoaded',()=>{
-    schedulePublicFixes();
-    disableServiceWorkers();
-  });
-  if(document.readyState!=='loading'){
-    schedulePublicFixes();
-    disableServiceWorkers();
+  function runPublicFixes(){
+    replaceInternalCopy(document);
+    installLegalLinks();
+    removeLegacyShareUi();
   }
 
   function loadScript(selector,src,datasetKey,datasetValue,asyncValue){
@@ -67,6 +63,27 @@
     script.dataset[datasetKey]=datasetValue;
     document.head.appendChild(script);
   }
+
+  function loadContextShareV2(){
+    if(window.PASS50_CONTEXT_SHARE_V2||document.querySelector('script[data-pass50-context-share-v2]'))return;
+    const script=document.createElement('script');
+    script.src='./context-share-v2.js?v=2.1';
+    script.async=false;
+    script.dataset.pass50ContextShare='2.1';
+    script.dataset.pass50ContextShareV2='2.1';
+    document.head.appendChild(script);
+  }
+
+  function boot(){
+    runPublicFixes();
+    disableServiceWorkers();
+    loadContextShareV2();
+    setTimeout(runPublicFixes,250);
+    setTimeout(runPublicFixes,1200);
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
 
   loadScript('script[data-pass50-connector-sections]','./connector-sections-v1.js?v=1.1','pass50ConnectorSections','1.1');
   loadScript('script[data-pass50-youtube-oauth-ui]','./youtube-oauth-ui-v1.js?v=1.0','pass50YoutubeOauthUi','1.0');
@@ -82,7 +99,6 @@
   loadScript('script[data-pass50-fictive-ranking-admin]','./admin-fictive-ranking-v1.js?v=1.0','pass50FictiveRankingAdmin','1.0');
   loadScript('script[data-pass50-classability-sync]','./classability-sync-v1.js?v=1.4','pass50ClassabilitySync','1.4',false);
   loadScript('script[data-pass50-mobile-bottom-nav]','./mobile-bottom-nav-v1.js?v=1.2','pass50MobileBottomNav','1.2',false);
-  loadScript('script[data-pass50-context-share]','./context-share-v1.js?v=1.0','pass50ContextShare','1.0',false);
   loadScript('script[data-pass50-duel-audio-feed]','./duel-audio-feed-v1.js?v=1.1','pass50DuelAudioFeed','1.1',false);
   loadScript('script[data-pass50-mobile-modal-video-progress]','./mobile-modal-video-progress-v1.js?v=1.0','pass50MobileModalVideoProgress','1.0',false);
 })();
