@@ -40,15 +40,17 @@ foreach ($questions as $row) {
     $items[] = p50_prono_question_public($row, $votes[$qid] ?? null, $tallies);
 }
 
-$balance = $user ? p50_prono_balance($pdo, (string)$user['id']) : ['balance' => 0, 'streak' => 0, 'lastPlayDate' => null];
+$balance = $user ? p50_prono_balance($pdo, (string)$user['id']) : ['balance' => 0, 'streak' => 0, 'lastPlayDate' => null, 'floor' => P50_PRONO_BALANCE_FLOOR];
 
 json_response([
     'ok' => true,
     'version' => P50_PRONO_VERSION,
-    'disclaimer' => 'Sans argent réel — cotes en points PASS50 uniquement.',
+    'disclaimer' => 'Sans argent réel — cotes en points PASS50. Départ 1000 · plancher 100 · perte = mise.',
     'balance' => $balance,
     'statusDurations' => P50_PRONO_STATUS_DURATIONS,
     'stakeDefault' => P50_PRONO_POINTS_CORRECT,
+    'startingBalance' => P50_PRONO_STARTING_BALANCE,
+    'balanceFloor' => P50_PRONO_BALANCE_FLOOR,
     'items' => $items,
     'auth' => $user !== null,
 ]);

@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 
-const P50_PRONO_VERSION = 'PRONO-V1.1';
-const P50_PRONO_POINTS_CORRECT = 100; // mise de base (gain = mise × cote)
+const P50_PRONO_VERSION = 'PRONO-V1.2';
+const P50_PRONO_POINTS_CORRECT = 100; // mise nominale (gain = mise × cote)
+const P50_PRONO_STARTING_BALANCE = 1000;
+const P50_PRONO_BALANCE_FLOOR = 100; // jamais en dessous — on peut toujours jouer
 const P50_PRONO_POINTS_DAILY_FIRST = 50;
 const P50_PRONO_POINTS_STREAK_3 = 200;
 const P50_PRONO_POINTS_STREAK_7 = 600;
@@ -95,6 +97,7 @@ function p50_prono_ensure_schema(): void {
 
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'measure_at', 'DATETIME NULL AFTER closes_at');
     p50_prono_ensure_column($pdo, 'p50_prono_votes', 'odd_locked', 'DECIMAL(8,2) NOT NULL DEFAULT 1.00 AFTER option_key');
+    p50_prono_ensure_column($pdo, 'p50_prono_votes', 'stake_locked', 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER odd_locked');
 }
 
 function p50_prono_ensure_column(PDO $pdo, string $table, string $column, string $definition): void {
@@ -209,23 +212,49 @@ function p50_prono_expire_statuses(PDO $pdo): void {
 }
 
 function p50_prono_balance(PDO $pdo, string $userId): array {
+    p50_prono_ensure_balance($pdo, $userId);
     $stmt = $pdo->prepare('SELECT balance,streak,last_play_date FROM p50_prono_balances WHERE user_id=? LIMIT 1');
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
     if (!$row) {
-        return ['balance' => 0.0, 'streak' => 0, 'lastPlayDate' => null];
+        return ['balance' => (float)P50_PRONO_STARTING_BALANCE, 'streak' => 0, 'lastPlayDate' => null, 'floor' => P50_PRONO_BALANCE_FLOOR];
     }
     return [
         'balance' => round((float)$row['balance'], 2),
         'streak' => (int)$row['streak'],
         'lastPlayDate' => $row['last_play_date'] !== null ? (string)$row['last_play_date'] : null,
+        'floor' => P50_PRONO_BALANCE_FLOOR,
     ];
 }
 
+/** Crée le solde de départ (1000) si le joueur n’a pas encore de ligne. */
+function p50_prono_ensure_balance(PDO $pdo, string $userId): void {
+    $pdo->prepare('INSERT IGNORE INTO p50_prono_balances(user_id,balance,streak) VALUES(?,?,0)')
+        ->execute([$userId, P50_PRONO_STARTING_BALANCE]);
+}
+
+/**
+ * Débite une mise sans jamais passer sous le plancher.
+ * @return int montant réellement débité
+ */
+function p50_prono_debit_stake(PDO $pdo, string $userId, int $desiredStake, string $refId = ''): int {
+    if ($desiredStake <= 0) return 0;
+    $bal = p50_prono_balance($pdo, $userId);
+    $maxDebitable = (int)max(0, floor($bal['balance'] - P50_PRONO_BALANCE_FLOOR));
+    $take = min($desiredStake, $maxDebitable);
+    if ($take <= 0) return 0;
+    p50_prono_credit($pdo, $userId, -1 * $take, 'prono_stake', $refId);
+    return $take;
+}
+
 function p50_prono_credit(PDO $pdo, string $userId, float $delta, string $reason, string $refId = ''): float {
+    p50_prono_ensure_balance($pdo, $userId);
     if (abs($delta) < 0.0001) return p50_prono_balance($pdo, $userId)['balance'];
     $pdo->prepare('INSERT INTO p50_prono_balances(user_id,balance) VALUES(?,?) ON DUPLICATE KEY UPDATE balance=balance+VALUES(balance)')
         ->execute([$userId, $delta]);
+    // Filet de sécurité plancher
+    $pdo->prepare('UPDATE p50_prono_balances SET balance=? WHERE user_id=? AND balance<?')
+        ->execute([P50_PRONO_BALANCE_FLOOR, $userId, P50_PRONO_BALANCE_FLOOR]);
     $pdo->prepare('INSERT INTO p50_prono_points_ledger(id,user_id,delta,reason,ref_id) VALUES(?,?,?,?,?)')
         ->execute([p50_prono_uuid(), $userId, $delta, mb_substr($reason, 0, 60), mb_substr($refId, 0, 80)]);
     return p50_prono_balance($pdo, $userId)['balance'];
@@ -246,9 +275,9 @@ function p50_prono_touch_streak(PDO $pdo, string $userId): array {
     $yesterday = p50_prono_now()->modify('-1 day')->format('Y-m-d');
     $streak = ($last === $yesterday) ? $streak + 1 : 1;
 
-    $pdo->prepare('INSERT INTO p50_prono_balances(user_id,balance,streak,last_play_date) VALUES(?,0,?,?)
+    $pdo->prepare('INSERT INTO p50_prono_balances(user_id,balance,streak,last_play_date) VALUES(?,?,?,?)
         ON DUPLICATE KEY UPDATE streak=VALUES(streak), last_play_date=VALUES(last_play_date)')
-        ->execute([$userId, $streak, $today]);
+        ->execute([$userId, P50_PRONO_STARTING_BALANCE, $streak, $today]);
 
     p50_prono_credit($pdo, $userId, P50_PRONO_POINTS_DAILY_FIRST, 'daily_first', $today);
 
@@ -307,10 +336,13 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
     }
     if ($vote) {
         $locked = isset($vote['odd_locked']) ? p50_prono_normalize_odd($vote['odd_locked']) : p50_prono_option_odd($options, (string)$vote['option_key']);
+        $stakeLocked = isset($vote['stake_locked']) ? (int)$vote['stake_locked'] : 0;
+        $effectiveStake = $stakeLocked > 0 ? $stakeLocked : $stake;
         $item['myVote'] = [
             'optionKey' => (string)$vote['option_key'],
             'oddLocked' => $locked,
-            'potentialPayout' => p50_prono_payout($stake, $locked),
+            'stakeLocked' => $stakeLocked,
+            'potentialPayout' => p50_prono_payout($effectiveStake, $locked),
             'updatedAt' => gmdate('c', strtotime((string)$vote['updated_at'] . ' UTC')),
         ];
     }

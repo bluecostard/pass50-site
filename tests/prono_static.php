@@ -32,7 +32,7 @@ foreach ($required as $rel) {
 }
 
 $core = file_get_contents($root.'/api/prono-core.php');
-foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout'] as $needle) {
+foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked'] as $needle) {
     if (!str_contains($core, $needle)) {
         fwrite(STDERR, "CORE missing $needle\n");
         exit(1);
@@ -56,9 +56,17 @@ foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sa
 }
 
 $admin = file_get_contents($root.'/admin-pronostics.html');
-foreach (['voteDays', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 'stake'] as $needle) {
+foreach (['voteDays', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 'stake', 'authGate'] as $needle) {
     if (!str_contains($admin, $needle)) {
         fwrite(STDERR, "ADMIN-UI missing $needle\n");
+        exit(1);
+    }
+}
+
+$de = file_get_contents($root.'/data-engine-ui.js');
+foreach (["['pronostics','Pronostics']", 'deRenderPronosticsAdmin', 'admin-pronostics.html'] as $needle) {
+    if (!str_contains($de, $needle)) {
+        fwrite(STDERR, "DATA-ENGINE missing $needle\n");
         exit(1);
     }
 }
@@ -74,6 +82,18 @@ foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php'] as
 $nav = file_get_contents($root.'/mobile-bottom-nav-v1.js');
 if (!str_contains($nav, 'pronostics.html')) {
     fwrite(STDERR, "NAV missing pronostics entry\n");
+    exit(1);
+}
+
+$index = file_get_contents($root.'/index.html');
+if (str_contains($index, 'id="pronostics"')) {
+    fwrite(STDERR, "INDEX still has Pronostics banner section\n");
+    exit(1);
+}
+
+$pronoHtml = file_get_contents($root.'/pronostics.html');
+if (preg_match('/href="\.\/"[^>]*>\s*Classement\s*</u', $pronoHtml)) {
+    fwrite(STDERR, "PRONO page still has Classement button\n");
     exit(1);
 }
 

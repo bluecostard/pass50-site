@@ -4,7 +4,7 @@
   const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,rankingLab:null,rankingLabPeriod:'2H',rankingLabLoading:false,rankingLabView:'current',rankingCalibration:null,rankingCalibrationLoading:false,rankingCalibrationRuns:24,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
   const ADMIN_ITEMS=[
     ['adminhome','Accueil'],['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],
-    ['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['update','MAJ PASS50'],
+    ['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['pronostics','Pronostics'],['update','MAJ PASS50'],
     ['metricsdiag','Diagnostic métriques'],['intelligence','PASS50 Intelligence'],['hub','Data Hub'],
     ['quality','Contrôle qualité'],['rankinglab','Classement métrique'],['ranking','Classement'],['data','Maintenance']
   ];
@@ -13,6 +13,7 @@
     signals:'Valider les signaux et événements détectés.',profiles:'Créer et modifier les fiches des influenceurs.',
     media:'Contrôler les photos et couvertures proposées.',links:'Vérifier les comptes officiels des plateformes.',
     news:'Rechercher et valider les contenus déclencheurs.',live:'Superviser les directs et leur disponibilité.',
+    pronostics:'Créer les questions, fixer les cotes, publier et résoudre les pronos.',
     update:'Synchroniser, calculer et publier les données validées.',metricsdiag:'Inspecter le pipeline métrique en lecture seule.',
     intelligence:'Consulter les tendances et diagnostics éditoriaux.',hub:'Contrôler la complétude et les preuves des fiches.',
     quality:'Repérer les données manquantes ou incohérentes.',rankinglab:'Calculer MR‑V1.0 puis publier le classement public (avec backup).',ranking:'Prévisualiser et publier le classement.',
@@ -25,11 +26,19 @@
     renderAdminPane();
   };
 
-  renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='rankinglab')return deRenderRankingLab($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
+  renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='pronostics')return deRenderPronosticsAdmin($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='rankinglab')return deRenderRankingLab($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function deRenderAdminHome(pane){
     pane.innerHTML=`<div class="de-admin-home"><div class="section-head"><div><div class="section-title">ACCUEIL DE L’ADMINISTRATION</div><div class="muted">Pilotez les données, les fiches, les métriques et la publication de PASS50.</div></div></div><div class="de-admin-home-grid">${ADMIN_ITEMS.filter(([id])=>id!=='adminhome').map(([id,label])=>`<button class="de-admin-home-card" data-admin-tab="${id}"><strong>${deEsc(label)}</strong><span>${deEsc(ADMIN_DESCRIPTIONS[id])}</span><i aria-hidden="true">Ouvrir →</i></button>`).join('')}</div></div>`;
+  }
+  function deRenderPronosticsAdmin(pane){
+    pane.innerHTML=`<div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button><div class="section-title" style="margin-top:10px">PRONOSTICS</div><div class="muted">Créer les questions, fixer les cotes (key|label|cote), publier, puis résoudre à la date de mesure.</div></div></div>
+      <div class="pref" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <p class="muted" style="margin:0;max-width:42rem;line-height:1.45">L’atelier éditorial est une page dédiée. Reste connecté en propriétaire / admin : ton token est réutilisé automatiquement.</p>
+        <a class="btn primary" href="./admin-pronostics.html">Ouvrir l’atelier Pronostics →</a>
+        <a class="btn" href="./pronostics.html">Voir la page joueurs</a>
+      </div>`;
   }
   function deThreshold(){return Number(DE.hub?.threshold||90);}
   function deStatus(status,confidence){

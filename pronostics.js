@@ -38,7 +38,7 @@
     const measureFar = new Date(Date.now() + 180 * 86400000).toISOString();
     return {
       auth: true,
-      balance: { balance: 12450.5, streak: 4 },
+      balance: { balance: 1000, streak: 0, floor: 100 },
       items: [
         {
           id: 'demo-1',
@@ -167,8 +167,8 @@
       </button>`;
     }).join('');
     const locked = item.myVote?.potentialPayout
-      ? `Ta cote ${fmtOdd(item.myVote.oddLocked)} · +${item.myVote.potentialPayout} pts si correct`
-      : `Mise ${stake} pts · gain = mise × cote`;
+      ? `Ta cote ${fmtOdd(item.myVote.oddLocked)} · mise ${item.myVote.stakeLocked ?? stake} · +${item.myVote.potentialPayout} si correct`
+      : `Mise ${stake} pts · perdu = mise perdue (plancher 100) · gagné = mise × cote`;
     return `<article class="card" data-qid="${esc(item.id)}">
       <p class="card-kicker">${esc(closesLabel(item.closesAt))}${item.totalVotes ? ` · ${esc(item.totalVotes)} joueurs` : ''}</p>
       <h2>${esc(item.title)}</h2>
@@ -352,9 +352,10 @@
     try {
       const data = await api('prono-statuses-feed.php?limit=30', { auth: true });
       state.statuses = Array.isArray(data.items) ? data.items : [];
+      if (!state.statuses.length) state.statuses = demoStatuses().map((s) => ({ ...s, sample: true }));
       renderStories();
     } catch (_) {
-      state.statuses = [];
+      state.statuses = demoStatuses().map((s) => ({ ...s, sample: true }));
       renderStories();
     }
   }
