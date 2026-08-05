@@ -1,11 +1,10 @@
-name: Validate Site Access Recovery V80
+name: Validate Site Access Recovery V81
 
 on:
   pull_request:
     paths:
       - 'sw.js'
       - 'public-copy-fixes.js'
-      - 'offline.html'
       - '.github/workflows/deploy-ionos.yml'
       - 'tests/test_site_access_recovery_v80.py'
       - '.github/workflows/validate-site-access-recovery-v80.yml'
@@ -15,7 +14,6 @@ on:
     paths:
       - 'sw.js'
       - 'public-copy-fixes.js'
-      - 'offline.html'
       - '.github/workflows/deploy-ionos.yml'
       - 'tests/test_site_access_recovery_v80.py'
       - '.github/workflows/validate-site-access-recovery-v80.yml'
@@ -39,8 +37,9 @@ jobs:
         run: python3 -m unittest tests.test_site_access_recovery_v80 -v
       - name: Workflow syntax markers
         run: |
-          grep -q -- '--transfer-all' .github/workflows/deploy-ionos.yml
+          grep -q -- '--only-newer' .github/workflows/deploy-ionos.yml
           grep -q 'deployment-version.json' .github/workflows/deploy-ionos.yml
-          grep -q 'pass50-v80-site-recovery' sw.js
+          grep -q 'pass50-v81-service-worker-disabled' sw.js
+          ! grep -q "addEventListener('fetch'" sw.js
       - name: Diff safety
         run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
