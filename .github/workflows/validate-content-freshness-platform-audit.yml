@@ -1,16 +1,16 @@
-name: Validate Content Freshness Platform Audit
+name: Validate Content Freshness Platform Audit V2
 
 on:
   pull_request:
     paths:
-      - 'api/content-freshness-platform-audit-cron-v1.php'
+      - 'api/content-freshness-platform-audit-cron-v2.php'
       - '.github/workflows/content-freshness-platform-audit.yml'
       - 'tests/test_content_freshness_platform_audit.py'
       - '.github/workflows/validate-content-freshness-platform-audit.yml'
   push:
     branches: [main]
     paths:
-      - 'api/content-freshness-platform-audit-cron-v1.php'
+      - 'api/content-freshness-platform-audit-cron-v2.php'
       - '.github/workflows/content-freshness-platform-audit.yml'
       - 'tests/test_content_freshness_platform_audit.py'
       - '.github/workflows/validate-content-freshness-platform-audit.yml'
@@ -27,16 +27,19 @@ jobs:
         with:
           fetch-depth: 0
       - name: PHP lint
-        run: php -l api/content-freshness-platform-audit-cron-v1.php
+        run: php -l api/content-freshness-platform-audit-cron-v2.php
       - name: Read-only platform audit contract
         run: python3 -m unittest tests.test_content_freshness_platform_audit -v
       - name: Workflow safety markers
         run: |
-          grep -q 'CONTENT-PLATFORM-AUDIT-V1.0' api/content-freshness-platform-audit-cron-v1.php
-          grep -q 'publicStateWrites.*0' api/content-freshness-platform-audit-cron-v1.php
-          grep -q 'youtubeSharePercent' api/content-freshness-platform-audit-cron-v1.php
-          grep -q "cron: '\*/5 \* \* \* \*'" .github/workflows/content-freshness-5m.yml
+          grep -q 'CONTENT-PLATFORM-AUDIT-V2.0' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'CONTENT-FRESHNESS-V3.2' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'P50_CONTENT_FRESHNESS_BUCKET_MINUTES=5' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'p50_cpa2_x_health' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'authorizedOauthProfiles' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'youtubeSharePercent' api/content-freshness-platform-audit-cron-v2.php
           ! grep -q 'actions: write' .github/workflows/content-freshness-platform-audit.yml
-          ! grep -q 'UPDATE app_state' api/content-freshness-platform-audit-cron-v1.php
+          ! grep -q 'UPDATE app_state' api/content-freshness-platform-audit-cron-v2.php
+          ! grep -q "'profileId'=>" api/content-freshness-platform-audit-cron-v2.php
       - name: Diff safety
         run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD

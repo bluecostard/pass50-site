@@ -33,12 +33,12 @@ function p50_mc_facebook(PDO $pdo,array $official,int $limit,string $observedAt,
         $postsResponse=p50_mc_request($fetch,p50_msc_query_url($graph.rawurlencode($pageId).'/posts',$query),$headers,$result);
         if(!p50_msc_response($postsResponse,'Facebook Page posts',$result,true))return;$payload=p50_mc_json($postsResponse);
         foreach((array)($payload['data']??[]) as $post){
-            if($collected++>=$limit)break;$post=(array)$post;$insights=[];$insightBody='';
+            if($collected++>=$limit)break;$post=(array)$post;$insights=[];$insightBody='';$insightsAvailable=false;$insightStatus=null;
             if(!empty($credentials['insightsAuthorized'])){
                 $insightResponse=p50_mc_request($fetch,p50_msc_query_url($graph.rawurlencode((string)$post['id']).'/insights',['metric'=>'post_impressions_unique,post_clicks,post_video_views']),$headers,$result);
-                $insightBody=(string)$insightResponse['body'];
-                if((int)$insightResponse['status']>=200&&(int)$insightResponse['status']<300)$insights=p50_msc_graph_insights(p50_mc_json($insightResponse));
-                else{$result['errors'][]='Facebook post insights unavailable';$result['status']='partial';}
+                $insightBody=(string)$insightResponse['body'];$insightStatus=(int)$insightResponse['status'];
+                if($insightStatus>=200&&$insightStatus<300){$insights=p50_msc_graph_insights(p50_mc_json($insightResponse));$insightsAvailable=true;}
+                else $result['unavailableMetrics']+=3;
             }else $result['unavailableMetrics']+=3;
             $comments=$post['comments']['summary']['total_count']??null;$shares=$post['shares']['count']??null;$likes=$post['like_reactions']['summary']['total_count']??null;$reactions=$post['reactions']['summary']['total_count']??null;
             $attachment=(array)($post['attachments']['data'][0]??[]);$media=(array)($attachment['media']??[]);$image=(array)($media['image']??[]);$target=(array)($attachment['target']??[]);
@@ -47,8 +47,9 @@ function p50_mc_facebook(PDO $pdo,array $official,int $limit,string $observedAt,
             $message=trim((string)($post['message']??''));
             if($message==='')$message=trim((string)($attachment['title']??$attachment['description']??''));
             $item=['id'=>$post['id']??'','url'=>$postUrl,'type'=>p50_mc_facebook_type($post),'title'=>$message,'publishedAt'=>$post['created_time']??null,
-              'metadata'=>['statusType'=>$post['status_type']??null,'thumbnailUrl'=>$thumbnail?:null,'facebookPreviewAvailable'=>$message!==''||$thumbnail!=='']];
-            p50_msc_store_content($pdo,$official,$account,'Facebook',$item,'facebook_graph_api','Page posts+insights',$credentials['mode'],$observedAt,$runUuid,$result,
+              'metadata'=>['statusType'=>$post['status_type']??null,'thumbnailUrl'=>$thumbnail?:null,'facebookPreviewAvailable'=>$message!==''||$thumbnail!=='',
+                'facebookInsightsAvailable'=>$insightsAvailable,'facebookInsightsHttpStatus'=>$insightStatus]];
+            p50_msc_store_content($pdo,$official,$account,'Facebook',$item,'facebook_graph_api','Page posts+optional insights',$credentials['mode'],$observedAt,$runUuid,$result,
               ['views'=>p50_mc_int($insights,'post_video_views'),'likes'=>p50_mc_int(['value'=>$likes],'value'),'comments'=>p50_mc_int(['value'=>$comments],'value'),'shares'=>p50_mc_int(['value'=>$shares],'value')],
               ['reactionsTotal'=>p50_mc_int(['value'=>$reactions],'value'),'likeReactions'=>p50_mc_int(['value'=>$likes],'value'),'videoViews'=>p50_mc_int($insights,'post_video_views'),'reach'=>p50_mc_int($insights,'post_impressions_unique'),'postClicks'=>p50_mc_int($insights,'post_clicks')],(int)$postsResponse['status'],hash('sha256',(string)$postsResponse['body'].'|'.$insightBody));
         }

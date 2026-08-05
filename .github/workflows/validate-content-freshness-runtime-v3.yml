@@ -4,17 +4,21 @@ on:
   pull_request:
     paths:
       - 'api/content-freshness-cron-v3.php'
+      - 'api/metrics-collector-facebook.php'
       - '.github/workflows/content-freshness-5m.yml'
       - 'tests/test_content_freshness_runtime_v3.py'
       - 'tests/content_freshness_v3_selection_mariadb.php'
+      - 'tests/test_content_intelligence_v1.py'
       - '.github/workflows/validate-content-freshness-runtime-v3.yml'
   push:
     branches: [main]
     paths:
       - 'api/content-freshness-cron-v3.php'
+      - 'api/metrics-collector-facebook.php'
       - '.github/workflows/content-freshness-5m.yml'
       - 'tests/test_content_freshness_runtime_v3.py'
       - 'tests/content_freshness_v3_selection_mariadb.php'
+      - 'tests/test_content_intelligence_v1.py'
       - '.github/workflows/validate-content-freshness-runtime-v3.yml'
 
 permissions:
@@ -46,18 +50,22 @@ jobs:
       - name: PHP lint
         run: |
           php -l api/content-freshness-cron-v3.php
+          php -l api/metrics-collector-facebook.php
           php -l tests/content_freshness_v3_selection_mariadb.php
-      - name: Runtime contract
-        run: python3 -m unittest tests.test_content_freshness_runtime_v3 -v
+      - name: Runtime and content contracts
+        run: |
+          python3 -m unittest tests.test_content_freshness_runtime_v3 -v
+          python3 -m unittest tests.test_content_intelligence_v1 -v
       - name: MariaDB selection regression
         run: php tests/content_freshness_v3_selection_mariadb.php
       - name: Workflow markers
         run: |
-          grep -q 'CONTENT-FRESHNESS-V3.1' api/content-freshness-cron-v3.php
+          grep -q 'CONTENT-FRESHNESS-V3.2' api/content-freshness-cron-v3.php
           grep -q 'P50_CONTENT_FRESHNESS_V3_BUCKET_SECONDS=300' api/content-freshness-cron-v3.php
-          grep -q 'SELECT ordered.profile_id' api/content-freshness-cron-v3.php
-          grep -q 'CASE WHEN ordered.latest_content IS NULL' api/content-freshness-cron-v3.php
-          ! grep -q 'ORDER BY latest_content IS NULL' api/content-freshness-cron-v3.php
+          grep -q 'p50tm_authorized_profile_ids' api/content-freshness-cron-v3.php
+          grep -q 'tiktokOauthProfilesPrioritized' api/content-freshness-cron-v3.php
+          grep -q 'facebookInsightsAvailable' api/metrics-collector-facebook.php
+          ! grep -q 'Facebook post insights unavailable' api/metrics-collector-facebook.php
           grep -q "cron: '\*/5 \* \* \* \*'" .github/workflows/content-freshness-5m.yml
           ! grep -q 'UPDATE app_state' api/content-freshness-cron-v3.php
       - name: Diff safety
