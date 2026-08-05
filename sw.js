@@ -3,7 +3,7 @@
 // Jalon de compatibilité protégé : pass50-v75-duel-audio-identity.
 // Jalon de compatibilité protégé : pass50-v76-mobile-modal-video-progress.
 // Jalon de compatibilité protégé : pass50-v77-context-share.
-const CACHE='pass50-v79-cache-bust-hotfix';
+const CACHE='pass50-v80-hero-ghost-covers';
 const ASSETS=[
   './','./index.html','./mon-fil.html','./app-config.js','./content-intelligence.js?v=1.2','./mon-fil.js?v=2.2','./duel-audio-feed-v1.js?v=1.1','./mobile-modal-video-progress-v1.js?v=1.0','./context-share-v1.js?v=1.0','./context-share-v2.js?v=2.0','./classability-sync-v1.js?v=1.4','./mobile-bottom-nav-v1.js?v=1.1','./mobile-bottom-nav-v1.js?v=1.2','./share-center-v1.js?v=1.0','./coules-share-simple-v1.js?v=1.0','./fi-navigation-v3.js?v=1.2','./fi-engagement-v3.js?v=1.3','./live-modal-layout-v1.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0','./profile-kawaii-nanami.js?v=1.0','./profile-melanie-tms.js?v=1.0','./profile-ivorian-kid.js?v=1.0','./profile-obre-marie-pascale.js?v=1.0','./profile-oustaz-diane.js?v=1.0','./profile-ismael-aka.js?v=1.0','./profile-general-camille-makosso.js?v=1.0','./profile-lolo-beaute.js?v=1.0','./profile-kim-makosso.js?v=1.0','./profile-dez-cocrane225.js?v=1.0','./profile-atoule.js?v=1.0','./profile-lionel-pcs.js?v=1.0','./profile-yasmine-fofana.js?v=1.0',
