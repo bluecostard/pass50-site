@@ -1,0 +1,73 @@
+name: Validate Content Freshness Runtime V4
+
+on:
+  pull_request:
+    paths:
+      - 'api/content-freshness-cron-v4.php'
+      - 'api/metrics-collector-facebook.php'
+      - '.github/workflows/content-freshness-5m.yml'
+      - 'tests/test_content_freshness_runtime_v4.py'
+      - 'tests/content_freshness_v3_selection_mariadb.php'
+      - 'tests/test_content_intelligence_v1.py'
+      - '.github/workflows/validate-content-freshness-runtime-v4.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/content-freshness-cron-v4.php'
+      - 'api/metrics-collector-facebook.php'
+      - '.github/workflows/content-freshness-5m.yml'
+      - 'tests/test_content_freshness_runtime_v4.py'
+      - 'tests/content_freshness_v3_selection_mariadb.php'
+      - 'tests/test_content_intelligence_v1.py'
+      - '.github/workflows/validate-content-freshness-runtime-v4.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: pass50_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      P50_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pass50_test;charset=utf8mb4
+      P50_TEST_DB_USER: root
+      P50_TEST_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: |
+          php -l api/content-freshness-cron-v4.php
+          php -l api/metrics-collector-facebook.php
+          php -l tests/content_freshness_v3_selection_mariadb.php
+      - name: Runtime and content contracts
+        run: |
+          python3 -m unittest tests.test_content_freshness_runtime_v4 -v
+          python3 -m unittest tests.test_content_intelligence_v1 -v
+      - name: MariaDB selection regression
+        run: php tests/content_freshness_v3_selection_mariadb.php
+      - name: Workflow markers
+        run: |
+          grep -q 'CONTENT-FRESHNESS-V4.0' api/content-freshness-cron-v4.php
+          grep -q 'FACEBOOK-COLLECTOR-V2.0' api/metrics-collector-facebook.php
+          grep -q 'opcache_invalidate' api/content-freshness-cron-v4.php
+          grep -q 'paymentRequiredPaused' api/content-freshness-cron-v4.php
+          grep -q 'p50tm_authorized_profile_ids' api/content-freshness-cron-v4.php
+          grep -q 'tiktokOauthProfilesPrioritized' api/content-freshness-cron-v4.php
+          ! grep -q 'Facebook post insights unavailable' api/metrics-collector-facebook.php
+          grep -q "cron: '\*/5 \* \* \* \*'" .github/workflows/content-freshness-5m.yml
+          ! grep -q 'UPDATE app_state' api/content-freshness-cron-v4.php
+      - name: Diff safety
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
