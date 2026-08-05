@@ -58,9 +58,11 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("maxTrendRunAgeMinutes'=>30", FEED)
 
     def test_fast_cycle_prioritizes_collectable_stale_ranked_profiles(self):
-        self.assertIn("CONTENT-FRESHNESS-V3.0", FRESH)
+        self.assertIn("CONTENT-FRESHNESS-V3.1", FRESH)
         self.assertIn("p50_ranking_snapshots", FRESH)
-        self.assertIn("ORDER BY latest_content IS NULL DESC,latest_content ASC", FRESH)
+        self.assertIn("SELECT ordered.profile_id", FRESH)
+        self.assertIn("CASE WHEN ordered.latest_content IS NULL THEN 0 ELSE 1 END", FRESH)
+        self.assertNotIn("ORDER BY latest_content IS NULL", FRESH)
         self.assertIn("p50_cf3_authorized_rows", FRESH)
         self.assertIn("p50_mc_platform_enabled", FRESH)
         self.assertIn("p50_mc_public_access", FRESH)
@@ -73,8 +75,8 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
     def test_fast_cycle_runs_every_five_minutes(self):
         self.assertIn("*/5 * * * *", FAST_WORKFLOW)
         self.assertIn("content-freshness-cron-v3.php", FAST_WORKFLOW)
-        self.assertIn("CONTENT-FRESHNESS-V3.0", FAST_WORKFLOW)
-        self.assertIn("bucketSeconds == 300", FAST_WORKFLOW)
+        self.assertIn("CONTENT-FRESHNESS-V3.1", FAST_WORKFLOW)
+        self.assertIn("bucketSeconds==300", FAST_WORKFLOW)
         self.assertIn("pass50/content-freshness", FAST_WORKFLOW)
         self.assertIn("actions/upload-artifact@v4", FAST_WORKFLOW)
 
