@@ -45,16 +45,24 @@ try {
     $pdo->prepare("UPDATE p50_prono_questions SET status='resolved', winning_option_key=?, evidence_json=?, resolved_at=UTC_TIMESTAMP() WHERE id=?")
         ->execute([$winningKey, json_encode($evidence, JSON_UNESCAPED_UNICODE), $questionId]);
 
-    $votes = $pdo->prepare('SELECT id,user_id,option_key,odd_locked FROM p50_prono_votes WHERE question_id=?');
+    $votes = $pdo->prepare('SELECT id,user_id,option_key,odd_locked,stake_locked FROM p50_prono_votes WHERE question_id=?');
     $votes->execute([$questionId]);
     $winners = 0;
+    $losers = 0;
     $pointsPaid = 0;
     foreach ($votes->fetchAll() ?: [] as $vote) {
-        if ((string)$vote['option_key'] !== $winningKey) continue;
         $odd = isset($vote['odd_locked']) && (float)$vote['odd_locked'] > 0
             ? p50_prono_normalize_odd($vote['odd_locked'])
             : $fallbackOdd;
-        $payout = p50_prono_payout($stake, $odd);
+        $stakeLocked = isset($vote['stake_locked']) ? (int)$vote['stake_locked'] : 0;
+        $effectiveStake = $stakeLocked > 0 ? $stakeLocked : $stake;
+
+        if ((string)$vote['option_key'] !== $winningKey) {
+            $losers++;
+            continue; // mise déjà perdue au vote (plancher respecté)
+        }
+
+        $payout = p50_prono_payout($effectiveStake, $odd);
         p50_prono_credit($pdo, (string)$vote['user_id'], $payout, 'prono_correct', $questionId);
         $winners++;
         $pointsPaid += $payout;
@@ -71,7 +79,9 @@ json_response([
     'questionId' => $questionId,
     'winningOptionKey' => $winningKey,
     'winnersPaid' => $winners,
+    'losers' => $losers,
     'stake' => $stake,
     'pointsPaidTotal' => $pointsPaid,
     'pointsEach' => $winners > 0 ? (int)round($pointsPaid / $winners) : p50_prono_payout($stake, $fallbackOdd),
+    'floor' => P50_PRONO_BALANCE_FLOOR,
 ]);

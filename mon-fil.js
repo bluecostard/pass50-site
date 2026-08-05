@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.3';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.4';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -162,19 +162,30 @@
     }
   }
 
+  function samplePronoStatuses() {
+    const now = Date.now();
+    return [
+      { id: 'sample-prono-1', feedType: 'prono_status', sample: true, authorPseudo: 'fan_abidjan', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 300 000', optionKey: 'b', likeCount: 18, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 20 * 60000).toISOString(), expiresAt: new Date(now + 20 * 3600000).toISOString() },
+      { id: 'sample-prono-2', feedType: 'prono_status', sample: true, authorPseudo: 'koffi_buzz', questionTitle: 'Josey finit-il dans le Top 3 PASS50 ?', optionLabel: 'Oui, Top 3', optionKey: 'yes', likeCount: 42, likedByMe: false, durationHours: 12, publishedAt: new Date(now - 55 * 60000).toISOString(), expiresAt: new Date(now + 8 * 3600000).toISOString() },
+      { id: 'sample-prono-3', feedType: 'prono_status', sample: true, authorPseudo: 'aya_ci', questionTitle: 'Lo Père finit-il sa 2ᵉ maison dans 6 mois ?', optionLabel: 'Oui', optionKey: 'y', likeCount: 7, likedByMe: false, durationHours: 48, publishedAt: new Date(now - 2 * 3600000).toISOString(), expiresAt: new Date(now + 40 * 3600000).toISOString() },
+      { id: 'sample-prono-4', feedType: 'prono_status', sample: true, authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', optionKey: 'a', likeCount: 11, likedByMe: false, durationHours: 24, publishedAt: new Date(now - 3 * 3600000).toISOString(), expiresAt: new Date(now + 18 * 3600000).toISOString() },
+    ];
+  }
+
   async function loadPronoStatuses() {
     try {
       const data = await apiFetch(`prono-statuses-feed.php?limit=20&_=${Date.now()}`, { auth: true });
-      return (Array.isArray(data?.items) ? data.items : []).map(item => ({ ...item, feedType: 'prono_status' }));
+      const items = (Array.isArray(data?.items) ? data.items : []).map(item => ({ ...item, feedType: 'prono_status' }));
+      return items.length ? items : samplePronoStatuses();
     } catch (error) {
       console.warn('Statuts prono indisponibles', error);
-      return [];
+      return samplePronoStatuses();
     }
   }
 
   async function loadFeedNews() {
     const [batches, duelAudios, pronoStatuses] = await Promise.all([
-      Promise.all(state.following.map(loadNewsFor)),
+      state.following.length ? Promise.all(state.following.map(loadNewsFor)) : Promise.resolve([]),
       loadDuelAudios(),
       loadPronoStatuses(),
     ]);
@@ -224,17 +235,20 @@
   function pronoStatusCard(item) {
     const expires = relativeDate(item.expiresAt);
     const liked = item.likedByMe ? 'liked' : '';
+    const sample = item.sample ? ' · ambiance' : '';
     return `<article class="feed-card prono-status-card" data-prono-status="${esc(item.id)}">
       <div class="feed-head">
         <div class="avatar">🎯</div>
-        <div class="feed-person"><strong>${esc(item.authorPseudo || 'Membre')}</strong><span>Prono · statut ${esc(item.durationHours)} h</span></div>
+        <div class="feed-person"><strong>${esc(item.authorPseudo || 'Membre')}</strong><span>Prono · statut ${esc(item.durationHours)} h${sample}</span></div>
         <div class="feed-position"><span class="up">PRONO</span><br>expire ${esc(expires)}</div>
       </div>
       <div class="feed-body">
         <h2>${esc(item.questionTitle || 'Pronostic')}</h2>
         <div class="feed-meta">Choix : <strong>${esc(item.optionLabel || item.optionKey)}</strong> · Sans argent réel</div>
         <div class="feed-actions">
-          <button type="button" class="btn ${liked}" data-prono-like="${esc(item.id)}">${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${esc(item.likeCount || 0)}</button>
+          ${item.sample
+            ? `<a class="btn primary" href="./pronostics.html">Jouer aussi</a>`
+            : `<button type="button" class="btn ${liked}" data-prono-like="${esc(item.id)}">${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${esc(item.likeCount || 0)}</button>`}
           <a class="btn" href="./pronostics.html">Voir les pronos</a>
         </div>
       </div>
@@ -263,13 +277,13 @@
       end.classList.add('hidden');
       return;
     }
-    if (!state.following.length) {
-      list.innerHTML = '<div class="empty"><strong>Votre fil est vide.</strong>Depuis le classement ou une fiche, cliquez sur « Suivre » pour choisir jusqu’à cinq influenceurs.<div style="margin-top:13px"><a class="btn primary" href="./">Voir le classement</a></div></div>';
+    if (!state.following.length && !state.news.length) {
+      list.innerHTML = '<div class="empty"><strong>Votre fil est vide.</strong>Suis jusqu’à 5 influenceurs, ou ouvre les Pronostics pour voir la communauté.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./pronostics.html">Ouvrir Pronostics</a><a class="btn" href="./">Voir le classement</a></div></div>';
       end.classList.add('hidden');
       return;
     }
     if (!state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>PASS50 ne remplit pas votre fil avec des contenus recommandés ou extérieurs à vos suivis.</div>';
+      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>PASS50 ne remplit pas votre fil avec des contenus recommandés ou extérieurs à vos suivis.<div style="margin-top:13px"><a class="btn primary" href="./pronostics.html">Voir les Pronostics</a></div></div>';
       end.classList.remove('hidden');
       return;
     }
@@ -281,7 +295,7 @@
     const list = $('#feedList');
     if (!silent && list) list.innerHTML = '<div class="loading">Actualisation de votre fil…</div>';
     renderFollowStrip();
-    if (state.user && state.following.length) await loadFeedNews();
+    if (state.user) await loadFeedNews();
     else state.news = [];
     renderFollowStrip();
     renderFeed();

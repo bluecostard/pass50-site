@@ -168,27 +168,30 @@ Une question n’est publiable que si elle mappe une métrique PASS50 :
 
 ---
 
-## 8. Économie de points (V1 proposée)
+## 8. Économie de points (V1)
 
-### Gains
+### Gains / pertes
 | Action | Points |
 |--------|--------|
-| Bonne réponse prono actu | **mise × cote** (mise défaut 100 pts) |
+| Bonne réponse prono actu | **mise × cote** (retour total ; mise déjà engagée) |
+| Mauvaise réponse | **mise perdue** (déjà débitée au vote) |
+| Solde départ | **1000** pts |
+| Plancher | **100** pts — jamais en dessous ; mise max = solde − 100 |
 | Streak 3 jours | +200 bonus |
 | Streak 7 jours | +600 bonus |
 | Premier prono du jour | +50 |
+| Like reçu sur statut prono | +0,25 |
 
-### Coût rencontre V1
+### Coût rencontre V1 (Phase B)
 | Offre | Coût |
 |-------|------|
-| Rencontre **Lo Père Daloa** (pilote) | **100 000 pts** |
+| Rencontre FI partenaire (seuil) | **100 000 pts** |
 
 **Anti-abus V1 :**
-- 1 vote / prono / compte
+- Votes illimités sur questions ouvertes (mise débitée à chaque vote)
 - Pas de multi-comptes (mêmes garde-fous auth existants)
 - Points non transférables entre users
-- Rencontre = 1 demande active max par user
-- Une seule offre pilote en V1 (pas de catalogue multi-prix)
+- Rencontre = 1 demande active max par user (Phase B)
 
 ---
 
@@ -354,7 +357,10 @@ La page **Pronostics** = jouer (questions, solde, résultats).
 
 | Action | Points |
 |--------|--------|
-| Bonne réponse prono actu | **mise × cote** (défaut mise 100) |
+| Bonne réponse prono actu | **mise × cote** (retour total ; mise déjà engagée) |
+| Mauvaise réponse | **mise perdue** (déjà débitée au vote) |
+| Solde départ | **1000** pts |
+| Plancher | **100** pts — jamais en dessous ; mise max = solde − 100 |
 | Streak 3 jours | **+200** bonus |
 | Streak 7 jours | **+600** bonus |
 | Premier prono du jour (même si faux) | **+50** |
