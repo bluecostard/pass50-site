@@ -91,12 +91,12 @@
     .motion-up{display:inline-block;animation:arrowUp 2.4s ease-in-out infinite}.motion-down{display:inline-block;animation:arrowDown 2.4s ease-in-out infinite}
     @keyframes arrowUp{0%,70%,100%{transform:translateY(0)}82%{transform:translateY(-5px)}}@keyframes arrowDown{0%,70%,100%{transform:translateY(0)}82%{transform:translateY(5px)}}
     .badge.hot .badge-icon{display:inline-block;transform-origin:50% 90%;animation:flameFlicker 1.15s ease-in-out infinite}
-    @keyframes flameFlicker{0%,100%{transform:scale(1) rotate(-2deg);filter:drop-shadow(0 0 2px rgba(255,157,29,.35))}45%{transform:scale(1.16,.94) rotate(3deg);filter:drop-shadow(0 0 7px rgba(255,157,29,.7))}72%{transform:scale(.96,1.08) rotate(-4deg)}}
+    @keyframes flameFlicker{0%,100%{transform:scale(1) rotate(-2deg)}45%{transform:scale(1.12,.96) rotate(2deg)}72%{transform:scale(.98,1.05) rotate(-3deg)}}
     .badge.live-badge .badge-icon,.live .live-dot{display:inline-block;border-radius:50%;animation:livePulse 1.7s ease-out infinite}
     @keyframes livePulse{0%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 rgba(255,75,75,.42)}70%{opacity:.86;transform:scale(1.08);box-shadow:0 0 0 8px rgba(255,75,75,0)}100%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 rgba(255,75,75,0)}}
-    .score-animate{animation:scorePop .65s cubic-bezier(.2,.8,.2,1)}
-    @keyframes scorePop{0%{opacity:.35;transform:translateY(7px) scale(.96)}100%{opacity:1;transform:none}}
-    .top10{scroll-behavior:smooth}.mini{will-change:transform;transition:border-color .25s,box-shadow .25s,background .25s}
+    .score-animate{animation:scorePop .55s cubic-bezier(.2,.8,.2,1)}
+    @keyframes scorePop{0%{transform:translateY(4px) scale(.98)}100%{transform:none}}
+    .top10{scroll-behavior:smooth}.mini{transition:border-color .25s,box-shadow .25s,background .25s}
     .mini.moved-up{border-color:rgba(183,255,0,.7);box-shadow:0 0 26px rgba(183,255,0,.14)}
     .mini.moved-down{border-color:rgba(255,75,75,.65);box-shadow:0 0 24px rgba(255,75,75,.11)}
     .mini.new-top10{animation:newTopTen 1.25s ease-out}
@@ -109,8 +109,21 @@
     .record-toast{position:fixed;top:92px;left:50%;z-index:90;transform:translate(-50%,-20px);opacity:0;padding:12px 18px;border:1px solid #e8cf4b;border-radius:999px;background:rgba(13,17,13,.96);color:#fff2a8;font-weight:950;box-shadow:0 16px 42px rgba(0,0,0,.45);pointer-events:none}
     .record-toast.show{animation:recordToast 2s ease forwards}
     @keyframes recordToast{0%{opacity:0;transform:translate(-50%,-20px)}15%,75%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-12px)}}
-    @media (prefers-reduced-motion:reduce){.hero-slide,.motion-up,.motion-down,.badge-icon,.live-dot,.rank-card.first::before{animation:none!important}.mini{transition:none!important}}
+    @media (prefers-reduced-motion:reduce){.hero-slide,.motion-up,.motion-down,.badge-icon,.live-dot,.rank-card.first::before,.score-animate,.mini.new-top10{animation:none!important}.mini{transition:none!important}}
 
+    /* Mobile : moins de glow / remount flicker (Safari GPU) */
+    @media (max-width:680px){
+      .rank-card.first{box-shadow:0 0 18px rgba(183,255,0,.12)}
+      .rank-card.first::before{animation:none;opacity:0}
+      .badge.hot .badge-icon{animation:none}
+      .badge.live-badge .badge-icon,.live .live-dot{animation:livePulseSoft 2.4s ease-in-out infinite;box-shadow:none}
+      @keyframes livePulseSoft{0%,100%{opacity:1}50%{opacity:.72}}
+      .score-animate{animation:none}
+      .mini{transition:none}
+      .mini.new-top10{animation:none}
+      .hero-slide{filter:none}
+      header{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(5,7,5,.98)}
+    }
 
     /* PASS50 V19 — optimisation iPhone / Safari mobile */
     html,body{width:100%;max-width:100%;overflow-x:hidden}
@@ -343,7 +356,7 @@ function migrateDb(){
   db.events.forEach(e=>{e.coverUrl=e.coverUrl||'';e.coverCandidateUrl=e.coverCandidateUrl||'';e.coverStatus=e.coverStatus||'missing';e.coverSource=e.coverSource||'';e.coverNote=e.coverNote||'';});
   db.version=Math.max(Number(db.version||1),5);
 }
-let session={userId:sessionStorage.getItem('pass50_session')||null};let ui={period:'2H',region:'ALL',adminTab:'adminhome'};
+let session={userId:sessionStorage.getItem('pass50_session')||null};let ui={period:'2H',region:'ALL',adminTab:'adminhome',scoreMotion:false};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function normalizeLiveStreams(){
   if(!Array.isArray(db.liveStreams))db.liveStreams=[];
@@ -404,7 +417,7 @@ function openLives(){
   }).join('')}</div>`:`<div class="live-empty"><strong>Aucun direct détecté pour le moment.</strong><div style="margin-top:6px">Cette fenêtre se met à jour automatiquement.</div></div>`;
   open('liveModal');
 }
-async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));render();}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
+async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){const changed=JSON.stringify(db.liveStreams||[])!==JSON.stringify(data.liveStreams);db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));if(CLOUD.ready){if(changed)render();else renderLiveHeader();}}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
 function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false;}
 function ranking(){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));}
 function completeRanking(){
@@ -583,11 +596,11 @@ function compressImage(file,kind='profile'){return new Promise((resolve,reject)=
 function eventHtml(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigger-empty"><strong>Élément déclencheur non encore validé</strong><div style="margin-top:5px">Le profil est classé sur la base de plusieurs signaux, mais aucun contenu principal n’a encore été sélectionné.</div></div>`;return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${triggerThumbHtml(e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${e.platforms.join(' · ')} · ${e.publishedLabel} · Confiance ${e.confidence}</div><div class="trigger-reason">${e.reason}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric}</span><a class="btn small primary" href="${e.url}" target="_blank" rel="noopener">Voir l’élément original ↗</a></div></section>`}
 
 function ageText(p){if(p.agePublic===false)return'Masqué';const confidence=Number(p?.quality?.birth||0),verifiedFacts=Array.isArray(p?.dataEngine?.verifiedFacts)?p.dataEngine.verifiedFacts:[],confirmed=p.ageStatus==='confirmed'||confidence>=90||verifiedFacts.includes('birth_date');if(confirmed&&p.birthDate){const b=new Date(p.birthDate+'T00:00:00'),n=new Date();if(!Number.isNaN(b.getTime())){let age=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))age--;return `${age} ans`;}}if(p.birthYear){const a=new Date().getFullYear()-Number(p.birthYear);return confirmed?`${a} ans`:`≈ ${a-1}–${a} ans`;}return'Non confirmé'}
-function render(){normalizeLiveStreams();renderLiveHeader();renderHero();renderTop10();renderContent();renderSunk();renderHeader();$('#lastPublished').textContent='Mise à jour : '+new Date(db.publishedAt).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});}
+function render(){const scoreMotion=ui.scoreMotion;normalizeLiveStreams();renderLiveHeader();renderHero(scoreMotion);renderTop10(scoreMotion);renderContent();renderSunk();renderHeader();$('#lastPublished').textContent='Mise à jour : '+new Date(db.publishedAt).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});ui.scoreMotion=false;}
 function renderHeader(){const u=currentUser();$('#accountBtn').textContent=u?'Mon espace':'Se connecter';const unread=u?db.notifications.filter(n=>n.userId===u.id&&!n.read).length:0;$('#unreadCount').textContent=unread?`(${unread})`:'';}
-function heroCard(p,index){const u=userPrefs(),fav=u?.favorites.includes(p.id),fol=u?.following.includes(p.id);return `<article class="rank-card ${['first','second','third'][index]}" data-profile="${p.id}"><div class="rank-num">${index+1}</div>${avatarHtml(p)}<div style="min-height:26px">${(Array.isArray(p.badges)?p.badges:[]).slice(0,2).map(b=>badgeHtml(b,p.id)).join(' ')}</div><div class="rank-name"><a href="/fi/${encodeURIComponent(p.id)}" data-fi-link="${safeAttr(p.id)}">${p.name.toUpperCase()}</a></div><div class="handle">${p.handle}</div><div class="score-row"><div class="score-block"><span class="score-label">TREND SCORE <span class="score-info" tabindex="0">i</span></span><div class="score score-animate" data-score="${score(p)}">${formatTrendScore(score(p))}</div></div><div class="${arrowClass(p)}">${arrow(p)}</div></div><div class="card-actions"><button class="btn fav ${fav?'on':''}" data-id="${p.id}">${fav?'★ Favori':'☆ Favori'}</button><button class="btn follow ${fol?'on':''}" data-id="${p.id}">${fol?'Ne plus suivre':'＋ Suivre'}</button></div></article>`}
+function heroCard(p,index,scoreMotion=false){const u=userPrefs(),fav=u?.favorites.includes(p.id),fol=u?.following.includes(p.id),scoreClass=scoreMotion?'score score-animate':'score';return `<article class="rank-card ${['first','second','third'][index]}" data-profile="${p.id}"><div class="rank-num">${index+1}</div>${avatarHtml(p)}<div style="min-height:26px">${(Array.isArray(p.badges)?p.badges:[]).slice(0,2).map(b=>badgeHtml(b,p.id)).join(' ')}</div><div class="rank-name"><a href="/fi/${encodeURIComponent(p.id)}" data-fi-link="${safeAttr(p.id)}">${p.name.toUpperCase()}</a></div><div class="handle">${p.handle}</div><div class="score-row"><div class="score-block"><span class="score-label">TREND SCORE <span class="score-info" tabindex="0">i</span></span><div class="${scoreClass}" data-score="${score(p)}">${formatTrendScore(score(p))}</div></div><div class="${arrowClass(p)}">${arrow(p)}</div></div><div class="card-actions"><button class="btn fav ${fav?'on':''}" data-id="${p.id}">${fav?'★ Favori':'☆ Favori'}</button><button class="btn follow ${fol?'on':''}" data-id="${p.id}">${fol?'Ne plus suivre':'＋ Suivre'}</button></div></article>`}
 function publishedTime(){return new Date(db.publishedAt||Date.now()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
-function renderHero(){
+function renderHero(scoreMotion=false){
   const r=ranking(),top=r.slice(0,3),total=top.reduce((a,p)=>a+score(p),0);
   const slides=[
     'assets/hero-media-1.jpg', // Willy à Midi
@@ -599,17 +612,20 @@ function renderHero(){
   ];
   const slidePositions=['center center','center center','center center','center center','center center','center center'];
   const bust=`?v=85`;
-  $('#buzz').innerHTML=`<div class="panel hero-intro"><div class="hero-backdrop">${slides.map((src,i)=>`<div class="hero-slide" style="background-image:url('${src}${bust}');background-position:${slidePositions[i]||'center center'}"></div>`).join('')}</div><div><div class="eyebrow">⚡ BUZZ NOW · ${periodLabels[ui.period]}</div><h1 class="buzz-title">LE BUZZ<br><span>MAINTENANT</span></h1></div><div><div class="metric score-animate">${total}/300</div><div class="muted">SCORE CUMULÉ DU TOP 3</div><div class="up" style="margin-top:7px">↗ Classement actualisé • ${publishedTime()}</div></div></div>${top.map(heroCard).join('')}`;
-  animateScoreCounters($('#buzz'));
+  const metricClass=scoreMotion?'metric score-animate':'metric';
+  $('#buzz').innerHTML=`<div class="panel hero-intro"><div class="hero-backdrop">${slides.map((src,i)=>`<div class="hero-slide" style="background-image:url('${src}${bust}');background-position:${slidePositions[i]||'center center'}"></div>`).join('')}</div><div><div class="eyebrow">⚡ BUZZ NOW · ${periodLabels[ui.period]}</div><h1 class="buzz-title">LE BUZZ<br><span>MAINTENANT</span></h1></div><div><div class="${metricClass}">${total}/300</div><div class="muted">SCORE CUMULÉ DU TOP 3</div><div class="up" style="margin-top:7px">↗ Classement actualisé • ${publishedTime()}</div></div></div>${top.map((p,i)=>heroCard(p,i,scoreMotion)).join('')}`;
+  if(scoreMotion)animateScoreCounters($('#buzz'));
 }
 let previousTop10Order=[];
-function renderTop10(){
+function renderTop10(scoreMotion=false){
   const grid=$('#top10Grid'),oldRects={};
   grid.querySelectorAll('.mini[data-profile]').forEach(el=>oldRects[el.dataset.profile]=el.getBoundingClientRect());
   const r=ranking().slice(3,10),nextOrder=r.map(p=>p.id);
-  grid.innerHTML=r.map((p,i)=>{const oldIndex=previousTop10Order.indexOf(p.id),newIndex=i;const moveClass=oldIndex<0&&previousTop10Order.length?'new-top10':oldIndex>newIndex?'moved-up':oldIndex>=0&&oldIndex<newIndex?'moved-down':'';return `<article class="mini ${moveClass}" data-profile="${p.id}"><div class="mini-rank">${i+4}</div><div class="mini-arrow ${arrowClass(p)}">${p.delta>0?'<span class="motion-up">↑</span>':p.delta<0?'<span class="motion-down">↓</span>':'—'}</div>${avatarHtml(p)}<div class="mini-name"><a href="/fi/${encodeURIComponent(p.id)}" data-fi-link="${safeAttr(p.id)}">${p.name}</a></div><div class="mini-score score-animate" data-score="${score(p)}">${formatTrendScore(score(p))}</div></article>`}).join('');
-  requestAnimationFrame(()=>grid.querySelectorAll('.mini[data-profile]').forEach(el=>{const old=oldRects[el.dataset.profile],now=el.getBoundingClientRect();if(!old||!el.animate)return;const dx=old.left-now.left,dy=old.top-now.top;if(Math.abs(dx)>1||Math.abs(dy)>1)el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:780,easing:'cubic-bezier(.2,.8,.2,1)'});}));
-  previousTop10Order=nextOrder;animateScoreCounters(grid);
+  const scoreClass=scoreMotion?'mini-score score-animate':'mini-score';
+  const allowMoveAnim=previousTop10Order.length>0&&!matchMedia('(max-width:680px)').matches;
+  grid.innerHTML=r.map((p,i)=>{const oldIndex=previousTop10Order.indexOf(p.id),newIndex=i;const moveClass=!allowMoveAnim?'':(oldIndex<0&&previousTop10Order.length?'new-top10':oldIndex>newIndex?'moved-up':oldIndex>=0&&oldIndex<newIndex?'moved-down':'');return `<article class="mini ${moveClass}" data-profile="${p.id}"><div class="mini-rank">${i+4}</div><div class="mini-arrow ${arrowClass(p)}">${p.delta>0?'<span class="motion-up">↑</span>':p.delta<0?'<span class="motion-down">↓</span>':'—'}</div>${avatarHtml(p)}<div class="mini-name"><a href="/fi/${encodeURIComponent(p.id)}" data-fi-link="${safeAttr(p.id)}">${p.name}</a></div><div class="${scoreClass}" data-score="${score(p)}">${formatTrendScore(score(p))}</div></article>`}).join('');
+  if(allowMoveAnim)requestAnimationFrame(()=>grid.querySelectorAll('.mini[data-profile]').forEach(el=>{const old=oldRects[el.dataset.profile],now=el.getBoundingClientRect();if(!old||!el.animate)return;const dx=old.left-now.left,dy=old.top-now.top;if(Math.abs(dx)>1||Math.abs(dy)>1)el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'translate(0,0)'}],{duration:780,easing:'cubic-bezier(.2,.8,.2,1)'});}));
+  previousTop10Order=nextOrder;if(scoreMotion)animateScoreCounters(grid);
 }
 function animateScoreCounters(root=document){
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -864,8 +880,8 @@ document.addEventListener('input',e=>{
   }
 });
 document.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='authForm')submitAuth(e.target);if(e.target.id==='liveForm')startLive(new FormData(e.target));if(e.target.id==='hubForm'){const p=profile(e.target.dataset.id),fd=new FormData(e.target);ensureQuality(p);['identity','photo','birth','nationality','social','score','live'].forEach(k=>p.quality[k]=Math.max(0,Math.min(100,Number(fd.get(k)||0))));p.qualityNote=String(fd.get('qualityNote')||'');p.lastCollectedAt=new Date().toISOString();save();ui.adminTab='adminhome';renderAdmin();toast('Contrôle enregistré');}if(e.target.id==='profileForm'){const fd=new FormData(e.target),isNew=e.target.dataset.new==='1';let p=isNew?null:profile(e.target.dataset.id);if(isNew){p=buildProfile([e.target.dataset.id,String(fd.get('name')),String(fd.get('handle')),(String(fd.get('name')).match(/\b\w/g)||['I','A']).slice(0,2).join('').toUpperCase(),String(fd.get('region')),String(fd.get('category')),['Instagram'],Number(fd.get('score')),Number(fd.get('delta')),0],db.profiles.length);db.profiles.push(p);}p.name=String(fd.get('name'));p.handle=String(fd.get('handle'));p.region=String(fd.get('region'));p.category=String(fd.get('category'));p.scores[ui.period]=Number(fd.get('score'));p.delta=Number(fd.get('delta'));p.birthDate=String(fd.get('birthDate')||'');p.birthYear=p.birthDate?Number(p.birthDate.slice(0,4)):null;p.ageStatus=String(fd.get('ageStatus'));if(p.birthDate&&p.ageStatus==='confirmed'){p.birthManualLocked=true;p.birthManualUpdatedAt=new Date().toISOString();p.agePublic=true;p.quality=p.quality||{};p.quality.birth=100;p.dataEngine=p.dataEngine||{};p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];}p.photoUrl=String(fd.get('photoUrl')||'');p.photoCandidateUrl=p.photoUrl;p.photoStatus=String(fd.get('photoStatus')||'missing');p.photoPosition=String(fd.get('photoPosition')||'50% 50%');if(p.photoUrl){p.photoManualLocked=true;p.photoManualUpdatedAt=new Date().toISOString();}p.alive=fd.get('alive')==='on';p.eligible=fd.get('eligible')==='on';save();render();ui.adminTab='adminhome';renderAdmin();toast('Profil enregistré')}});
-$$('#periodFilters button').forEach(b=>b.addEventListener('click',()=>{$$('#periodFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');ui.period=b.dataset.period;render();toast('Période : '+periodLabels[ui.period])}));
-$$('#regionFilters button').forEach(b=>b.addEventListener('click',()=>{$$('#regionFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');ui.region=b.dataset.region;render();toast('Zone mise à jour')}));
+$$('#periodFilters button').forEach(b=>b.addEventListener('click',()=>{$$('#periodFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');ui.period=b.dataset.period;ui.scoreMotion=true;render();toast('Période : '+periodLabels[ui.period])}));
+$$('#regionFilters button').forEach(b=>b.addEventListener('click',()=>{$$('#regionFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');ui.region=b.dataset.region;ui.scoreMotion=true;render();toast('Zone mise à jour')}));
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)close(m.id)}));
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const visible=[...document.querySelectorAll('.modal.show')].pop();if(visible)close(visible.id)});
 window.addEventListener('storage',()=>{db=load();render()});
