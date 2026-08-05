@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'api/content-freshness-cron-v3.php'
+      - 'api/content-freshness-cron-v4.php'
       - 'api/content-feed.php'
       - 'api/content-intelligence-core.php'
       - 'api/metrics-collector-facebook.php'
@@ -31,31 +31,31 @@ jobs:
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Wait for deployed Content Freshness V3.2 contract
+      - name: Wait for deployed Content Freshness V4 contract
         if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
           set -euo pipefail
           case "${CRON_URL:-}" in
-            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-freshness-cron-v3.php" ;;
+            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-freshness-cron-v4.php" ;;
             *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
           esac
           [ -n "${CRON_SECRET:-}" ] || { echo '::error::Secret cron absent'; exit 1; }
           ready=false
           for attempt in $(seq 1 36); do
-            code="$(curl --location --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$ENDPOINT?contract=CONTENT-FRESHNESS-V3.2&attempt=$attempt" || true)"
+            code="$(curl --location --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$ENDPOINT?contract=CONTENT-FRESHNESS-V4.0&attempt=$attempt" || true)"
             if [ "$code" = 405 ]; then
-              dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-fresh-probe-$attempt"
+              dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-fresh-v4-probe-$attempt"
               body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
               timestamp="$(date +%s)"
               signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
               probe="$(curl --fail-with-body --silent --show-error --max-time 30 -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT" || true)"
-              if jq -e '.ok==true and .action=="probe" and .version=="CONTENT-FRESHNESS-V3.2" and .bucketSeconds==300 and .publicStateWrites==0' >/dev/null 2>&1 <<<"$probe"; then ready=true; break; fi
+              if jq -e '.ok==true and .action=="probe" and .version=="CONTENT-FRESHNESS-V4.0" and .bucketSeconds==300 and .facebookCollectorVersion=="FACEBOOK-COLLECTOR-V2.0" and .xFastCycle.enabled==false and .xFastCycle.reason=="payment_required" and .publicStateWrites==0' >/dev/null 2>&1 <<<"$probe"; then ready=true; break; fi
             fi
-            echo "Runtime V3.2 en attente ($attempt/36, HTTP ${code:-000})."
+            echo "Runtime V4 en attente ($attempt/36, HTTP ${code:-000})."
             sleep 10
           done
-          [ "$ready" = true ] || { echo '::error::Runtime V3.2 non servi'; exit 1; }
+          [ "$ready" = true ] || { echo '::error::Runtime V4 ou collecteur Facebook V2 non servi'; exit 1; }
 
       - name: Collecter et recalculer les contenus récents
         id: refresh
@@ -63,14 +63,14 @@ jobs:
         run: |
           set -euo pipefail
           case "${CRON_URL:-}" in
-            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-freshness-cron-v3.php" ;;
+            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-freshness-cron-v4.php" ;;
             *) exit 1 ;;
           esac
           mkdir -p /tmp/p50-content-freshness
           response_file=/tmp/p50-content-freshness/result.json
           success=false; http_code=000; curl_status=0
           for attempt in $(seq 1 5); do
-            dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-fresh-v32-$attempt"
+            dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-fresh-v4-$attempt"
             body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"refresh",dispatchId:$dispatchId}')"
             timestamp="$(date +%s)"
             signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
@@ -78,29 +78,27 @@ jobs:
             http_code="$(curl --silent --show-error --max-time 260 --output "$response_file" --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT")"
             curl_status=$?
             set -e
-            if [ "$curl_status" -eq 0 ] && [ "$http_code" = 200 ] && jq -e '.ok==true and .action=="refresh" and .version=="CONTENT-FRESHNESS-V3.2" and .bucketSeconds==300 and .publicStateWrites==0' "$response_file" >/dev/null 2>&1; then success=true; break; fi
+            if [ "$curl_status" -eq 0 ] && [ "$http_code" = 200 ] && jq -e '.ok==true and .action=="refresh" and .version=="CONTENT-FRESHNESS-V4.0" and .bucketSeconds==300 and .facebookCollectorVersion=="FACEBOOK-COLLECTOR-V2.0" and .xFastCycle.enabled==false and .publicStateWrites==0' "$response_file" >/dev/null 2>&1; then success=true; break; fi
             stage="$(jq -r '.stage // "transport"' "$response_file" 2>/dev/null || echo transport)"
             error_code="$(jq -r '.errorCode // "unknown"' "$response_file" 2>/dev/null || echo unknown)"
             detail="$(jq -r '.detail // .error // "—"' "$response_file" 2>/dev/null || echo '—')"
             echo "Tentative $attempt/5 · curl $curl_status · HTTP $http_code · $stage · $error_code · $detail"
             if [ "$attempt" -lt 5 ] && [[ "$http_code" =~ ^(000|429|500|502|503|504)$ ]]; then sleep 15; else break; fi
           done
-          [ "$success" = true ] || { echo '::error::Rafraîchissement V3.2 interrompu'; cat "$response_file" 2>/dev/null || true; exit 1; }
-          for key in profilesSelected authorizedLinks enqueued processed failed remaining tiktokOauthProfilesPrioritized; do
+          [ "$success" = true ] || { echo '::error::Rafraîchissement V4 interrompu'; cat "$response_file" 2>/dev/null || true; exit 1; }
+          for key in profilesSelected authorizedLinks enqueued processed failed partial skipped remaining tiktokOauthProfilesPrioritized; do
             printf '%s=%s\n' "${key}" "$(jq -r ".${key} // 0" "$response_file")" >> "$GITHUB_OUTPUT"
           done
-          printf 'created=%s\n' "$(jq -r '.contentIntelligence.news.created // 0' "$response_file")" >> "$GITHUB_OUTPUT"
-          printf 'updated=%s\n' "$(jq -r '.contentIntelligence.news.updated // 0' "$response_file")" >> "$GITHUB_OUTPUT"
           {
-            echo '### PASS50 Content Freshness V3.2'
+            echo '### PASS50 Content Freshness V4'
+            printf -- '- Collecteur Facebook chargé : `%s`\n' "$(jq -r '.facebookCollectorVersion' "$response_file")"
+            printf -- '- Politique X rapide : `%s`\n' "$(jq -c '.xFastCycle' "$response_file")"
             printf -- '- Fiches parcourues / sélectionnées : %s / %s\n' "$(jq -r '.profilesScanned // 0' "$response_file")" "$(jq -r '.profilesSelected // 0' "$response_file")"
             printf -- '- Profils TikTok OAuth priorisés : %s\n' "$(jq -r '.tiktokOauthProfilesPrioritized // 0' "$response_file")"
             printf -- '- Accès par plateforme : `%s`\n' "$(jq -c '.accessByPlatform // {}' "$response_file")"
             printf -- '- Sélection par plateforme : `%s`\n' "$(jq -c '.selectedByPlatform // {}' "$response_file")"
-            printf -- '- Mise en file par plateforme : `%s`\n' "$(jq -c '.enqueueByPlatform // {}' "$response_file")"
             printf -- '- Traitement par plateforme : `%s`\n' "$(jq -c '.processedByPlatform // {}' "$response_file")"
-            printf -- '- Tâches créées / doublons / traitées : %s / %s / %s\n' "$(jq -r '.enqueued // 0' "$response_file")" "$(jq -r '.duplicates // 0' "$response_file")" "$(jq -r '.processed // 0' "$response_file")"
-            printf -- '- Terminées / partielles / réessais / échecs / restantes : %s / %s / %s / %s / %s\n' "$(jq -r '.completed // 0' "$response_file")" "$(jq -r '.partial // 0' "$response_file")" "$(jq -r '.retried // 0' "$response_file")" "$(jq -r '.failed // 0' "$response_file")" "$(jq -r '.remaining // 0' "$response_file")"
+            printf -- '- Tâches créées / traitées / partielles / échecs / ignorées / restantes : %s / %s / %s / %s / %s / %s\n' "$(jq -r '.enqueued // 0' "$response_file")" "$(jq -r '.processed // 0' "$response_file")" "$(jq -r '.partial // 0' "$response_file")" "$(jq -r '.failed // 0' "$response_file")" "$(jq -r '.skipped // 0' "$response_file")" "$(jq -r '.remaining // 0' "$response_file")"
             printf -- '- Actualités créées / mises à jour : %s / %s\n' "$(jq -r '.contentIntelligence.news.created // 0' "$response_file")" "$(jq -r '.contentIntelligence.news.updated // 0' "$response_file")"
             printf -- '- Lignes de tendance recalculées : %s\n' "$(jq -r '.contentIntelligence.trends.rowsWritten // 0' "$response_file")"
             echo '- Bucket : `5 minutes` · app_state : `0 écriture`'
@@ -114,15 +112,14 @@ jobs:
           SELECTED: ${{ steps.refresh.outputs.profilesSelected }}
           PROCESSED: ${{ steps.refresh.outputs.processed }}
           FAILED: ${{ steps.refresh.outputs.failed }}
+          PARTIAL: ${{ steps.refresh.outputs.partial }}
           REMAINING: ${{ steps.refresh.outputs.remaining }}
           TIKTOK: ${{ steps.refresh.outputs.tiktokOauthProfilesPrioritized }}
-          CREATED: ${{ steps.refresh.outputs.created }}
-          UPDATED: ${{ steps.refresh.outputs.updated }}
         run: |
           set -euo pipefail
-          state=success; description="Fraîcheur V3.2 · ${SELECTED:-0} fiches · TikTok ${TIKTOK:-0} · ${PROCESSED:-0} tâches"
-          if [ "$STEP_OUTCOME" != success ]; then state=failure; description='Rafraîchissement V3.2 interrompu · app_state 0';
-          elif [ "${REMAINING:-0}" -gt 0 ] || [ "${FAILED:-0}" -gt 0 ]; then state=pending; description="Fraîcheur V3.2 partielle · ${FAILED:-0} échecs · ${REMAINING:-0} restantes";
+          state=success; description="Fraîcheur V4 · ${SELECTED:-0} fiches · TikTok ${TIKTOK:-0} · ${PROCESSED:-0} tâches"
+          if [ "$STEP_OUTCOME" != success ]; then state=failure; description='Rafraîchissement V4 interrompu · app_state 0';
+          elif [ "${REMAINING:-0}" -gt 0 ] || [ "${FAILED:-0}" -gt 0 ] || [ "${PARTIAL:-0}" -gt 0 ]; then state=pending; description="Fraîcheur V4 partielle · ${PARTIAL:-0} partielles · ${FAILED:-0} échecs · ${REMAINING:-0} restantes";
           fi
           payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/content-freshness' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
           curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
@@ -131,7 +128,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: content-freshness-${{ github.run_id }}-${{ github.run_attempt }}
+          name: content-freshness-v4-${{ github.run_id }}-${{ github.run_attempt }}
           path: /tmp/p50-content-freshness/result.json
           if-no-files-found: warn
           retention-days: 14

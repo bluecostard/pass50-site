@@ -88,21 +88,22 @@ class ContentFreshnessRuntimeV32Tests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, ENDPOINT)
 
-    def test_workflow_uses_v32_every_five_minutes(self):
+    def test_production_workflow_retires_v32_for_v4_every_five_minutes(self):
         self.assertIn("cron: '*/5 * * * *'", WORKFLOW)
-        self.assertIn("content-freshness-cron-v3.php", WORKFLOW)
-        self.assertIn("CONTENT-FRESHNESS-V3.2", WORKFLOW)
+        self.assertIn("content-freshness-cron-v4.php", WORKFLOW)
+        self.assertIn("CONTENT-FRESHNESS-V4.0", WORKFLOW)
+        self.assertNotIn("content-freshness-cron-v3.php", WORKFLOW)
+        self.assertNotIn("CONTENT-FRESHNESS-V3.2", WORKFLOW)
         self.assertIn("bucketSeconds==300", WORKFLOW)
-        self.assertNotIn("CONTENT-FRESHNESS-V3.1", WORKFLOW)
-        self.assertIn("fresh-v32", WORKFLOW)
+        self.assertIn("fresh-v4", WORKFLOW)
         self.assertIn("tiktokOauthProfilesPrioritized", WORKFLOW)
         self.assertIn("Profils TikTok OAuth priorisés", WORKFLOW)
         self.assertIn("selectedByPlatform", WORKFLOW)
         self.assertIn("processedByPlatform", WORKFLOW)
         self.assertIn("app_state : `0 écriture`", WORKFLOW)
 
-    def test_workflow_waits_for_versioned_endpoint_on_push(self):
-        self.assertIn("Wait for deployed Content Freshness V3.2 contract", WORKFLOW)
+    def test_production_workflow_waits_for_v4_endpoint_on_push(self):
+        self.assertIn("Wait for deployed Content Freshness V4 contract", WORKFLOW)
         self.assertIn("github.event_name == 'push'", WORKFLOW)
         self.assertIn("for attempt in $(seq 1 36)", WORKFLOW)
         self.assertIn("action:\"probe\"", WORKFLOW)

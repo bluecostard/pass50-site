@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+const P50_FACEBOOK_COLLECTOR_VERSION='FACEBOOK-COLLECTOR-V2.0';
+
 function p50_mc_facebook_type(array $post): string {
     $status=strtolower((string)($post['status_type']??''));$attachment=(array)(($post['attachments']['data'][0]??[]));$type=strtolower((string)($attachment['media_type']??$attachment['type']??''));
     if(str_contains($type,'reel'))return 'reel';if(str_contains($type,'live'))return 'live';if(str_contains($type,'video'))return 'video';
@@ -48,7 +50,7 @@ function p50_mc_facebook(PDO $pdo,array $official,int $limit,string $observedAt,
             if($message==='')$message=trim((string)($attachment['title']??$attachment['description']??''));
             $item=['id'=>$post['id']??'','url'=>$postUrl,'type'=>p50_mc_facebook_type($post),'title'=>$message,'publishedAt'=>$post['created_time']??null,
               'metadata'=>['statusType'=>$post['status_type']??null,'thumbnailUrl'=>$thumbnail?:null,'facebookPreviewAvailable'=>$message!==''||$thumbnail!=='',
-                'facebookInsightsAvailable'=>$insightsAvailable,'facebookInsightsHttpStatus'=>$insightStatus]];
+                'facebookInsightsAvailable'=>$insightsAvailable,'facebookInsightsHttpStatus'=>$insightStatus,'facebookCollectorVersion'=>P50_FACEBOOK_COLLECTOR_VERSION]];
             p50_msc_store_content($pdo,$official,$account,'Facebook',$item,'facebook_graph_api','Page posts+optional insights',$credentials['mode'],$observedAt,$runUuid,$result,
               ['views'=>p50_mc_int($insights,'post_video_views'),'likes'=>p50_mc_int(['value'=>$likes],'value'),'comments'=>p50_mc_int(['value'=>$comments],'value'),'shares'=>p50_mc_int(['value'=>$shares],'value')],
               ['reactionsTotal'=>p50_mc_int(['value'=>$reactions],'value'),'likeReactions'=>p50_mc_int(['value'=>$likes],'value'),'videoViews'=>p50_mc_int($insights,'post_video_views'),'reach'=>p50_mc_int($insights,'post_impressions_unique'),'postClicks'=>p50_mc_int($insights,'post_clicks')],(int)$postsResponse['status'],hash('sha256',(string)$postsResponse['body'].'|'.$insightBody));
