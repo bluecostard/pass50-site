@@ -54,7 +54,7 @@ jobs:
           grep -q -- '--only-newer' .github/workflows/deploy-ionos.yml
           grep -q 'v82-share-v2-only' .github/workflows/deploy-ionos.yml
           grep -q 'PASS50-PUBLIC-RUNTIME-V82' public-copy-fixes.js
-          grep -q 'context-share-v2.js?v=2.1' public-copy-fixes.js
+          grep -q 'context-share-v2.js?v=2.3' public-copy-fixes.js
           ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" public-copy-fixes.js
           ! grep -q 'new MutationObserver' public-copy-fixes.js
           grep -q 'pass50-v81-service-worker-disabled' sw.js

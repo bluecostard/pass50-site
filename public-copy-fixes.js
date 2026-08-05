@@ -67,7 +67,7 @@
   function loadContextShareV2(){
     if(window.PASS50_CONTEXT_SHARE_V2||document.querySelector('script[data-pass50-context-share-v2]'))return;
     const script=document.createElement('script');
-    script.src='./context-share-v2.js?v=2.1';
+    script.src='./context-share-v2.js?v=2.3';
     script.async=false;
     script.dataset.pass50ContextShare='2.1';
     script.dataset.pass50ContextShareV2='2.1';
@@ -92,7 +92,7 @@
   loadScript('script[data-pass50-meta-oauth-ui]','./meta-oauth-ui-v1.js?v=1.5','pass50MetaOauthUi','1.5');
   loadScript('script[data-pass50-tiktok-oauth-ui]','./tiktok-oauth-ui-v1.js?v=1.0','pass50TiktokOauthUi','1.0');
   loadScript('script[data-pass50-live-trust-gate]','./live-trust-gate-v1.js?v=1.2','pass50LiveTrustGate','1.2');
-  loadScript('script[data-pass50-live-experience-v41]','./live-experience-v4-1.js?v=1.4','pass50LiveExperienceV41','1.4');
+  loadScript('script[data-pass50-live-experience-v41]','./live-experience-v4-1.js?v=1.6','pass50LiveExperienceV41','1.5');
   loadScript('script[data-pass50-live-dismiss-ui]','./live-dismiss-ui-v1.js?v=1.0','pass50LiveDismissUi','1.0');
   loadScript('script[data-pass50-profile-lionel-pcs]','./profile-lionel-pcs.js?v=1.0','pass50ProfileLionelPcs','1.0');
   loadScript('script[data-pass50-profile-yasmine-fofana]','./profile-yasmine-fofana.js?v=1.0','pass50ProfileYasmineFofana','1.0');

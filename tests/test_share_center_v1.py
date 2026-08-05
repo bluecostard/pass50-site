@@ -29,9 +29,9 @@ class ShareCenterV1Tests(unittest.TestCase):
 
     def test_center_loads_before_legacy_profile_sharing(self):
         self.assertIn("data-pass50-share-center", APP_CONFIG)
-        self.assertIn("share-center-v1.js?v=1.0", APP_CONFIG)
+        self.assertIn("share-center-v1.js?v=1.1", APP_CONFIG)
         self.assertLess(
-            APP_CONFIG.index("share-center-v1.js?v=1.0"),
+            APP_CONFIG.index("share-center-v1.js?v=1.1"),
             APP_CONFIG.index("fi-engagement-v3.js?v=1.3"),
         )
 
@@ -42,7 +42,7 @@ class ShareCenterV1Tests(unittest.TestCase):
 
     def test_profile_share_has_its_own_title_and_deep_link(self):
         self.assertIn("'profile'=>['color'=>'#b7ff00'", SHARE_PAGE)
-        self.assertIn("Fiche influenceur PASS50", SHARE_PAGE)
+        self.assertIn("Fiche influenceur", SHARE_PAGE)
         self.assertIn("$query['profile']=$id", SHARE_PAGE)
         profile_block = SHARE_PAGE[
             SHARE_PAGE.index("'profile'=>"):SHARE_PAGE.index("'live'=>")
@@ -93,7 +93,7 @@ class ShareCenterV1Tests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
 
     def test_service_worker_keeps_share_center_and_versioned_cache(self):
-        self.assertIn("./share-center-v1.js?v=1.0", SW)
+        self.assertIn("./share-center-v1.js?v=1.1", SW)
         self.assertIn("./coules-share-simple-v1.js?v=1.0", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 

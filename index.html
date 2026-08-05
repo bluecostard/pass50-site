@@ -461,26 +461,25 @@ async function drawVoteShareCard(canvas,card,{vertical=false,progress=0,wave=0}=
   const candidates=card.candidates.slice(0,2);
   const photos=await Promise.all(candidates.map(candidate=>shareImage(candidate.photoUrl)));
   const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,isStory=vertical&&h>=1800;
-  const base=ctx.createLinearGradient(0,0,w,h);base.addColorStop(0,'#1c291e');base.addColorStop(.48,'#071009');base.addColorStop(1,'#25340e');ctx.fillStyle=base;ctx.fillRect(0,0,w,h);
-  const glow=ctx.createRadialGradient(w*.16,h*.08,0,w*.16,h*.08,w*.8);glow.addColorStop(0,'rgba(183,255,0,.34)');glow.addColorStop(1,'rgba(183,255,0,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
-  ctx.strokeStyle='rgba(183,255,0,.055)';ctx.lineWidth=2;for(let y=0;y<h;y+=34){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y+90);ctx.stroke();}
-  ctx.fillStyle='#b7ff00';ctx.font=`1000 ${isStory?72:58}px Arial`;ctx.fillText('PASS50',24,isStory?100:72);ctx.fillStyle='#e9f0e5';ctx.font=`900 ${isStory?39:31}px Arial`;ctx.fillText('MON VOTE · LE DUEL',24,isStory?154:120);
+  const base=ctx.createLinearGradient(0,0,w,h);base.addColorStop(0,'#eef1ec');base.addColorStop(1,'#e4e9e1');ctx.fillStyle=base;ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='#b45309';ctx.fillRect(0,0,w,14);
+  ctx.fillStyle='#b7ff00';ctx.fillRect(24,isStory?56:40,18,18);ctx.fillStyle='#0b0f0b';ctx.font=`1000 ${isStory?44:36}px Arial`;ctx.fillText('PASS50',52,isStory?74:56);ctx.fillStyle='#b45309';ctx.font=`800 ${isStory?26:20}px Arial`;ctx.fillText('LES COULÉS · MON VOTE',24,isStory?120:96);
   const margin=24,gap=34,panelW=(w-margin*2-gap)/2,py=isStory?230:(h===1080?145:155),photoH=isStory?1160:(h===1080?600:835);
   candidates.forEach((candidate,index)=>{
     const x=margin+index*(panelW+gap),photo=photos[index],selected=candidate.profileId===card.selectedProfileId;
-    roundRectPath(ctx,x,py,panelW,photoH,30);ctx.save();ctx.clip();
+    roundRectPath(ctx,x,py,panelW,photoH,18);ctx.save();ctx.clip();
     if(photo){const scale=Math.max(panelW/photo.width,photoH/photo.height),dw=photo.width*scale,dh=photo.height*scale;ctx.drawImage(photo,x+(panelW-dw)/2,py+(photoH-dh)/2,dw,dh);}
-    else{const fallback=ctx.createLinearGradient(x,py,x+panelW,py+photoH);fallback.addColorStop(0,selected?'#344a18':'#253126');fallback.addColorStop(1,'#0c140d');ctx.fillStyle=fallback;ctx.fillRect(x,py,panelW,photoH);ctx.fillStyle=selected?'#b7ff00':'#edf4e9';ctx.font=`1000 ${isStory?150:122}px Arial`;ctx.textAlign='center';ctx.fillText(candidate.initials||'P50',x+panelW/2,py+photoH/2+42);ctx.textAlign='left';}
-    ctx.restore();ctx.strokeStyle=selected?'#b7ff00':'#7d8a7a';ctx.lineWidth=selected?12:5;roundRectPath(ctx,x,py,panelW,photoH,30);ctx.stroke();
-    if(selected){ctx.fillStyle='#b7ff00';roundRectPath(ctx,x+16,py+16,isStory?218:190,62,20);ctx.fill();ctx.fillStyle='#071000';ctx.font=`1000 ${isStory?28:25}px Arial`;ctx.fillText('✓ MON VOTE',x+31,py+57);}
-    const nameY=py+photoH+(isStory?64:58);ctx.fillStyle=selected?'#b7ff00':'#fff';ctx.font=`1000 ${isStory?50:42}px Arial`;ctx.textAlign='center';ctx.fillText(String(candidate.name).toUpperCase().slice(0,17),x+panelW/2,nameY);
-    if(card.percentagesAvailable&&Number.isFinite(Number(candidate.percentage))){ctx.fillStyle='#fff';ctx.font=`1000 ${isStory?68:59}px Arial`;ctx.fillText(`${Number(candidate.percentage)} %`,x+panelW/2,nameY+(isStory?78:68));}
+    else{ctx.fillStyle=selected?'#dde8c8':'#dde3d8';ctx.fillRect(x,py,panelW,photoH);ctx.fillStyle='#0b0f0b';ctx.font=`1000 ${isStory?150:122}px Arial`;ctx.textAlign='center';ctx.fillText(candidate.initials||'P50',x+panelW/2,py+photoH/2+42);ctx.textAlign='left';}
+    ctx.restore();ctx.strokeStyle=selected?'#0b0f0b':'#a8b2a4';ctx.lineWidth=selected?10:4;roundRectPath(ctx,x,py,panelW,photoH,18);ctx.stroke();
+    if(selected){ctx.fillStyle='#b7ff00';roundRectPath(ctx,x+16,py+16,isStory?218:190,54,10);ctx.fill();ctx.fillStyle='#0b0f0b';ctx.font=`1000 ${isStory?26:23}px Arial`;ctx.fillText('✓ MON VOTE',x+31,py+52);}
+    const nameY=py+photoH+(isStory?64:58);ctx.fillStyle=selected?'#0b0f0b':'#5c665c';ctx.font=`1000 ${isStory?46:38}px Arial`;ctx.textAlign='center';ctx.fillText(String(candidate.name).toUpperCase().slice(0,17),x+panelW/2,nameY);
+    if(card.percentagesAvailable&&Number.isFinite(Number(candidate.percentage))){ctx.fillStyle='#0b0f0b';ctx.font=`1000 ${isStory?64:54}px Arial`;ctx.fillText(`${Number(candidate.percentage)} %`,x+panelW/2,nameY+(isStory?78:68));}
     ctx.textAlign='left';
   });
-  const vsX=w/2,vsY=py+photoH*.48;ctx.fillStyle='#101710';ctx.beginPath();ctx.arc(vsX,vsY,isStory?61:54,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#b7ff00';ctx.lineWidth=6;ctx.stroke();ctx.fillStyle='#fff';ctx.font=`1000 ${isStory?41:37}px Arial`;ctx.textAlign='center';ctx.fillText('VS',vsX,vsY+14);ctx.textAlign='left';
-  const dateY=py+photoH+(card.percentagesAvailable?(isStory?190:156):(isStory?115:92));ctx.fillStyle='#c3cdc0';ctx.font=`700 ${isStory?30:25}px Arial`;ctx.fillText(`Vote du ${new Date(card.voteDate).toLocaleDateString('fr-FR')}`,24,dateY);
-  if(vertical){ctx.strokeStyle='#b7ff00';ctx.lineWidth=7;ctx.beginPath();for(let x=70;x<w-70;x+=18){const amp=18+Math.abs(Math.sin(x*.031+progress*9))*wave*85;ctx.moveTo(x,h-390-amp);ctx.lineTo(x,h-390+amp);}ctx.stroke();}
-  ctx.fillStyle='#fff';ctx.font=`900 ${isStory?30:25}px Arial`;ctx.fillText('VOTE TOI AUSSI',24,h-92);ctx.fillStyle='#b7ff00';ctx.font=`700 ${isStory?25:21}px Arial`;ctx.fillText(String(card.pass50Url).replace(/^https?:\/\//,''),24,h-52);
+  const vsX=w/2,vsY=py+photoH*.48;ctx.fillStyle='#0b0f0b';ctx.beginPath();ctx.arc(vsX,vsY,isStory?54:48,0,Math.PI*2);ctx.fill();ctx.fillStyle='#eef1ec';ctx.font=`1000 ${isStory?36:32}px Arial`;ctx.textAlign='center';ctx.fillText('VS',vsX,vsY+12);ctx.textAlign='left';
+  const dateY=py+photoH+(card.percentagesAvailable?(isStory?190:156):(isStory?115:92));ctx.fillStyle='#5c665c';ctx.font=`700 ${isStory?28:23}px Arial`;ctx.fillText(`Vote du ${new Date(card.voteDate).toLocaleDateString('fr-FR')}`,24,dateY);
+  if(vertical){ctx.strokeStyle='#b45309';ctx.lineWidth=5;ctx.beginPath();for(let x=70;x<w-70;x+=18){const amp=14+Math.abs(Math.sin(x*.031+progress*9))*wave*70;ctx.moveTo(x,h-390-amp);ctx.lineTo(x,h-390+amp);}ctx.stroke();}
+  ctx.fillStyle='#0b0f0b';ctx.font=`900 ${isStory?28:24}px Arial`;ctx.fillText('Vote toi aussi',24,h-92);ctx.fillStyle='#5c665c';ctx.font=`700 ${isStory?23:20}px Arial`;ctx.fillText(String(card.pass50Url).replace(/^https?:\/\//,''),24,h-52);
 }
 function canvasFile(canvas,name='mon-vote-pass50.png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob&&blob.size>0?resolve(new File([blob],name,{type:'image/png'})):reject(new Error('Génération image impossible')),'image/png'))}
 async function generateVoteShareImage(square=false){

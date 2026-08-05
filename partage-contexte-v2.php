@@ -80,9 +80,9 @@ if($audioToken!==''&&!preg_match('/^[A-Za-z0-9._-]{1,180}$/',$audioToken))$audio
 $base=p50_share_v2_base();
 $title='PASS50 — Partage';
 $description='Découvrez ce contenu sur PASS50.';
-$accent='#b7ff00';
-$label='PARTAGE PASS50';
-$badge='↗ PASS50';
+$accent='#0e7c7b';
+$label='Partage';
+$badge='PASS50';
 $cta='Voir sur PASS50';
 $destination=$base.'/';
 $audioUrl='';
@@ -97,7 +97,7 @@ if(str_starts_with($type,'ranking-top')){
     if($leader){
         $description.=' Numéro 1 : '.p50_share_v2_clean((string)($leader['name']??''),80).' ('.round((float)($leader['_share_score']??0)).'/100).';
     }
-    $label='CLASSEMENT OFFICIEL';$badge="📊 TOP {$size}";$cta=$size===50?'Voir le classement complet':"Voir le Top {$size}";
+    $accent='#0e7c7b';$label='Classement';$badge="Top {$size}";$cta=$size===50?'Voir le classement complet':"Voir le Top {$size}";
     $query=['source'=>'share_ranking','ranking'=>"top{$size}",'period'=>$period,'region'=>$region,'section'=>$size===3?'buzz':'top10'];
     if($size===50)$query['open']='top50';
     $destination=$base.'/?'.http_build_query($query);
@@ -107,7 +107,7 @@ if(str_starts_with($type,'ranking-top')){
     if($postTitle==='')$postTitle='Actualité récente';
     $title="{$name} — {$postTitle}";
     $description=($platform!==''?$platform.' · ':'')."Découvrez cette actualité et la position de {$name} dans le classement PASS50.";
-    $accent='#1ee5ff';$label='POST DE MON FIL';$badge='📰 ACTUALITÉ';$cta='Voir la fiche et le contenu';
+    $accent='#3d5a1f';$label='Mon fil';$badge='Actualité';$cta='Voir la fiche';
     $destination=$base.'/?'.http_build_query(array_filter(['source'=>'share_feed','profile'=>$id],static fn($value)=>$value!==''));
 }elseif($type==='duel-audio'){
     $audio=p50_share_v2_audio($audioToken);
@@ -118,7 +118,7 @@ if(str_starts_with($type,'ranking-top')){
     $selected=$selectedId!==''&&$selectedId===(string)($audio['candidate_a_id']??'')?$a:$b;
     $title="{$author} commente son vote pour {$selected}";
     $description="Écoutez le commentaire audio public de {$author} pour le duel {$a} VS {$b} sur PASS50.";
-    $accent='#a66cff';$label='AUDIO PUBLIC · LES COULÉS';$badge='🎙 AUDIO DU DUEL';$cta='Écouter l’audio et voir le duel';
+    $accent='#1d4e89';$label='Les Coulés · Audio';$badge='Audio';$cta='Écouter';
     $destination=$base.'/?'.http_build_query(array_filter(['source'=>'share_duel_audio','section'=>'coules','audio'=>$audioToken],static fn($value)=>$value!==''));
     if($audio&&$audioToken!=='')$audioUrl=$base.'/uploads/duel-audio/'.rawurlencode($audioToken);
 }
@@ -154,11 +154,11 @@ $image=$base.'/partage-contexte-image-v2.php?'.http_build_query($canonicalParams
 <meta name="twitter:image" content="<?=p50_share_v2_h($image)?>">
 <meta http-equiv="refresh" content="1;url=<?=p50_share_v2_h($destination)?>">
 <style>
-:root{--accent:<?=p50_share_v2_h($accent)?>}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:#050705;color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.card{position:relative;width:min(500px,100%);min-height:560px;padding:34px;border:1px solid var(--accent);border-radius:28px;overflow:hidden;background:radial-gradient(circle at 95% 0,color-mix(in srgb,var(--accent) 24%,transparent),transparent 38%),linear-gradient(150deg,#151b15,#050705 72%);box-shadow:0 32px 100px rgba(0,0,0,.7);display:flex;flex-direction:column}.card:before{content:"";position:absolute;inset:0 auto 0 0;width:9px;background:var(--accent)}.brand{font-size:32px;font-weight:1000;letter-spacing:-1.7px}.brand span{color:var(--accent)}.kicker{margin-top:52px;color:var(--accent);font-size:12px;font-weight:1000;letter-spacing:1.8px}.pill{align-self:flex-start;margin-top:14px;padding:9px 14px;border:1px solid var(--accent);border-radius:999px;color:var(--accent);font-size:12px;font-weight:1000}.title{margin:38px 0 0;font-size:39px;line-height:1.05;letter-spacing:-1.7px}.desc{margin-top:14px;color:#aeb8aa;font-weight:800;line-height:1.48}.cta{display:block;margin-top:auto;padding:17px;border-radius:16px;background:var(--accent);color:#050705;text-align:center;text-decoration:none;font-weight:1000}.small{margin-top:12px;text-align:center;color:#879184;font-size:12px}
+:root{--accent:<?=p50_share_v2_h($accent)?>}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:#e8ebe4;color:#0b0f0b;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.card{position:relative;width:min(460px,100%);min-height:520px;padding:28px;border:1px solid #d5dbd2;border-radius:18px;overflow:hidden;background:#eef1ec;border-top:8px solid var(--accent);box-shadow:0 24px 80px rgba(0,0,0,.22);display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:1000;letter-spacing:-.8px}.brand:before{content:"";width:14px;height:14px;background:#b7ff00;flex:0 0 auto}.kicker{margin-top:28px;color:var(--accent);font-size:12px;font-weight:900;letter-spacing:.5px}.title{margin:18px 0 0;font-size:32px;line-height:1.05;letter-spacing:-1.1px}.desc{margin-top:12px;color:#5c665c;font-weight:600;line-height:1.45}.cta{display:block;margin-top:auto;padding:15px;border-radius:10px;background:#b7ff00;color:#0b0f0b;text-align:center;text-decoration:none;font-weight:1000}.small{margin-top:12px;text-align:center;color:#5c665c;font-size:12px}
 </style>
 </head>
 <body>
-<main class="card"><div class="brand">PASS<span>50</span></div><div class="kicker"><?=p50_share_v2_h($label)?></div><div class="pill"><?=p50_share_v2_h($badge)?></div><h1 class="title"><?=p50_share_v2_h($title)?></h1><p class="desc"><?=p50_share_v2_h($description)?></p><a class="cta" href="<?=p50_share_v2_h($destination)?>"><?=p50_share_v2_h($cta)?></a><div class="small">Redirection vers PASS50…</div></main>
+<main class="card"><div class="brand">PASS50</div><div class="kicker"><?=p50_share_v2_h($label)?></div><h1 class="title"><?=p50_share_v2_h($title)?></h1><p class="desc"><?=p50_share_v2_h($description)?></p><a class="cta" href="<?=p50_share_v2_h($destination)?>"><?=p50_share_v2_h($cta)?></a><div class="small">Redirection vers PASS50…</div></main>
 <script>window.setTimeout(function(){location.replace(<?=json_encode($destination,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>)},120);</script>
 </body>
 </html>

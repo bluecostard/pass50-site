@@ -108,7 +108,7 @@
     void LEGACY_CONTEXT_SHARE_ASSET;
     if (window.PASS50_CONTEXT_SHARE_V2 || document.querySelector('script[data-pass50-context-share-v2]')) return;
     const script = document.createElement('script');
-    script.src = './context-share-v2.js?v=2.0';
+    script.src = './context-share-v2.js?v=2.3';
     script.async = false;
     script.dataset.pass50ContextShare = '2.0';
     script.dataset.pass50ContextShareV2 = '2.0';

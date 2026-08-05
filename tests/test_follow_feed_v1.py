@@ -77,7 +77,7 @@ class FollowFeedV2Tests(unittest.TestCase):
         page = read("mon-fil.html")
         self.assertIn("mobile-bottom-nav-v1.js?v=1.2", loader)
         self.assertNotIn("data-pass50-follow-watch", loader)
-        self.assertIn("live-experience-v4-1.js?v=1.4", loader)
+        self.assertIn("live-experience-v4-1.js?v=1.5", loader)
         self.assertIn("./mon-fil.html", worker)
         feed_asset = re.search(r"mon-fil\.js\?v=([0-9.]+)", worker)
         self.assertIsNotNone(feed_asset)

@@ -80,13 +80,13 @@ class ContextShareV2Tests(unittest.TestCase):
         self.assertIn("og:audio", self.landing)
 
     def test_runtime_loads_only_v2_and_keeps_legacy_as_marker(self):
-        self.assertIn("context-share-v2.js?v=2.1", self.loader)
+        self.assertIn("context-share-v2.js?v=2.2", self.loader)
         self.assertIn("dataset.pass50ContextShareV2", self.loader)
         self.assertIn("LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0'", self.loader)
         self.assertNotIn("loadScript('script[data-pass50-context-share]','./context-share-v1.js", self.loader)
-        self.assertIn("context-share-v2.js?v=2.0", self.nav)
+        self.assertIn("context-share-v2.js?v=2.2", self.nav)
         self.assertIn("context-share-v1.js?v=1.0", self.nav)
-        self.assertIn("context-share-v2.js?v=2.0", self.worker)
+        self.assertIn("context-share-v2.js?v=2.2", self.worker)
         self.assertIn("pass50-v77-context-share", self.worker)
         self.assertRegex(self.worker, r"pass50-v\d+-[a-z0-9-]+")
 

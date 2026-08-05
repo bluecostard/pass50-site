@@ -230,7 +230,7 @@ function ensureLiveTrustGate(){
 function ensureLiveExperience(){
   ensureLiveTrustGate();
   if(document.querySelector('script[data-pass50-live-experience-v41]'))return;
-  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.4';script.dataset.pass50LiveExperienceV41='1.4';document.head.appendChild(script);
+  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.6';script.dataset.pass50LiveExperienceV41='1.5';document.head.appendChild(script);
 }
 
 function bind(){
