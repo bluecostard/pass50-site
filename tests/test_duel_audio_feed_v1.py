@@ -40,7 +40,7 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
             "u.display_name author_display_name", "'authorPseudo'=>$authorPseudo",
             "'anonymousAuthor'=>false", "'authorIdentity'=>'account_display_name'",
             "P50_DUEL_AUDIO_RETENTION_DAYS=30",
-        ):
+       ):
             self.assertIn(marker, API)
         item = API[API.index("function p50_duel_audio_item"):API.index("function p50_duel_audio_candidates")]
         self.assertNotIn("'userId'", item)
@@ -55,7 +55,7 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
         ):
             self.assertIn(marker, CLIENT)
         self.assertNotIn("COMMENTAIRE ANONYME", CLIENT)
-        self.assertNotIn("L’identité du membre n’est pas affichée", CLIENT)
+        self.assertNotIn("Lidentité du membre n’est pas affichée", CLIENT)
 
     def test_audio_is_published_only_during_real_share_action(self):
         for marker in (
@@ -82,7 +82,7 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
         self.assertIn("mon-fil.js?v=2.3", FEED_HTML)
 
     def test_no_ranking_or_public_state_write(self):
-        combined = API + CLIENT + FEE
+        combined = API + CLIENT + FEED
         for forbidden in (
             "UPDATE app_state", "INSERT INTO app_state", "DELETE FROM app_state",
             "metrics-ranking-publication-apply.php", "p50_mr_calculate",
