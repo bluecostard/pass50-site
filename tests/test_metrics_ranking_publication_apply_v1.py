@@ -23,26 +23,41 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("publishPlans", core)
         self.assertIn("p50_de_load_public_state_for_update", core)
 
-    def test_admin_and_cron_endpoints_exist(self):
+    def test_admin_and_cron_endpoints_exist_and_reject_forced_bootstrap(self):
         admin = read("api/metrics-ranking-publication-apply.php")
         cron = read("api/metrics-ranking-publication-apply-cron.php")
         self.assertIn("require_role($user,'owner','admin')", admin)
         self.assertIn("p50_mrp_apply_execute", admin)
         self.assertIn("p50_mo_verify_cron_signature", cron)
         self.assertIn("automaticPublicationEnabled", cron)
-        # After sort($keys), confirm comes before dispatchId alphabetically.
         self.assertIn("'action','confirm','dispatchId'", cron)
-        self.assertIn("'action','bootstrap','confirm','dispatchId'", cron)
-        self.assertIn("'bootstrap'=>$forceBootstrap", cron)
-        self.assertNotIn("'action','dispatchId','confirm'", cron)
+        self.assertNotIn("'action','bootstrap','confirm','dispatchId'", cron)
+        self.assertIn("'bootstrap'=>false", cron)
+        self.assertIn("'appliedBy'=>'cron-automatic'", cron)
+        self.assertIn("forcedBootstrapEnabled", cron)
+        self.assertIn("array_key_exists('bootstrap',$in)", admin)
+        self.assertIn("bootstrap_recovery_consumed", admin)
+        self.assertIn("'bootstrap'=>false", admin)
+        self.assertIn("forcedBootstrapEnabled", admin)
 
-    def test_force_bootstrap_flows_into_preview(self):
+    def test_one_time_bootstrap_workflow_is_retired(self):
+        workflow = ROOT / ".github/workflows/metrics-ranking-publication-apply-bootstrap.yml"
+        self.assertFalse(workflow.exists())
+        cron = read("api/metrics-ranking-publication-apply-cron.php")
+        admin = read("api/metrics-ranking-publication-apply.php")
+        self.assertNotIn("cron-bootstrap-recovery", cron)
+        self.assertNotIn("$forceBootstrap", cron)
+        self.assertNotIn("$forceBootstrap", admin)
+
+    def test_initial_bootstrap_remains_internal_to_first_success(self):
         core = read("api/metrics-ranking-publication-apply-core.php")
         self.assertIn("bool $forceBootstrap=false", core)
-        self.assertIn("p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now,$forceBootstrap)", core)
-        self.assertIn("$forceBootstrap||!p50_mrp_apply_has_prior_success($pdo)", core)
+        self.assertIn("p50_mrp_apply_has_prior_success", core)
         self.assertIn("function p50_mrp_apply_state_actor", core)
         self.assertIn("p50_mrp_apply_state_actor($appliedBy)", core)
+        # Les endpoints publics n'exposent plus le forçage ; le moteur conserve la compatibilité interne.
+        self.assertNotIn("bootstrap:true", read("api/metrics-ranking-publication-apply-cron.php"))
+        self.assertNotIn("bootstrap:true", read("api/metrics-ranking-publication-apply.php"))
 
     def test_config_exposes_publication_flags(self):
         example = read("api/config.example.php")
