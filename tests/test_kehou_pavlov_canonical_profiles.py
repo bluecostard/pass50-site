@@ -1,3 +1,4 @@
+# Contrat anti-régression des profils ajoutés le 5 août 2026.
 import json
 import re
 import unittest
