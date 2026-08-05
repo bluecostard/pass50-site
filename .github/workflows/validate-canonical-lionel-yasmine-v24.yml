@@ -16,6 +16,12 @@ on:
       - 'tests/test_metrics_ranking_calibration_v1.py'
       - 'tests/test_mobile_public_ux_polish.py'
       - '.github/workflows/validate-canonical-lionel-yasmine-v24.yml'
+  issues:
+    types:
+      - opened
+
+permissions:
+  contents: write
 
 jobs:
   validate:
@@ -24,21 +30,46 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Appliquer Bébé Nicapol
+        if: "${{ github.event_name == 'issues' && github.event.action == 'opened' && github.event.issue.title == 'PASS50 integrate Bebe Nicapol' }}"
+        run: |
+          python3 scripts/one_shot_add_bebe_nicapol.py
+          python3 -m json.tool pass50_nouveaux_candidats_90_v19.json >/dev/null
+          node --check v9-tools.js
+          node --check sw.js
+          python3 -m unittest tests.test_canonical_lionel_yasmine_v24
+          python3 -m unittest tests.test_andrea_naomi_canonical_profile
+          python3 -m unittest tests.test_kehou_pavlov_canonical_profiles
+          python3 -m unittest tests.test_bebe_nicapol_canonical_profile
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Ajouter Bébé Nicapol au recensement PASS50'
+          git push origin HEAD:main
+
       - name: JSON valide
+        if: "${{ github.event_name == 'pull_request' }}"
         run: python3 -m json.tool pass50_nouveaux_candidats_90_v19.json >/dev/null
+
       - name: JavaScript valide
+        if: "${{ github.event_name == 'pull_request' }}"
         run: |
           node --check v9-tools.js
           node --check app-config.js
           node --check sw.js
           node --check profile-lionel-pcs.js
           node --check profile-yasmine-fofana.js
+
       - name: Présence canonique et cache
+        if: "${{ github.event_name == 'pull_request' }}"
         run: |
           python3 -m unittest tests.test_canonical_lionel_yasmine_v24
           python3 -m unittest tests.test_andrea_naomi_canonical_profile
           python3 -m unittest tests.test_kehou_pavlov_canonical_profiles
+
       - name: Versions publiques cohérentes
+        if: "${{ github.event_name == 'pull_request' }}"
         run: |
           python3 -m unittest tests.test_live_radar_v3
           python3 -m unittest tests.test_live_trust_gate_v1
