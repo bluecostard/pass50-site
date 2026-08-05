@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: pass50-ionos-production-deploy
@@ -97,12 +98,14 @@ jobs:
                 && grep -q "pass50-v81-service-worker-disabled" <<<"$worker" \
                 && grep -q "PASS50-PUBLIC-RUNTIME-V82" <<<"$runtime" \
                 && grep -q "context-share-v2.js?v=2.3" <<<"$runtime" \
+                && grep -q "facebook-video-player-v1.js?v=1.1" <<<"$runtime" \
                 && ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" <<<"$runtime" \
                 && grep -q "PASS50-CONTEXT-SHARE-V2.0" <<<"$share" \
-                && grep -q "PASS50-FACEBOOK-VIDEO-PLAYER-V1.0" <<<"$content" \
+                && grep -q "PASS50-FACEBOOK-VIDEO-PLAYER-V1.1" <<<"$content" \
+                && grep -q "plugins/\${plugin}.php" <<<"$content" \
                 && grep -q "PASS50" <<<"$page"; then
                 ready=true
-                echo "$site sert bien l’interface V82, le partage V2 et le lecteur Facebook."
+                echo "$site sert bien l’interface V82, le partage V2 et le lecteur Facebook V1.1."
                 break
               fi
               echo "Propagation V82 en attente pour $site ($attempt/30)."
@@ -117,8 +120,58 @@ jobs:
             echo '### Déploiement PASS50 V82'
             echo "- Commit vérifié : \`$GITHUB_SHA\`"
             echo '- Interface : `V82 share-v2-only`'
-            echo '- Lecteur des vidéos Facebook : `V1.0`'
+            echo '- Lecteur Facebook : `V1.1`, routage post/vidéo et lecteur alternatif'
             echo '- Runtimes actualité V4 : déploiement prioritaire forcé'
             echo '- Service worker : désactivé temporairement (`V81`)'
             echo '- Cache HTTP HTML/JS/CSS : désactivé temporairement'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Vérifier la fiche Apoutchou National
+        id: apoutchou
+        shell: bash
+        run: |
+          set -euo pipefail
+          feed='apoutchou-feed.json'; ready=false
+          for attempt in $(seq 1 12); do
+            curl --location --silent --show-error --max-time 30 -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' \
+              "https://www.pass50.store/api/content-feed.php?period=24h&profileId=apoutchou&newsLimit=30&sha=$GITHUB_SHA&attempt=$attempt" > "$feed" || true
+            if jq -e '.ok==true and .ready==true and .rules.facebookEmbedRouting==true' "$feed" >/dev/null 2>&1; then ready=true; break; fi
+            sleep 5
+          done
+          [ "$ready" = true ] || { echo '::error::Le flux V1.1 d’Apoutchou n’est pas servi'; cat "$feed" 2>/dev/null || true; exit 1; }
+          jq '[.news[] | select((.platform|ascii_downcase)=="facebook" and .playableInPass50==true)]' "$feed" > apoutchou-facebook.json
+          count="$(jq 'length' apoutchou-facebook.json)"
+          post_count="$(jq '[.[] | select(.facebookEmbedType=="post")] | length' apoutchou-facebook.json)"
+          video_count="$(jq '[.[] | select(.facebookEmbedType=="video")] | length' apoutchou-facebook.json)"
+          invalid="$(jq '[.[] | select((.facebookEmbedType!="post") and (.facebookEmbedType!="video"))] | length' apoutchou-facebook.json)"
+          [ "$count" -gt 0 ] || { echo '::error::Aucune vidéo Facebook récente sur la fiche Apoutchou'; exit 1; }
+          [ "$invalid" -eq 0 ] || { echo '::error::Routage Facebook incomplet sur la fiche Apoutchou'; jq . apoutchou-facebook.json; exit 1; }
+          {
+            printf 'count=%s\n' "$count"
+            printf 'post_count=%s\n' "$post_count"
+            printf 'video_count=%s\n' "$video_count"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo '### Test de la fiche Apoutchou National'
+            printf -- '- Actualités Facebook lisibles : %s\n' "$count"
+            printf -- '- Liens de publication routés vers `post.php` : %s\n' "$post_count"
+            printf -- '- Liens vidéo/Reel routés vers `video.php` : %s\n' "$video_count"
+            echo '- Lecteur alternatif : disponible dans la fenêtre'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publier le statut du lecteur Apoutchou
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.apoutchou.outcome }}
+          COUNT: ${{ steps.apoutchou.outputs.count }}
+          POST_COUNT: ${{ steps.apoutchou.outputs.post_count }}
+          VIDEO_COUNT: ${{ steps.apoutchou.outputs.video_count }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="Apoutchou: ${COUNT:-0} vidéo(s), publication ${POST_COUNT:-0}, vidéo ${VIDEO_COUNT:-0}, V1.1"
+          if [ "${OUTCOME:-failure}" != success ]; then state=failure; description='lecteur Facebook Apoutchou non validé en production'; fi
+          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/apoutchou-facebook-player' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"

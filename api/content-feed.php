@@ -13,10 +13,30 @@ $newsLimit=max(1,min(30,(int)($_GET['newsLimit']??12)));
 $trendMaxAgeHours=['2h'=>24,'24h'=>72,'48h'=>120,'7d'=>240,'15d'=>384][$period];
 $trendFreshSince=gmdate('Y-m-d H:i:s',time()-$trendMaxAgeHours*3600);
 
+function p50_content_feed_facebook_url(string $platform,string $url): ?array {
+    if(strcasecmp(trim($platform),'Facebook')!==0)return null;
+    $url=trim($url);if($url===''||!preg_match('~^https://~i',$url))return null;
+    $parts=parse_url($url);if(!is_array($parts))return null;
+    $host=strtolower((string)($parts['host']??''));
+    if(!($host==='facebook.com'||str_ends_with($host,'.facebook.com')||$host==='fb.watch'))return null;
+    return ['host'=>$host,'path'=>strtolower((string)($parts['path']??'/'))];
+}
+
+function p50_content_feed_facebook_explicit_video_url(string $platform,string $url): bool {
+    $parts=p50_content_feed_facebook_url($platform,$url);if($parts===null)return false;
+    if($parts['host']==='fb.watch')return true;
+    return preg_match('~(?:^|/)(?:watch/?|reel/|share/(?:v|r)/|[^/]+/videos/)(?:|[^?]*)$~i',(string)$parts['path'])===1;
+}
+
+function p50_content_feed_facebook_embed_type(string $platform,string $url): ?string {
+    $parts=p50_content_feed_facebook_url($platform,$url);if($parts===null)return null;
+    return p50_content_feed_facebook_explicit_video_url($platform,$url)?'video':'post';
+}
+
 function p50_content_feed_facebook_playable(string $platform,string $contentType,string $url=''): bool {
-    if(strcasecmp(trim($platform),'Facebook')!==0)return false;
+    if(p50_content_feed_facebook_url($platform,$url)===null)return false;
     if(in_array(strtolower(trim($contentType)),['video','reel','live'],true))return true;
-    return preg_match('~(?:facebook\.com/(?:watch/?|reel/|share/(?:v|r)/)|facebook\.com/[^/]+/videos/|fb\.watch/)~i',trim($url))===1;
+    return p50_content_feed_facebook_explicit_video_url($platform,$url);
 }
 
 $pdo=db();
@@ -49,6 +69,7 @@ foreach($trendStmt->fetchAll() as $row){
     $titleLength=function_exists('mb_strlen')?mb_strlen($title,'UTF-8'):strlen($title);
     if(strcasecmp((string)$row['platform'],'Facebook')===0&&$titleLength<12&&$thumbnail==='')continue;
     $publishedSource=$row['published_at']?:$row['first_seen_at'];
+    $playable=p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['content_type'],(string)$row['canonical_url']);
     $trends[]=[
         'rank'=>count($trends)+1,'sourceRank'=>(int)$row['rank_position'],'previousRank'=>$row['previous_rank']===null?null:(int)$row['previous_rank'],
         'rankDelta'=>$row['rank_delta']===null?null:(int)$row['rank_delta'],'contentId'=>(int)$row['content_id'],
@@ -61,7 +82,8 @@ foreach($trendStmt->fetchAll() as $row){
         'followers'=>$row['follower_count']===null?null:(int)$row['follower_count'],'clusterPlatformCount'=>(int)$row['cluster_platform_count'],
         'calculatedAt'=>gmdate('c',strtotime((string)$row['calculated_at'].' UTC')),
         'readableInPass50'=>strcasecmp((string)$row['platform'],'Facebook')===0,
-        'playableInPass50'=>p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['content_type'],(string)$row['canonical_url']),
+        'playableInPass50'=>$playable,
+        'facebookEmbedType'=>$playable?p50_content_feed_facebook_embed_type((string)$row['platform'],(string)$row['canonical_url']):null,
     ];
     $perProfile[$pid]=($perProfile[$pid]??0)+1;
     if(count($trends)>=5)break;
@@ -87,6 +109,7 @@ if($profileId!==''){
         $title=trim((string)$row['title']);$thumbnail=trim((string)($row['thumbnail_url']??''));
         $titleLength=function_exists('mb_strlen')?mb_strlen($title,'UTF-8'):strlen($title);
         if(strcasecmp((string)$row['platform'],'Facebook')===0&&$titleLength<12&&$thumbnail==='')continue;
+        $playable=p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['item_type'],(string)$row['canonical_url']);
         $news[]=[
             'id'=>(int)$row['id'],'contentId'=>$row['content_id']===null?null:(int)$row['content_id'],'platform'=>(string)$row['platform'],
             'itemType'=>(string)$row['item_type'],'url'=>(string)$row['canonical_url'],'title'=>$title,
@@ -95,7 +118,8 @@ if($profileId!==''){
             'trendScore'=>$row['trend_score']===null?null:(float)$row['trend_score'],'trendBadge'=>$row['trend_badge']?:null,
             'trendRank'=>$row['trend_rank']===null?null:(int)$row['trend_rank'],
             'readableInPass50'=>strcasecmp((string)$row['platform'],'Facebook')===0,
-            'playableInPass50'=>p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['item_type'],(string)$row['canonical_url']),
+            'playableInPass50'=>$playable,
+            'facebookEmbedType'=>$playable?p50_content_feed_facebook_embed_type((string)$row['platform'],(string)$row['canonical_url']):null,
         ];
     }
 }
@@ -107,7 +131,7 @@ json_response([
     'rules'=>[
         'maxPerProfile'=>2,'topLimit'=>5,'officialContentAutomatic'=>true,'externalNewsHumanValidation'=>true,
         'officialNewsMaxAgeHours'=>72,'externalNewsMaxAgeDays'=>7,'trendMaxAgeHours'=>$trendMaxAgeHours,'maxTrendRunAgeMinutes'=>30,
-        'facebookPreviewInPass50'=>true,'facebookVideoPlaybackInPass50'=>true,
+        'facebookPreviewInPass50'=>true,'facebookVideoPlaybackInPass50'=>true,'facebookEmbedRouting'=>true,
     ],
     'run'=>$lastRun?['runUuid'=>(string)$lastRun['run_uuid'],'contentsConsidered'=>(int)$lastRun['contents_considered'],'rowsWritten'=>(int)$lastRun['rows_written'],'finishedAt'=>gmdate('c',strtotime((string)$lastRun['finished_at'].' UTC'))]:null,
     'generatedAt'=>gmdate('c'),
