@@ -2514,5 +2514,69 @@
       "\"Joshua Pavlov\" influenceur ivoirien",
       "\"Pavlov\" \"joshua_pavlov_23\" vidéo récente vues"
     ]
+  },
+  {
+    "id": "census-bebe-nicapol",
+    "name": "Bébé Nicapol",
+    "known_alias": "Kadio Mourou Nic-Apol Christian Emmanuel / Christian Kadio / Bébé Nica / Nicapol / @BebeNicaOfficiel",
+    "entity_type": "Personne",
+    "zone": "BOTH",
+    "category": "TikTok / Lives / Divertissement / Musique / Société",
+    "census_status": "Recensé confirmé — chaîne YouTube officielle fournie par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "YouTube": "https://www.youtube.com/@BebeNicaOfficiel"
+    },
+    "source": {
+      "publisher": "Chaîne YouTube officielle fournie par le propriétaire PASS50",
+      "date": "2026-08-05",
+      "url": "https://www.youtube.com/@BebeNicaOfficiel"
+    },
+    "source_secondary": {
+      "publisher": "Digital Mag Côte d’Ivoire",
+      "url": "https://digitalmag.ci/reseaux-sociaux-portrait-robot-de-tiktok-en-cote-divoire/"
+    },
+    "source_tertiary": {
+      "publisher": "Afrikahabari",
+      "date": "2024-07-05",
+      "url": "https://afrikahabari.com/la-biographie-nicapo-4-points-precis/"
+    },
+    "notes": "Ajout approuvé PASS50 le 5 août 2026. Bébé Nicapol, aussi appelé Bébé Nica ou Nicapol, est un créateur ivoirien suivi en Côte d’Ivoire et dans la diaspora. Seule la chaîne YouTube directe @BebeNicaOfficiel est enregistrée comme réseau officiel à ce stade. Les comptes TikTok, Instagram et Facebook ne sont pas ajoutés tant que leurs URLs actuelles n’ont pas été validées, plusieurs comptes ayant changé ou été suspendus. Profil non classable jusqu’à validation des métriques récentes.",
+    "curated_social_sources": {
+      "YouTube": {
+        "url": "https://www.youtube.com/@BebeNicaOfficiel",
+        "source_name": "Chaîne YouTube officielle fournie par le propriétaire PASS50",
+        "source_url": "https://www.youtube.com/@BebeNicaOfficiel",
+        "confidence": 100
+      }
+    },
+    "curated_facts": {
+      "real_name": {
+        "value": "Kadio Mourou Nic-Apol Christian Emmanuel",
+        "source_name": "Digital Mag Côte d’Ivoire",
+        "source_url": "https://digitalmag.ci/reseaux-sociaux-portrait-robot-de-tiktok-en-cote-divoire/",
+        "confidence": 96
+      },
+      "occupation": {
+        "value": "Créateur de contenus et de directs sur les réseaux sociaux, également associé à une activité musicale.",
+        "source_name": "Afrikahabari",
+        "source_url": "https://afrikahabari.com/la-biographie-nicapo-4-points-precis/",
+        "confidence": 92
+      },
+      "diaspora_signal": {
+        "value": "Profil ivoirien ayant résidé et étudié à l’étranger, tout en conservant une forte audience en Côte d’Ivoire.",
+        "source_name": "Afrikahabari",
+        "source_url": "https://afrikahabari.com/la-biographie-nicapo-4-points-precis/",
+        "confidence": 90
+      }
+    },
+    "research_queries": [
+      "\"Bébé Nicapol\" compte TikTok officiel actuel",
+      "\"Bébé Nica\" Instagram Facebook officiel",
+      "\"BebeNicaOfficiel\" vidéos récentes vues abonnés",
+      "\"nicapol21\" compte officiel actuel"
+    ]
   }
 ]
