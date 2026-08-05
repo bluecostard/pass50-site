@@ -1,0 +1,42 @@
+name: Validate Content Freshness Platform Audit
+
+on:
+  pull_request:
+    paths:
+      - 'api/content-freshness-platform-audit-cron-v1.php'
+      - '.github/workflows/content-freshness-platform-audit.yml'
+      - 'tests/test_content_freshness_platform_audit.py'
+      - '.github/workflows/validate-content-freshness-platform-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/content-freshness-platform-audit-cron-v1.php'
+      - '.github/workflows/content-freshness-platform-audit.yml'
+      - 'tests/test_content_freshness_platform_audit.py'
+      - '.github/workflows/validate-content-freshness-platform-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: php -l api/content-freshness-platform-audit-cron-v1.php
+      - name: Read-only platform audit contract
+        run: python3 -m unittest tests.test_content_freshness_platform_audit -v
+      - name: Workflow safety markers
+        run: |
+          grep -q 'CONTENT-PLATFORM-AUDIT-V1.0' api/content-freshness-platform-audit-cron-v1.php
+          grep -q 'publicStateWrites.*0' api/content-freshness-platform-audit-cron-v1.php
+          grep -q 'youtubeSharePercent' api/content-freshness-platform-audit-cron-v1.php
+          grep -q "cron: '\*/5 \* \* \* \*'" .github/workflows/content-freshness-5m.yml
+          ! grep -q 'actions: write' .github/workflows/content-freshness-platform-audit.yml
+          ! grep -q 'UPDATE app_state' api/content-freshness-platform-audit-cron-v1.php
+      - name: Diff safety
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
