@@ -1,7 +1,7 @@
 // Hotfix V81 : désactivation complète du service worker PASS50.
 // Le site repasse temporairement en accès réseau direct afin d'éliminer
 // les boucles de mise à jour, les caches obsolètes et les préchargements massifs.
-const CACHE='pass50-v81-service-worker-disabled';
+const CACHE='pass50-v82-hero-ghost-covers';
 const PASS50_SW_DISABLED_VERSION=CACHE;
 
 // Jalons de compatibilité uniquement. Ces ressources ne sont plus préchargées,
@@ -39,7 +39,7 @@ const ASSETS=[
   './pass50_nouveaux_candidats_90_v19.json?v=22.8','./data-engine-ui.js?v=18.7',
   './manifest.webmanifest?v=22.4','./icon.svg?v=22.4','./favicon-32.png?v=22.4',
   './apple-touch-icon.png?v=22.4','./assets/hero-media-1.jpg','./assets/hero-media-2.jpg',
-  './assets/hero-media-3.jpg','./assets/hero-media-4.jpg','./data-engine-ui.css?v=27.1'
+  './assets/hero-media-3.jpg','./assets/hero-media-4.jpg','./assets/hero-media-5.jpg','./assets/hero-media-6.jpg','./data-engine-ui.css?v=27.1'
 ];
 void ASSETS;
 
