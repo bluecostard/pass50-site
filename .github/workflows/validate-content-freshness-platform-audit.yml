@@ -34,7 +34,8 @@ jobs:
         run: |
           grep -q 'CONTENT-PLATFORM-AUDIT-V2.1' api/content-freshness-platform-audit-cron-v2.php
           ! grep -q 'CONTENT-PLATFORM-AUDIT-V2.0' api/content-freshness-platform-audit-cron-v2.php
-          grep -q 'CONTENT-FRESHNESS-V3.2' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'CONTENT-FRESHNESS-V4.0' api/content-freshness-platform-audit-cron-v2.php
+          ! grep -q 'CONTENT-FRESHNESS-V3.2' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'P50_CONTENT_FRESHNESS_BUCKET_MINUTES=5' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'ORDER BY s.confidence DESC,s.profile_id ASC LIMIT 1' api/content-freshness-platform-audit-cron-v2.php
           ! grep -q 'ORDER BY s.confidence DESC,s.id' api/content-freshness-platform-audit-cron-v2.php
@@ -42,6 +43,7 @@ jobs:
           grep -q 'p50_cpa2_x_health' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'authorizedOauthProfiles' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'youtubeSharePercent' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'content-freshness-cron-v4.php' .github/workflows/content-freshness-platform-audit.yml
           ! grep -q 'actions: write' .github/workflows/content-freshness-platform-audit.yml
           ! grep -q 'UPDATE app_state' api/content-freshness-platform-audit-cron-v2.php
           ! grep -q "'profileId'=>" api/content-freshness-platform-audit-cron-v2.php
