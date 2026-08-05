@@ -1,0 +1,48 @@
+name: Validate Metrics Ranking Publication Apply Safety V1
+
+on:
+  pull_request:
+    paths:
+      - 'api/metrics-ranking-publication-apply-cron.php'
+      - 'api/metrics-ranking-publication-apply.php'
+      - '.github/workflows/metrics-ranking-publication-apply-bootstrap.yml'
+      - 'tests/test_metrics_ranking_publication_apply_v1.py'
+      - '.github/workflows/validate-metrics-ranking-publication-apply-safety-v1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/metrics-ranking-publication-apply-cron.php'
+      - 'api/metrics-ranking-publication-apply.php'
+      - '.github/workflows/metrics-ranking-publication-apply-bootstrap.yml'
+      - 'tests/test_metrics_ranking_publication_apply_v1.py'
+      - '.github/workflows/validate-metrics-ranking-publication-apply-safety-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: |
+          php -l api/metrics-ranking-publication-apply-cron.php
+          php -l api/metrics-ranking-publication-apply.php
+      - name: Publication apply safety contract
+        run: python3 -m unittest tests.test_metrics_ranking_publication_apply_v1 -v
+      - name: Retired recovery markers
+        run: |
+          test ! -e .github/workflows/metrics-ranking-publication-apply-bootstrap.yml
+          ! grep -q "'action','bootstrap','confirm','dispatchId'" api/metrics-ranking-publication-apply-cron.php
+          ! grep -q 'cron-bootstrap-recovery' api/metrics-ranking-publication-apply-cron.php
+          ! grep -q 'bootstrap:true' api/metrics-ranking-publication-apply-cron.php
+          ! grep -q 'bootstrap:true' api/metrics-ranking-publication-apply.php
+          grep -q 'bootstrap_recovery_consumed' api/metrics-ranking-publication-apply.php
+          grep -q "'bootstrap'=>false" api/metrics-ranking-publication-apply-cron.php
+          grep -q "'bootstrap'=>false" api/metrics-ranking-publication-apply.php
+      - name: Diff safety
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
