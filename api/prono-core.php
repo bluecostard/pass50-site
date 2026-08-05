@@ -355,13 +355,25 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
 }
 
 function p50_prono_status_public(array $row, bool $likedByMe = false): array {
+    $options = p50_prono_options($row['options_json'] ?? []);
+    $optionKey = (string)$row['option_key'];
+    $odd = isset($row['odd_locked']) && (float)$row['odd_locked'] > 0
+        ? p50_prono_normalize_odd($row['odd_locked'])
+        : p50_prono_option_odd($options, $optionKey);
+    $stake = isset($row['stake_locked']) && (int)$row['stake_locked'] > 0
+        ? (int)$row['stake_locked']
+        : (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
     return [
         'id' => (string)$row['id'],
         'feedType' => 'prono_status',
         'questionId' => (string)$row['question_id'],
         'questionTitle' => (string)($row['question_title'] ?? ''),
-        'optionKey' => (string)$row['option_key'],
-        'optionLabel' => (string)($row['option_label'] ?? $row['option_key']),
+        'profileId' => (string)($row['profile_id'] ?? ''),
+        'optionKey' => $optionKey,
+        'optionLabel' => (string)($row['option_label'] ?? $optionKey),
+        'odd' => $odd,
+        'stake' => $stake,
+        'potentialPayout' => p50_prono_payout($stake, $odd),
         'authorPseudo' => (string)($row['author_display_name'] ?? 'Membre PASS50'),
         'authorUserId' => (string)$row['user_id'],
         'likeCount' => (int)$row['like_count'],

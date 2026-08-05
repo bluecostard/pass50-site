@@ -12,9 +12,11 @@ $user = auth_user(false);
 $pdo = db();
 $limit = max(1, min(40, (int)($_GET['limit'] ?? 20)));
 
-$stmt = $pdo->query("SELECT s.*, q.title AS question_title, q.options_json, u.display_name AS author_display_name
+$stmt = $pdo->query("SELECT s.*, q.title AS question_title, q.options_json, q.profile_id, q.points_correct,
+    v.odd_locked, v.stake_locked, u.display_name AS author_display_name
   FROM p50_prono_statuses s
   JOIN p50_prono_questions q ON q.id=s.question_id
+  JOIN p50_prono_votes v ON v.id=s.vote_id
   JOIN users u ON u.id=s.user_id AND u.deleted_at IS NULL
   WHERE s.status='live' AND s.expires_at>UTC_TIMESTAMP()
   ORDER BY s.created_at DESC

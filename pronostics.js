@@ -46,12 +46,24 @@
 
   function demoStatuses() {
     return [
-      { id: 'st-1', authorPseudo: 'fan_abidjan', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 300 000', likeCount: 18, likedByMe: false, durationHours: 24 },
-      { id: 'st-2', authorPseudo: 'koffi_buzz', questionTitle: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Oui, Top 3', likeCount: 42, likedByMe: false, durationHours: 12 },
-      { id: 'st-3', authorPseudo: 'aya_ci', questionTitle: 'Lo Père Daloa passera-t-il en LIVE sous 24 h ?', optionLabel: 'Oui', likeCount: 7, likedByMe: true, durationHours: 48 },
-      { id: 'st-4', authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', likeCount: 11, likedByMe: false, durationHours: 24 },
-      { id: 'st-5', authorPseudo: 'yves_rank', questionTitle: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Non, hors Top 3', likeCount: 3, likedByMe: false, durationHours: 24 },
-    ].map((item) => ({ ...item, authorPhoto: syntheticPhoto(item.authorPseudo) }));
+      { id: 'st-1', authorPseudo: 'fan_abidjan', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 300 000', optionKey: 'b', odd: 2.1, stake: 100, potentialPayout: 210, likeCount: 18, likedByMe: false, durationHours: 24 },
+      { id: 'st-2', authorPseudo: 'koffi_buzz', questionTitle: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Oui, Top 3', optionKey: 'yes', odd: 1.85, stake: 100, potentialPayout: 185, likeCount: 42, likedByMe: false, durationHours: 12 },
+      { id: 'st-3', authorPseudo: 'aya_ci', questionTitle: 'Lo Père Daloa passera-t-il en LIVE sous 24 h ?', optionLabel: 'Oui', optionKey: 'y', odd: 1.7, stake: 100, potentialPayout: 170, likeCount: 7, likedByMe: true, durationHours: 48 },
+      { id: 'st-4', authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', optionKey: 'a', odd: 3.4, stake: 100, potentialPayout: 340, likeCount: 11, likedByMe: false, durationHours: 24 },
+      { id: 'st-5', authorPseudo: 'yves_rank', questionTitle: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Non, hors Top 3', optionKey: 'no', odd: 2.05, stake: 100, potentialPayout: 205, likeCount: 3, likedByMe: false, durationHours: 24 },
+    ].map((item) => ({ ...item, authorPhoto: syntheticPhoto(item.authorPseudo), coverPhoto: statusCoverDataUri(item) }));
+  }
+
+  function statusCoverDataUri(item) {
+    const odd = fmtOdd(item.odd || 2);
+    const hue = hashHue(item.questionTitle || item.authorPseudo);
+    const title = String(item.optionLabel || 'PRONO').slice(0, 28);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(${hue} 42% 16%)"/><stop offset="1" stop-color="#050705"/></linearGradient></defs><rect width="720" height="900" fill="url(#bg)"/><circle cx="560" cy="180" r="160" fill="hsl(${(hue + 70) % 360} 55% 28%)" opacity=".35"/><text x="48" y="120" fill="#b7ff00" font-family="Arial Black,Impact,sans-serif" font-size="28">PASS50</text><text x="48" y="420" fill="#f6f8f4" font-family="Arial Black,Impact,sans-serif" font-size="54">${odd}</text><text x="48" y="470" fill="#9da79b" font-family="Arial,sans-serif" font-size="22" font-weight="700">COTE</text><text x="48" y="560" fill="#f6f8f4" font-family="Arial,sans-serif" font-size="34" font-weight="800">${title.replace(/[<>&]/g, '')}</text></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }
+
+  function statusCoverSrc(item) {
+    return String(item.coverPhoto || item.authorPhoto || '').trim() || statusCoverDataUri(item);
   }
 
   function demoFeed() {
@@ -235,11 +247,24 @@
     const item = state.statuses[state.diapoIndex];
     if (!item) return closeDiapo();
     markSeen(item.id);
-    $('#diapoAuthor').innerHTML = `${storyAvatarHtml(item)}<div>${esc(item.authorPseudo || 'Membre')}<small>Prono · ${esc(item.durationHours)} h</small></div>`;
+    const odd = fmtOdd(item.odd);
+    const payout = Math.round(Number(item.potentialPayout || (Number(item.stake || 100) * Number(item.odd || 0))) || 0);
+    const cover = $('#diapoCover');
+    if (cover) {
+      cover.src = statusCoverSrc(item);
+      cover.onerror = () => { cover.src = statusCoverDataUri(item); };
+    }
+    $('#diapoAuthor').innerHTML = `${storyAvatarHtml(item)}<div>${esc(item.authorPseudo || 'Membre')}<small>Statut prono · ${esc(item.durationHours)} h</small></div>`;
     $('#diapoQuestion').textContent = item.questionTitle || 'Pronostic';
     $('#diapoChoice').textContent = item.optionLabel || item.optionKey || '—';
-    $('#diapoLike').textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
-    $('#diapoMeta').textContent = 'Sans argent réel · sans abonnement';
+    const oddEl = $('#diapoOdd');
+    if (oddEl) oddEl.textContent = odd;
+    const oddInline = $('#diapoOddInline');
+    if (oddInline) oddInline.textContent = `@${odd}`;
+    const ret = $('#diapoReturn');
+    if (ret) ret.textContent = payout > 0 ? `Gain pot. ${payout} pts · mise ${item.stake || 100} · sans argent réel` : 'Sans argent réel';
+    const like = $('#diapoLike');
+    if (like) like.textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
     const bars = $('#diapoBars');
     bars.innerHTML = state.statuses.map((_, i) => {
       const cls = i < state.diapoIndex ? 'done' : i === state.diapoIndex ? 'active' : '';
@@ -247,7 +272,19 @@
     }).join('');
     renderStories();
     stopDiapoTimer();
-    state.diapoTimer = setTimeout(() => nextDiapo(), 5000);
+    state.diapoTimer = setTimeout(() => nextDiapo(), 6000);
+  }
+
+  function shareStatus(item) {
+    if (!item) return;
+    const odd = fmtOdd(item.odd);
+    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd !== '—' ? ` @${odd}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
+    const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`;
+    if (navigator.share) {
+      navigator.share({ title: 'Statut prono PASS50', text, url }).catch(() => {});
+      return;
+    }
+    navigator.clipboard?.writeText(`${text}\n${url}`).then(() => toast('Lien copié')).catch(() => toast(text));
   }
 
   function openDiapo(index = 0) {
@@ -376,6 +413,10 @@
       state.statuses = (items.length ? items : demoStatuses().map((s) => ({ ...s, sample: true }))).map((s) => ({
         ...s,
         authorPhoto: String(s.authorPhoto || '').trim() || syntheticPhoto(s.authorPseudo),
+        coverPhoto: String(s.coverPhoto || '').trim() || statusCoverDataUri(s),
+        odd: Number(s.odd) || 2,
+        stake: Number(s.stake) || 100,
+        potentialPayout: Number(s.potentialPayout) || Math.round((Number(s.stake) || 100) * (Number(s.odd) || 2)),
       }));
       renderStories();
     } catch (_) {
@@ -519,6 +560,7 @@
     $('#diapoNext')?.addEventListener('click', nextDiapo);
     $('#diapoClose')?.addEventListener('click', closeDiapo);
     $('#diapoLike')?.addEventListener('click', likeCurrentDiapo);
+    $('#diapoShare')?.addEventListener('click', () => shareStatus(state.statuses[state.diapoIndex]));
     document.addEventListener('keydown', (event) => {
       if (!$('#diapo')?.classList.contains('show')) return;
       if (event.key === 'Escape') closeDiapo();
