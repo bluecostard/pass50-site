@@ -112,3 +112,5 @@ json_response([
     'run'=>$lastRun?['runUuid'=>(string)$lastRun['run_uuid'],'contentsConsidered'=>(int)$lastRun['contents_considered'],'rowsWritten'=>(int)$lastRun['rows_written'],'finishedAt'=>gmdate('c',strtotime((string)$lastRun['finished_at'].' UTC'))]:null,
     'generatedAt'=>gmdate('c'),
 ]);
+
+// Marqueur temporaire de diagnostic Apoutchou — branche non fusionnée.
