@@ -4,6 +4,7 @@ declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/metrics-ranking-core.php';
+require __DIR__.'/metrics-ranking-fresh-capture-core.php';
 require __DIR__.'/metrics-ranking-readiness-core.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -41,6 +42,7 @@ try{
     $response=[
         'ok'=>true,'skipped'=>false,'dispatchId'=>$dispatchId,
         'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'periods'=>array_keys(p50_mr_periods()),
+        'freshCaptureGateVersion'=>P50_MR_FRESH_CAPTURE_GATE_VERSION,
         'readiness'=>$readiness,
     ];
     if(empty($readiness['ready'])){
@@ -50,8 +52,11 @@ try{
         json_response($response);
     }
 
-    $result=p50_mr_calculate_if_due($pdo,$now,90,$dispatchId);
+    $result=p50_mr_calculate_if_due_with_fresh_captures($pdo,$now,90,$dispatchId);
     $response['skipped']=(bool)($result['skipped']??false);
+    $response['freshCaptureOverride']=(bool)($result['freshCaptureOverride']??false);
+    if(isset($result['latestPreviousFinishedAt']))$response['latestPreviousFinishedAt']=$result['latestPreviousFinishedAt'];
+    if(isset($result['latestUsableCaptureAt']))$response['latestUsableCaptureAt']=$result['latestUsableCaptureAt'];
     if($response['skipped']){
         $response['reason']=(string)($result['reason']??'recent_success');
         $response['latestFinishedAt']=$result['latestFinishedAt']??null;

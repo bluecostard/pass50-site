@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = (ROOT / "api/metrics-ranking-core.php").read_text(encoding="utf-8")
+FRESH_GATE = (ROOT / "api/metrics-ranking-fresh-capture-core.php").read_text(encoding="utf-8")
 ENDPOINT = (ROOT / "api/metrics-ranking-cron.php").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github" / "workflows" / "metrics-ranking-experimental.yml").read_text(encoding="utf-8")
 VALIDATE = (ROOT / ".github" / "workflows" / "validate-metrics-ranking-experimental-v1.yml").read_text(encoding="utf-8")
@@ -46,10 +47,13 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn("/^[A-Za-z0-9._-]+$/", ENDPOINT)
         self.assertIn("$now=new DateTimeImmutable('now',new DateTimeZone('UTC'))", ENDPOINT)
         self.assertIn("p50_mrr_readiness($pdo,$now)", ENDPOINT)
-        self.assertRegex(ENDPOINT, r"p50_mr_calculate_if_due\(\$pdo,\$now,90,\$dispatchId\)")
+        self.assertIn("metrics-ranking-fresh-capture-core.php", ENDPOINT)
+        self.assertRegex(ENDPOINT, r"p50_mr_calculate_if_due_with_fresh_captures\(\$pdo,\$now,90,\$dispatchId\)")
+        self.assertNotRegex(ENDPOINT, r"(?<!with_fresh_captures)p50_mr_calculate_if_due\(\$pdo,\$now,90,\$dispatchId\)")
 
     def test_due_policy_uses_only_successful_finished_runs(self):
         due = php_function(CORE, "p50_mr_calculate_if_due")
+        fresh_due = php_function(FRESH_GATE, "p50_mr_calculate_if_due_with_fresh_captures")
         self.assertIn("$minimumMinutes=max(60,min(240,$minimumMinutes))", due)
         self.assertIn("algorithm_version=? AND status='success'", due)
         self.assertIn("finished_at IS NOT NULL", due)
@@ -57,6 +61,10 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
         self.assertIn("'skipped'=>true,'reason'=>'recent_success'", due)
         self.assertIn("array_keys(p50_mr_periods())", due)
         self.assertIn("'cron_2h'", due)
+        self.assertIn("quality_status='usable'", FRESH_GATE)
+        self.assertIn("confidence>=70", FRESH_GATE)
+        self.assertIn("p50_mr_latest_usable_capture_after", fresh_due)
+        self.assertIn("'freshCaptureOverride'=>true", fresh_due)
 
         now = datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc)
         self.assertFalse(simulated_due([{"status": "success", "finished_at": now - timedelta(minutes=30)}], now, 90))
@@ -116,7 +124,7 @@ class MetricsRankingScheduleV1Tests(unittest.TestCase):
             self.assertIn(field, WORKFLOW)
 
     def test_no_public_state_or_publication_path_is_added(self):
-        combined = CORE + ENDPOINT + WORKFLOW
+        combined = CORE + FRESH_GATE + ENDPOINT + WORKFLOW
         for forbidden in (
             "UPDATE app_state",
             "INSERT INTO app_state",
