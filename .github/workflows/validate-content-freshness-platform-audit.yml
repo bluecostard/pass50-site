@@ -1,4 +1,4 @@
-name: Validate Content Freshness Platform Audit V2
+name: Validate Content Freshness Platform Audit V2.1
 
 on:
   pull_request:
@@ -32,9 +32,13 @@ jobs:
         run: python3 -m unittest tests.test_content_freshness_platform_audit -v
       - name: Workflow safety markers
         run: |
-          grep -q 'CONTENT-PLATFORM-AUDIT-V2.0' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'CONTENT-PLATFORM-AUDIT-V2.1' api/content-freshness-platform-audit-cron-v2.php
+          ! grep -q 'CONTENT-PLATFORM-AUDIT-V2.0' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'CONTENT-FRESHNESS-V3.2' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'P50_CONTENT_FRESHNESS_BUCKET_MINUTES=5' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'ORDER BY s.confidence DESC,s.profile_id ASC LIMIT 1' api/content-freshness-platform-audit-cron-v2.php
+          ! grep -q 'ORDER BY s.confidence DESC,s.id' api/content-freshness-platform-audit-cron-v2.php
+          grep -q 'array_replace.*verified_source_missing' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'p50_cpa2_x_health' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'authorizedOauthProfiles' api/content-freshness-platform-audit-cron-v2.php
           grep -q 'youtubeSharePercent' api/content-freshness-platform-audit-cron-v2.php
