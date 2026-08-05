@@ -152,11 +152,7 @@ jobs:
           source="$(jq -r '.[0].url // ""' apoutchou-facebook.json)"
           item_type="$(jq -r '.[0].itemType // "unknown"' apoutchou-facebook.json)"
           [ -n "$source" ] || { echo '::error::URL Facebook d’Apoutchou absente'; exit 1; }
-          encoded="$(python3 - "$source" <<'PY'
-import sys, urllib.parse
-print(urllib.parse.quote(sys.argv[1], safe=''))
-PY
-)"
+          encoded="$(jq -rn --arg u "$source" '$u|@uri')"
           post_body='apoutchou-facebook-post.html'
           post_code="$(curl --location --silent --show-error --max-time 40 --output "$post_body" --write-out '%{http_code}' -H 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.8' \
             "https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=820" || true)"
