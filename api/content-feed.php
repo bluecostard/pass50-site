@@ -13,9 +13,10 @@ $newsLimit=max(1,min(30,(int)($_GET['newsLimit']??12)));
 $trendMaxAgeHours=['2h'=>24,'24h'=>72,'48h'=>120,'7d'=>240,'15d'=>384][$period];
 $trendFreshSince=gmdate('Y-m-d H:i:s',time()-$trendMaxAgeHours*3600);
 
-function p50_content_feed_facebook_playable(string $platform,string $contentType): bool {
-    return strcasecmp(trim($platform),'Facebook')===0
-        && in_array(strtolower(trim($contentType)),['video','reel','live'],true);
+function p50_content_feed_facebook_playable(string $platform,string $contentType,string $url=''): bool {
+    if(strcasecmp(trim($platform),'Facebook')!==0)return false;
+    if(in_array(strtolower(trim($contentType)),['video','reel','live'],true))return true;
+    return preg_match('~(?:facebook\.com/(?:watch/?|reel/|share/(?:v|r)/)|facebook\.com/[^/]+/videos/|fb\.watch/)~i',trim($url))===1;
 }
 
 $pdo=db();
@@ -60,7 +61,7 @@ foreach($trendStmt->fetchAll() as $row){
         'followers'=>$row['follower_count']===null?null:(int)$row['follower_count'],'clusterPlatformCount'=>(int)$row['cluster_platform_count'],
         'calculatedAt'=>gmdate('c',strtotime((string)$row['calculated_at'].' UTC')),
         'readableInPass50'=>strcasecmp((string)$row['platform'],'Facebook')===0,
-        'playableInPass50'=>p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['content_type']),
+        'playableInPass50'=>p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['content_type'],(string)$row['canonical_url']),
     ];
     $perProfile[$pid]=($perProfile[$pid]??0)+1;
     if(count($trends)>=5)break;
@@ -94,7 +95,7 @@ if($profileId!==''){
             'trendScore'=>$row['trend_score']===null?null:(float)$row['trend_score'],'trendBadge'=>$row['trend_badge']?:null,
             'trendRank'=>$row['trend_rank']===null?null:(int)$row['trend_rank'],
             'readableInPass50'=>strcasecmp((string)$row['platform'],'Facebook')===0,
-            'playableInPass50'=>p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['item_type']),
+            'playableInPass50'=>p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['item_type'],(string)$row['canonical_url']),
         ];
     }
 }
