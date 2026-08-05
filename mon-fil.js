@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.5';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.6';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -414,12 +414,12 @@
       return;
     }
     if (!state.following.length && !state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Votre fil d’actualités est vide.</strong>Suis jusqu’à 5 influenceurs. Les pronos de la communauté restent au-dessus en diapo.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./pronostics.html">Ouvrir Pronostics</a><a class="btn" href="./">Voir le classement</a></div></div>';
+      list.innerHTML = '<div class="empty"><strong>Votre fil d’actualités est vide.</strong>Suis jusqu’à 5 influenceurs. Les statuts prono de la communauté restent au-dessus.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./pronostics.html">Ouvrir Pronostics</a><a class="btn" href="./">Voir le classement</a></div></div>';
       end.classList.add('hidden');
       return;
     }
     if (!state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>Les pronos de la communauté sont dans la diapo au-dessus.<div style="margin-top:13px"><a class="btn primary" href="./pronostics.html">Voir les Pronostics</a></div></div>';
+      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>Les statuts prono de la communauté sont au-dessus.<div style="margin-top:13px"><a class="btn primary" href="./pronostics.html">Voir les Pronostics</a></div></div>';
       end.classList.remove('hidden');
       return;
     }

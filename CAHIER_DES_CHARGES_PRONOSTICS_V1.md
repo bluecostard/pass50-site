@@ -39,7 +39,7 @@ Le gain = **statut + accès réel**, pas de l’argent.
 - Compte utilisateur (déjà PASS50) obligatoire pour jouer
 - **Prono actu uniquement** (question éditoriale créée par l’admin)
 - Votes **sans limite** sur toutes les questions ouvertes
-- Durée de vote admin **2 / 3 / 7 j** + **date de mesure** séparée
+- Durée de vote admin **6 / 12 / 24 h** + **date de mesure** séparée
 - **Cotes** éditoriales (admin) + répartition des votes
 - Clôture, scoring points, streak
 - Solde points + historique
@@ -65,7 +65,7 @@ Une question publiée avec :
 - titre / contexte actu
 - FI concernée (optionnelle mais recommandée)
 - 2 à 4 réponses exclusives avec **cote** décimale
-- **durée de vote** fixe : **2 / 3 / 7 jours** → `closes_at`
+- **durée de vote** fixe : **6 / 12 / 24 heures** → `closes_at`
 - **date de mesure** séparée (`measure_at`) — quand on résout / paye
 - gain = **mise × cote** (cote figée au moment du vote)
 - **règle de résolution** (métrique + seuil)
@@ -134,7 +134,7 @@ Champs :
 - Contexte / actu (lien FI, news)
 - Options (2–4)
 - FI liée
-- Ouverture + durée vote (2/3/7 j) + date de mesure
+- Ouverture + durée vote (6/12/24 h) + date de mesure
 - Date de **mesure** (ex. J+7)
 - Métrique de résolution (voir §7)
 - Points si correct / partiel
@@ -237,7 +237,7 @@ Si user no-show (règle à définir avec FI) :
 
 ## 11. Données (schéma logique)
 
-- `p50_prono_questions` — question, options JSON, métrique, `opens_at` / `closes_at` (vote 2/3/7 j) / `measure_at`, statut
+- `p50_prono_questions` — question, options JSON, métrique, `opens_at` / `closes_at` (vote 6/12/24 h) / `measure_at`, statut
 - `p50_prono_votes` — user_id, question_id, option_key, created_at
 - `p50_prono_resolutions` — question_id, winning_option, evidence JSON, resolved_at
 - `p50_prono_points_ledger` — user_id, delta, reason, ref_id, created_at
@@ -260,7 +260,7 @@ Si user no-show (règle à définir avec FI) :
 | `POST prono-status-publish.php` | Publier statut 12/24/48 h |
 | `POST prono-status-like.php` | Like statut (+0,25 pt auteur) |
 | `GET prono-admin-list.php` | Liste admin |
-| `POST prono-admin-save.php` | Créer / éditer (durée 2/3/7 + measureAt) |
+| `POST prono-admin-save.php` | Créer / éditer (durée 6/12/24 h + measureAt) |
 | `POST prono-admin-resolve.php` | Clôturer et payer |
 
 **UI admin :** Espace user → Administration → carte / onglet **Pronostics** → `admin-pronostics.html` (créer questions, cotes `key|label|cote`, publier, résoudre).
@@ -321,7 +321,7 @@ Auth : user connecté pour jouer ; owner/admin pour admin.
 | 11 | Partage | Oui — partager son prono / résultat |
 | 12 | Commentaires | **Reporté** (texte éventuel plus tard ; pas d’audio en V1) |
 | 13 | **Voir les pronos des autres** | **Oui** — diapo type Stories, **sans s’abonner**. Même encadré, on enchaîne les statuts publics |
-| 14 | **Fenêtre de vote** | Durées fixes admin : **2 j / 3 j / 7 j** (à partir de l’ouverture) |
+| 14 | **Fenêtre de vote** | Durées fixes admin : **6 h / 12 h / 24 h** (à partir de l’ouverture) |
 | 15 | **Date de mesure** | Séparée de la clôture des votes — moment où on résout le prono (ex. maison finie dans 6 mois) |
 
 ### Dates d’un prono (validé)
@@ -331,7 +331,7 @@ Exemple : « Lo Père Daloa finit sa 2ᵉ maison dans 6 mois »
 | Concept | Rôle | Exemple |
 |---------|------|---------|
 | Ouverture | Début des votes | Aujourd’hui |
-| **Durée de vote** | Choix admin **2 / 3 / 7 jours** → calcule `closes_at` | 7 jours |
+| **Durée de vote** | Choix admin **6 / 12 / 24 heures** → calcule `closes_at` | 12 heures |
 | **Date de mesure** | Quand on vérifie le résultat / paye les points | +6 mois |
 | Statut user | 12 / 24 / 48 h (indépendant) | Après publication |
 

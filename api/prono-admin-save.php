@@ -21,7 +21,12 @@ $status = trim((string)($input['status'] ?? 'draft'));
 $opensAt = trim((string)($input['opensAt'] ?? ''));
 $closesAt = trim((string)($input['closesAt'] ?? ''));
 $measureAt = trim((string)($input['measureAt'] ?? ''));
-$voteDays = (int)($input['voteDurationDays'] ?? 0);
+$voteHours = (int)($input['voteDurationHours'] ?? 0);
+// Compat ancienne API jours → heures (2j→48h max hors grille ; on force la grille courte)
+if ($voteHours <= 0 && isset($input['voteDurationDays'])) {
+    $legacyDays = (int)$input['voteDurationDays'];
+    $voteHours = $legacyDays === 2 ? 12 : ($legacyDays === 3 ? 24 : ($legacyDays === 7 ? 24 : 0));
+}
 $pointsCorrect = max(1, (int)($input['pointsCorrect'] ?? P50_PRONO_POINTS_CORRECT));
 
 if ($title === '' || count($options) < 2) {
@@ -37,12 +42,12 @@ if (!in_array($metricType, ['manual', 'followers_delta', 'rank_position', 'rank_
 $now = p50_prono_now();
 $opens = $opensAt !== '' ? new DateTimeImmutable($opensAt, new DateTimeZone('UTC')) : $now;
 
-if (in_array($voteDays, [2, 3, 7], true)) {
-    $closes = $opens->modify('+' . $voteDays . ' days');
+if (in_array($voteHours, P50_PRONO_VOTE_HOURS, true)) {
+    $closes = $opens->modify('+' . $voteHours . ' hours');
 } elseif ($closesAt !== '') {
     $closes = new DateTimeImmutable($closesAt, new DateTimeZone('UTC'));
 } else {
-    json_response(['error' => 'Durée de vote requise : 2, 3 ou 7 jours.'], 400);
+    json_response(['error' => 'Durée de vote requise : 6, 12 ou 24 heures.'], 400);
 }
 
 if ($closes <= $opens) {

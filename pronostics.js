@@ -55,7 +55,7 @@
   }
 
   function demoFeed() {
-    const closes3 = new Date(Date.now() + 3 * 86400000).toISOString();
+    const closes12 = new Date(Date.now() + 12 * 3600000).toISOString();
     const measureFar = new Date(Date.now() + 180 * 86400000).toISOString();
     return {
       auth: true,
@@ -72,7 +72,7 @@
             { key: 'c', label: 'moins de 250 000', odd: 1.65, payout: 165, votePercent: 41, voteCount: 21 },
           ],
           totalVotes: 51,
-          closesAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+          closesAt: new Date(Date.now() + 6 * 3600000).toISOString(),
           measureAt: new Date(Date.now() + 7 * 86400000).toISOString(),
           pointsCorrect: 100,
           myVote: null,
@@ -87,7 +87,7 @@
             { key: 'no', label: 'Non, hors Top 3', odd: 2.05, payout: 205, votePercent: 38, voteCount: 19 },
           ],
           totalVotes: 50,
-          closesAt: new Date(Date.now() + 2 * 86400000).toISOString(),
+          closesAt: new Date(Date.now() + 24 * 3600000).toISOString(),
           measureAt: new Date(Date.now() + 2 * 86400000).toISOString(),
           pointsCorrect: 100,
           myVote: { optionKey: 'yes', oddLocked: 1.85, potentialPayout: 185 },
@@ -95,14 +95,14 @@
         {
           id: 'demo-3',
           title: 'Lo Père Daloa finit-il sa 2ᵉ maison dans 6 mois ?',
-          context: 'Votes ouverts 3 jours — mesure dans 6 mois.',
+          context: 'Votes ouverts 12 h — mesure dans 6 mois.',
           stake: 100,
           options: [
             { key: 'y', label: 'Oui', odd: 1.55, payout: 155, votePercent: 0, voteCount: 0 },
             { key: 'n', label: 'Non', odd: 2.45, payout: 245, votePercent: 0, voteCount: 0 },
           ],
           totalVotes: 0,
-          closesAt: closes3,
+          closesAt: closes12,
           measureAt: measureFar,
           pointsCorrect: 100,
           myVote: null,
@@ -335,7 +335,7 @@
       return;
     }
     if (!state.items.length) {
-      list.innerHTML = '<div class="empty"><strong>Aucun prono ouvert</strong><div>Reviens bientôt — PASS50 publie les questions sur l’actu.</div></div>';
+      list.innerHTML = '<div class="empty"><strong>Aucun prono ouvert</strong><div>Reviens bientôt — PASS50 publie Qui fait quoi sur l’actu.</div></div>';
       return;
     }
     list.innerHTML = state.items.map(card).join('');
