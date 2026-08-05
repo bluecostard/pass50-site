@@ -1,0 +1,42 @@
+name: Validate Content Freshness Runtime V3
+
+on:
+  pull_request:
+    paths:
+      - 'api/content-freshness-cron-v3.php'
+      - '.github/workflows/content-freshness-5m.yml'
+      - 'tests/test_content_freshness_runtime_v3.py'
+      - '.github/workflows/validate-content-freshness-runtime-v3.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/content-freshness-cron-v3.php'
+      - '.github/workflows/content-freshness-5m.yml'
+      - 'tests/test_content_freshness_runtime_v3.py'
+      - '.github/workflows/validate-content-freshness-runtime-v3.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: php -l api/content-freshness-cron-v3.php
+      - name: Runtime V3 contract
+        run: python3 -m unittest tests.test_content_freshness_runtime_v3 -v
+      - name: Workflow markers
+        run: |
+          grep -q 'CONTENT-FRESHNESS-V3.0' api/content-freshness-cron-v3.php
+          grep -q 'P50_CONTENT_FRESHNESS_V3_BUCKET_SECONDS=300' api/content-freshness-cron-v3.php
+          grep -q 'content-freshness-cron-v3.php' .github/workflows/content-freshness-5m.yml
+          grep -q "cron: '\*/5 \* \* \* \*'" .github/workflows/content-freshness-5m.yml
+          ! grep -q 'CONTENT-FRESHNESS-V2.0' .github/workflows/content-freshness-5m.yml
+          ! grep -q 'UPDATE app_state' api/content-freshness-cron-v3.php
+      - name: Diff safety
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
