@@ -103,3 +103,5 @@
   loadScript('script[data-pass50-mobile-modal-video-progress]','./mobile-modal-video-progress-v1.js?v=1.0','pass50MobileModalVideoProgress','1.0',false);
   loadScript('script[data-pass50-facebook-video-player]','./facebook-video-player-v1.js?v=1.1','pass50FacebookVideoPlayer','1.1',false);
 })();
+
+// Vérification temporaire de la production Apoutchou V1.1 — branche non fusionnée.
