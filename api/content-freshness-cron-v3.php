@@ -5,10 +5,11 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-queue-core.php';
 require __DIR__.'/content-intelligence-core.php';
 
-const P50_CONTENT_FRESHNESS_V3_VERSION='CONTENT-FRESHNESS-V3.1';
+const P50_CONTENT_FRESHNESS_V3_VERSION='CONTENT-FRESHNESS-V3.2';
 const P50_CONTENT_FRESHNESS_V3_BUCKET_SECONDS=300;
 const P50_CONTENT_FRESHNESS_V3_PROFILE_LIMIT=8;
 const P50_CONTENT_FRESHNESS_V3_JOB_LIMIT=16;
+const P50_CONTENT_FRESHNESS_V3_TIKTOK_OAUTH_LIMIT=4;
 
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
@@ -70,6 +71,21 @@ function p50_cf3_ranked_profiles(PDO $pdo,int $limit=70): array {
     $stmt=$pdo->prepare("SELECT profile_id,9999 rank_position,NULL latest_content FROM p50_profile_registry WHERE alive=1 ORDER BY profile_id LIMIT ?");
     $stmt->bindValue(1,$limit,PDO::PARAM_INT);$stmt->execute();return $stmt->fetchAll();
 }
+
+function p50_cf3_prioritize_tiktok_oauth(PDO $pdo,array $ranked,int $limit=P50_CONTENT_FRESHNESS_V3_TIKTOK_OAUTH_LIMIT): array {
+    if(!function_exists('p50tm_authorized_profile_ids'))return ['rows'=>$ranked,'count'=>0];
+    $authorized=array_slice(array_values(array_unique(array_filter(array_map('strval',p50tm_authorized_profile_ids($pdo))))),0,max(0,$limit));
+    if(!$authorized)return ['rows'=>$ranked,'count'=>0];
+    $byId=[];foreach($ranked as $row){$id=trim((string)($row['profile_id']??''));if($id!=='')$byId[$id]=$row;}
+    $priority=[];
+    foreach($authorized as $id){
+        $priority[]=$byId[$id]??['profile_id'=>$id,'rank_position'=>0,'latest_content'=>null];
+        unset($byId[$id]);
+    }
+    $remaining=[];foreach($ranked as $row){$id=trim((string)($row['profile_id']??''));if($id!==''&&isset($byId[$id])){$remaining[]=$row;unset($byId[$id]);}}
+    return ['rows'=>array_merge($priority,$remaining),'count'=>count($priority)];
+}
+
 function p50_cf3_platform_counter(array &$counter,string $platform,string $key,int $increment=1): void {
     if(!isset($counter[$platform]))$counter[$platform]=[];
     $counter[$platform][$key]=(int)($counter[$platform][$key]??0)+$increment;
@@ -120,7 +136,7 @@ function p50_cf3_enqueue(PDO $pdo,array $row,string $dispatchId,int $now): array
 set_time_limit(280);$started=microtime(true);$stage='bootstrap';
 try{
     $pdo=db();p50_metrics_ensure_schema($pdo);p50_metrics_recover_stale_jobs($pdo);
-    $stage='selection';$ranked=p50_cf3_ranked_profiles($pdo,70);$access=p50_cf3_authorized_rows($pdo,$ranked);$selection=p50_cf3_select($ranked,$access['rows']);
+    $stage='selection';$priority=p50_cf3_prioritize_tiktok_oauth($pdo,p50_cf3_ranked_profiles($pdo,70));$ranked=$priority['rows'];$access=p50_cf3_authorized_rows($pdo,$ranked);$selection=p50_cf3_select($ranked,$access['rows']);
     $stage='enqueue';$enqueued=0;$duplicates=0;$enqueueByPlatform=[];$now=time();
     foreach($selection['jobs'] as $row){$job=p50_cf3_enqueue($pdo,$row,$dispatchId,$now);$platform=(string)$row['platform'];if(!empty($job['created'])){$enqueued++;p50_cf3_platform_counter($enqueueByPlatform,$platform,'enqueued');}else{$duplicates++;p50_cf3_platform_counter($enqueueByPlatform,$platform,'duplicates');}}
     $stage='work';$processed=0;$completed=0;$partial=0;$failed=0;$retried=0;$skipped=0;$processedByPlatform=[];
@@ -133,7 +149,7 @@ try{
     }
     $stage='content_intelligence';$refresh=p50_ci_refresh($pdo);$remaining=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=5 AND status IN ('pending','running','retry_wait')");
     ksort($enqueueByPlatform,SORT_NATURAL|SORT_FLAG_CASE);ksort($processedByPlatform,SORT_NATURAL|SORT_FLAG_CASE);
-    json_response(['ok'=>true,'action'=>'refresh','version'=>P50_CONTENT_FRESHNESS_V3_VERSION,'dispatchId'=>$dispatchId,'bucketSeconds'=>P50_CONTENT_FRESHNESS_V3_BUCKET_SECONDS,'profilesScanned'=>count($ranked),'profilesSelected'=>count($selection['profiles']),'candidateLinks'=>(int)$access['summary']['verified'],'authorizedLinks'=>(int)$access['summary']['authorized'],'accessSummary'=>$access['summary'],'accessByPlatform'=>$access['byPlatform'],'selectedByPlatform'=>$selection['platforms'],'enqueueByPlatform'=>$enqueueByPlatform,'processedByPlatform'=>$processedByPlatform,'enqueued'=>$enqueued,'duplicates'=>$duplicates,'processed'=>$processed,'completed'=>$completed,'partial'=>$partial,'retried'=>$retried,'failed'=>$failed,'skipped'=>$skipped,'remaining'=>$remaining,'contentIntelligence'=>$refresh,'stage'=>'complete','durationMs'=>(int)round((microtime(true)-$started)*1000),'publicStateWrites'=>0]);
+    json_response(['ok'=>true,'action'=>'refresh','version'=>P50_CONTENT_FRESHNESS_V3_VERSION,'dispatchId'=>$dispatchId,'bucketSeconds'=>P50_CONTENT_FRESHNESS_V3_BUCKET_SECONDS,'profilesScanned'=>count($ranked),'profilesSelected'=>count($selection['profiles']),'tiktokOauthProfilesPrioritized'=>(int)$priority['count'],'candidateLinks'=>(int)$access['summary']['verified'],'authorizedLinks'=>(int)$access['summary']['authorized'],'accessSummary'=>$access['summary'],'accessByPlatform'=>$access['byPlatform'],'selectedByPlatform'=>$selection['platforms'],'enqueueByPlatform'=>$enqueueByPlatform,'processedByPlatform'=>$processedByPlatform,'enqueued'=>$enqueued,'duplicates'=>$duplicates,'processed'=>$processed,'completed'=>$completed,'partial'=>$partial,'retried'=>$retried,'failed'=>$failed,'skipped'=>$skipped,'remaining'=>$remaining,'contentIntelligence'=>$refresh,'stage'=>'complete','durationMs'=>(int)round((microtime(true)-$started)*1000),'publicStateWrites'=>0]);
 }catch(Throwable $error){
     $detail=p50_metrics_safe_error($error->getMessage());error_log('PASS50 content freshness V3 ['.$stage.']: '.$detail);
     json_response(['error'=>'Rafraîchissement rapide des contenus interrompu.','errorCode'=>'content_freshness_'.$stage,'detail'=>$detail,'stage'=>$stage,'dispatchId'=>$dispatchId,'version'=>P50_CONTENT_FRESHNESS_V3_VERSION,'publicStateWrites'=>0,'durationMs'=>(int)round((microtime(true)-$started)*1000)],500);
