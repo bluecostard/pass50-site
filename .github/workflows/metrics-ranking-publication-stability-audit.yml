@@ -138,6 +138,11 @@ jobs:
           warn_threshold="$(jq -r '.thresholds.candidateVolatilityWarnPercent // 0' "$response_file")"
           block_threshold="$(jq -r '.thresholds.candidateVolatilityBlockPercent // 0' "$response_file")"
           max_age="$(jq -r '.thresholds.maximumLatestAgeHours // 0' "$response_file")"
+          p2h_state="$(jq -r '.periods["2H"].state // "absent"' "$response_file")"
+          p24h_state="$(jq -r '.periods["24H"].state // "absent"' "$response_file")"
+          p48h_state="$(jq -r '.periods["48H"].state // "absent"' "$response_file")"
+          p7j_state="$(jq -r '.periods["7J"].state // "absent"' "$response_file")"
+          p15j_state="$(jq -r '.periods["15J"].state // "absent"' "$response_file")"
 
           {
             echo '### Stabilité des simulations MR-V1.0'
@@ -178,11 +183,11 @@ jobs:
 
           {
             printf 'overall=%s\n' "$overall"
-            for period in 2H 24H 48H 7J 15J; do
-              key="$(tr '[:upper:]' '[:lower:]' <<<"$period")"
-              state="$(jq -r --arg p "$period" '.periods[$p].state // "absent"' "$response_file")"
-              printf '%s_state=%s\n' "$key" "$state"
-            done
+            printf 'p2h_state=%s\n' "$p2h_state"
+            printf 'p24h_state=%s\n' "$p24h_state"
+            printf 'p48h_state=%s\n' "$p48h_state"
+            printf 'p7j_state=%s\n' "$p7j_state"
+            printf 'p15j_state=%s\n' "$p15j_state"
           } >> "$GITHUB_OUTPUT"
 
           {
@@ -198,10 +203,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           AUDIT_OUTCOME: ${{ steps.stability.outcome }}
           OVERALL: ${{ steps.stability.outputs.overall }}
-          P24H: ${{ steps.stability.outputs.24h_state }}
-          P48H: ${{ steps.stability.outputs.48h_state }}
-          P7J: ${{ steps.stability.outputs.7j_state }}
-          P15J: ${{ steps.stability.outputs.15j_state }}
+          P24H: ${{ steps.stability.outputs.p24h_state }}
+          P48H: ${{ steps.stability.outputs.p48h_state }}
+          P7J: ${{ steps.stability.outputs.p7j_state }}
+          P15J: ${{ steps.stability.outputs.p15j_state }}
         run: |
           set -euo pipefail
           state='success'
