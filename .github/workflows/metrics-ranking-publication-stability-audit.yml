@@ -1,0 +1,243 @@
+name: Metrics Ranking Publication Stability Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/metrics-ranking-publication-stability-audit-cron-v1.php'
+      - '.github/workflows/metrics-ranking-publication-stability-audit.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-metrics-ranking-publication-stability-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - name: Wait for stability audit endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Secrets métriques incomplets."
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              AUDIT_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-stability-audit-cron-v1.php"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
+              exit 1
+              ;;
+          esac
+          ready=false
+          for attempt in $(seq 1 30); do
+            code="$(curl --location --silent --show-error --max-time 15 \
+              --output /dev/null --write-out '%{http_code}' \
+              -H 'Cache-Control: no-cache, no-store' \
+              "$AUDIT_URL?contract=MR-STABILITY-AUDIT-V1.0&attempt=$attempt" || true)"
+            if [ "$code" = '405' ]; then ready=true; break; fi
+            echo "Endpoint de stabilité en attente ($attempt/30, HTTP ${code:-000})."
+            sleep 10
+          done
+          if [ "$ready" != 'true' ]; then
+            echo "::error::L’endpoint de stabilité n’est pas servi après cinq minutes."
+            exit 1
+          fi
+
+      - name: Probe stability contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CRON_URL" in
+            */metrics-cron.php) AUDIT_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-stability-audit-cron-v1.php" ;;
+            *) exit 1 ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-stability-probe"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
+          timestamp="$(date +%s)"
+          signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+          curl --fail-with-body --silent --show-error --max-time 55 \
+            -H 'Content-Type: application/json' \
+            -H "X-P50-Timestamp: $timestamp" \
+            -H "X-P50-Signature: $signature" \
+            --data "$body" "$AUDIT_URL" > publication-stability-probe.json
+          jq -e '
+            .ok == true and
+            .action == "probe" and
+            .contract == "MR-STABILITY-AUDIT-V1.0" and
+            .readOnly == true and
+            .advisoryOnly == true and
+            .authorizesPublication == false and
+            .publicStateWrites == 0
+          ' publication-stability-probe.json >/dev/null
+
+      - name: Audit recent simulation stability
+        id: stability
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CRON_URL" in
+            */metrics-cron.php) AUDIT_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-stability-audit-cron-v1.php" ;;
+            *) exit 1 ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-stability-audit"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"audit",dispatchId:$dispatchId}')"
+          response_file='publication-stability-audit.json'
+          http_code='000'
+          for attempt in $(seq 1 5); do
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            set +e
+            http_code="$(curl --silent --show-error --max-time 90 \
+              --output "$response_file" --write-out '%{http_code}' \
+              -H 'Content-Type: application/json' \
+              -H "X-P50-Timestamp: $timestamp" \
+              -H "X-P50-Signature: $signature" \
+              --data "$body" "$AUDIT_URL")"
+            curl_status=$?
+            set -e
+            if [ "$curl_status" -eq 0 ] && [ "$http_code" = '200' ]; then break; fi
+            if [ "$attempt" -lt 5 ] && { [ "$http_code" = '000' ] || [ "$http_code" = '502' ] || [ "$http_code" = '503' ] || [ "$http_code" = '504' ]; }; then
+              echo "IONOS temporairement indisponible (HTTP ${http_code:-000}), tentative $attempt/5."
+              sleep 15
+              continue
+            fi
+            echo "::error::Audit de stabilité refusé (curl $curl_status, HTTP ${http_code:-000})."
+            cat "$response_file" 2>/dev/null || true
+            exit 1
+          done
+          if [ "$http_code" != '200' ]; then
+            echo "::error::Audit de stabilité indisponible après les tentatives."
+            exit 1
+          fi
+          jq -e '
+            .ok == true and
+            .action == "audit" and
+            .contract == "MR-STABILITY-AUDIT-V1.0" and
+            .readOnly == true and
+            .advisoryOnly == true and
+            .authorizesPublication == false and
+            .publicStateWrites == 0 and
+            (.periods | type == "object")
+          ' "$response_file" >/dev/null
+
+          overall="$(jq -r '.overallState // "unknown"' "$response_file")"
+          warn_threshold="$(jq -r '.thresholds.candidateVolatilityWarnPercent // 0' "$response_file")"
+          block_threshold="$(jq -r '.thresholds.candidateVolatilityBlockPercent // 0' "$response_file")"
+          max_age="$(jq -r '.thresholds.maximumLatestAgeHours // 0' "$response_file")"
+          p2h_state="$(jq -r '.periods["2H"].state // "absent"' "$response_file")"
+          p24h_state="$(jq -r '.periods["24H"].state // "absent"' "$response_file")"
+          p48h_state="$(jq -r '.periods["48H"].state // "absent"' "$response_file")"
+          p7j_state="$(jq -r '.periods["7J"].state // "absent"' "$response_file")"
+          p15j_state="$(jq -r '.periods["15J"].state // "absent"' "$response_file")"
+
+          {
+            echo '### Stabilité des simulations MR-V1.0'
+            printf -- '- État global : `%s`\n' "$overall"
+            printf -- '- Seuil volatilité avertissement / blocage : %s%% / %s%%\n' "$warn_threshold" "$block_threshold"
+            printf -- '- Âge maximal du dernier rapport : %s h\n' "$max_age"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for period in 2H 24H 48H 7J 15J; do
+            state="$(jq -r --arg p "$period" '.periods[$p].state // "absent"' "$response_file")"
+            sample="$(jq -r --arg p "$period" '.periods[$p].sampleSize // 0' "$response_file")"
+            runs="$(jq -r --arg p "$period" '.periods[$p].distinctRunCount // 0' "$response_file")"
+            latest_age="$(jq -r --arg p "$period" '.periods[$p].latestAgeHours // "—"' "$response_file")"
+            latest_status="$(jq -r --arg p "$period" '.periods[$p].latestStatus // "none"' "$response_file")"
+            public_count="$(jq -r --arg p "$period" '.periods[$p].latestPublicCount // 0' "$response_file")"
+            candidate_count="$(jq -r --arg p "$period" '.periods[$p].latestCandidateCount // 0' "$response_file")"
+            delta="$(jq -r --arg p "$period" '.periods[$p].latestCandidateDelta // "—"' "$response_file")"
+            minimum="$(jq -r --arg p "$period" '.periods[$p].candidateSeries.minimum // "—"' "$response_file")"
+            maximum="$(jq -r --arg p "$period" '.periods[$p].candidateSeries.maximum // "—"' "$response_file")"
+            median="$(jq -r --arg p "$period" '.periods[$p].candidateSeries.median // "—"' "$response_file")"
+            volatility="$(jq -r --arg p "$period" '.periods[$p].candidateSeries.volatilityPercent // "—"' "$response_file")"
+            ready="$(jq -r --arg p "$period" '.periods[$p].statusCounts.ready // 0' "$response_file")"
+            review="$(jq -r --arg p "$period" '.periods[$p].statusCounts.review // 0' "$response_file")"
+            blocked="$(jq -r --arg p "$period" '.periods[$p].statusCounts.blocked // 0' "$response_file")"
+            baseline="$(jq -r --arg p "$period" '.periods[$p].publicBaseline.stable // false' "$response_file")"
+            writes="$(jq -r --arg p "$period" '.periods[$p].writeAnomalies // 0' "$response_file")"
+            {
+              printf '\n#### %s\n' "$period"
+              printf -- '- État : `%s` · échantillon %s · runs distincts %s\n' "$state" "$sample" "$runs"
+              printf -- '- Dernier rapport : `%s` · âge %s h\n' "$latest_status" "$latest_age"
+              printf -- '- Public / candidat / variation récente : %s / %s / %s\n' "$public_count" "$candidate_count" "$delta"
+              printf -- '- Candidats min / médiane / max : %s / %s / %s\n' "$minimum" "$median" "$maximum"
+              printf -- '- Volatilité candidats : %s%%\n' "$volatility"
+              printf -- '- Cycles prêts / revue / bloqués : %s / %s / %s\n' "$ready" "$review" "$blocked"
+              printf -- '- Base publique stable : `%s` · anomalies d’écriture : %s\n' "$baseline" "$writes"
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          {
+            printf 'overall=%s\n' "$overall"
+            printf 'p2h_state=%s\n' "$p2h_state"
+            printf 'p24h_state=%s\n' "$p24h_state"
+            printf 'p48h_state=%s\n' "$p48h_state"
+            printf 'p7j_state=%s\n' "$p7j_state"
+            printf 'p15j_state=%s\n' "$p15j_state"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo '\n- Cet audit est consultatif et n’autorise aucune publication.'
+            echo '- Profils individuels et empreintes exposés : `non`'
+            echo '- Écriture app_state : `0`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish sanitized stability status
+        if: ${{ always() }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUDIT_OUTCOME: ${{ steps.stability.outcome }}
+          OVERALL: ${{ steps.stability.outputs.overall }}
+          P24H: ${{ steps.stability.outputs.p24h_state }}
+          P48H: ${{ steps.stability.outputs.p48h_state }}
+          P7J: ${{ steps.stability.outputs.p7j_state }}
+          P15J: ${{ steps.stability.outputs.p15j_state }}
+        run: |
+          set -euo pipefail
+          state='success'
+          description="stabilité ${OVERALL:-unknown} · 24H ${P24H:-?} · 48H ${P48H:-?} · 7J ${P7J:-?} · app_state 0"
+          if [ "${AUDIT_OUTCOME:-failure}" != 'success' ]; then
+            state='failure'
+            description='audit stabilité interrompu · app_state inchangé'
+          elif [ "${OVERALL:-blocked}" != 'stable' ]; then
+            state='pending'
+          fi
+          payload="$(jq -nc \
+            --arg state "$state" \
+            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg description "$description" \
+            --arg context 'pass50/publication-stability-audit' \
+            '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archive stability audit
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-stability-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            publication-stability-probe.json
+            publication-stability-audit.json
+          if-no-files-found: ignore
+          retention-days: 30
