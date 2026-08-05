@@ -1,0 +1,182 @@
+name: Metrics Ranking Publication Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/metrics-ranking-publication-preview.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-metrics-ranking-publication-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - name: Probe publication configuration
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Secrets métriques incomplets."
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              PREVIEW_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
+              exit 1
+              ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-publication-probe"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
+          timestamp="$(date +%s)"
+          signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+          curl --fail-with-body --silent --show-error --max-time 55 \
+            -H 'Content-Type: application/json' \
+            -H "X-P50-Timestamp: $timestamp" \
+            -H "X-P50-Signature: $signature" \
+            --data "$body" "$PREVIEW_URL" > publication-probe.json
+          jq -e '.ok == true and .action == "probe" and .contract == "PUBAPPLY-V1.0"' publication-probe.json >/dev/null
+
+      - name: Preview controlled bootstrap without public write
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              PREVIEW_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"
+              ;;
+            *) exit 1 ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-publication-preview"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"preview",dispatchId:$dispatchId}')"
+          timestamp="$(date +%s)"
+          signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+          curl --fail-with-body --silent --show-error --max-time 120 \
+            -H 'Content-Type: application/json' \
+            -H "X-P50-Timestamp: $timestamp" \
+            -H "X-P50-Signature: $signature" \
+            --data "$body" "$PREVIEW_URL" > publication-preview.json
+          jq -e '.ok == true and .version == "PUBAPPLY-V1.0" and .algorithmVersion == "MR-V1.0"' publication-preview.json >/dev/null
+
+          status="$(jq -r '.status // "unknown"' publication-preview.json)"
+          bootstrap="$(jq -r '.bootstrap // false' publication-preview.json)"
+          publication_enabled="$(jq -r '.config.publicationEnabled // false' publication-preview.json)"
+          automatic_enabled="$(jq -r '.config.automaticPublicationEnabled // false' publication-preview.json)"
+          bootstrap_allowed="$(jq -r '.config.bootstrapAllowed // false' publication-preview.json)"
+          eligible="$(jq -r '.publicationEligible // false' publication-preview.json)"
+          automatic_eligible="$(jq -r '.automaticPublicationEligible // false' publication-preview.json)"
+          run_uuid="$(jq -r '.runUuid // "—"' publication-preview.json)"
+          periods="$(jq -r '(.periods // []) | join(", ")' publication-preview.json)"
+          all_periods="$(jq -r '(.allPeriods // []) | join(", ")' publication-preview.json)"
+          publishable="$(jq -r '(.summary.publishablePeriods // []) | join(", ")' publication-preview.json)"
+          skipped="$(jq -r '(.summary.skippedPeriods // []) | join(", ")' publication-preview.json)"
+          blocked="$(jq -r '(.summary.blockedPeriods // []) | join(", ")' publication-preview.json)"
+          mutations="$(jq -r '.summary.mutations // 0' publication-preview.json)"
+          entries="$(jq -r '.summary.entries // 0' publication-preview.json)"
+          exits="$(jq -r '.summary.exits // 0' publication-preview.json)"
+          reasons="$(jq -r '(.summary.reasons // []) | join(" ; ")' publication-preview.json)"
+          p24_status="$(jq -r '.plans["24H"].status // "absent"' publication-preview.json)"
+          p24_entries="$(jq -r '.plans["24H"].counts.entries // 0' publication-preview.json)"
+          p24_exits="$(jq -r '.plans["24H"].counts.exits // 0' publication-preview.json)"
+          p24_blocks="$(jq -r '(.plans["24H"].blockedGates // []) | join(", ")' publication-preview.json)"
+          p24_relaxed="$(jq '[.plans["24H"].report.gates[]? | select(.bootstrapRelaxed == true)] | length' publication-preview.json)"
+
+          {
+            echo '### Preview bootstrap MR-V1.0 → app_state'
+            printf -- '- État : `%s`\n' "$status"
+            printf -- '- Bootstrap détecté : `%s`\n' "$bootstrap"
+            printf -- '- Publication contrôlée activée : `%s`\n' "$publication_enabled"
+            printf -- '- Publication automatique activée : `%s`\n' "$automatic_enabled"
+            printf -- '- Bootstrap autorisé : `%s`\n' "$bootstrap_allowed"
+            printf -- '- Éligible à une publication contrôlée : `%s`\n' "$eligible"
+            printf -- '- Éligible à une publication automatique : `%s`\n' "$automatic_eligible"
+            printf -- '- runUuid : `%s`\n' "$run_uuid"
+            printf -- '- Périodes publiables : %s\n' "${periods:-—}"
+            printf -- '- Toutes les périodes évaluées : %s\n' "${all_periods:-—}"
+            printf -- '- Périodes publiables / ignorées / bloquées : %s / %s / %s\n' "${publishable:-—}" "${skipped:-—}" "${blocked:-—}"
+            printf -- '- Mutations / entrées / sorties : %s / %s / %s\n' "$mutations" "$entries" "$exits"
+            printf -- '- Plan 24H : `%s` · entrées %s · sorties %s · garde(s) bloquant(s) `%s`\n' "$p24_status" "$p24_entries" "$p24_exits" "${p24_blocks:-aucun}"
+            printf -- '- Garde-fous 24H assouplis par bootstrap : %s\n' "$p24_relaxed"
+            printf -- '- Raisons : %s\n' "${reasons:-aucune}"
+            echo '- Action exécutée : `preview` uniquement'
+            echo '- Confirmation envoyée : `non`'
+            echo '- Écriture app_state : `0`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            printf 'status=%s\n' "$status"
+            printf 'bootstrap=%s\n' "$bootstrap"
+            printf 'publication_enabled=%s\n' "$publication_enabled"
+            printf 'eligible=%s\n' "$eligible"
+            printf 'run_uuid=%s\n' "$run_uuid"
+            printf 'entries=%s\n' "$entries"
+            printf 'exits=%s\n' "$exits"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish sanitized preview status
+        if: ${{ always() }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STEP_OUTCOME: ${{ steps.preview.outcome }}
+          PREVIEW_STATUS: ${{ steps.preview.outputs.status }}
+          BOOTSTRAP: ${{ steps.preview.outputs.bootstrap }}
+          PUBLICATION_ENABLED: ${{ steps.preview.outputs.publication_enabled }}
+          ELIGIBLE: ${{ steps.preview.outputs.eligible }}
+          ENTRIES: ${{ steps.preview.outputs.entries }}
+          EXITS: ${{ steps.preview.outputs.exits }}
+        run: |
+          set -euo pipefail
+          state='success'
+          description="preview ${PREVIEW_STATUS:-unknown} · bootstrap ${BOOTSTRAP:-false} · ${ENTRIES:-0} entrées / ${EXITS:-0} sorties · app_state 0"
+          if [ "${STEP_OUTCOME:-failure}" != 'success' ]; then
+            state='failure'
+            description='preview publication interrompu · app_state inchangé'
+          elif [ "${PUBLICATION_ENABLED:-false}" != 'true' ]; then
+            state='pending'
+            description="preview prêt · publication contrôlée désactivée · app_state 0"
+          elif [ "${ELIGIBLE:-false}" != 'true' ]; then
+            state='pending'
+            description="preview non éligible · garde-fous à résoudre · app_state 0"
+          fi
+          payload="$(jq -nc \
+            --arg state "$state" \
+            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg description "$description" \
+            --arg context 'pass50/publication-bootstrap-preview' \
+            '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archive preview reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-bootstrap-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            publication-probe.json
+            publication-preview.json
+          if-no-files-found: ignore
+          retention-days: 30

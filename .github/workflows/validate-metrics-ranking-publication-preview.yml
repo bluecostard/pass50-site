@@ -1,0 +1,38 @@
+name: Validate Metrics Ranking Publication Preview
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/metrics-ranking-publication-preview.yml'
+      - 'tests/test_metrics_ranking_publication_preview.py'
+      - '.github/workflows/validate-metrics-ranking-publication-preview.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/metrics-ranking-publication-preview.yml'
+      - 'tests/test_metrics_ranking_publication_preview.py'
+      - '.github/workflows/validate-metrics-ranking-publication-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preview safety contract
+        run: python3 -m unittest tests.test_metrics_ranking_publication_preview -v
+      - name: Workflow markers
+        run: |
+          grep -q 'action:\"probe\"' .github/workflows/metrics-ranking-publication-preview.yml
+          grep -q 'action:\"preview\"' .github/workflows/metrics-ranking-publication-preview.yml
+          ! grep -q 'action:\"apply\"' .github/workflows/metrics-ranking-publication-preview.yml
+          ! grep -q 'confirm:true' .github/workflows/metrics-ranking-publication-preview.yml
+          ! grep -q 'actions: write' .github/workflows/metrics-ranking-publication-preview.yml
+          ! grep -q 'metrics-ranking-publication-apply.yml/dispatches' .github/workflows/metrics-ranking-publication-preview.yml
+      - name: Diff safety
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
