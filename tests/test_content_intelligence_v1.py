@@ -100,14 +100,20 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("Ouvrir Facebook", CLIENT)
         self.assertIn("$titleLength<12&&$thumbnail===''", FEED)
 
-    def test_public_facebook_videos_can_play_inside_pass50_with_external_fallback(self):
+    def test_public_facebook_videos_route_post_urls_to_the_post_plugin(self):
         self.assertIn("p50_content_feed_facebook_playable", FEED)
+        self.assertIn("p50_content_feed_facebook_embed_type", FEED)
+        self.assertIn("p50_content_feed_facebook_explicit_video_url", FEED)
         self.assertIn("['video','reel','live']", FEED)
         self.assertIn("'playableInPass50'", FEED)
+        self.assertIn("'facebookEmbedType'", FEED)
         self.assertIn("facebookVideoPlaybackInPass50'=>true", FEED)
-        self.assertIn("PASS50-FACEBOOK-VIDEO-PLAYER-V1.0", PLAYER)
-        self.assertIn("https://www.facebook.com/plugins/video.php", PLAYER)
-        self.assertIn("data-p50fb-play", PLAYER)
+        self.assertIn("facebookEmbedRouting'=>true", FEED)
+        self.assertIn("PASS50-FACEBOOK-VIDEO-PLAYER-V1.1", PLAYER)
+        self.assertIn("facebookEmbedTypeFromUrl", PLAYER)
+        self.assertIn("plugins/${plugin}.php", PLAYER)
+        self.assertIn("data-p50fb-alternate", PLAYER)
+        self.assertIn("Essayer comme publication", PLAYER)
         self.assertIn("▶ Lire la vidéo", PLAYER)
         self.assertIn("allowfullscreen", PLAYER)
         self.assertIn("host.endsWith('.facebook.com')", PLAYER)
@@ -115,7 +121,10 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("facebook-video-player-v1.js?v=1.0", PUBLIC_COPY)
         self.assertIn('.deploy/facebook-video-player-v1.js', DEPLOY)
         self.assertIn('.deploy/api/content-feed.php', DEPLOY)
-        self.assertIn("PASS50-FACEBOOK-VIDEO-PLAYER-V1.0", DEPLOY)
+        self.assertIn("PASS50-FACEBOOK-VIDEO-PLAYER-V1.1", DEPLOY)
+        self.assertIn("profileId=apoutchou", DEPLOY)
+        self.assertIn("facebookEmbedType", DEPLOY)
+        self.assertIn("pass50/apoutchou-facebook-player", DEPLOY)
 
     def test_small_accounts_are_normalized(self):
         self.assertIn("follower_count", CORE)
