@@ -20,7 +20,28 @@
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function initials(name) {
-    return String(name || 'P50').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || 'P50';
+    const clean = String(name || 'P50').replace(/[^a-zA-Z0-9àâäéèêëïîôùûüç]/gi, ' ').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return (clean.slice(0, 2) || 'P50').toUpperCase();
+  }
+
+  function hashHue(value) {
+    let hash = 0;
+    for (const char of String(value || '')) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+    return hash % 360;
+  }
+
+  function syntheticPhoto(pseudo) {
+    const ini = initials(pseudo);
+    const hue = hashHue(pseudo);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(${hue} 58% 34%)"/><stop offset="1" stop-color="hsl(${(hue + 48) % 360} 42% 14%)"/></linearGradient></defs><rect width="128" height="128" rx="64" fill="url(#g)"/><text x="64" y="76" text-anchor="middle" fill="#f6f8f4" font-family="system-ui,sans-serif" font-size="42" font-weight="800">${ini}</text></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }
+
+  function storyAvatarHtml(item) {
+    const src = String(item.authorPhoto || '').trim() || syntheticPhoto(item.authorPseudo);
+    return `<span class="story-avatar"><img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='${esc(syntheticPhoto(item.authorPseudo))}'"></span>`;
   }
 
   function demoStatuses() {
@@ -30,7 +51,7 @@
       { id: 'st-3', authorPseudo: 'aya_ci', questionTitle: 'Lo Père Daloa passera-t-il en LIVE sous 24 h ?', optionLabel: 'Oui', likeCount: 7, likedByMe: true, durationHours: 48 },
       { id: 'st-4', authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', likeCount: 11, likedByMe: false, durationHours: 24 },
       { id: 'st-5', authorPseudo: 'yves_rank', questionTitle: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Non, hors Top 3', likeCount: 3, likedByMe: false, durationHours: 24 },
-    ];
+    ].map((item) => ({ ...item, authorPhoto: syntheticPhoto(item.authorPseudo) }));
   }
 
   function demoFeed() {
@@ -192,7 +213,7 @@
     strip.innerHTML = state.statuses.map((s, index) => {
       const seen = state.seen.has(s.id);
       return `<button type="button" class="story-chip" data-diapo="${index}">
-        <span class="story-ring ${seen ? 'seen' : ''}"><span class="story-avatar">${esc(initials(s.authorPseudo))}</span></span>
+        <span class="story-ring ${seen ? 'seen' : ''}">${storyAvatarHtml(s)}</span>
         <span>${esc(s.authorPseudo || 'Membre')}</span>
       </button>`;
     }).join('');
@@ -214,7 +235,7 @@
     const item = state.statuses[state.diapoIndex];
     if (!item) return closeDiapo();
     markSeen(item.id);
-    $('#diapoAuthor').innerHTML = `${esc(item.authorPseudo || 'Membre')}<small>Prono · ${esc(item.durationHours)} h</small>`;
+    $('#diapoAuthor').innerHTML = `${storyAvatarHtml(item)}<div>${esc(item.authorPseudo || 'Membre')}<small>Prono · ${esc(item.durationHours)} h</small></div>`;
     $('#diapoQuestion').textContent = item.questionTitle || 'Pronostic';
     $('#diapoChoice').textContent = item.optionLabel || item.optionKey || '—';
     $('#diapoLike').textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
@@ -351,8 +372,11 @@
     }
     try {
       const data = await api('prono-statuses-feed.php?limit=30', { auth: true });
-      state.statuses = Array.isArray(data.items) ? data.items : [];
-      if (!state.statuses.length) state.statuses = demoStatuses().map((s) => ({ ...s, sample: true }));
+      const items = Array.isArray(data.items) ? data.items : [];
+      state.statuses = (items.length ? items : demoStatuses().map((s) => ({ ...s, sample: true }))).map((s) => ({
+        ...s,
+        authorPhoto: String(s.authorPhoto || '').trim() || syntheticPhoto(s.authorPseudo),
+      }));
       renderStories();
     } catch (_) {
       state.statuses = demoStatuses().map((s) => ({ ...s, sample: true }));

@@ -72,9 +72,17 @@ foreach (["['pronostics','Pronostics']", 'deRenderPronosticsAdmin', 'admin-prono
 }
 
 $fil = file_get_contents($root.'/mon-fil.js');
-foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php'] as $needle) {
+foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'pronoStoriesStrip', 'openPronoDiapo', 'memberAvatarHtml', 'PASS50-FOLLOW-FEED-PAGE-V2.5'] as $needle) {
     if (!str_contains($fil, $needle)) {
         fwrite(STDERR, "MON-FIL missing $needle\n");
+        exit(1);
+    }
+}
+
+$filHtml = file_get_contents($root.'/mon-fil.html');
+foreach (['pronoStoriesStrip', 'pronoDiapo', 'mon-fil.js?v=2.5'] as $needle) {
+    if (!str_contains($filHtml, $needle)) {
+        fwrite(STDERR, "MON-FIL-HTML missing $needle\n");
         exit(1);
     }
 }
