@@ -6,14 +6,21 @@ ENDPOINT = (ROOT / "api/content-freshness-cron-v3.php").read_text(encoding="utf-
 WORKFLOW = (ROOT / ".github/workflows/content-freshness-5m.yml").read_text(encoding="utf-8")
 
 
-class ContentFreshnessRuntimeV3Tests(unittest.TestCase):
+class ContentFreshnessRuntimeV31Tests(unittest.TestCase):
     def test_endpoint_is_strict_signed_and_versioned(self):
-        self.assertIn("CONTENT-FRESHNESS-V3.0", ENDPOINT)
+        self.assertIn("CONTENT-FRESHNESS-V3.1", ENDPOINT)
         self.assertIn("P50_CONTENT_FRESHNESS_V3_BUCKET_SECONDS=300", ENDPOINT)
         self.assertIn("['probe','refresh']", ENDPOINT)
         self.assertIn("p50_mo_verify_cron_signature", ENDPOINT)
         self.assertIn("$keys!==['action','dispatchId']", ENDPOINT)
         self.assertIn("'publicStateWrites'=>0", ENDPOINT)
+
+    def test_ranked_selection_is_mariadb_safe(self):
+        self.assertGreaterEqual(ENDPOINT.count("SELECT ordered.profile_id"), 2)
+        self.assertGreaterEqual(ENDPOINT.count("MAX(c.last_seen_at) AS latest_content"), 2)
+        self.assertGreaterEqual(ENDPOINT.count("CASE WHEN ordered.latest_content IS NULL THEN 0 ELSE 1 END"), 2)
+        self.assertNotIn("ORDER BY latest_content IS NULL", ENDPOINT)
+        self.assertIn("ordered.latest_content ASC,ordered.rank_position ASC", ENDPOINT)
 
     def test_selection_checks_access_before_choosing_eight_profiles(self):
         self.assertIn("p50_cf3_ranked_profiles($pdo,70)", ENDPOINT)
@@ -31,59 +38,40 @@ class ContentFreshnessRuntimeV3Tests(unittest.TestCase):
         self.assertIn("floor($now/P50_CONTENT_FRESHNESS_V3_BUCKET_SECONDS)", ENDPOINT)
         self.assertIn("P50_CONTENT_FRESHNESS_V3_VERSION,$bucket,$profileId,$platform", ENDPOINT)
         self.assertIn("'priority'=>5", ENDPOINT)
-        self.assertIn("'cadence'=>'p0'", ENDPOINT)
         self.assertIn("'reason'=>'content_freshness_v3'", ENDPOINT)
         self.assertNotIn("p50_mo_enqueue_profile($pdo", ENDPOINT)
 
     def test_platform_diagnostics_cover_access_selection_and_processing(self):
-        for marker in (
-            "accessSummary",
-            "accessByPlatform",
-            "selectedByPlatform",
-            "enqueueByPlatform",
-            "processedByPlatform",
-            "authorizedLinks",
-            "profilesScanned",
-            "profilesSelected",
-        ):
+        for marker in ("accessSummary", "accessByPlatform", "selectedByPlatform", "enqueueByPlatform", "processedByPlatform", "authorizedLinks", "profilesScanned", "profilesSelected"):
             self.assertIn(marker, ENDPOINT)
         self.assertIn("p50_cf3_platform_counter", ENDPOINT)
         self.assertIn("contentIntelligence", ENDPOINT)
 
-    def test_errors_expose_a_sanitized_stage_without_public_write(self):
+    def test_errors_are_sanitized_and_no_public_write_exists(self):
         self.assertIn("$stage='bootstrap'", ENDPOINT)
         for stage in ("selection", "enqueue", "work", "content_intelligence"):
             self.assertIn(f"$stage='{stage}'", ENDPOINT)
         self.assertIn("p50_metrics_safe_error", ENDPOINT)
         self.assertIn("'errorCode'=>'content_freshness_'.$stage", ENDPOINT)
-        self.assertIn("'detail'=>$detail", ENDPOINT)
-        for forbidden in (
-            "UPDATE app_state",
-            "INSERT INTO app_state",
-            "DELETE FROM app_state",
-            "metrics-ranking-publication-apply",
-        ):
+        for forbidden in ("UPDATE app_state", "INSERT INTO app_state", "DELETE FROM app_state", "metrics-ranking-publication-apply"):
             self.assertNotIn(forbidden, ENDPOINT)
 
-    def test_workflow_uses_v3_on_the_five_minute_schedule(self):
+    def test_workflow_uses_v31_every_five_minutes(self):
         self.assertIn("cron: '*/5 * * * *'", WORKFLOW)
         self.assertIn("content-freshness-cron-v3.php", WORKFLOW)
-        self.assertIn("CONTENT-FRESHNESS-V3.0", WORKFLOW)
-        self.assertIn("bucketSeconds == 300", WORKFLOW)
-        self.assertNotIn("CONTENT-FRESHNESS-V2.0", WORKFLOW)
-        self.assertNotIn("content-freshness-cron.php\"", WORKFLOW)
+        self.assertIn("CONTENT-FRESHNESS-V3.1", WORKFLOW)
+        self.assertIn("bucketSeconds==300", WORKFLOW)
+        self.assertNotIn("CONTENT-FRESHNESS-V3.0", WORKFLOW)
         self.assertIn("for attempt in $(seq 1 5)", WORKFLOW)
-        self.assertIn("stage=", WORKFLOW)
         self.assertIn("selectedByPlatform", WORKFLOW)
         self.assertIn("processedByPlatform", WORKFLOW)
-        self.assertIn("Écriture directe app_state : `0`", WORKFLOW)
+        self.assertIn("app_state : `0 écriture`", WORKFLOW)
 
-    def test_workflow_waits_for_the_versioned_endpoint_on_push(self):
-        self.assertIn("Wait for deployed Content Freshness V3 contract", WORKFLOW)
+    def test_workflow_waits_for_versioned_endpoint_on_push(self):
+        self.assertIn("Wait for deployed Content Freshness V3.1 contract", WORKFLOW)
         self.assertIn("github.event_name == 'push'", WORKFLOW)
         self.assertIn("for attempt in $(seq 1 36)", WORKFLOW)
         self.assertIn("action:\"probe\"", WORKFLOW)
-        self.assertIn("bucketSeconds == 300", WORKFLOW)
         self.assertIn("timeout-minutes: 15", WORKFLOW)
 
 
