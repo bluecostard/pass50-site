@@ -85,4 +85,16 @@ if (!str_contains($nav, 'pronostics.html')) {
     exit(1);
 }
 
+$index = file_get_contents($root.'/index.html');
+if (str_contains($index, 'id="pronostics"')) {
+    fwrite(STDERR, "INDEX still has Pronostics banner section\n");
+    exit(1);
+}
+
+$pronoHtml = file_get_contents($root.'/pronostics.html');
+if (preg_match('/href="\.\/"[^>]*>\s*Classement\s*</u', $pronoHtml)) {
+    fwrite(STDERR, "PRONO page still has Classement button\n");
+    exit(1);
+}
+
 echo "OK prono Phase A static checks\n";
