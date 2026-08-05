@@ -10,13 +10,23 @@ require_role($user,'owner','admin');
 try{
     $pdo=db();
     if($_SERVER['REQUEST_METHOD']==='GET'){
-        json_response(p50_mrp_apply_preview($pdo));
+        $preview=p50_mrp_apply_preview($pdo);
+        $preview['forcedBootstrapEnabled']=false;
+        json_response($preview);
     }
     require_method('POST');
     $in=json_input();
+    if(array_key_exists('bootstrap',$in))json_response([
+        'error'=>'Le bootstrap de récupération a déjà été consommé.',
+        'reason'=>'bootstrap_recovery_consumed',
+        'publicStateWrites'=>0,
+    ],409);
     $action=trim((string)($in['action']??'preview'));
-    $forceBootstrap=!empty($in['bootstrap']);
-    if($action==='preview')json_response(p50_mrp_apply_preview($pdo,null,null,$forceBootstrap));
+    if($action==='preview'){
+        $preview=p50_mrp_apply_preview($pdo);
+        $preview['forcedBootstrapEnabled']=false;
+        json_response($preview);
+    }
     if($action==='rollback'){
         $applyUuid=trim((string)($in['applyUuid']??''));
         if($applyUuid==='')json_response(['error'=>'applyUuid requis.'],422);
@@ -28,7 +38,7 @@ try{
         'dispatchId'=>trim((string)($in['dispatchId']??('admin-'.bin2hex(random_bytes(8))))),
         'appliedBy'=>(string)($user['id']??'admin'),
         'confirm'=>!empty($in['confirm']),
-        'bootstrap'=>$forceBootstrap,
+        'bootstrap'=>false,
     ]);
     json_response($result);
 }catch(InvalidArgumentException $error){
