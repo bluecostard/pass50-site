@@ -1,6 +1,8 @@
 name: Diagnose Apoutchou Facebook Video
 
 on:
+  push:
+    branches: [ops/diagnose-apoutchou-facebook-video-v1]
   pull_request:
     paths:
       - '.github/workflows/diagnose-apoutchou-facebook-video.yml'
