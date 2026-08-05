@@ -1,5 +1,6 @@
 name: Metrics Public Baseline P1
 # Contract history: PUBLIC-BASELINE-P1-V1.1 -> PUBLIC-BASELINE-P1-V1.2
+# Audit manuel couverture publique P1 — 2026-08-05T13:05+02:00
 
 on:
   schedule:

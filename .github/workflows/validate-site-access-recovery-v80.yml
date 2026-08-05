@@ -1,0 +1,64 @@
+name: Validate Site Access Recovery V82
+
+on:
+  pull_request:
+    paths:
+      - 'sw.js'
+      - '.htaccess'
+      - 'public-copy-fixes.js'
+      - 'context-share-v2.js'
+      - 'mobile-bottom-nav-v1.js'
+      - '.github/workflows/deploy-ionos.yml'
+      - 'tests/test_context_share_v1.py'
+      - 'tests/test_context_share_v2.py'
+      - 'tests/test_site_access_recovery_v80.py'
+      - '.github/workflows/validate-site-access-recovery-v80.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'sw.js'
+      - '.htaccess'
+      - 'public-copy-fixes.js'
+      - 'context-share-v2.js'
+      - 'mobile-bottom-nav-v1.js'
+      - '.github/workflows/deploy-ionos.yml'
+      - 'tests/test_context_share_v1.py'
+      - 'tests/test_context_share_v2.py'
+      - 'tests/test_site_access_recovery_v80.py'
+      - '.github/workflows/validate-site-access-recovery-v80.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: JavaScript syntax
+        run: |
+          node --check sw.js
+          node --check public-copy-fixes.js
+          node --check context-share-v2.js
+      - name: Recovery and share contracts
+        run: |
+          python3 -m unittest tests.test_site_access_recovery_v80 -v
+          python3 -m unittest tests.test_context_share_v1 -v
+          python3 -m unittest tests.test_context_share_v2 -v
+      - name: Runtime markers
+        run: |
+          grep -q -- '--only-newer' .github/workflows/deploy-ionos.yml
+          grep -q 'v82-share-v2-only' .github/workflows/deploy-ionos.yml
+          grep -q 'PASS50-PUBLIC-RUNTIME-V82' public-copy-fixes.js
+          grep -q 'context-share-v2.js?v=2.1' public-copy-fixes.js
+          ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" public-copy-fixes.js
+          ! grep -q 'new MutationObserver' public-copy-fixes.js
+          grep -q 'pass50-v81-service-worker-disabled' sw.js
+          ! grep -q "addEventListener('fetch'" sw.js
+          grep -q 'no-store, no-cache' .htaccess
+      - name: Diff safety
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD

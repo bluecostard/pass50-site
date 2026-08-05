@@ -1,0 +1,14 @@
+# PASS50 V82 — neutralisation temporaire des caches d’interface pendant la remise en ligne.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html?|js|css|json|webmanifest)$">
+    Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header always set Pragma "no-cache"
+    Header always set Expires "0"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive Off
+</IfModule>
+
+DirectoryIndex index.html

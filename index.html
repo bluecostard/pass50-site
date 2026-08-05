@@ -567,7 +567,7 @@ function renderHero(){
     'assets/hero-media-6.jpg'  // Y'a Problème
   ];
   const slidePositions=['center 22%','center 28%','center 30%','center 32%','center 40%','center 28%'];
-  const bust=`?v=80`;
+  const bust=`?v=82`;
   $('#buzz').innerHTML=`<div class="panel hero-intro"><div class="hero-backdrop">${slides.map((src,i)=>`<div class="hero-slide" style="background-image:url('${src}${bust}');background-position:${slidePositions[i]||'center center'}"></div>`).join('')}</div><div><div class="eyebrow">⚡ BUZZ NOW · ${periodLabels[ui.period]}</div><h1 class="buzz-title">LE BUZZ<br><span>MAINTENANT</span></h1></div><div><div class="metric score-animate">${total}/300</div><div class="muted">SCORE CUMULÉ DU TOP 3</div><div class="up" style="margin-top:7px">↗ Classement actualisé • ${publishedTime()}</div></div></div>${top.map(heroCard).join('')}`;
   animateScoreCounters($('#buzz'));
 }
@@ -838,7 +838,7 @@ $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)close(m.i
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const visible=[...document.querySelectorAll('.modal.show')].pop();if(visible)close(visible.id)});
 window.addEventListener('storage',()=>{db=load();render()});
 normalizeLiveStreams();refreshLiveStatus();setInterval(refreshLiveStatus,60000);setInterval(()=>{normalizeLiveStreams();renderLiveHeader();if($('#liveModal')?.classList.contains('show'))openLives();},30000);
-if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=80').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=82').catch(()=>{});
 
 // --- Adaptateur IONOS + MySQL + Brevo ---
 const apiConfig=window.PASS50_API||{};

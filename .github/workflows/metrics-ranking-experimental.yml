@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: '57 */2 * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/metrics-ranking-cron.php'
+      - 'api/metrics-ranking-fresh-capture-core.php'
+      - '.github/workflows/metrics-ranking-experimental.yml'
 
 permissions:
   actions: write
@@ -17,12 +24,56 @@ concurrency:
 jobs:
   calculate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
       STATUS_SHA: ${{ github.sha }}
     steps:
+      - name: Wait for deployed MR fresh-capture contract
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$CRON_URL" ]; then
+            echo "::error::PASS50_METRICS_CRON_URL absent."
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */api/metrics-cron.php)
+              API_BASE="${CRON_URL%/metrics-cron.php}"
+              SITE_BASE="${API_BASE%/api}"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /api/metrics-cron.php"
+              exit 1
+              ;;
+          esac
+          deployment_url="$SITE_BASE/deployment-version.json"
+          gate_url="$API_BASE/metrics-ranking-fresh-capture-core.php"
+          deployed=false
+          for attempt in $(seq 1 36); do
+            marker="$(curl --location --silent --show-error --max-time 15 \
+              -H 'Cache-Control: no-cache, no-store' \
+              "$deployment_url?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+            gate_code="$(curl --location --silent --show-error --max-time 15 \
+              --output /dev/null --write-out '%{http_code}' \
+              -H 'Cache-Control: no-cache, no-store' \
+              "$gate_url?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+            if jq -e --arg sha "$GITHUB_SHA" '.commit == $sha' >/dev/null 2>&1 <<<"$marker" \
+              && [ "$gate_code" = "200" ]; then
+              deployed=true
+              echo "Le commit $GITHUB_SHA et le garde MR-FRESH-CAPTURE-V1.0 sont servis."
+              break
+            fi
+            echo "Déploiement MR en attente ($attempt/36, gate HTTP ${gate_code:-000})."
+            sleep 10
+          done
+          if [ "$deployed" != "true" ]; then
+            echo "::error::Le contrat MR frais n'est pas servi après six minutes."
+            exit 1
+          fi
+
       - name: Calculate experimental ranking
         id: ranking
         shell: bash
@@ -77,12 +128,14 @@ jobs:
           periods="$(jq -r '(.periods // []) | join(", ")' <<<"$response")"
           classable="$(jq -r '.classableCount // 0' <<<"$response")"
           scores="$(jq -r '.scoresWritten // 0' <<<"$response")"
+          fresh_gate="$(jq -r '.freshCaptureGateVersion // "—"' <<<"$response")"
+          fresh_override="$(jq -r '.freshCaptureOverride // false' <<<"$response")"
           duration="$(jq -r '.durationMs // 0' <<<"$response")"
           refresh_p1=false
 
           case "$reason" in
             executed) result="exécuté" ;;
-            recent_success) result="reporté : succès récent" ;;
+            recent_success) result="reporté : succès récent sans capture nouvelle" ;;
             collection_pending) result="reporté : collecte P1 encore en cours" ;;
             no_new_captures) result="reporté : aucune nouvelle capture" ;;
             p1_not_observed) result="reporté : aucun cycle P1 observé"; refresh_p1=true ;;
@@ -101,6 +154,8 @@ jobs:
             printf -- '- Fin du dernier P1 : %s\n' "$p1_finished"
             printf -- '- Jobs P1 actifs / échoués : %s / %s\n' "$active_jobs" "$failed_jobs"
             printf -- '- Dernière capture exploitable : %s\n' "$latest_capture"
+            printf -- '- Garde de fraîcheur : `%s`\n' "$fresh_gate"
+            printf -- '- Recalcul anticipé par capture nouvelle : `%s`\n' "$fresh_override"
             printf -- '- runUuid : `%s`\n' "${run_uuid:-—}"
             printf -- '- Algorithme : `%s`\n' "$algorithm"
             printf -- '- Périodes : %s\n' "${periods:-—}"
@@ -117,6 +172,7 @@ jobs:
             printf 'run_uuid=%s\n' "$run_uuid"
             printf 'classable=%s\n' "$classable"
             printf 'scores=%s\n' "$scores"
+            printf 'fresh_override=%s\n' "$fresh_override"
             printf 'refresh_p1=%s\n' "$refresh_p1"
           } >> "$GITHUB_OUTPUT"
 

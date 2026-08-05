@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050705">
+  <title>PASS50 — Connexion indisponible</title>
+  <style>
+    :root{color-scheme:dark;--lime:#b7ff00;--bg:#050705;--panel:#111711;--line:#2b352b;--text:#f7faf4;--muted:#aab4a7}
+    *{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 80% 0,rgba(183,255,0,.12),transparent 34%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(520px,100%);padding:28px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(160deg,#121812,#080b08);box-shadow:0 26px 90px rgba(0,0,0,.55)}
+    .brand{font-size:38px;font-weight:1000;letter-spacing:-2px}.brand span{color:var(--lime)}
+    h1{margin:28px 0 10px;font-size:28px;line-height:1.05}p{margin:0;color:var(--muted);line-height:1.55}
+    button{width:100%;margin-top:24px;padding:14px 18px;border:0;border-radius:15px;background:var(--lime);color:#050705;font:inherit;font-weight:1000;cursor:pointer}
+    small{display:block;margin-top:14px;color:#748073;text-align:center}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">PASS<span>50</span></div>
+    <h1>Connexion au site momentanément indisponible</h1>
+    <p>PASS50 ne vous présente pas une ancienne version comme si elle était actuelle. Vérifiez votre connexion, puis rechargez le site pour récupérer la dernière publication.</p>
+    <button type="button" onclick="location.href='./?recovery='+Date.now()">Réessayer maintenant</button>
+    <small>Vos données de compte ne sont pas supprimées.</small>
+  </main>
+</body>
+</html>

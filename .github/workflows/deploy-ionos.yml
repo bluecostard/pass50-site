@@ -8,9 +8,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pass50-ionos-production-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Récupérer le projet
@@ -18,6 +23,7 @@ jobs:
 
       - name: Préparer les fichiers
         run: |
+          set -euo pipefail
           mkdir -p .deploy
           rsync -a ./ .deploy/ \
             --exclude '.git/' \
@@ -28,21 +34,82 @@ jobs:
             --exclude 'install.php' \
             --exclude '*.zip' \
             --exclude '*.md'
+          jq -nc --arg commit "$GITHUB_SHA" --arg deployedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{commit:$commit,deployedAt:$deployedAt,environment:"production",serviceWorker:"disabled-v81",frontend:"v82-share-v2-only"}' > .deploy/deployment-version.json
 
       - name: Installer SFTP
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      - name: Déployer sur IONOS
+      - name: Déployer l’interface V82 en priorité
         env:
           HOST: ${{ secrets.IONOS_SFTP_HOST }}
           USER: ${{ secrets.IONOS_SFTP_USER }}
           PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
           REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
         run: |
+          set -euo pipefail
+          if [ -z "${HOST:-}" ] || [ -z "${USER:-}" ] || [ -z "${PASSWORD:-}" ] || [ -z "${REMOTE_DIR:-}" ]; then
+            echo '::error::Configuration SFTP IONOS incomplète.'
+            exit 1
+          fi
           lftp <<LFTP
           set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 20
           set sftp:auto-confirm yes
           open -u "$USER","$PASSWORD" sftp://$HOST:22
-          mirror --reverse --verbose --only-newer .deploy/ "$REMOTE_DIR"
+          put -O "$REMOTE_DIR" .deploy/.htaccess
+          put -O "$REMOTE_DIR" .deploy/sw.js
+          put -O "$REMOTE_DIR" .deploy/index.html
+          put -O "$REMOTE_DIR" .deploy/mon-fil.html
+          put -O "$REMOTE_DIR" .deploy/mon-fil.js
+          put -O "$REMOTE_DIR" .deploy/app-config.js
+          put -O "$REMOTE_DIR" .deploy/public-copy-fixes.js
+          put -O "$REMOTE_DIR" .deploy/context-share-v2.js
+          put -O "$REMOTE_DIR" .deploy/mobile-bottom-nav-v1.js
+          put -O "$REMOTE_DIR" .deploy/v9-tools.js
+          put -O "$REMOTE_DIR" .deploy/v9-tools.css
+          put -O "$REMOTE_DIR" .deploy/deployment-version.json
+          mirror --reverse --verbose --only-newer --parallel=2 .deploy/ "$REMOTE_DIR"
           bye
           LFTP
+
+      - name: Vérifier la version réellement servie
+        shell: bash
+        run: |
+          set -euo pipefail
+          sites=('https://pass50.store' 'https://www.pass50.store')
+          for site in "${sites[@]}"; do
+            ready=false
+            for attempt in $(seq 1 30); do
+              marker="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/deployment-version.json?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              worker="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/sw.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              runtime="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/public-copy-fixes.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              share="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/context-share-v2.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              page="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/?health=$GITHUB_SHA&attempt=$attempt" || true)"
+              if jq -e --arg sha "$GITHUB_SHA" '.commit == $sha and .frontend == "v82-share-v2-only"' >/dev/null 2>&1 <<<"$marker" \
+                && grep -q "pass50-v81-service-worker-disabled" <<<"$worker" \
+                && grep -q "PASS50-PUBLIC-RUNTIME-V82" <<<"$runtime" \
+                && grep -q "context-share-v2.js?v=2.1" <<<"$runtime" \
+                && ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" <<<"$runtime" \
+                && grep -q "PASS50-CONTEXT-SHARE-V2.0" <<<"$share" \
+                && grep -q "PASS50" <<<"$page"; then
+                ready=true
+                echo "$site sert bien l’interface V82 et uniquement le partage V2."
+                break
+              fi
+              echo "Propagation V82 en attente pour $site ($attempt/30)."
+              sleep 5
+            done
+            if [ "$ready" != true ]; then
+              echo "::error::$site ne sert pas l’interface V82 après deux minutes trente."
+              exit 1
+            fi
+          done
+          {
+            echo '### Déploiement PASS50 V82'
+            echo "- Commit vérifié : \`$GITHUB_SHA\`"
+            echo '- Interface : `V82 share-v2-only`'
+            echo '- Service worker : désactivé temporairement (`V81`)'
+            echo '- Cache HTTP HTML/JS/CSS : désactivé temporairement'
+          } >> "$GITHUB_STEP_SUMMARY"
