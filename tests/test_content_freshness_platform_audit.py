@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ENDPOINT = (ROOT / "api/content-freshness-platform-audit-cron-v2.php").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github/workflows/content-freshness-platform-audit.yml").read_text(encoding="utf-8")
 FRESHNESS = (ROOT / ".github/workflows/content-freshness-5m.yml").read_text(encoding="utf-8")
+DEPLOY = (ROOT / ".github/workflows/deploy-ionos.yml").read_text(encoding="utf-8")
 
 
 class ContentFreshnessPlatformAuditV21Tests(unittest.TestCase):
@@ -88,6 +89,29 @@ class ContentFreshnessPlatformAuditV21Tests(unittest.TestCase):
             self.assertIn(marker, ENDPOINT + WORKFLOW)
         for period in ('"2h"', '"24h"', '"48h"', '"7d"', '"15d"'):
             self.assertIn(period, WORKFLOW)
+
+    def test_workflow_waits_for_the_signed_v4_probe(self):
+        self.assertIn("platform-wait-probe-v21", WORKFLOW)
+        self.assertIn("X-P50-Signature", WORKFLOW)
+        self.assertIn("contentFreshnessRuntime==\"CONTENT-FRESHNESS-V4.0\"", WORKFLOW)
+        self.assertIn("collectionBucketMinutes==5", WORKFLOW)
+        self.assertIn("Audit V2.1/V4 en attente", WORKFLOW)
+        wait_section = WORKFLOW[
+            WORKFLOW.index("Wait for deployed Content Platform Audit V2.1 on V4") : WORKFLOW.index("Probe read-only contract")
+        ]
+        self.assertNotIn('if [ "$code" = 405 ]', wait_section)
+
+    def test_deployment_forces_the_three_v4_runtime_files(self):
+        for path in (
+            ".deploy/api/content-freshness-platform-audit-cron-v2.php",
+            ".deploy/api/content-freshness-cron-v4.php",
+            ".deploy/api/metrics-collector-facebook.php",
+        ):
+            self.assertIn(f'put -O "$REMOTE_DIR/api" {path}', DEPLOY)
+        self.assertLess(
+            DEPLOY.index(".deploy/api/content-freshness-platform-audit-cron-v2.php"),
+            DEPLOY.index("mirror --reverse"),
+        )
 
     def test_workflow_uses_v21_with_v4_runtime_and_only_reads_diagnostics(self):
         self.assertIn("content-freshness-platform-audit-cron-v2.php", WORKFLOW)
