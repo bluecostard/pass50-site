@@ -15,11 +15,11 @@ SW = (ROOT / "sw.js").read_text(encoding="utf-8")
 class ShareCenterV1Tests(unittest.TestCase):
     def test_five_visual_codes_are_explicit(self):
         expected = {
-            "site": "#1ee5ff",
-            "profile": "#b7ff00",
-            "live": "#ff4b4b",
-            "coules": "#ff9d1d",
-            "coules-audio": "#a66cff",
+            "site": "#0e7c7b",
+            "profile": "#3d5a1f",
+            "live": "#b42318",
+            "coules": "#b45309",
+            "coules-audio": "#1d4e89",
         }
         for kind, color in expected.items():
             self.assertIn(kind, CENTER)
@@ -29,9 +29,9 @@ class ShareCenterV1Tests(unittest.TestCase):
 
     def test_center_loads_before_legacy_profile_sharing(self):
         self.assertIn("data-pass50-share-center", APP_CONFIG)
-        self.assertIn("share-center-v1.js?v=1.0", APP_CONFIG)
+        self.assertIn("share-center-v1.js?v=1.2", APP_CONFIG)
         self.assertLess(
-            APP_CONFIG.index("share-center-v1.js?v=1.0"),
+            APP_CONFIG.index("share-center-v1.js?v=1.2"),
             APP_CONFIG.index("fi-engagement-v3.js?v=1.3"),
         )
 
@@ -41,8 +41,8 @@ class ShareCenterV1Tests(unittest.TestCase):
         self.assertIn("target.closest('#shareBtn')", CENTER)
 
     def test_profile_share_has_its_own_title_and_deep_link(self):
-        self.assertIn("'profile'=>['color'=>'#b7ff00'", SHARE_PAGE)
-        self.assertIn("Fiche influenceur PASS50", SHARE_PAGE)
+        self.assertIn("'profile'=>['color'=>'#3d5a1f'", SHARE_PAGE)
+        self.assertIn("Fiche influenceur", SHARE_PAGE)
         self.assertIn("$query['profile']=$id", SHARE_PAGE)
         profile_block = SHARE_PAGE[
             SHARE_PAGE.index("'profile'=>"):SHARE_PAGE.index("'live'=>")
@@ -54,11 +54,11 @@ class ShareCenterV1Tests(unittest.TestCase):
     def test_live_share_delegates_to_unified_red_card(self):
         self.assertIn("window.PASS50_SHARE_CENTER?.openLive", LIVE)
         self.assertIn("profileId,platform,directUrl", LIVE)
-        self.assertIn("'live'=>['color'=>'#ff4b4b'", SHARE_PAGE)
+        self.assertIn("'live'=>['color'=>'#b42318'", SHARE_PAGE)
         self.assertIn("$query['live']=$id", SHARE_PAGE)
 
     def test_site_and_coules_land_on_the_right_content(self):
-        self.assertIn("'site'=>['color'=>'#1ee5ff'", SHARE_PAGE)
+        self.assertIn("'site'=>['color'=>'#0e7c7b'", SHARE_PAGE)
         self.assertIn("$query['section']='coules'", SHARE_PAGE)
         self.assertIn("'type'=>'coules'", VOTE_SHARE)
         self.assertIn("'type'=>'coules-audio'", VOTE_SHARE)
@@ -93,7 +93,7 @@ class ShareCenterV1Tests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
 
     def test_service_worker_keeps_share_center_and_versioned_cache(self):
-        self.assertIn("./share-center-v1.js?v=1.0", SW)
+        self.assertIn("./share-center-v1.js?v=1.2", SW)
         self.assertIn("./coules-share-simple-v1.js?v=1.0", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 

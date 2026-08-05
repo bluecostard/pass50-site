@@ -28,7 +28,7 @@ jobs:
           grep -F 'PASS50 — Qui fait le buzz maintenant ?' /tmp/share-site.html
           grep -F 'property="og:title"' /tmp/share-site.html
           php -r '$_GET=["type"=>"profile","id"=>"demo"]; include "partage.php";' > /tmp/share-profile.html
-          grep -F 'Fiche influenceur PASS50' /tmp/share-profile.html
+          grep -F 'Fiche influenceur' /tmp/share-profile.html
           if grep -F 'Qui est le plus coulé des 2' /tmp/share-profile.html; then exit 1; fi
       - name: Diff check
         run: git diff --check origin/${{ github.base_ref }}...HEAD

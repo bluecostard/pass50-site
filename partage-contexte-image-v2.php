@@ -106,49 +106,57 @@ function p50_og_v2_avatar(GdImage $canvas,?array $profile,int $x,int $y,int $siz
 }
 
 $image=imagecreatetruecolor(1200,630);
-$bg=p50_og_v2_color($image,'#050705');$panel=p50_og_v2_color($image,'#111711');$white=p50_og_v2_color($image,'#ffffff');$muted=p50_og_v2_color($image,'#aeb8aa');$lime=p50_og_v2_color($image,'#b7ff00');$cyan=p50_og_v2_color($image,'#1ee5ff');$purple=p50_og_v2_color($image,'#a66cff');
-imagefill($image,0,0,$bg);imagefilledrectangle($image,20,20,1180,610,$panel);
-$accent=str_starts_with($type,'ranking-')?$lime:($type==='duel-audio'?$purple:$cyan);
-imagefilledrectangle($image,20,20,38,610,$accent);imagefilledellipse($image,1130,35,420,420,$accent);
-p50_og_v2_text($image,42,72,82,$white,'PASS');p50_og_v2_text($image,42,200,82,$accent,'50');
+$paper=p50_og_v2_color($image,'#eef1ec');$ink=p50_og_v2_color($image,'#0b0f0b');$muted=p50_og_v2_color($image,'#5c665c');$lime=p50_og_v2_color($image,'#b7ff00');$line=p50_og_v2_color($image,'#d5dbd2');$panel=p50_og_v2_color($image,'#ffffff');
+$teal=p50_og_v2_color($image,'#0e7c7b');$olive=p50_og_v2_color($image,'#3d5a1f');$amber=p50_og_v2_color($image,'#b45309');$blue=p50_og_v2_color($image,'#1d4e89');
+imagefill($image,0,0,$paper);
+$accent=str_starts_with($type,'ranking-')?$teal:($type==='duel-audio'?$blue:$olive);
+imagefilledrectangle($image,0,0,1200,16,$accent);
+imagefilledrectangle($image,64,48,86,70,$lime);
+p50_og_v2_text($image,28,100,68,$ink,'PASS50');
 
 if(str_starts_with($type,'ranking-top')){
     $size=(int)substr($type,strlen('ranking-top'));if(!in_array($size,[3,10,50],true))$size=3;
     $rows=p50_og_v2_ranking($period,$region,$size);
-    p50_og_v2_text($image,18,72,145,$accent,'CLASSEMENT OFFICIEL');p50_og_v2_text($image,38,72,205,$white,"TOP {$size} PASS50");
+    p50_og_v2_text($image,15,64,118,$accent,'CLASSEMENT');p50_og_v2_text($image,36,64,175,$ink,"TOP {$size}");
     $periodLabel=['2H'=>'2 h','24H'=>'24 h','48H'=>'48 h','7J'=>'7 jours','15J'=>'15 jours'][$period]??$period;
     $regionLabel=['ALL'=>'Côte d’Ivoire + diaspora','CI'=>'Côte d’Ivoire','DIASPORA'=>'Diaspora'][$region]??$region;
-    p50_og_v2_text($image,17,72,242,$muted,$periodLabel.' · '.$regionLabel,false);
+    p50_og_v2_text($image,15,64,212,$muted,$periodLabel.' · '.$regionLabel,false);
     if($size===3){
         foreach(array_slice($rows,0,3) as $index=>$profile){
-            $x=80+$index*370;p50_og_v2_avatar($image,$profile,$x,285,150,$accent,$white);
-            p50_og_v2_text($image,22,$x,475,$accent,'#'.($index+1));
-            foreach(p50_og_v2_fit(mb_strtoupper((string)($profile['name']??'Influenceur'),'UTF-8'),15,2) as $lineIndex=>$line)p50_og_v2_text($image,20,$x+42,475+$lineIndex*28,$white,$line);
-            p50_og_v2_text($image,18,$x+42,545,$accent,round((float)($profile['_og_score']??0)).'/100');
+            $x=80+$index*370;p50_og_v2_avatar($image,$profile,$x,250,140,$accent,$ink);
+            p50_og_v2_text($image,20,$x,430,$accent,'#'.($index+1));
+            foreach(p50_og_v2_fit(mb_strtoupper((string)($profile['name']??'Influenceur'),'UTF-8'),15,2) as $lineIndex=>$lineText)p50_og_v2_text($image,18,$x+42,430+$lineIndex*26,$ink,$lineText);
+            p50_og_v2_text($image,16,$x+42,495,$accent,round((float)($profile['_og_score']??0)).'/100');
         }
     }else{
         $visible=array_slice($rows,0,10);
         foreach($visible as $index=>$profile){
-            $column=$index<5?0:1;$local=$index%5;$x=$column===0?70:620;$y=285+$local*61;
-            p50_og_v2_avatar($image,$profile,$x,$y-35,45,$accent,$white);
-            p50_og_v2_text($image,18,$x+58,$y,$accent,'#'.($index+1));
-            p50_og_v2_text($image,18,$x+100,$y,$white,mb_substr((string)($profile['name']??'Influenceur'),0,24));
-            p50_og_v2_text($image,17,$x+420,$y,$accent,round((float)($profile['_og_score']??0)).'/100');
+            $column=$index<5?0:1;$local=$index%5;$x=$column===0?70:620;$y=255+$local*58;
+            p50_og_v2_avatar($image,$profile,$x,$y-32,42,$accent,$ink);
+            p50_og_v2_text($image,16,$x+54,$y,$accent,'#'.($index+1));
+            p50_og_v2_text($image,16,$x+96,$y,$ink,mb_substr((string)($profile['name']??'Influenceur'),0,24));
+            p50_og_v2_text($image,15,$x+420,$y,$accent,round((float)($profile['_og_score']??0)).'/100');
         }
-        if($size===50)p50_og_v2_text($image,14,840,590,$muted,'APERÇU DU TOP 10 / 50',false);
+        if($size===50)p50_og_v2_text($image,13,840,575,$muted,'Aperçu top 10',false);
     }
+    imagefilledrectangle($image,64,560,1136,561,$line);
+    p50_og_v2_text($image,14,64,595,$muted,'pass50.store',false);
 }elseif($type==='feed-post'){
-    $profile=p50_share_photo_profile_by_id($id);$name=(string)($profile['name']??'Influenceur PASS50');
-    p50_og_v2_text($image,18,72,145,$accent,'POST DE MON FIL');p50_og_v2_avatar($image,$profile,80,215,260,$accent,$white);
-    p50_og_v2_text($image,31,390,260,$white,mb_strtoupper(mb_substr($name,0,28),'UTF-8'));
-    $post=$title!==''?$title:'Actualité récente';foreach(p50_og_v2_fit($post,30,4) as $index=>$line)p50_og_v2_text($image,25,390,335+$index*40,$white,$line);
-    p50_og_v2_text($image,17,390,540,$accent,'VOIR LA FICHE ET LE CONTENU');
+    $profile=p50_share_photo_profile_by_id($id);$name=(string)($profile['name']??'Influenceur');
+    p50_og_v2_text($image,15,64,118,$accent,'MON FIL');p50_og_v2_avatar($image,$profile,80,190,220,$accent,$ink);
+    p50_og_v2_text($image,28,370,235,$ink,mb_strtoupper(mb_substr($name,0,28),'UTF-8'));
+    $post=$title!==''?$title:'Actualité récente';foreach(p50_og_v2_fit($post,30,4) as $index=>$lineText)p50_og_v2_text($image,22,370,295+$index*36,$ink,$lineText);
+    imagefilledrectangle($image,370,480,700,530,$lime);
+    p50_og_v2_text($image,16,400,513,$ink,'Voir la fiche');
+    p50_og_v2_text($image,14,370,575,$muted,'pass50.store',false);
 }else{
-    $audio=p50_og_v2_audio($audioToken);$a=(string)($audio['candidate_a_name']??'Influenceur A');$b=(string)($audio['candidate_b_name']??'Influenceur B');$profileA=p50_share_photo_profile_by_id((string)($audio['candidate_a_id']??''));$profileB=p50_share_photo_profile_by_id((string)($audio['candidate_b_id']??''));$author=(string)($audio['author_display_name']??'Membre PASS50');
-    p50_og_v2_text($image,18,72,145,$accent,'AUDIO PUBLIC · LES COULÉS');p50_og_v2_avatar($image,$profileA,95,225,190,$accent,$white);p50_og_v2_avatar($image,$profileB,330,225,190,$accent,$white);
-    p50_og_v2_text($image,24,270,445,$accent,'VS');p50_og_v2_text($image,26,575,260,$white,mb_strtoupper(mb_substr($author,0,26),'UTF-8'));
-    foreach(p50_og_v2_fit("Commente son vote dans {$a} VS {$b}",28,4) as $index=>$line)p50_og_v2_text($image,23,575,330+$index*38,$white,$line);
-    p50_og_v2_text($image,17,575,535,$accent,'ÉCOUTER L’AUDIO SUR PASS50');
+    $audio=p50_og_v2_audio($audioToken);$a=(string)($audio['candidate_a_name']??'Influenceur A');$b=(string)($audio['candidate_b_name']??'Influenceur B');$profileA=p50_share_photo_profile_by_id((string)($audio['candidate_a_id']??''));$profileB=p50_share_photo_profile_by_id((string)($audio['candidate_b_id']??''));$author=(string)($audio['author_display_name']??'Membre');
+    p50_og_v2_text($image,15,64,118,$accent,'LES COULÉS · AUDIO');p50_og_v2_avatar($image,$profileA,95,200,160,$accent,$ink);p50_og_v2_avatar($image,$profileB,300,200,160,$accent,$ink);
+    p50_og_v2_text($image,18,250,400,$accent,'VS');p50_og_v2_text($image,22,540,235,$ink,mb_strtoupper(mb_substr($author,0,26),'UTF-8'));
+    foreach(p50_og_v2_fit("Commente {$a} VS {$b}",28,4) as $index=>$lineText)p50_og_v2_text($image,20,540,290+$index*34,$ink,$lineText);
+    imagefilledrectangle($image,540,470,900,520,$lime);
+    p50_og_v2_text($image,16,575,503,$ink,'Écouter');
+    p50_og_v2_text($image,14,540,560,$muted,'pass50.store',false);
 }
 
 header('Content-Type: image/png');header('Cache-Control: public, max-age=21600, stale-while-revalidate=86400');header('X-Content-Type-Options: nosniff');imagepng($image,null,6);imagedestroy($image);

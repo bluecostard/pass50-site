@@ -90,7 +90,7 @@ jobs:
               if jq -e --arg sha "$GITHUB_SHA" '.commit == $sha and .frontend == "v82-share-v2-only"' >/dev/null 2>&1 <<<"$marker" \
                 && grep -q "pass50-v81-service-worker-disabled" <<<"$worker" \
                 && grep -q "PASS50-PUBLIC-RUNTIME-V82" <<<"$runtime" \
-                && grep -q "context-share-v2.js?v=2.1" <<<"$runtime" \
+                && grep -q "context-share-v2.js?v=2.3" <<<"$runtime" \
                 && ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" <<<"$runtime" \
                 && grep -q "PASS50-CONTEXT-SHARE-V2.0" <<<"$share" \
                 && grep -q "PASS50" <<<"$page"; then

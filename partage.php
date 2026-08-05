@@ -67,11 +67,11 @@ $handle=p50_share_clean((string)($profile['handle']??''),90);
 $base=p50_share_base();
 
 $themes=[
-    'site'=>['color'=>'#1ee5ff','label'=>'LE SITE','title'=>'PASS50 — Qui fait le buzz maintenant ?','description'=>'Découvre le classement du buzz et des influenceurs ivoiriens.','cta'=>'Découvrir PASS50'],
-    'profile'=>['color'=>'#b7ff00','label'=>'FICHE INFLUENCEUR','title'=>$name.' — Fiche influenceur PASS50','description'=>trim($handle.' · Découvre sa fiche officielle, ses réseaux et son actualité.'),'cta'=>'Voir la fiche'],
-    'live'=>['color'=>'#ff4b4b','label'=>'EN DIRECT','title'=>$name.' est en direct — PASS50','description'=>'Regarde ce LIVE'.($platform!==''?' sur '.$platform:'').' depuis PASS50.','cta'=>'Regarder maintenant'],
-    'coules'=>['color'=>'#ff9d1d','label'=>'LES COULÉS','title'=>'Les Coulés — Mon vote PASS50','description'=>$name!=='PASS50'?'Mon choix : '.$name.'. À toi de voter.':'Découvre le duel et vote sur PASS50.','cta'=>'Voir le duel'],
-    'coules-audio'=>['color'=>'#a66cff','label'=>'LES COULÉS + AUDIO','title'=>'Les Coulés — Mon vote commenté sur PASS50','description'=>'Découvre mon choix et mon commentaire audio.','cta'=>'Écouter et voir'],
+    'site'=>['color'=>'#0e7c7b','label'=>'Le buzz','title'=>'Qui fait le buzz ?','description'=>'Classement des influenceurs ivoiriens.','cta'=>'Découvrir'],
+    'profile'=>['color'=>'#3d5a1f','label'=>'Fiche','title'=>$name,'description'=>trim($handle.' · Fiche influenceur'),'cta'=>'Voir la fiche'],
+    'live'=>['color'=>'#b42318','label'=>'En direct','title'=>$name.' est en direct','description'=>'Regarde ce LIVE'.($platform!==''?' sur '.$platform:'').'.','cta'=>'Regarder'],
+    'coules'=>['color'=>'#b45309','label'=>'Les Coulés','title'=>'Mon vote','description'=>$name!=='PASS50'?'Mon choix : '.$name.'. À toi de voter.':'Découvre le duel et vote.','cta'=>'Voir le duel'],
+    'coules-audio'=>['color'=>'#1d4e89','label'=>'Les Coulés','title'=>'Vote commenté','description'=>'Découvre mon choix et mon commentaire audio.','cta'=>'Écouter'],
 ];
 $theme=$themes[$type];
 
@@ -117,14 +117,13 @@ $cta=(string)$theme['cta'];
 <meta name="twitter:image" content="<?=p50_share_h($image)?>">
 <meta http-equiv="refresh" content="1;url=<?=p50_share_h($destination)?>">
 <style>
-:root{--accent:<?=p50_share_h($color)?>}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:#050705;color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.card{position:relative;width:min(480px,100%);min-height:560px;padding:34px;border:1px solid var(--accent);border-radius:28px;overflow:hidden;background:radial-gradient(circle at 95% 0,color-mix(in srgb,var(--accent) 24%,transparent),transparent 38%),linear-gradient(150deg,#151b15,#050705 72%);box-shadow:0 32px 100px rgba(0,0,0,.7);display:flex;flex-direction:column}.card:before{content:"";position:absolute;inset:0 auto 0 0;width:9px;background:var(--accent)}.brand{font-size:32px;font-weight:1000;letter-spacing:-1.7px}.brand span{color:var(--accent)}.kicker{margin-top:56px;color:var(--accent);font-size:12px;font-weight:1000;letter-spacing:1.8px}.pill{align-self:flex-start;margin-top:14px;padding:9px 14px;border:1px solid var(--accent);border-radius:999px;color:var(--accent);font-size:12px;font-weight:1000}.title{margin:42px 0 0;font-size:40px;line-height:1.02;letter-spacing:-1.8px}.desc{margin-top:14px;color:#aeb8aa;font-weight:800;line-height:1.45}.cta{display:block;margin-top:auto;padding:17px;border-radius:16px;background:var(--accent);color:#050705;text-align:center;text-decoration:none;font-weight:1000}.small{margin-top:12px;text-align:center;color:#879184;font-size:12px}
+:root{--accent:<?=p50_share_h($color)?>}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:#e8ebe4;color:#0b0f0b;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.card{position:relative;width:min(440px,100%);min-height:520px;padding:28px;border:1px solid #d5dbd2;border-radius:18px;overflow:hidden;background:#eef1ec;border-top:8px solid var(--accent);box-shadow:0 24px 80px rgba(0,0,0,.22);display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:1000;letter-spacing:-.8px}.brand:before{content:"";width:14px;height:14px;background:#b7ff00;flex:0 0 auto}.kicker{margin-top:28px;color:var(--accent);font-size:12px;font-weight:900;letter-spacing:.5px}.title{margin:18px 0 0;font-size:34px;line-height:1.05;letter-spacing:-1.2px}.desc{margin-top:12px;color:#5c665c;font-weight:600;line-height:1.45}.cta{display:block;margin-top:auto;padding:15px;border-radius:10px;background:#b7ff00;color:#0b0f0b;text-align:center;text-decoration:none;font-weight:1000}.small{margin-top:12px;text-align:center;color:#5c665c;font-size:12px}
 </style>
 </head>
 <body>
 <main class="card">
-<div class="brand">PASS<span>50</span></div>
+<div class="brand">PASS50</div>
 <div class="kicker"><?=p50_share_h($label)?></div>
-<div class="pill"><?=p50_share_h($type==='live'?'● EN DIRECT':($type==='profile'?'★ FICHE OFFICIELLE':($type==='site'?'↗ PASS50':($type==='coules-audio'?'🎙 VOTE COMMENTÉ':'⚔ MON VOTE'))))?></div>
 <h1 class="title"><?=p50_share_h($title)?></h1>
 <p class="desc"><?=p50_share_h($description)?></p>
 <a class="cta" href="<?=p50_share_h($destination)?>"><?=p50_share_h($cta)?></a>

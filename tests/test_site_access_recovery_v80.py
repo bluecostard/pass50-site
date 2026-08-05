@@ -17,13 +17,13 @@ class SiteAccessRecoveryV82Tests(unittest.TestCase):
         cls.htaccess = read(".htaccess")
 
     def test_service_worker_stays_disabled(self):
-        self.assertIn("pass50-v81-service-worker-disabled", self.worker)
+        self.assertIn("pass50-v82-hero-ghost-covers", self.worker)
         self.assertIn("self.registration.unregister()", self.worker)
         self.assertNotIn("addEventListener('fetch'", self.worker)
 
     def test_public_runtime_uses_only_share_v2(self):
         self.assertIn("PASS50-PUBLIC-RUNTIME-V82", self.public_copy)
-        self.assertIn("context-share-v2.js?v=2.1", self.public_copy)
+        self.assertIn("context-share-v2.js?v=2.3", self.public_copy)
         self.assertIn("dataset.pass50ContextShareV2", self.public_copy)
         self.assertIn("LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0'", self.public_copy)
         self.assertNotIn("loadScript('script[data-pass50-context-share]','./context-share-v1.js", self.public_copy)
@@ -54,7 +54,7 @@ class SiteAccessRecoveryV82Tests(unittest.TestCase):
             self.assertIn(f'put -O "$REMOTE_DIR" {path}', self.deploy)
         self.assertIn("v82-share-v2-only", self.deploy)
         self.assertIn("PASS50-PUBLIC-RUNTIME-V82", self.deploy)
-        self.assertIn("context-share-v2.js?v=2.1", self.deploy)
+        self.assertIn("context-share-v2.js?v=2.3", self.deploy)
         self.assertIn("--only-newer", self.deploy)
         self.assertNotIn("--transfer-all", self.deploy)
 

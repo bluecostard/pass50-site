@@ -170,9 +170,9 @@
       region,
       periodLabel: periodLabel(period),
       regionLabel: regionLabel(region),
-      title: `Top ${normalized} PASS50`,
+      title: `Top ${normalized}`,
       subtitle: `${periodLabel(period)} · ${regionLabel(region)}`,
-      accent: '#b7ff00'
+      accent: '#3d5a1f'
     };
     payload.url = contextUrl(payload);
     return payload;
@@ -210,7 +210,7 @@
       const audioUrl = String(audio?.currentSrc || audio?.src || '');
       const audioToken = audioTokenFromUrl(audioUrl);
       const kicker = compact(card.querySelector('.duel-audio-kicker')?.textContent || '', 100);
-      const author = compact(kicker.split('·').pop() || 'Membre PASS50', 48);
+      const author = compact(kicker.split('·').pop() || 'Membre', 48);
       const duel = compact(card.querySelector('.duel-audio-feed-head strong')?.textContent || 'Duel Les Coulés', 100);
       const [nameA, nameB] = splitDuel(duel);
       const profileA = profileByName(nameA);
@@ -231,7 +231,7 @@
         candidateB: { id: String(profileB?.id || ''), name: nameB, photoUrl: photoUrl(profileB, 220), initials: initials(nameB) },
         title: statement,
         subtitle: `${duel}${duration ? ` · ${duration}` : ''}`,
-        accent: '#a66cff'
+        accent: '#1d4e89'
       };
       payload.url = contextUrl(payload);
       return payload;
@@ -239,7 +239,7 @@
 
     const profileId = profileIdFromCard(card);
     const profile = profileById(profileId);
-    const name = compact(card.querySelector('.feed-person strong')?.textContent || profile?.name || 'Influenceur PASS50', 70);
+    const name = compact(card.querySelector('.feed-person strong')?.textContent || profile?.name || 'Influenceur', 70);
     const title = compact(card.querySelector('.feed-body h2')?.textContent || 'Actualité récente', 150);
     const meta = compact(card.querySelector('.feed-meta')?.textContent || '', 100);
     const platform = compact(meta.split('·')[0] || '', 32);
@@ -257,7 +257,7 @@
       photoUrl: photoUrl(profile || profileId, 260),
       initials: initials(name),
       subtitle: [platform, position].filter(Boolean).join(' · '),
-      accent: '#1ee5ff'
+      accent: '#0e7c7b'
     };
     payload.url = contextUrl(payload);
     return payload;
@@ -271,26 +271,26 @@
       #shareBtn{display:none!important}
       [data-p50-context-share="ranking"]{display:none!important}
       .p50-ranking-share-fab{position:fixed;right:22px;top:50%;z-index:118;display:flex;align-items:center;gap:10px;transform:translateY(-50%)}
-      .p50-ranking-share-toggle{width:56px;height:56px;border:1px solid rgba(183,255,0,.55);border-radius:50%;background:linear-gradient(145deg,#b7ff00,#79df00);color:#050705;display:grid;place-items:center;box-shadow:0 14px 34px rgba(0,0,0,.48),0 0 26px rgba(183,255,0,.25);transition:.18s}
+      .p50-ranking-share-toggle{width:56px;height:56px;border:1px solid #cfd6cb;border-radius:50%;background:#b7ff00;color:#0b0f0b;display:grid;place-items:center;box-shadow:0 10px 28px rgba(0,0,0,.22);transition:.18s}
       .p50-ranking-share-toggle:hover{transform:scale(1.04)}.p50-ranking-share-toggle svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-      .p50-ranking-share-menu{display:none;min-width:210px;padding:9px;border:1px solid rgba(183,255,0,.32);border-radius:18px;background:rgba(8,11,8,.98);box-shadow:0 20px 54px rgba(0,0,0,.58);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+      .p50-ranking-share-menu{display:none;min-width:210px;padding:9px;border:1px solid #d5dbd2;border-radius:16px;background:#eef1ec;box-shadow:0 18px 48px rgba(0,0,0,.28)}
       .p50-ranking-share-fab.open .p50-ranking-share-menu{display:grid;gap:7px;animation:p50ShareMenuIn .16s ease-out}@keyframes p50ShareMenuIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
-      .p50-ranking-share-menu strong{padding:4px 7px 6px;color:#aeb8aa;font-size:9px;letter-spacing:.8px}.p50-ranking-share-option{border:1px solid #293129;border-radius:13px;background:#101510;color:#fff;padding:11px 12px;text-align:left;font-weight:950}.p50-ranking-share-option:hover{border-color:#b7ff00;color:#b7ff00}
+      .p50-ranking-share-menu strong{padding:4px 7px 6px;color:#5c665c;font-size:9px;letter-spacing:.8px}.p50-ranking-share-option{border:1px solid #cfd6cb;border-radius:12px;background:#fff;color:#0b0f0b;padding:11px 12px;text-align:left;font-weight:950}.p50-ranking-share-option:hover{border-color:#0b0f0b;background:#0b0f0b;color:#eef1ec}
       .p50-context-share-post-v2{display:inline-flex!important;align-items:center;justify-content:center;gap:6px}
-      .p50-context-share-modal-v2{position:fixed;inset:0;z-index:13000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.84);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}.p50-context-share-modal-v2.show{display:flex}
-      .p50-context-share-box-v2{--p50-accent:#b7ff00;width:min(590px,100%);max-height:94vh;overflow:auto;padding:11px;border:1px solid color-mix(in srgb,var(--p50-accent) 48%,#293129);border-radius:27px;background:#080b08;box-shadow:0 34px 110px rgba(0,0,0,.75)}
-      .p50-context-share-head-v2{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 3px 10px}.p50-context-share-close-v2{width:42px;height:42px;border:1px solid #293129;border-radius:50%;background:#111611;color:#fff;font-size:23px}
-      .p50-context-share-preview-v2{position:relative;overflow:hidden;border-radius:21px;padding:21px;background:radial-gradient(circle at 93% 3%,color-mix(in srgb,var(--p50-accent) 22%,transparent),transparent 38%),linear-gradient(150deg,#151b15,#050705 76%);border-left:7px solid var(--p50-accent)}
-      .p50-context-brand-v2{font-size:25px;font-weight:1000;letter-spacing:-1.3px}.p50-context-brand-v2 span{color:var(--p50-accent)}.p50-context-kicker-v2{margin-top:18px;color:var(--p50-accent);font-size:10px;font-weight:1000;letter-spacing:1px}.p50-context-share-preview-v2 h2{margin:7px 0 5px;font-size:30px;line-height:1.05}.p50-context-subtitle-v2{color:#aeb8aa;font-size:12px;font-weight:850}
-      .p50-context-ranking-list-v2{display:grid;gap:6px;margin-top:16px}.p50-context-ranking-row-v2{display:grid;grid-template-columns:34px 38px minmax(0,1fr) 50px;gap:7px;align-items:center;padding:7px 8px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(5,7,5,.52);font-size:11px}.p50-context-ranking-row-v2>strong{color:var(--p50-accent)}
-      .p50-share-avatar-v2{position:relative;width:38px;height:38px;border:2px solid var(--p50-accent);border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#172017;font-size:11px;font-weight:1000}.p50-share-avatar-v2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}.p50-context-ranking-name-v2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:950}.p50-context-ranking-score-v2{text-align:right;font-weight:1000}
-      .p50-context-feed-v2{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;margin-top:17px;padding:14px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(5,7,5,.5)}.p50-context-feed-v2 .p50-share-avatar-v2{width:82px;height:82px;font-size:22px}.p50-context-feed-v2.duel .p50-context-duel-avatars-v2{display:flex;align-items:center}.p50-context-feed-v2.duel .p50-share-avatar-v2+span{margin:0 -4px;z-index:3;width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#100b17;border:1px solid var(--p50-accent);font-size:9px;font-weight:1000}.p50-context-feed-v2.duel .p50-share-avatar-v2:last-child{margin-left:-4px}.p50-context-feed-copy-v2 strong{display:block;color:var(--p50-accent);font-size:11px}.p50-context-feed-copy-v2 p{margin:6px 0 0;font-size:17px;line-height:1.35;font-weight:900}.p50-context-feed-copy-v2 audio{width:100%;margin-top:10px}
-      .p50-context-actions-v2{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.p50-context-actions-v2 button{min-height:50px;border:1px solid #293129;border-radius:13px;background:#111611;color:#fff;font-size:11px;font-weight:950}.p50-context-actions-v2 button:first-child{background:var(--p50-accent);border-color:var(--p50-accent);color:#050705}
-      #coules.section{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible!important}
-      #coules .coules-banner{width:100%!important;max-height:none!important;margin:0 0 7px!important;border-radius:20px!important;object-fit:cover!important;box-shadow:0 14px 34px rgba(0,0,0,.25)}
-      #coules .sunk-duel{margin:0!important;padding:14px!important;border:1px solid rgba(255,75,75,.38)!important;border-radius:20px!important;background:radial-gradient(circle at 50% -10%,rgba(255,75,75,.2),transparent 42%),linear-gradient(145deg,#2a1014,#12090b 72%)!important;box-shadow:0 16px 40px rgba(0,0,0,.32)!important}
+      .p50-context-share-modal-v2{position:fixed;inset:0;z-index:13000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(11,15,11,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}.p50-context-share-modal-v2.show{display:flex}
+      .p50-context-share-box-v2{--p50-accent:#0e7c7b;width:min(590px,100%);max-height:94vh;overflow:auto;padding:11px;border:1px solid #d5dbd2;border-radius:18px;background:#eef1ec;box-shadow:0 24px 80px rgba(0,0,0,.28)}
+      .p50-context-share-head-v2{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 3px 10px;color:#0b0f0b}.p50-context-share-close-v2{width:42px;height:42px;border:1px solid #cfd6cb;border-radius:50%;background:#fff;color:#0b0f0b;font-size:23px}
+      .p50-context-share-preview-v2{position:relative;overflow:hidden;border-radius:14px;padding:22px;background:#eef1ec;border-top:8px solid var(--p50-accent);color:#0b0f0b}
+      .p50-context-brand-v2{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:1000;letter-spacing:-.8px;color:#0b0f0b}.p50-context-brand-v2::before{content:"";width:14px;height:14px;background:#b7ff00;flex:0 0 auto}.p50-context-kicker-v2{margin-top:16px;color:var(--p50-accent);font-size:11px;font-weight:900;letter-spacing:.6px}.p50-context-share-preview-v2 h2{margin:7px 0 5px;font-size:28px;line-height:1.05;letter-spacing:-1px}.p50-context-subtitle-v2{color:#5c665c;font-size:12px;font-weight:700}
+      .p50-context-ranking-list-v2{display:grid;gap:6px;margin-top:16px}.p50-context-ranking-row-v2{display:grid;grid-template-columns:34px 38px minmax(0,1fr) 50px;gap:7px;align-items:center;padding:7px 8px;border:1px solid #d5dbd2;border-radius:10px;background:#fff;font-size:11px;color:#0b0f0b}.p50-context-ranking-row-v2>strong{color:var(--p50-accent)}
+      .p50-share-avatar-v2{position:relative;width:38px;height:38px;border:2px solid #0b0f0b;border-radius:10px;overflow:hidden;display:grid;place-items:center;background:#dde3d8;color:#0b0f0b;font-size:11px;font-weight:1000}.p50-share-avatar-v2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}.p50-context-ranking-name-v2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:950}.p50-context-ranking-score-v2{text-align:right;font-weight:1000}
+      .p50-context-feed-v2{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;margin-top:17px;padding:14px;border:1px solid #d5dbd2;border-radius:12px;background:#fff}.p50-context-feed-v2 .p50-share-avatar-v2{width:82px;height:82px;font-size:22px}.p50-context-feed-v2.duel .p50-context-duel-avatars-v2{display:flex;align-items:center}.p50-context-feed-v2.duel .p50-share-avatar-v2+span{margin:0 -4px;z-index:3;width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#0b0f0b;border:1px solid #0b0f0b;color:#eef1ec;font-size:9px;font-weight:1000}.p50-context-feed-v2.duel .p50-share-avatar-v2:last-child{margin-left:-4px}.p50-context-feed-copy-v2 strong{display:block;color:var(--p50-accent);font-size:11px}.p50-context-feed-copy-v2 p{margin:6px 0 0;font-size:17px;line-height:1.35;font-weight:900;color:#0b0f0b}.p50-context-feed-copy-v2 audio{width:100%;margin-top:10px}
+      .p50-context-actions-v2{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.p50-context-actions-v2 button{min-height:50px;border:1px solid #cfd6cb;border-radius:12px;background:#fff;color:#0b0f0b;font-size:11px;font-weight:950}.p50-context-actions-v2 button:first-child{background:#0b0f0b;border-color:#0b0f0b;color:#eef1ec}
+      #coules.section{padding:12px!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible!important}
+      #coules .coules-banner{display:flex!important;align-items:center!important;gap:14px!important;width:100%!important;max-height:none!important;margin:0 0 10px!important;padding:12px 14px!important;border:1px solid rgba(212,175,55,.5)!important;border-radius:16px!important;background:linear-gradient(120deg,#1a1308,#0d0b09 58%,#160c0c)!important;box-shadow:inset 0 1px 0 rgba(255,214,120,.08)!important;object-fit:unset!important}
+      #coules .sunk-duel{margin:0!important;padding:14px!important;border:1px solid rgba(255,75,75,.38)!important;border-radius:16px!important;background:radial-gradient(circle at 50% -10%,rgba(255,75,75,.2),transparent 42%),linear-gradient(145deg,#2a1014,#12090b 72%)!important;box-shadow:0 16px 40px rgba(0,0,0,.32)!important}
       #coules .duel-question{margin-top:0!important}#coules .duel-sub{margin-bottom:11px!important}#coules .sunk{padding:12px!important;background:linear-gradient(145deg,rgba(87,28,34,.82),rgba(23,10,12,.96))!important}
-      @media(max-width:680px){.p50-ranking-share-fab{right:12px;top:auto;bottom:calc(115px + env(safe-area-inset-bottom));transform:none;flex-direction:row}.p50-ranking-share-toggle{width:52px;height:52px}.p50-ranking-share-menu{min-width:190px}.p50-context-share-modal-v2{align-items:flex-end;padding:0}.p50-context-share-box-v2{width:100vw;max-width:100vw;border-radius:23px 23px 0 0;padding:9px;padding-bottom:calc(9px + env(safe-area-inset-bottom))}.p50-context-actions-v2{grid-template-columns:1fr 1fr}.p50-context-feed-v2{grid-template-columns:1fr}.p50-context-feed-v2 .p50-share-avatar-v2{width:72px;height:72px}.feed-actions .p50-context-share-post-v2{width:100%}#coules .coules-banner{border-radius:15px!important;margin-bottom:5px!important}#coules .sunk-duel{padding:10px!important;border-radius:16px!important}#coules .sunk{padding:10px!important}}
+      @media(max-width:680px){.p50-ranking-share-fab{right:12px;top:auto;bottom:calc(115px + env(safe-area-inset-bottom));transform:none;flex-direction:row}.p50-ranking-share-toggle{width:52px;height:52px}.p50-ranking-share-menu{min-width:190px}.p50-context-share-modal-v2{align-items:flex-end;padding:0}.p50-context-share-box-v2{width:100vw;max-width:100vw;border-radius:23px 23px 0 0;padding:9px;padding-bottom:calc(9px + env(safe-area-inset-bottom))}.p50-context-actions-v2{grid-template-columns:1fr 1fr}.p50-context-feed-v2{grid-template-columns:1fr}.p50-context-feed-v2 .p50-share-avatar-v2{width:72px;height:72px}.feed-actions .p50-context-share-post-v2{width:100%}#coules .coules-banner{padding:10px 12px!important;gap:10px!important;border-radius:13px!important;margin-bottom:8px!important}#coules .sunk-duel{padding:10px!important;border-radius:16px!important}#coules .sunk{padding:10px!important}}
     `;
     document.head.appendChild(style);
   }
@@ -317,15 +317,15 @@
     const visible = payload.size === 50 ? payload.rows.slice(0, 10) : payload.rows;
     const rows = visible.map(row => `<div class="p50-context-ranking-row-v2"><strong>#${row.rank}</strong>${avatarPreview(row)}<span class="p50-context-ranking-name-v2">${esc(row.name)}</span><span class="p50-context-ranking-score-v2">${row.score}</span></div>`).join('');
     const more = payload.size === 50 && payload.rows.length > visible.length ? '<div class="p50-context-subtitle-v2" style="margin-top:8px;text-align:center">Aperçu des 10 premiers · l’image contient le Top 50 complet</div>' : '';
-    return `<div class="p50-context-brand-v2">PASS<span>50</span></div><div class="p50-context-kicker-v2">CLASSEMENT OFFICIEL</div><h2>${esc(payload.title)}</h2><div class="p50-context-subtitle-v2">${esc(payload.subtitle)}</div><div class="p50-context-ranking-list-v2">${rows}</div>${more}`;
+    return `<div class="p50-context-brand-v2">PASS50</div><div class="p50-context-kicker-v2">CLASSEMENT</div><h2>${esc(payload.title)}</h2><div class="p50-context-subtitle-v2">${esc(payload.subtitle)}</div><div class="p50-context-ranking-list-v2">${rows}</div>${more}`;
   }
 
   function feedPreview(payload) {
     if (payload.kind === 'duel-audio') {
       const audio = payload.audioUrl ? `<audio controls preload="metadata" src="${attr(payload.audioUrl)}"></audio>` : '';
-      return `<div class="p50-context-brand-v2">PASS<span>50</span></div><div class="p50-context-kicker-v2">AUDIO PUBLIC · LES COULÉS</div><h2>${esc(payload.duel)}</h2><div class="p50-context-subtitle-v2">${esc(payload.duration || '')}</div><div class="p50-context-feed-v2 duel"><div class="p50-context-duel-avatars-v2">${avatarPreview(payload.candidateA)}<span>VS</span>${avatarPreview(payload.candidateB)}</div><div class="p50-context-feed-copy-v2"><strong>🎙 ${esc(payload.author)}</strong><p>${esc(payload.statement)}</p>${audio}</div></div>`;
+      return `<div class="p50-context-brand-v2">PASS50</div><div class="p50-context-kicker-v2">LES COULÉS · AUDIO</div><h2>${esc(payload.duel)}</h2><div class="p50-context-subtitle-v2">${esc(payload.duration || '')}</div><div class="p50-context-feed-v2 duel"><div class="p50-context-duel-avatars-v2">${avatarPreview(payload.candidateA)}<span>VS</span>${avatarPreview(payload.candidateB)}</div><div class="p50-context-feed-copy-v2"><strong>${esc(payload.author)}</strong><p>${esc(payload.statement)}</p>${audio}</div></div>`;
     }
-    return `<div class="p50-context-brand-v2">PASS<span>50</span></div><div class="p50-context-kicker-v2">POST DE MON FIL</div><h2>${esc(payload.name)}</h2><div class="p50-context-subtitle-v2">${esc(payload.subtitle || '')}</div><div class="p50-context-feed-v2">${avatarPreview({ name: payload.name, initials: payload.initials, photoUrl: payload.photoUrl })}<div class="p50-context-feed-copy-v2"><strong>📰 ACTUALITÉ</strong><p>${esc(payload.title)}</p></div></div>`;
+    return `<div class="p50-context-brand-v2">PASS50</div><div class="p50-context-kicker-v2">MON FIL</div><h2>${esc(payload.name)}</h2><div class="p50-context-subtitle-v2">${esc(payload.subtitle || '')}</div><div class="p50-context-feed-v2">${avatarPreview({ name: payload.name, initials: payload.initials, photoUrl: payload.photoUrl })}<div class="p50-context-feed-copy-v2"><strong>ACTUALITÉ</strong><p>${esc(payload.title)}</p></div></div>`;
   }
 
   function openPayload(payload) {
@@ -333,7 +333,7 @@
     state.current = payload;
     closeRankingMenu();
     const modal = ensureModal();
-    modal.querySelector('.p50-context-share-box-v2').style.setProperty('--p50-accent', payload.accent || '#b7ff00');
+    modal.querySelector('.p50-context-share-box-v2').style.setProperty('--p50-accent', payload.accent || '#0e7c7b');
     modal.querySelector('#p50ContextSharePreviewV2').innerHTML = payload.kind === 'ranking' ? rankingPreview(payload) : feedPreview(payload);
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
@@ -403,8 +403,8 @@
       const leader = payload.rows[0];
       return `📊 ${payload.title} — ${payload.periodLabel}, ${payload.regionLabel}.${leader ? `\nN°1 : ${leader.name} · ${leader.score}/100` : ''}\n${payload.url}`;
     }
-    if (payload.kind === 'duel-audio') return `🎙 ${payload.author} commente son vote dans ${payload.duel} sur PASS50.\n${payload.url}`;
-    return `📰 ${payload.name} sur PASS50 : ${payload.title}\n${payload.url}`;
+    if (payload.kind === 'duel-audio') return `🎙 ${payload.author} commente ${payload.duel}.\n${payload.url}`;
+    return `📰 ${payload.name} : ${payload.title}\n${payload.url}`;
   }
 
   function roundedRect(ctx, x, y, width, height, radius) {
@@ -459,12 +459,9 @@
       const height = image.height * ratio;
       ctx.drawImage(image, x + (size - width) / 2, y + (size - height) / 2, width, height);
     } else {
-      const gradient = ctx.createLinearGradient(x, y, x + size, y + size);
-      gradient.addColorStop(0, '#2b362b');
-      gradient.addColorStop(1, '#0b0e0b');
-      ctx.fillStyle = gradient;
+      ctx.fillStyle = '#dde3d8';
       ctx.fillRect(x, y, size, size);
-      ctx.fillStyle = accent;
+      ctx.fillStyle = '#0b0f0b';
       ctx.textAlign = 'center';
       ctx.font = `1000 ${Math.max(13, Math.round(size * .31))}px Arial, sans-serif`;
       ctx.fillText(fallback || 'P50', x + size / 2, y + size * .62);
@@ -479,35 +476,28 @@
   }
 
   function drawBase(ctx, accent, kicker, title, subtitle) {
-    const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
-    gradient.addColorStop(0, '#151b15');
-    gradient.addColorStop(1, '#050705');
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = '#eef1ec';
     ctx.fillRect(0, 0, 1080, 1350);
     ctx.fillStyle = accent;
-    ctx.fillRect(0, 0, 22, 1350);
-    ctx.globalAlpha = .14;
-    ctx.beginPath();
-    ctx.arc(990, 80, 380, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#fff';
-    ctx.font = '1000 70px Arial, sans-serif';
-    ctx.fillText('PASS', 64, 106);
+    ctx.fillRect(0, 0, 1080, 18);
+    ctx.fillStyle = '#b7ff00';
+    ctx.fillRect(64, 56, 22, 22);
+    ctx.fillStyle = '#0b0f0b';
+    ctx.font = '1000 42px Arial, sans-serif';
+    ctx.fillText('PASS50', 100, 76);
     ctx.fillStyle = accent;
-    ctx.fillText('50', 238, 106);
-    ctx.font = '1000 27px Arial, sans-serif';
-    ctx.fillText(kicker, 64, 185);
-    ctx.fillStyle = '#fff';
-    ctx.font = '1000 58px Arial, sans-serif';
-    wrapCanvas(ctx, String(title || '').toUpperCase(), 930, 2).forEach((line, index) => ctx.fillText(line, 64, 270 + index * 66));
-    ctx.fillStyle = '#aeb8aa';
-    ctx.font = '800 26px Arial, sans-serif';
-    wrapCanvas(ctx, subtitle, 920, 2).forEach((line, index) => ctx.fillText(line, 64, 360 + index * 38));
+    ctx.font = '800 22px Arial, sans-serif';
+    ctx.fillText(String(kicker || '').toUpperCase(), 64, 140);
+    ctx.fillStyle = '#0b0f0b';
+    ctx.font = '1000 56px Arial, sans-serif';
+    wrapCanvas(ctx, String(title || ''), 930, 2).forEach((line, index) => ctx.fillText(line, 64, 250 + index * 66));
+    ctx.fillStyle = '#5c665c';
+    ctx.font = '600 26px Arial, sans-serif';
+    wrapCanvas(ctx, subtitle, 920, 2).forEach((line, index) => ctx.fillText(line, 64, 360 + index * 36));
   }
 
   async function drawRankingImage(ctx, payload) {
-    drawBase(ctx, payload.accent, 'CLASSEMENT OFFICIEL', payload.title, payload.subtitle);
+    drawBase(ctx, payload.accent, 'CLASSEMENT', payload.title, payload.subtitle);
     const rows = payload.rows.slice(0, payload.size);
     const images = await Promise.all(rows.map(row => loadImage(row.photoUrl)));
     if (payload.size === 50) {
@@ -517,10 +507,10 @@
         const x = column === 0 ? 52 : 548;
         const y = 420 + local * 32;
         drawAvatar(ctx, images[index], x + 39, y - 23, 25, row.initials, payload.accent);
-        ctx.fillStyle = row.rank <= 3 ? payload.accent : '#dce5d8';
+        ctx.fillStyle = row.rank <= 3 ? payload.accent : '#5c665c';
         ctx.font = '1000 18px Arial, sans-serif';
         ctx.fillText(`#${row.rank}`, x, y);
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = '#0b0f0b';
         ctx.font = '900 17px Arial, sans-serif';
         ctx.fillText(compact(row.name, 20), x + 72, y);
         ctx.fillStyle = payload.accent;
@@ -533,22 +523,22 @@
       const rowHeight = payload.size === 3 ? 205 : 77;
       rows.forEach((row, index) => {
         const y = startY + index * rowHeight;
-        roundedRect(ctx, 60, y - 42, 960, rowHeight - 12, 22);
-        ctx.fillStyle = 'rgba(5,7,5,.58)';
+        roundedRect(ctx, 60, y - 42, 960, rowHeight - 12, 16);
+        ctx.fillStyle = '#ffffff';
         ctx.fill();
-        ctx.strokeStyle = row.rank <= 3 ? payload.accent : 'rgba(255,255,255,.12)';
-        ctx.lineWidth = row.rank <= 3 ? 4 : 2;
+        ctx.strokeStyle = row.rank <= 3 ? payload.accent : '#d5dbd2';
+        ctx.lineWidth = row.rank <= 3 ? 3 : 1;
         ctx.stroke();
         const avatarSize = payload.size === 3 ? 120 : 50;
         drawAvatar(ctx, images[index], payload.size === 3 ? 140 : 112, y - (payload.size === 3 ? 20 : 29), avatarSize, row.initials, payload.accent);
         ctx.fillStyle = payload.accent;
         ctx.font = `1000 ${payload.size === 3 ? 48 : 29}px Arial, sans-serif`;
         ctx.fillText(`#${row.rank}`, 82, y + (payload.size === 3 ? 25 : 8));
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = '#0b0f0b';
         ctx.font = `1000 ${payload.size === 3 ? 40 : 27}px Arial, sans-serif`;
         ctx.fillText(compact(row.name, payload.size === 3 ? 27 : 38), payload.size === 3 ? 300 : 184, y + (payload.size === 3 ? 10 : 7));
-        ctx.fillStyle = '#aeb8aa';
-        ctx.font = `800 ${payload.size === 3 ? 23 : 17}px Arial, sans-serif`;
+        ctx.fillStyle = '#5c665c';
+        ctx.font = `700 ${payload.size === 3 ? 23 : 17}px Arial, sans-serif`;
         ctx.fillText(row.movement, payload.size === 3 ? 300 : 184, y + (payload.size === 3 ? 50 : 30));
         ctx.fillStyle = payload.accent;
         ctx.textAlign = 'right';
@@ -557,38 +547,41 @@
         ctx.textAlign = 'left';
       });
     }
-    ctx.fillStyle = payload.accent;
-    roundedRect(ctx, 60, 1230, 960, 78, 24);
+    ctx.fillStyle = '#b7ff00';
+    roundedRect(ctx, 60, 1230, 960, 78, 12);
     ctx.fill();
-    ctx.fillStyle = '#050705';
+    ctx.fillStyle = '#0b0f0b';
     ctx.textAlign = 'center';
-    ctx.font = '1000 29px Arial, sans-serif';
-    ctx.fillText(payload.size === 50 ? 'VOIR LE CLASSEMENT COMPLET SUR PASS50' : `VOIR LE TOP ${payload.size} SUR PASS50`, 540, 1280);
+    ctx.font = '1000 28px Arial, sans-serif';
+    ctx.fillText(payload.size === 50 ? 'Voir le classement' : `Voir le Top ${payload.size}`, 540, 1280);
     ctx.textAlign = 'left';
+    ctx.fillStyle = '#5c665c';
+    ctx.font = '600 22px Arial, sans-serif';
+    ctx.fillText('pass50.store', 64, 1330);
   }
 
   async function drawFeedImage(ctx, payload) {
-    const kicker = payload.kind === 'duel-audio' ? 'AUDIO PUBLIC · LES COULÉS' : 'POST DE MON FIL';
+    const kicker = payload.kind === 'duel-audio' ? 'LES COULÉS · AUDIO' : 'MON FIL';
     const heading = payload.kind === 'duel-audio' ? payload.duel : payload.name;
-    drawBase(ctx, payload.accent, kicker, heading, payload.subtitle || 'PASS50');
-    roundedRect(ctx, 64, 450, 952, 560, 30);
-    ctx.fillStyle = 'rgba(5,7,5,.6)';
+    drawBase(ctx, payload.accent, kicker, heading, payload.subtitle || 'Contenu du moment');
+    roundedRect(ctx, 64, 450, 952, 560, 16);
+    ctx.fillStyle = '#ffffff';
     ctx.fill();
-    ctx.strokeStyle = payload.accent;
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#d5dbd2';
+    ctx.lineWidth = 2;
     ctx.stroke();
     if (payload.kind === 'duel-audio') {
       const [imageA, imageB] = await Promise.all([loadImage(payload.candidateA.photoUrl), loadImage(payload.candidateB.photoUrl)]);
       drawAvatar(ctx, imageA, 112, 520, 190, payload.candidateA.initials, payload.accent);
       drawAvatar(ctx, imageB, 325, 520, 190, payload.candidateB.initials, payload.accent);
       ctx.fillStyle = payload.accent;
-      ctx.font = '1000 28px Arial, sans-serif';
-      ctx.fillText(`🎙 ${compact(payload.author, 34)}`, 560, 550);
-      ctx.fillStyle = '#fff';
-      ctx.font = '1000 42px Arial, sans-serif';
-      wrapCanvas(ctx, payload.statement, 390, 6).forEach((line, index) => ctx.fillText(line, 560, 625 + index * 54));
+      ctx.font = '800 24px Arial, sans-serif';
+      ctx.fillText(compact(payload.author, 34), 560, 550);
+      ctx.fillStyle = '#0b0f0b';
+      ctx.font = '800 36px Arial, sans-serif';
+      wrapCanvas(ctx, payload.statement, 390, 6).forEach((line, index) => ctx.fillText(line, 560, 625 + index * 48));
       ctx.strokeStyle = payload.accent;
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 5;
       ctx.beginPath();
       for (let x = 120; x < 960; x += 20) {
         const amplitude = 14 + Math.abs(Math.sin(x * .035)) * 34;
@@ -600,23 +593,23 @@
       const image = await loadImage(payload.photoUrl);
       drawAvatar(ctx, image, 105, 540, 250, payload.initials, payload.accent);
       ctx.fillStyle = payload.accent;
-      ctx.font = '1000 29px Arial, sans-serif';
-      ctx.fillText(`📰 ${compact(payload.name, 30)}`, 410, 565);
-      ctx.fillStyle = '#fff';
-      ctx.font = '1000 45px Arial, sans-serif';
-      wrapCanvas(ctx, payload.title, 535, 6).forEach((line, index) => ctx.fillText(line, 410, 650 + index * 57));
+      ctx.font = '800 24px Arial, sans-serif';
+      ctx.fillText(compact(payload.name, 30), 410, 565);
+      ctx.fillStyle = '#0b0f0b';
+      ctx.font = '800 40px Arial, sans-serif';
+      wrapCanvas(ctx, payload.title, 535, 6).forEach((line, index) => ctx.fillText(line, 410, 650 + index * 52));
     }
-    ctx.fillStyle = payload.accent;
-    roundedRect(ctx, 64, 1120, 952, 120, 28);
+    ctx.fillStyle = '#b7ff00';
+    roundedRect(ctx, 64, 1120, 952, 100, 12);
     ctx.fill();
-    ctx.fillStyle = '#050705';
+    ctx.fillStyle = '#0b0f0b';
     ctx.textAlign = 'center';
-    ctx.font = '1000 34px Arial, sans-serif';
-    ctx.fillText(payload.kind === 'duel-audio' ? 'ÉCOUTER L’AUDIO SUR PASS50' : 'VOIR LA FICHE ET LE CONTENU', 540, 1195);
+    ctx.font = '1000 30px Arial, sans-serif';
+    ctx.fillText(payload.kind === 'duel-audio' ? 'Écouter l’audio' : 'Voir la fiche', 540, 1184);
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#aeb8aa';
-    ctx.font = '800 24px Arial, sans-serif';
-    ctx.fillText('pass50.store', 64, 1305);
+    ctx.fillStyle = '#5c665c';
+    ctx.font = '600 22px Arial, sans-serif';
+    ctx.fillText('pass50.store', 64, 1295);
   }
 
   async function imageFile(payload) {

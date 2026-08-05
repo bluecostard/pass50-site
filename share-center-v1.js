@@ -3,13 +3,17 @@
 
 if(window.PASS50_SHARE_CENTER)return;
 
-const VERSION='1.0.0';
+const VERSION='1.2.0';
+const PAPER='#eef1ec';
+const INK='#0b0f0b';
+const MUTED='#5c665c';
+const LIME='#b7ff00';
 const THEMES={
-  site:{accent:'#1ee5ff',soft:'rgba(30,229,255,.16)',label:'PASS50',icon:'↗',kicker:'LE SITE',cta:'DÉCOUVRIR PASS50'},
-  profile:{accent:'#b7ff00',soft:'rgba(183,255,0,.16)',label:'FICHE INFLUENCEUR',icon:'★',kicker:'FICHE OFFICIELLE',cta:'VOIR LA FICHE'},
-  live:{accent:'#ff4b4b',soft:'rgba(255,75,75,.16)',label:'EN DIRECT',icon:'●',kicker:'LIVE PASS50',cta:'REGARDER MAINTENANT'},
-  coules:{accent:'#ff9d1d',soft:'rgba(255,157,29,.17)',label:'LES COULÉS',icon:'⚔',kicker:'MON VOTE',cta:'VOIR LE DUEL'},
-  'coules-audio':{accent:'#a66cff',soft:'rgba(166,108,255,.18)',label:'LES COULÉS + AUDIO',icon:'🎙',kicker:'MON VOTE COMMENTÉ',cta:'ÉCOUTER ET VOIR'}
+  site:{accent:'#0e7c7b',soft:'rgba(14,124,123,.10)',label:'Le buzz',kicker:'Classement',cta:'Découvrir'},
+  profile:{accent:'#3d5a1f',soft:'rgba(61,90,31,.10)',label:'Profil',kicker:'Fiche',cta:'Voir la fiche'},
+  live:{accent:'#b42318',soft:'rgba(180,35,24,.10)',label:'Live',kicker:'En direct',cta:'Regarder'},
+  coules:{accent:'#b45309',soft:'rgba(180,83,9,.10)',label:'Duel',kicker:'Les Coulés',cta:'Voir le duel'},
+  'coules-audio':{accent:'#1d4e89',soft:'rgba(29,78,137,.10)',label:'Audio',kicker:'Les Coulés',cta:'Écouter'}
 };
 let current=null;
 let deepLinkApplied=false;
@@ -68,17 +72,17 @@ function payloadFor(type,data={}){
   const name=String(data.name||profile?.name||'PASS50');
   const handle=String(data.handle||profile?.handle||'');
   const photo=String(data.photo||publicPhoto(profile)||'');
-  let title='Qui fait le buzz maintenant ?';
-  let subtitle='Le classement du buzz et des influenceurs ivoiriens.';
+  let title='Qui fait le buzz ?';
+  let subtitle='Classement des influenceurs ivoiriens.';
   if(type==='profile'){
     title=name;
-    subtitle=[handle,'Fiche influenceur PASS50'].filter(Boolean).join(' · ');
+    subtitle=[handle,'Fiche influenceur'].filter(Boolean).join(' · ');
   }else if(type==='live'){
     title=name;
     subtitle=`En direct${data.platform?` sur ${data.platform}`:''}`;
   }else if(type==='coules'||type==='coules-audio'){
-    title=data.title||name||'Mon vote PASS50';
-    subtitle=type==='coules-audio'?'Mon vote avec commentaire audio':'Mon choix dans le duel';
+    title=data.title||name||'Mon vote';
+    subtitle=type==='coules-audio'?'Vote avec commentaire audio':'Choix dans le duel';
   }
   return {
     type,theme,name,title,subtitle,photo,
@@ -99,24 +103,26 @@ function ensureModal(){
   #shareBtn{display:inline-grid!important;place-items:center}
   .p50-share-center{position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.82);backdrop-filter:blur(14px)}
   .p50-share-center.show{display:flex}
-  .p50-share-box{--share-accent:#1ee5ff;--share-soft:rgba(30,229,255,.16);width:min(440px,100%);padding:12px;border:1px solid color-mix(in srgb,var(--share-accent) 48%,#293129);border-radius:27px;background:#080b08;box-shadow:0 34px 110px rgba(0,0,0,.75)}
-  .p50-share-close{display:grid;place-items:center;margin-left:auto;width:42px;height:42px;border:1px solid #293129;border-radius:50%;background:#111611;color:#fff;font-size:23px}
-  .p50-share-card{position:relative;min-height:474px;padding:27px;overflow:hidden;border-radius:22px;background:radial-gradient(circle at 94% 4%,var(--share-soft),transparent 34%),linear-gradient(152deg,#151b15 0%,#060806 72%);display:flex;flex-direction:column}
-  .p50-share-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--share-accent)}
-  .p50-share-brand{font-size:27px;font-weight:1000;letter-spacing:-1.3px}.p50-share-brand span{color:var(--share-accent)}
-  .p50-share-kicker{margin-top:42px;color:var(--share-accent);font-size:12px;font-weight:1000;letter-spacing:1.7px}
-  .p50-share-pill{align-self:flex-start;margin-top:12px;padding:8px 13px;border:1px solid var(--share-accent);border-radius:999px;color:var(--share-accent);background:var(--share-soft);font-size:12px;font-weight:1000}
-  .p50-share-person{display:grid;grid-template-columns:96px minmax(0,1fr);gap:17px;align-items:center;margin-top:25px}
-  .p50-share-avatar{width:96px;height:96px;border:4px solid var(--share-accent);border-radius:24px;display:grid;place-items:center;overflow:hidden;background:#202820;color:#fff;font-size:32px;font-weight:1000}
+  .p50-share-box{--share-accent:#0e7c7b;--share-soft:rgba(14,124,123,.10);width:min(440px,100%);padding:12px;border:1px solid #d5dbd2;border-radius:18px;background:#eef1ec;box-shadow:0 24px 80px rgba(0,0,0,.28)}
+  .p50-share-close{display:grid;place-items:center;margin-left:auto;width:42px;height:42px;border:1px solid #cfd6cb;border-radius:50%;background:#fff;color:#0b0f0b;font-size:23px}
+  .p50-share-card{position:relative;min-height:474px;padding:28px;overflow:hidden;border-radius:14px;background:#eef1ec;display:flex;flex-direction:column;border-top:8px solid var(--share-accent)}
+  .p50-share-card::before{display:none}
+  .p50-share-brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:1000;letter-spacing:-.8px;color:#0b0f0b}
+  .p50-share-brand::before{content:"";width:14px;height:14px;background:#b7ff00;flex:0 0 auto}
+  .p50-share-brand span{color:inherit}
+  .p50-share-kicker{margin-top:34px;color:var(--share-accent);font-size:12px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+  .p50-share-pill{align-self:flex-start;margin-top:8px;padding:0;border:0;border-radius:0;color:#5c665c;background:transparent;font-size:13px;font-weight:700;letter-spacing:.2px}
+  .p50-share-person{display:grid;grid-template-columns:88px minmax(0,1fr);gap:16px;align-items:center;margin-top:22px}
+  .p50-share-avatar{width:88px;height:88px;border:2px solid #0b0f0b;border-radius:12px;display:grid;place-items:center;overflow:hidden;background:#dde3d8;color:#0b0f0b;font-size:28px;font-weight:1000}
   .p50-share-avatar img{width:100%;height:100%;object-fit:cover}
-  .p50-share-title{margin:0;font-size:34px;line-height:1.02;letter-spacing:-1.5px;overflow-wrap:anywhere}
-  .p50-share-subtitle{margin-top:7px;color:#aeb8aa;font-weight:850;line-height:1.35}
-  .p50-share-rule{height:1px;margin:25px 0;background:linear-gradient(90deg,var(--share-accent),transparent)}
-  .p50-share-cta{margin-top:auto;padding:16px;border-radius:16px;background:var(--share-accent);color:#050705;text-align:center;font-weight:1000;letter-spacing:.4px}
+  .p50-share-title{margin:0;font-size:32px;line-height:1.05;letter-spacing:-1.2px;color:#0b0f0b;overflow-wrap:anywhere}
+  .p50-share-subtitle{margin-top:7px;color:#5c665c;font-weight:700;line-height:1.35}
+  .p50-share-rule{height:1px;margin:24px 0;background:#cfd6cb}
+  .p50-share-cta{margin-top:auto;padding:15px;border-radius:10px;background:#b7ff00;color:#0b0f0b;text-align:center;font-weight:1000;letter-spacing:.2px}
   .p50-share-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:11px}
-  .p50-share-actions button{min-height:52px;border:1px solid #293129;border-radius:14px;background:#111611;color:#fff;font-weight:950}
-  .p50-share-actions button:first-child{background:var(--share-accent);border-color:var(--share-accent);color:#050705}
-  .p50-share-code{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:9px 11px;border:1px solid var(--share-accent);border-radius:12px;color:var(--share-accent);background:var(--share-soft);font-size:11px;font-weight:1000;letter-spacing:.7px}
+  .p50-share-actions button{min-height:52px;border:1px solid #cfd6cb;border-radius:12px;background:#fff;color:#0b0f0b;font-weight:950}
+  .p50-share-actions button:first-child{background:#0b0f0b;border-color:#0b0f0b;color:#eef1ec}
+  .p50-share-code{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:9px 11px;border:1px solid #cfd6cb;border-radius:10px;color:#0b0f0b;background:#fff;font-size:11px;font-weight:900;letter-spacing:.4px}
   #voteShareModal.p50-coules-share{--coules-accent:#ff9d1d}#voteShareModal.p50-coules-audio-share{--coules-accent:#a66cff}
   #voteShareModal.p50-coules-share .modal-box,#voteShareModal.p50-coules-audio-share .modal-box{border-color:var(--coules-accent)}
   #voteShareModal.p50-coules-share .vote-share-preview,#voteShareModal.p50-coules-audio-share .vote-share-preview{border-color:var(--coules-accent);box-shadow:0 0 32px color-mix(in srgb,var(--coules-accent) 20%,transparent)}
@@ -134,15 +140,15 @@ function ensureModal(){
   modal.innerHTML=`<div class="p50-share-box" role="dialog" aria-modal="true" aria-label="Partager sur PASS50">
     <button type="button" class="p50-share-close" aria-label="Fermer">×</button>
     <div class="p50-share-card">
-      <div class="p50-share-brand">PASS<span>50</span></div>
-      <div class="p50-share-kicker">LE SITE</div>
-      <div class="p50-share-pill">↗ PASS50</div>
+      <div class="p50-share-brand">PASS50</div>
+      <div class="p50-share-kicker">CLASSEMENT</div>
+      <div class="p50-share-pill"></div>
       <div class="p50-share-person">
         <div class="p50-share-avatar">P50</div>
-        <div><h2 class="p50-share-title">PASS50</h2><div class="p50-share-subtitle"></div></div>
+        <div><h2 class="p50-share-title">Qui fait le buzz ?</h2><div class="p50-share-subtitle"></div></div>
       </div>
       <div class="p50-share-rule"></div>
-      <div class="p50-share-cta">DÉCOUVRIR PASS50</div>
+      <div class="p50-share-cta">Découvrir</div>
     </div>
     <div class="p50-share-actions">
       <button type="button" data-p50-share-native>Partager</button>
@@ -161,7 +167,7 @@ function render(payload){
   box.style.setProperty('--share-accent',payload.theme.accent);
   box.style.setProperty('--share-soft',payload.theme.soft);
   modal.querySelector('.p50-share-kicker').textContent=payload.theme.kicker;
-  modal.querySelector('.p50-share-pill').textContent=`${payload.theme.icon} ${payload.theme.label}`;
+  modal.querySelector('.p50-share-pill').textContent=payload.theme.label;
   modal.querySelector('.p50-share-title').textContent=payload.title;
   modal.querySelector('.p50-share-subtitle').textContent=payload.subtitle;
   modal.querySelector('.p50-share-cta').textContent=payload.theme.cta;
@@ -193,36 +199,35 @@ function imageFile(payload){
     const canvas=document.createElement('canvas');
     canvas.width=1080;canvas.height=1350;
     const ctx=canvas.getContext('2d');
-    const gradient=ctx.createLinearGradient(0,0,1080,1350);
-    gradient.addColorStop(0,'#151b15');gradient.addColorStop(1,'#050705');
-    ctx.fillStyle=gradient;ctx.fillRect(0,0,1080,1350);
-    ctx.fillStyle=payload.theme.accent;ctx.fillRect(0,0,22,1350);
-    ctx.globalAlpha=.14;ctx.fillStyle=payload.theme.accent;ctx.beginPath();ctx.arc(980,80,370,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-    ctx.fillStyle='#fff';ctx.font='1000 76px Arial';ctx.fillText('PASS',70,112);
-    ctx.fillStyle=payload.theme.accent;ctx.fillText('50',260,112);
-    ctx.fillStyle=payload.theme.accent;ctx.font='1000 30px Arial';ctx.fillText(payload.theme.kicker,70,240);
-    ctx.strokeStyle=payload.theme.accent;ctx.lineWidth=4;ctx.beginPath();ctx.roundRect(70,282,500,80,40);ctx.stroke();
-    ctx.fillStyle=payload.theme.accent;ctx.font='1000 30px Arial';ctx.fillText(`${payload.theme.icon}  ${payload.theme.label}`,105,333);
-    ctx.fillStyle='#fff';ctx.font='1000 82px Arial';
-    const titleLines=wrapLines(ctx,payload.title.toUpperCase(),900,3);
-    titleLines.forEach((line,index)=>ctx.fillText(line,70,540+index*94));
-    const subtitleY=540+titleLines.length*94+35;
-    ctx.fillStyle='#aeb8aa';ctx.font='800 37px Arial';
-    wrapLines(ctx,payload.subtitle,880,3).forEach((line,index)=>ctx.fillText(line,70,subtitleY+index*52));
-    ctx.fillStyle=payload.theme.accent;ctx.beginPath();ctx.roundRect(70,1110,940,130,36);ctx.fill();
-    ctx.fillStyle='#050705';ctx.textAlign='center';ctx.font='1000 43px Arial';ctx.fillText(payload.theme.cta,540,1191);ctx.textAlign='left';
-    ctx.fillStyle='#aeb8aa';ctx.font='800 30px Arial';ctx.fillText('pass50.store',70,1300);
+    const accent=payload.theme.accent;
+    ctx.fillStyle=PAPER;ctx.fillRect(0,0,1080,1350);
+    ctx.fillStyle=accent;ctx.fillRect(0,0,1080,18);
+    ctx.fillStyle=LIME;ctx.fillRect(64,56,22,22);
+    ctx.fillStyle=INK;ctx.font='1000 42px Arial';ctx.fillText('PASS50',100,76);
+    ctx.fillStyle=accent;ctx.font='800 22px Arial';ctx.fillText(String(payload.theme.kicker||'').toUpperCase(),64,140);
+    ctx.fillStyle=INK;ctx.font='1000 68px Arial';
+    const titleLines=wrapLines(ctx,payload.title,920,3);
+    titleLines.forEach((line,index)=>ctx.fillText(line,64,280+index*78));
+    const subtitleY=280+titleLines.length*78+24;
+    ctx.fillStyle=MUTED;ctx.font='600 30px Arial';
+    wrapLines(ctx,payload.subtitle,900,3).forEach((line,index)=>ctx.fillText(line,64,subtitleY+index*42));
+    ctx.fillStyle='#d5dbd2';ctx.fillRect(64,1080,952,2);
+    ctx.fillStyle=LIME;ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(64,1130,952,100,12);else ctx.rect(64,1130,952,100);
+    ctx.fill();
+    ctx.fillStyle=INK;ctx.textAlign='center';ctx.font='1000 34px Arial';ctx.fillText(payload.theme.cta,540,1194);ctx.textAlign='left';
+    ctx.fillStyle=MUTED;ctx.font='600 24px Arial';ctx.fillText('pass50.store',64,1295);
     canvas.toBlob(blob=>resolve(blob?new File([blob],`pass50-${payload.type}.png`,{type:'image/png'}):null),'image/png',.94);
   });
 }
 
 function message(payload){
   if(payload.text)return `${payload.text}\n${payload.url}`;
-  if(payload.type==='profile')return `Découvre la fiche influenceur PASS50 de ${payload.title}.\n${payload.url}`;
+  if(payload.type==='profile')return `Découvre la fiche de ${payload.title}.\n${payload.url}`;
   if(payload.type==='live')return `🔴 ${payload.title} est en direct${payload.platform?` sur ${payload.platform}`:''}.\n${payload.url}`;
-  if(payload.type==='coules-audio')return `🎙 Mon vote commenté dans Les Coulés sur PASS50.\n${payload.url}`;
-  if(payload.type==='coules')return `⚔ Mon vote dans Les Coulés sur PASS50.\n${payload.url}`;
-  return `Découvre PASS50 — qui fait le buzz maintenant ?\n${payload.url}`;
+  if(payload.type==='coules-audio')return `🎙 Mon vote commenté dans Les Coulés.\n${payload.url}`;
+  if(payload.type==='coules')return `⚔ Mon vote dans Les Coulés.\n${payload.url}`;
+  return `Qui fait le buzz maintenant ?\n${payload.url}`;
 }
 
 async function copyText(value){
@@ -325,9 +330,7 @@ function installCoulesBridge(){
       const accent=audio?THEMES['coules-audio'].accent:THEMES.coules.accent;
       const ctx=canvas?.getContext?.('2d');
       if(ctx){
-        ctx.save();ctx.fillStyle=accent;ctx.fillRect(0,0,canvas.width,14);
-        ctx.fillStyle=accent;ctx.font=`1000 ${Math.max(24,Math.round(canvas.width*.027))}px Arial`;
-        ctx.fillText(audio?'LES COULÉS · VOTE COMMENTÉ':'LES COULÉS · MON VOTE',24,Math.max(48,Math.round(canvas.height*.045)));ctx.restore();
+        ctx.save();ctx.fillStyle=accent;ctx.fillRect(0,0,canvas.width,10);ctx.restore();
       }
       return result;
     };
