@@ -111,7 +111,7 @@ class ShareVoteDuelHistoryTests(unittest.TestCase):
     def test_both_candidates_are_present_on_the_card(self):
         self.assertIn("'candidates'=>$candidates", API)
         self.assertIn("card.candidates.slice(0,2)", INDEX)
-        self.assertIn("MON VOTE · LE DUEL", INDEX)
+        self.assertIn("LES COULÉS · MON VOTE", INDEX)
         self.assertIn("'VS'", INDEX)
 
     def test_opponent_is_derived_from_the_voted_poll(self):
@@ -124,7 +124,7 @@ class ShareVoteDuelHistoryTests(unittest.TestCase):
         self.assertIn("'selectedProfileId'=>$selectedId", API)
         self.assertIn("candidate.profileId===card.selectedProfileId", INDEX)
         self.assertIn("✓ MON VOTE", INDEX)
-        self.assertIn("ctx.strokeStyle=selected?'#b7ff00'", INDEX)
+        self.assertIn("ctx.strokeStyle=selected?'#0b0f0b'", INDEX)
 
     def test_percentages_are_only_rendered_when_frozen_values_exist(self):
         self.assertIn("$history['candidate_a_percentage']!==null&&$history['candidate_b_percentage']!==null", API)
@@ -275,7 +275,7 @@ class ShareCardLargeThumbnailTests(unittest.TestCase):
     def test_card_keeps_vs_and_selected_vote_badge(self):
         self.assertIn("'VS'", self.draw)
         self.assertIn("✓ MON VOTE", self.draw)
-        self.assertIn("selected?'#b7ff00'", self.draw)
+        self.assertIn("selected?'#0b0f0b'", self.draw)
 
     def test_no_qr_or_flat_black_empty_background(self):
         self.assertNotIn("api.qrserver.com", INDEX)
