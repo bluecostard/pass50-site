@@ -1,5 +1,9 @@
 from pathlib import Path
+import json
+import re
 import unittest
+import urllib.parse
+import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 ENDPOINT = (ROOT / 'api' / 'metrics-ranking-publication-simulate-cron.php').read_text(encoding='utf-8')
@@ -99,6 +103,54 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('actions/upload-artifact@v4', WORKFLOW)
         self.assertIn('publication-simulation.json', WORKFLOW)
         self.assertIn('retention-days: 30', WORKFLOW)
+
+    def test_apoutchou_facebook_viewer_v12_is_live(self):
+        def fetch_text(url, timeout=30):
+            request = urllib.request.Request(
+                url,
+                headers={
+                    'Cache-Control': 'no-cache, no-store',
+                    'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+                    'User-Agent': 'Mozilla/5.0 PASS50-V12-Diagnostic',
+                },
+            )
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return response.status, response.read().decode('utf-8', 'replace')
+
+        _, viewer = fetch_text('https://www.pass50.store/facebook-video-player-v1.js?verify=python-v12')
+        _, loader = fetch_text('https://www.pass50.store/public-copy-fixes.js?verify=python-v12')
+        self.assertIn('PASS50-FACEBOOK-VIDEO-PLAYER-V1.2', viewer)
+        self.assertIn('Voir dans Pass50', viewer)
+        self.assertNotIn('item.playableInPass50!==true', viewer)
+        self.assertIn('facebook-video-player-v1.js?v=1.2', loader)
+
+        _, feed_text = fetch_text(
+            'https://www.pass50.store/api/content-feed.php?period=24h&profileId=apoutchou&newsLimit=30&verify=python-v12'
+        )
+        feed = json.loads(feed_text)
+        self.assertTrue(feed.get('ok'))
+        self.assertTrue(feed.get('ready'))
+        items = [item for item in feed.get('news', []) if str(item.get('platform', '')).lower() == 'facebook']
+        self.assertTrue(items, 'Aucune publication Facebook sur la fiche Apoutchou')
+        item = items[0]
+        source = str(item.get('url', ''))
+        item_type = str(item.get('itemType', 'unknown'))
+        playable = item.get('playableInPass50') is True
+        parsed = urllib.parse.urlparse(source)
+        safe_path = f"{parsed.hostname or ''}{parsed.path or '/'}"
+        params = urllib.parse.urlencode({'href': source, 'show_text': 'true', 'width': '820'})
+        _, post_html = fetch_text(f'https://www.facebook.com/plugins/post.php?{params}', timeout=40)
+        unavailable = bool(re.search(
+            r"ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible",
+            post_html,
+            flags=re.IGNORECASE,
+        ))
+        print(
+            'APOUTCHOU_V12_RESULT '
+            f'count={len(items)} itemType={item_type} playable={str(playable).lower()} '
+            f'viewer=all-facebook-items postUnavailable={str(unavailable).lower()} path={safe_path}'
+        )
+        self.assertFalse(unavailable, 'La publication réelle d’Apoutchou reste indisponible dans post.php')
 
 
 if __name__ == '__main__':unittest.main()
