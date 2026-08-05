@@ -77,6 +77,13 @@ function p50_mrp_apply_public_score(float $score): float {
     return round(max(0,min(100,$score)),1);
 }
 
+/** updated_by → users.id (CHAR36). Les acteurs cron/système passent en NULL. */
+function p50_mrp_apply_state_actor(?string $appliedBy): ?string {
+    $appliedBy=trim((string)$appliedBy);
+    if($appliedBy!==''&&preg_match('/^[0-9a-fA-F-]{36}$/',$appliedBy))return $appliedBy;
+    return null;
+}
+
 function p50_mrp_apply_relax_gates(array $report,bool $bootstrap): array {
     if(!$bootstrap)return $report;
     $gates=[];
@@ -353,11 +360,12 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
         $mutated=p50_mrp_apply_mutate_state($state,$plans,$runUuid);
         $newState=$mutated['state'];
         $newState['stateRevision']=$currentRevision+1;
+        $stateActor=p50_mrp_apply_state_actor($appliedBy);
         $stmt=$pdo->prepare("UPDATE app_state SET data=?,updated_by=?,updated_at=NOW() WHERE id='public'");
-        $stmt->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$appliedBy!==''?$appliedBy:'metrics-publication']);
+        $stmt->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$stateActor]);
         if($stmt->rowCount()===0){
             $ins=$pdo->prepare("INSERT INTO app_state(id,data,updated_by) VALUES('public',?,?)");
-            $ins->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$appliedBy!==''?$appliedBy:'metrics-publication']);
+            $ins->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$stateActor]);
         }
 
         $report=[
@@ -446,7 +454,7 @@ function p50_mrp_apply_rollback(PDO $pdo,string $applyUuid,string $appliedBy='')
         }
         $backup['stateRevision']=$currentRevision+1;
         $pdo->prepare("UPDATE app_state SET data=?,updated_by=?,updated_at=NOW() WHERE id='public'")
-            ->execute([json_encode($backup,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$appliedBy!==''?$appliedBy:'metrics-rollback']);
+            ->execute([json_encode($backup,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),p50_mrp_apply_state_actor($appliedBy)]);
         $pdo->prepare("UPDATE p50_metric_publication_applies SET status='rolled_back' WHERE id=?")->execute([(int)$row['id']]);
         $pdo->commit();
         return ['ok'=>true,'status'=>'rolled_back','applyUuid'=>$applyUuid,'publicStateRevision'=>$currentRevision+1,'publicStateWrites'=>1];
