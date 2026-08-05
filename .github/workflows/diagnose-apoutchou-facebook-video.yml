@@ -1,0 +1,71 @@
+name: Diagnose Apoutchou Facebook Video
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/diagnose-apoutchou-facebook-video.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Apoutchou public feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://www.pass50.store/api/content-feed.php?period=24h&profileId=apoutchou&newsLimit=30&_=${GITHUB_RUN_ID}"
+          curl --fail-with-body --silent --show-error --max-time 30 -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' "$url" > apoutchou-feed.json
+          jq -e '.ok==true and .ready==true' apoutchou-feed.json >/dev/null
+          jq '[.news[] | select((.platform|ascii_downcase)=="facebook") | {id,itemType,url,playableInPass50,facebookEmbedType}]' apoutchou-feed.json > apoutchou-facebook.json
+          count="$(jq 'length' apoutchou-facebook.json)"
+          echo "Facebook items: $count"
+          [ "$count" -gt 0 ] || { echo '::error::Aucune actualité Facebook pour Apoutchou'; exit 1; }
+      - name: Compare Facebook plugins
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > plugin-results.jsonl
+          while IFS= read -r item; do
+            source="$(jq -r '.url' <<<"$item")"
+            item_type="$(jq -r '.itemType // ""' <<<"$item")"
+            path="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+u=urllib.parse.urlparse(sys.argv[1])
+print((u.hostname or '')+(u.path or ''))
+PY
+)"
+            encoded="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=''))
+PY
+)"
+            for plugin in video post; do
+              plugin_url="https://www.facebook.com/plugins/${plugin}.php?href=${encoded}&show_text=false&width=820"
+              body="plugin-${plugin}.html"
+              code="$(curl --location --silent --show-error --max-time 30 --output "$body" --write-out '%{http_code}' -H 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.8' "$plugin_url" || true)"
+              unavailable=false
+              if grep -Eqi "content[^<]{0,40}(isn.t|not) available|contenu[^<]{0,40}(n.est pas|indisponible)|publication[^<]{0,40}indisponible" "$body" 2>/dev/null; then unavailable=true; fi
+              jq -nc --arg path "$path" --arg itemType "$item_type" --arg plugin "$plugin" --arg code "$code" --argjson unavailable "$unavailable" '{path:$path,itemType:$itemType,plugin:$plugin,httpStatus:($code|tonumber? // 0),unavailableMessage:$unavailable}' >> plugin-results.jsonl
+            done
+          done < <(jq -c '.[]' apoutchou-facebook.json)
+          jq -s '.' plugin-results.jsonl > plugin-results.json
+          jq . plugin-results.json
+          {
+            echo '### Diagnostic Apoutchou Facebook'
+            echo '```json'
+            jq '.' plugin-results.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive sanitized diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: apoutchou-facebook-video-diagnostic-${{ github.run_id }}
+          path: |
+            apoutchou-facebook.json
+            plugin-results.json
+          retention-days: 7
