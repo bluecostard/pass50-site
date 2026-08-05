@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Pronostics — PASS50</title>
+<style>
+body{margin:0;background:#050705;color:#f6f8f4;font:15px/1.4 Inter,system-ui,sans-serif}
+.shell{max-width:720px;margin:auto;padding:20px}
+h1{font-size:28px;letter-spacing:-1px}.muted{color:#9da79b}
+label{display:block;margin:12px 0 4px;font-weight:800;font-size:12px;color:#9da79b}
+input,textarea,select,button{width:100%;box-sizing:border-box;border:1px solid #293129;border-radius:12px;background:#0a0d0a;color:#fff;padding:12px;font:inherit}
+button{background:#b7ff00;color:#050705;font-weight:1000;cursor:pointer;margin-top:14px}
+button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8px}
+.card{border:1px solid #293129;border-radius:16px;padding:16px;margin-top:16px;background:#0d110d}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{margin-top:12px;color:#b7ff00;font-weight:900}
+.q{border:1px solid #293129;border-radius:12px;padding:12px;margin-top:10px;background:#0a0d0a}
+.q strong{display:block;margin-bottom:4px}
+.q .meta{font-size:12px;color:#9da79b;margin:6px 0}
+.q .actions{display:flex;gap:8px;flex-wrap:wrap}
+.q .actions button{width:auto;margin:0;padding:8px 12px;font-size:13px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid #3a453a;color:#b7ff00}
+</style>
+</head>
+<body>
+<div class="shell">
+  <h1>Admin · Pronostics</h1>
+  <p class="muted">Créer / publier une question actu. Durée vote 2/3/7 j + date de mesure. Résolution manuelle. Sans argent réel.</p>
+
+  <div class="card">
+    <label>Question</label>
+    <input id="title" placeholder="Ex. Lo Père finit sa 2ᵉ maison dans 6 mois ?">
+    <label>Contexte</label>
+    <textarea id="context" rows="2" placeholder="Actu / précision"></textarea>
+    <label>Profile ID FI (optionnel)</label>
+    <input id="profileId" placeholder="himra">
+    <label>Options (2 à 4, une par ligne : key|label)</label>
+    <textarea id="options" rows="4">y|Oui
+n|Non</textarea>
+    <div class="row">
+      <div>
+        <label>Durée des votes</label>
+        <select id="voteDays">
+          <option value="2">2 jours</option>
+          <option value="3" selected>3 jours</option>
+          <option value="7">7 jours</option>
+        </select>
+      </div>
+      <div>
+        <label>Date de mesure</label>
+        <input id="measureAt" type="date" required>
+      </div>
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:12px">Votes clos après 2/3/7 j. Résolution / points à la date de mesure (peut être bien plus tard).</p>
+    <div class="row">
+      <div><label>Métrique</label>
+        <select id="metricType">
+          <option value="manual">manual</option>
+          <option value="followers_delta">followers_delta</option>
+          <option value="rank_position">rank_position</option>
+          <option value="rank_delta">rank_delta</option>
+          <option value="live_appeared">live_appeared</option>
+          <option value="score_threshold">score_threshold</option>
+        </select>
+      </div>
+      <div><label>Statut</label>
+        <select id="status"><option value="open">open</option><option value="draft">draft</option></select>
+      </div>
+    </div>
+    <button type="button" id="saveBtn">Enregistrer / publier</button>
+    <div class="toast" id="saveMsg"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <h2 style="margin:0">Questions</h2>
+      <button type="button" class="ghost" id="refreshList" style="width:auto;margin:0">Rafraîchir</button>
+    </div>
+    <div id="qList" class="muted" style="margin-top:12px">Chargement…</div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Résoudre</h2>
+    <label>Question ID</label><input id="resolveId">
+    <label>Option gagnante (key)</label><input id="winKey" placeholder="y">
+    <label>Preuve / note</label><input id="evidence" placeholder="Capture métriques…">
+    <button type="button" id="resolveBtn">Clôturer et payer les gagnants</button>
+    <div class="toast" id="resolveMsg"></div>
+  </div>
+  <p class="muted" style="margin-top:18px"><a href="./pronostics.html" style="color:#b7ff00">← Voir Pronostics</a></p>
+</div>
+<script>
+async function api(path, body){
+  const token=localStorage.getItem('pass50_api_token')||'';
+  const opts={method:body===undefined?'GET':'POST',headers:{Accept:'application/json',...(token?{Authorization:'Bearer '+token}:{})}};
+  if(body!==undefined){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
+  const res=await fetch('./api/'+path,opts);
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(data.error||'Erreur');
+  return data;
+}
+function fmt(iso){
+  if(!iso)return '—';
+  const d=new Date(iso);
+  return Number.isFinite(d.getTime())?d.toLocaleString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):iso;
+}
+function renderList(items){
+  const box=document.getElementById('qList');
+  if(!items.length){box.innerHTML='Aucune question.';return;}
+  box.innerHTML=items.map(item=>{
+    const opts=(item.options||[]).map(o=>`${o.key}=${o.label}`).join(' · ');
+    const canResolve=item.status==='open'||item.status==='locked';
+    return `<div class="q" data-id="${item.id}">
+      <strong>${item.title||'—'}</strong>
+      <span class="badge">${item.status}</span>
+      <div class="meta">${item.voteCount||0} vote(s) · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
+      <div class="meta">${opts}</div>
+      <div class="actions">
+        <button type="button" class="ghost" data-copy="${item.id}">Copier ID</button>
+        ${canResolve?`<button type="button" data-fill="${item.id}" data-keys="${(item.options||[]).map(o=>o.key).join(',')}">Résoudre</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+async function loadList(){
+  const box=document.getElementById('qList');
+  try{
+    const data=await api('prono-admin-list.php');
+    renderList(data.items||[]);
+  }catch(e){box.textContent=e.message;}
+}
+document.getElementById('qList').onclick=(e)=>{
+  const copy=e.target.closest('[data-copy]');
+  if(copy){
+    navigator.clipboard?.writeText(copy.getAttribute('data-copy'));
+    document.getElementById('resolveId').value=copy.getAttribute('data-copy');
+    return;
+  }
+  const fill=e.target.closest('[data-fill]');
+  if(fill){
+    document.getElementById('resolveId').value=fill.getAttribute('data-fill');
+    const keys=(fill.getAttribute('data-keys')||'').split(',').filter(Boolean);
+    if(keys[0])document.getElementById('winKey').value=keys[0];
+    document.getElementById('resolveId').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+};
+document.getElementById('refreshList').onclick=loadList;
+document.getElementById('saveBtn').onclick=async()=>{
+  const msg=document.getElementById('saveMsg');
+  try{
+    const options=document.getElementById('options').value.split(/\n+/).map(line=>{
+      const [key,...rest]=line.split('|');
+      return {key:(key||'').trim(),label:rest.join('|').trim()||(key||'').trim()};
+    }).filter(o=>o.key&&o.label);
+    const measureRaw=document.getElementById('measureAt').value.trim();
+    if(!measureRaw)throw new Error('Date de mesure requise');
+    const payload={
+      title:document.getElementById('title').value.trim(),
+      context:document.getElementById('context').value.trim(),
+      profileId:document.getElementById('profileId').value.trim(),
+      options,
+      metricType:document.getElementById('metricType').value,
+      status:document.getElementById('status').value,
+      voteDurationDays:Number(document.getElementById('voteDays').value),
+      measureAt:measureRaw+'T23:59:59Z'
+    };
+    const data=await api('prono-admin-save.php',payload);
+    msg.textContent='OK · id '+data.item.id;
+    loadList();
+  }catch(e){msg.textContent=e.message;}
+};
+document.getElementById('resolveBtn').onclick=async()=>{
+  const msg=document.getElementById('resolveMsg');
+  try{
+    const data=await api('prono-admin-resolve.php',{questionId:document.getElementById('resolveId').value.trim(),winningOptionKey:document.getElementById('winKey').value.trim(),evidenceNote:document.getElementById('evidence').value.trim()});
+    msg.textContent=`OK · ${data.winnersPaid} gagnant(s) × ${data.pointsEach} pts`;
+    loadList();
+  }catch(e){msg.textContent=e.message;}
+};
+(()=>{
+  const el=document.getElementById('measureAt');
+  if(!el||el.value)return;
+  const d=new Date();
+  d.setUTCDate(d.getUTCDate()+7);
+  el.value=d.toISOString().slice(0,10);
+})();
+loadList();
+</script>
+</body>
+</html>

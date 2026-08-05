@@ -102,6 +102,13 @@
     section.id = 'p50SeparateFeedEntry';
     section.innerHTML = `<div class="user-title"><span>≋ Mon fil</span><span>Page séparée</span></div><div class="pref"><div><strong>L’actualité de mes influenceurs suivis</strong><div class="muted">Une page limitée à vos suivis, distincte du classement et sans défilement infini.</div></div><a class="btn primary" href="./mon-fil.html">Ouvrir mon fil</a></div>`;
     grid.prepend(section);
+    if (!grid.querySelector('#p50PronoEntry')) {
+      const prono = document.createElement('section');
+      prono.className = 'user-section full';
+      prono.id = 'p50PronoEntry';
+      prono.innerHTML = `<div class="user-title"><span>🎯 Pronostics</span><span>Sans argent réel</span></div><div class="pref"><div><strong>Joue sur l’actu PASS50</strong><div class="muted">Vote, publie un statut dans Mon fil, gagne des points vers une rencontre FI.</div></div><a class="btn primary" href="./pronostics.html">Ouvrir Pronostics</a></div>`;
+      grid.prepend(prono);
+    }
   }
 
   function loadContextShare() {

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aperçu Pronostics — PASS50</title>
+<style>
+:root{--bg:#050705;--line:#293129;--text:#f6f8f4;--muted:#9da79b;--lime:#b7ff00}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 80% -5%,rgba(183,255,0,.08),transparent 28%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.shell{width:min(430px,100%);margin:auto;padding:0 14px 40px}
+.banner{position:sticky;top:0;z-index:30;background:#b7ff00;color:#050705;text-align:center;padding:10px;font-weight:1000;font-size:13px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.brand{font-size:26px;font-weight:1000;letter-spacing:-1.4px}.brand span{color:var(--lime)}
+.btn{border:1px solid var(--line);background:#0a0d0a;color:var(--text);border-radius:12px;padding:10px 12px;font-weight:900;font:inherit}
+.btn.primary{background:var(--lime);border-color:var(--lime);color:#050705}
+.hero{padding:18px;border:1px solid rgba(183,255,0,.28);border-radius:20px;background:linear-gradient(145deg,rgba(183,255,0,.1),rgba(16,22,16,.96))}
+.eyebrow{color:var(--lime);font-size:11px;font-weight:1000;letter-spacing:.7px}
+.hero h1{margin:8px 0;font-size:40px;line-height:.95;letter-spacing:-1.8px}
+.hero p{margin:0;color:#c4ccc1;line-height:1.45;font-size:14px}
+.chip{display:inline-flex;margin-top:12px;border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:11px;color:var(--muted);font-weight:900}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.stat{border:1px solid var(--line);border-radius:14px;padding:12px;background:#0a0d0a}.stat strong{display:block;font-size:22px;color:var(--lime)}.stat span{font-size:11px;color:var(--muted)}
+.list{display:grid;gap:12px;margin-top:16px}
+.card{border:1px solid var(--line);border-radius:18px;padding:16px;background:linear-gradient(180deg,#111711,#090c09)}
+.card h2{margin:0 0 6px;font-size:17px;line-height:1.25}.ctx{color:var(--muted);font-size:13px;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{border:1px solid #3a453a;border-radius:12px;padding:12px;background:#121812;color:#f6f8f4;text-align:left;font-weight:850;font:inherit;width:100%;cursor:pointer}
+.opt.selected{border-color:var(--lime);background:rgba(183,255,0,.12);color:var(--lime)}
+.meta{margin-top:10px;font-size:11px;color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.section{margin:28px 0 8px;color:var(--lime);font-size:12px;font-weight:1000;letter-spacing:.08em}
+.status{border:1px solid rgba(183,255,0,.42);border-radius:18px;padding:14px;background:radial-gradient(circle at 90% 0,rgba(183,255,0,.14),transparent 40%),linear-gradient(180deg,#141a10,#090c09)}
+.status .head{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:12px}
+.status h3{margin:0 0 8px;font-size:16px}
+.modal-fake{margin-top:12px;border:1px solid var(--line);border-radius:16px;padding:14px;background:#101510}
+.durs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.durs button{border:1px solid var(--line);border-radius:12px;padding:12px;background:#0a0d0a;color:var(--text);font-weight:900;font:inherit}
+.durs button.active{border-color:var(--lime);color:var(--lime);background:rgba(183,255,0,.1)}
+</style>
+</head>
+<body>
+<div class="banner">APERÇU DESIGN · données fictives · pas encore en prod</div>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">PASS<span>50</span></div>
+    <div style="display:flex;gap:8px"><span class="btn">Mon fil</span><span class="btn primary">Compte</span></div>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">PRONOSTICS</div>
+    <h1>Joue sur l’actu.</h1>
+    <p>PASS50 pose les questions. Tu choisis. Tu peux publier ton prono en statut dans Mon fil. <strong>Sans argent réel</strong> — uniquement des points.</p>
+    <div class="chip">Points → rencontre FI (100 000 pts)</div>
+    <div class="stats">
+      <div class="stat"><strong>12 450</strong><span>Solde points</span></div>
+      <div class="stat"><strong>4</strong><span>Streak (jours)</span></div>
+    </div>
+  </section>
+
+  <div class="section">0 · DIAPO DES AUTRES (sans abonnement)</div>
+  <div style="display:flex;gap:10px;overflow-x:auto;padding:4px 0 12px">
+    <div style="text-align:center;width:76px"><div style="width:64px;height:64px;margin:auto;border-radius:50%;padding:3px;background:linear-gradient(135deg,#b7ff00,#1ee5ff)"><div style="width:100%;height:100%;border-radius:50%;background:#121812;border:2px solid #050705;display:grid;place-items:center;font-weight:1000">FA</div></div><div style="font-size:10px;margin-top:6px">fan_abidjan</div></div>
+    <div style="text-align:center;width:76px"><div style="width:64px;height:64px;margin:auto;border-radius:50%;padding:3px;background:linear-gradient(135deg,#b7ff00,#1ee5ff)"><div style="width:100%;height:100%;border-radius:50%;background:#121812;border:2px solid #050705;display:grid;place-items:center;font-weight:1000">KB</div></div><div style="font-size:10px;margin-top:6px">koffi_buzz</div></div>
+    <div style="text-align:center;width:76px"><div style="width:64px;height:64px;margin:auto;border-radius:50%;padding:3px;background:#3a453a"><div style="width:100%;height:100%;border-radius:50%;background:#121812;border:2px solid #050705;display:grid;place-items:center;font-weight:1000">AC</div></div><div style="font-size:10px;margin-top:6px">aya_ci</div></div>
+    <div style="text-align:center;width:76px"><div style="width:64px;height:64px;margin:auto;border-radius:50%;padding:3px;background:linear-gradient(135deg,#b7ff00,#1ee5ff)"><div style="width:100%;height:100%;border-radius:50%;background:#121812;border:2px solid #050705;display:grid;place-items:center;font-weight:1000">DT</div></div><div style="font-size:10px;margin-top:6px">diaspora_tv</div></div>
+  </div>
+  <article class="status" style="min-height:280px;display:flex;flex-direction:column">
+    <div style="display:flex;gap:4px;margin-bottom:12px">
+      <i style="flex:1;height:3px;border-radius:99px;background:#b7ff00;display:block"></i>
+      <i style="flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.22);display:block"></i>
+      <i style="flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.22);display:block"></i>
+      <i style="flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.22);display:block"></i>
+    </div>
+    <div class="head"><strong>@fan_abidjan</strong><span style="color:var(--lime)">PRONO · 24 h</span></div>
+    <h3>Himra — perte d’abonnés TikTok en 7 jours ?</h3>
+    <div style="margin-top:auto;padding:16px;border-radius:14px;background:rgba(183,255,0,.12);border:1px solid rgba(183,255,0,.45);color:var(--lime);font-weight:1000;font-size:18px">+ de 300 000</div>
+    <div class="actions">
+      <button class="btn" type="button">♡ Like · 18</button>
+      <span class="meta" style="align-self:center">Tap droite = suivant</span>
+    </div>
+  </article>
+
+  <div class="section">1 · QUESTION OUVERTE</div>
+  <article class="card">
+    <h2>Himra — perte d’abonnés TikTok en 7 jours ?</h2>
+    <div class="ctx">Après la polémique de la semaine, quel scénario te semble le plus probable ?</div>
+    <div class="opts">
+      <button class="opt" type="button">+ de 400 000</button>
+      <button class="opt" type="button">+ de 300 000</button>
+      <button class="opt" type="button">moins de 250 000</button>
+    </div>
+    <div class="meta">Votes clos dans 7 j · Résolution le 12 août · +500 pts si correct · Sans argent réel</div>
+  </article>
+
+  <div class="section">2 · DÉJÀ VOTÉ</div>
+  <article class="card">
+    <h2>Josey finit-il dans le Top 3 PASS50 sur 24 h ?</h2>
+    <div class="ctx">Classement public Côte d’Ivoire + diaspora.</div>
+    <div class="opts">
+      <button class="opt selected" type="button">Oui, Top 3</button>
+      <button class="opt" type="button">Non, hors Top 3</button>
+    </div>
+    <div class="meta">Votes clos dans 2 j · Résolution le 7 août · +500 pts si correct · Sans argent réel</div>
+    <div class="actions">
+      <button class="btn primary" type="button">Publier en statut</button>
+      <button class="btn" type="button">Partager</button>
+    </div>
+  </article>
+
+  <div class="section">3 · PUBLIER EN STATUT (après vote)</div>
+  <div class="modal-fake">
+    <strong>Publier en statut · Mon fil</strong>
+    <p style="color:var(--muted);font-size:13px;margin:8px 0 0">Choisis la durée. Chaque like = +0,25 pt.</p>
+    <div class="durs">
+      <button type="button">12 h</button>
+      <button type="button" class="active">24 h</button>
+      <button type="button">48 h</button>
+    </div>
+    <div class="actions">
+      <button class="btn primary" type="button">Publier</button>
+      <button class="btn" type="button">Plus tard</button>
+    </div>
+  </div>
+
+  <div class="section">4 · STATUT DANS MON FIL</div>
+  <article class="status">
+    <div class="head"><strong>@fan_abidjan</strong><span style="color:var(--lime)">PRONO · 24 h</span></div>
+    <h3>Himra — perte d’abonnés TikTok en 7 jours ?</h3>
+    <div class="meta">Choix : <strong style="color:#fff">+ de 300 000</strong> · Sans argent réel</div>
+    <div class="actions">
+      <button class="btn" type="button">♡ Like · 18</button>
+      <button class="btn" type="button">Voir les pronos</button>
+    </div>
+  </article>
+</div>
+</body>
+</html>

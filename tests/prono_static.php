@@ -1,0 +1,80 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Static smoke checks for Pronostics Phase A files.
+ * Run: php tests/prono_static.php
+ */
+
+$root = dirname(__DIR__);
+$required = [
+    'api/prono-core.php',
+    'api/prono-feed.php',
+    'api/prono-vote.php',
+    'api/prono-results.php',
+    'api/prono-status-publish.php',
+    'api/prono-status-like.php',
+    'api/prono-statuses-feed.php',
+    'api/prono-admin-save.php',
+    'api/prono-admin-resolve.php',
+    'api/prono-admin-list.php',
+    'pronostics.html',
+    'pronostics.js',
+    'admin-pronostics.html',
+];
+
+foreach ($required as $rel) {
+    $path = $root.'/'.$rel;
+    if (!is_file($path)) {
+        fwrite(STDERR, "MISSING $rel\n");
+        exit(1);
+    }
+}
+
+$core = file_get_contents($root.'/api/prono-core.php');
+foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed'] as $needle) {
+    if (!str_contains($core, $needle)) {
+        fwrite(STDERR, "CORE missing $needle\n");
+        exit(1);
+    }
+}
+
+$save = file_get_contents($root.'/api/prono-admin-save.php');
+foreach (['voteDurationDays', 'measureAt', '[2, 3, 7]'] as $needle) {
+    if (!str_contains($save, $needle)) {
+        fwrite(STDERR, "ADMIN-SAVE missing $needle\n");
+        exit(1);
+    }
+}
+
+$js = file_get_contents($root.'/pronostics.js');
+foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sans argent réel', 'durationHours', 'measureAt', 'timingMeta'] as $needle) {
+    if (!str_contains($js, $needle)) {
+        fwrite(STDERR, "JS missing $needle\n");
+        exit(1);
+    }
+}
+
+$admin = file_get_contents($root.'/admin-pronostics.html');
+foreach (['voteDays', 'measureAt', 'prono-admin-list.php'] as $needle) {
+    if (!str_contains($admin, $needle)) {
+        fwrite(STDERR, "ADMIN-UI missing $needle\n");
+        exit(1);
+    }
+}
+
+$fil = file_get_contents($root.'/mon-fil.js');
+foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php'] as $needle) {
+    if (!str_contains($fil, $needle)) {
+        fwrite(STDERR, "MON-FIL missing $needle\n");
+        exit(1);
+    }
+}
+
+$nav = file_get_contents($root.'/mobile-bottom-nav-v1.js');
+if (!str_contains($nav, 'pronostics.html')) {
+    fwrite(STDERR, "NAV missing pronostics entry\n");
+    exit(1);
+}
+
+echo "OK prono Phase A static checks\n";
