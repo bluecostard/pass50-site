@@ -118,7 +118,7 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("allowfullscreen", PLAYER)
         self.assertIn("host.endsWith('.facebook.com')", PLAYER)
         self.assertIn("Ouvrir Facebook", PLAYER)
-        self.assertIn("facebook-video-player-v1.js?v=1.0", PUBLIC_COPY)
+        self.assertIn("facebook-video-player-v1.js?v=1.1", PUBLIC_COPY)
         self.assertIn('.deploy/facebook-video-player-v1.js', DEPLOY)
         self.assertIn('.deploy/api/content-feed.php', DEPLOY)
         self.assertIn("PASS50-FACEBOOK-VIDEO-PLAYER-V1.1", DEPLOY)
