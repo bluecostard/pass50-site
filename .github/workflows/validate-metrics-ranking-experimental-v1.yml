@@ -7,6 +7,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
     services:
       mariadb:
         image: mariadb:11.4
@@ -55,5 +56,42 @@ jobs:
         run: |
           php tests/metrics_ranking_integration.php
           php tests/metrics_ranking_fresh_capture_integration.php
+      - name: Diagnostic production Apoutchou Facebook
+        shell: bash
+        run: |
+          set -euo pipefail
+          feed='apoutchou-production-feed.json'
+          curl --fail-with-body --location --silent --show-error --max-time 30 -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' \
+            "https://www.pass50.store/api/content-feed.php?period=24h&profileId=apoutchou&newsLimit=30&verify=${GITHUB_RUN_ID}" > "$feed"
+          jq -e '.ok==true and .ready==true and .rules.facebookEmbedRouting==true' "$feed" >/dev/null
+          item="$(jq -c '[.news[] | select((.platform|ascii_downcase)=="facebook" and .playableInPass50==true)][0] // empty' "$feed")"
+          [ -n "$item" ] || { echo '::error::Aucune actualité Facebook lisible sur Apoutchou'; exit 1; }
+          source="$(jq -r '.url' <<<"$item")"
+          route="$(jq -r '.facebookEmbedType // "missing"' <<<"$item")"
+          item_type="$(jq -r '.itemType // "unknown"' <<<"$item")"
+          safe_path="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+u=urllib.parse.urlparse(sys.argv[1]); print((u.hostname or '')+(u.path or '/'))
+PY
+)"
+          encoded="$(python3 - "$source" <<'PY'
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=''))
+PY
+)"
+          for plugin in post video; do
+            show_text=false; [ "$plugin" = post ] && show_text=true
+            body="facebook-${plugin}.html"
+            code="$(curl --location --silent --show-error --max-time 40 --output "$body" --write-out '%{http_code}' -H 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.8' "https://www.facebook.com/plugins/${plugin}.php?href=${encoded}&show_text=${show_text}&width=820" || true)"
+            bytes="$(wc -c < "$body" 2>/dev/null || printf 0)"
+            unavailable=false
+            if grep -Eqi "ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible" "$body" 2>/dev/null; then unavailable=true; fi
+            printf 'APOUTCHOU_PLUGIN plugin=%s http=%s bytes=%s unavailable=%s\n' "$plugin" "$code" "$bytes" "$unavailable"
+            printf '%s' "$unavailable" > "${plugin}-unavailable.txt"
+          done
+          post_unavailable="$(cat post-unavailable.txt)"; video_unavailable="$(cat video-unavailable.txt)"
+          printf 'APOUTCHOU_RESULT itemType=%s route=%s postUnavailable=%s videoUnavailable=%s path=%s\n' "$item_type" "$route" "$post_unavailable" "$video_unavailable" "$safe_path"
+          selected_unavailable="$video_unavailable"; [ "$route" = post ] && selected_unavailable="$post_unavailable"
+          [ "$selected_unavailable" = false ] || { echo '::error::Le lecteur sélectionné renvoie encore contenu indisponible'; exit 1; }
       - name: Diff check
         run: git diff --check origin/${{ github.base_ref }}...HEAD
