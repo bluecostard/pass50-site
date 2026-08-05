@@ -1,4 +1,4 @@
-name: Validate Canonical Profiles V25
+name: Validate Canonical Profiles V26
 
 on:
   pull_request:
@@ -10,15 +10,12 @@ on:
       - 'sw.js'
       - 'tests/test_canonical_lionel_yasmine_v24.py'
       - 'tests/test_andrea_naomi_canonical_profile.py'
+      - 'tests/test_kehou_pavlov_canonical_profiles.py'
       - 'tests/test_live_radar_v3.py'
       - 'tests/test_live_trust_gate_v1.py'
       - 'tests/test_metrics_ranking_calibration_v1.py'
       - 'tests/test_mobile_public_ux_polish.py'
-      - '.pass50-integrate-kehou-pavlov-v6'
       - '.github/workflows/validate-canonical-lionel-yasmine-v24.yml'
-
-permissions:
-  contents: write
 
 jobs:
   validate:
@@ -27,22 +24,9 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-      - name: Appliquer Kehou Mousso et Pavlov
-        if: "${{ github.event.action == 'opened' && github.event.pull_request.title == 'PASS50: integrate Kehou Mousso and Pavlov' }}"
-        run: |
-          python3 scripts/one_shot_add_kehou_pavlov.py
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'Ajouter Kehou Mousso et Pavlov au recensement PASS50'
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
       - name: JSON valide
-        if: "${{ github.event.pull_request.title != 'PASS50: integrate Kehou Mousso and Pavlov' }}"
         run: python3 -m json.tool pass50_nouveaux_candidats_90_v19.json >/dev/null
       - name: JavaScript valide
-        if: "${{ github.event.pull_request.title != 'PASS50: integrate Kehou Mousso and Pavlov' }}"
         run: |
           node --check v9-tools.js
           node --check app-config.js
@@ -50,12 +34,11 @@ jobs:
           node --check profile-lionel-pcs.js
           node --check profile-yasmine-fofana.js
       - name: Présence canonique et cache
-        if: "${{ github.event.pull_request.title != 'PASS50: integrate Kehou Mousso and Pavlov' }}"
         run: |
           python3 -m unittest tests.test_canonical_lionel_yasmine_v24
           python3 -m unittest tests.test_andrea_naomi_canonical_profile
+          python3 -m unittest tests.test_kehou_pavlov_canonical_profiles
       - name: Versions publiques cohérentes
-        if: "${{ github.event.pull_request.title != 'PASS50: integrate Kehou Mousso and Pavlov' }}"
         run: |
           python3 -m unittest tests.test_live_radar_v3
           python3 -m unittest tests.test_live_trust_gate_v1
