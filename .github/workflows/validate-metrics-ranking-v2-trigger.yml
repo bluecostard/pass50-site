@@ -1,0 +1,36 @@
+name: Validate Metrics Ranking V2 Trigger
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/metrics-ranking-v2-trigger.yml'
+      - 'tests/test_metrics_ranking_v2_trigger.py'
+      - '.github/workflows/validate-metrics-ranking-v2-trigger.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/metrics-ranking-v2-trigger.yml'
+      - 'tests/test_metrics_ranking_v2_trigger.py'
+      - '.github/workflows/validate-metrics-ranking-v2-trigger.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Trigger contract
+        run: python3 -m unittest tests.test_metrics_ranking_v2_trigger -v
+      - name: Workflow markers
+        run: |
+          grep -q 'metrics-ranking-fresh-capture-v2-core.php' .github/workflows/metrics-ranking-v2-trigger.yml
+          grep -q 'metrics-ranking-cron-v2.php' .github/workflows/metrics-ranking-v2-trigger.yml
+          grep -q 'metrics-ranking-experimental.yml/dispatches' .github/workflows/metrics-ranking-v2-trigger.yml
+          ! grep -q 'deployment-version.json' .github/workflows/metrics-ranking-v2-trigger.yml
+      - name: Diff safety
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
