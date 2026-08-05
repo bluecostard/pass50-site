@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: pass50-ionos-production-deploy
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -35,12 +35,12 @@ jobs:
             --exclude '*.zip' \
             --exclude '*.md'
           jq -nc --arg commit "$GITHUB_SHA" --arg deployedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{commit:$commit,deployedAt:$deployedAt,environment:"production"}' > .deploy/deployment-version.json
+            '{commit:$commit,deployedAt:$deployedAt,environment:"production",serviceWorker:"disabled-v81"}' > .deploy/deployment-version.json
 
       - name: Installer SFTP
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      - name: Déployer sur IONOS
+      - name: Déployer le correctif d’accès en priorité
         env:
           HOST: ${{ secrets.IONOS_SFTP_HOST }}
           USER: ${{ secrets.IONOS_SFTP_USER }}
@@ -58,43 +58,49 @@ jobs:
           set net:timeout 20
           set sftp:auto-confirm yes
           open -u "$USER","$PASSWORD" sftp://$HOST:22
-          mirror --reverse --verbose --transfer-all --parallel=4 .deploy/ "$REMOTE_DIR"
+          put -O "$REMOTE_DIR" .deploy/sw.js
+          put -O "$REMOTE_DIR" .deploy/public-copy-fixes.js
+          put -O "$REMOTE_DIR" .deploy/deployment-version.json
+          mirror --reverse --verbose --only-newer --parallel=2 .deploy/ "$REMOTE_DIR"
           bye
           LFTP
 
-      - name: Vérifier la version réellement servie
+      - name: Vérifier la remise en ligne
         shell: bash
         run: |
           set -euo pipefail
           sites=('https://pass50.store' 'https://www.pass50.store')
           for site in "${sites[@]}"; do
             ready=false
-            for attempt in $(seq 1 18); do
-              marker="$(curl --location --silent --show-error --max-time 20 \
+            for attempt in $(seq 1 24); do
+              marker="$(curl --location --silent --show-error --max-time 15 \
                 -H 'Cache-Control: no-cache, no-store' \
                 "$site/deployment-version.json?sha=$GITHUB_SHA&attempt=$attempt" || true)"
-              if jq -e --arg sha "$GITHUB_SHA" '.commit == $sha' >/dev/null 2>&1 <<<"$marker"; then
-                worker="$(curl --location --silent --show-error --max-time 20 \
-                  -H 'Cache-Control: no-cache, no-store' \
-                  "$site/sw.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
-                if grep -q "pass50-v80-site-recovery" <<<"$worker"; then
-                  ready=true
-                  echo "$site sert bien le commit $GITHUB_SHA et le service worker V80."
-                  break
-                fi
+              worker="$(curl --location --silent --show-error --max-time 15 \
+                -H 'Cache-Control: no-cache, no-store' \
+                "$site/sw.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              page="$(curl --location --silent --show-error --max-time 20 \
+                -H 'Cache-Control: no-cache, no-store' \
+                "$site/?health=$GITHUB_SHA&attempt=$attempt" || true)"
+              if jq -e --arg sha "$GITHUB_SHA" '.commit == $sha' >/dev/null 2>&1 <<<"$marker" \
+                && grep -q "pass50-v81-service-worker-disabled" <<<"$worker" \
+                && grep -q "PASS50" <<<"$page"; then
+                ready=true
+                echo "$site sert bien le commit $GITHUB_SHA avec le service worker désactivé."
+                break
               fi
-              echo "Propagation IONOS en attente pour $site ($attempt/18)."
-              sleep 10
+              echo "Remise en ligne en attente pour $site ($attempt/24)."
+              sleep 5
             done
             if [ "$ready" != true ]; then
-              echo "::error::$site ne sert pas la version déployée après trois minutes."
+              echo "::error::$site ne sert pas le correctif V81 après deux minutes."
               exit 1
             fi
           done
           {
-            echo '### Déploiement PASS50 sur IONOS'
+            echo '### Remise en ligne PASS50'
             echo "- Commit vérifié : \`$GITHUB_SHA\`"
             echo '- Domaine principal : `https://pass50.store`'
             echo '- Domaine www : `https://www.pass50.store`'
-            echo '- Service worker : `pass50-v80-site-recovery`'
+            echo '- Service worker : désactivé temporairement (`V81`)'
           } >> "$GITHUB_STEP_SUMMARY"
