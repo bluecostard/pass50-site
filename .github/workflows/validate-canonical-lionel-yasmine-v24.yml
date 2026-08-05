@@ -1,4 +1,4 @@
-name: Validate Canonical Profiles V25
+name: Validate Canonical Profiles V26
 
 on:
   pull_request:
@@ -10,6 +10,7 @@ on:
       - 'sw.js'
       - 'tests/test_canonical_lionel_yasmine_v24.py'
       - 'tests/test_andrea_naomi_canonical_profile.py'
+      - 'tests/test_kehou_pavlov_canonical_profiles.py'
       - 'tests/test_live_radar_v3.py'
       - 'tests/test_live_trust_gate_v1.py'
       - 'tests/test_metrics_ranking_calibration_v1.py'
@@ -36,6 +37,7 @@ jobs:
         run: |
           python3 -m unittest tests.test_canonical_lionel_yasmine_v24
           python3 -m unittest tests.test_andrea_naomi_canonical_profile
+          python3 -m unittest tests.test_kehou_pavlov_canonical_profiles
       - name: Versions publiques cohérentes
         run: |
           python3 -m unittest tests.test_live_radar_v3

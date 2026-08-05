@@ -2408,5 +2408,111 @@
       "\"N'Guessan Andrea Naomi\" voyage aventure influenceuse ivoirienne",
       "\"Andrea Naomi Nguessan\" vidéo récente vues abonnés"
     ]
+  },
+  {
+    "id": "census-kehou-mousso",
+    "name": "Kehou Mousso",
+    "known_alias": "Tano Nadia Marcel / Reine du coupé-décalé / @reine_du_couper_decaler",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Danse / Biama / Coupé-décalé / Divertissement / Musique",
+    "census_status": "Recensé confirmé — intégration prioritaire",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@reine_du_couper_decaler"
+    },
+    "source": {
+      "publisher": "The Guardian",
+      "date": "2026-08-04",
+      "url": "https://www.theguardian.com/world/2026/aug/04/biama-dance-ivorian-pop-culture-cote-d-ivoire-tik-tok"
+    },
+    "source_secondary": {
+      "publisher": "Le Monde",
+      "date": "2026-04-29",
+      "url": "https://www.lemonde.fr/afrique/article/2026/04/29/en-cote-d-ivoire-le-biama-a-reveille-le-coupe-decale_6684063_3212.html"
+    },
+    "notes": "Ajout approuvé PASS50 le 5 août 2026. Kehou Mousso est une danseuse de biama et une artiste de la scène coupé-décalé ivoirienne. Seul le compte TikTok direct @reine_du_couper_decaler est enregistré à ce stade. Profil non classable jusqu’à validation des métriques récentes.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@reine_du_couper_decaler",
+        "source_name": "Hafi — classement TikTok Côte d’Ivoire",
+        "source_url": "https://hafi.pro/top/most-followed-tiktok/ivory-coast",
+        "confidence": 96
+      }
+    },
+    "curated_facts": {
+      "cultural_position": {
+        "value": "Danseuse de biama et figure féminine du coupé-décalé ivoirien.",
+        "source_name": "The Guardian",
+        "source_url": "https://www.theguardian.com/world/2026/aug/04/biama-dance-ivorian-pop-culture-cote-d-ivoire-tik-tok",
+        "confidence": 98
+      },
+      "audience_snapshot": {
+        "value": "Environ 2,5 à 2,6 millions d’abonnés TikTok relevés en août 2026.",
+        "source_name": "The Guardian / Hafi",
+        "source_url": "https://hafi.pro/top/most-followed-tiktok/ivory-coast",
+        "confidence": 94
+      }
+    },
+    "research_queries": [
+      "\"Kehou Mousso\" compte officiel Instagram Facebook YouTube",
+      "\"reine_du_couper_decaler\" Kehou Mousso TikTok",
+      "\"Kehou Mousso\" vidéo récente vues abonnés"
+    ]
+  },
+  {
+    "id": "census-pavlov-joshua",
+    "name": "Pavlov",
+    "known_alias": "Joshua Pavlov / @joshua_pavlov_23",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "TikTok / Divertissement",
+    "census_status": "Recensé confirmé — compte TikTok fourni par le propriétaire PASS50",
+    "verification_priority": "P1",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@joshua_pavlov_23"
+    },
+    "source": {
+      "publisher": "Compte TikTok direct fourni par le propriétaire PASS50",
+      "date": "2026-08-05",
+      "url": "https://www.tiktok.com/@joshua_pavlov_23"
+    },
+    "source_secondary": {
+      "publisher": "Chartex",
+      "date": "2026-08-05",
+      "url": "https://chartex.com/song/ivorian-doll-babi-5377580"
+    },
+    "notes": "Ajout approuvé PASS50 le 5 août 2026. Le compte TikTok direct @joshua_pavlov_23 a été fourni par le propriétaire PASS50 et recoupé par Chartex, qui rattache le compte à la Côte d’Ivoire. Catégorie volontairement large tant que le positionnement éditorial précis n’est pas documenté. Profil non classable jusqu’à validation des métriques récentes.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@joshua_pavlov_23",
+        "source_name": "Compte TikTok direct fourni par le propriétaire PASS50",
+        "source_url": "https://www.tiktok.com/@joshua_pavlov_23",
+        "confidence": 100
+      }
+    },
+    "curated_facts": {
+      "country_signal": {
+        "value": "Compte rattaché à la Côte d’Ivoire dans un relevé public Chartex.",
+        "source_name": "Chartex",
+        "source_url": "https://chartex.com/song/ivorian-doll-babi-5377580",
+        "confidence": 94
+      },
+      "audience_snapshot": {
+        "value": "313,8 k abonnés relevés par Chartex au moment de la vérification.",
+        "source_name": "Chartex",
+        "source_url": "https://chartex.com/song/ivorian-doll-babi-5377580",
+        "confidence": 90
+      }
+    },
+    "research_queries": [
+      "\"joshua_pavlov_23\" Instagram Facebook YouTube officiel",
+      "\"Joshua Pavlov\" influenceur ivoirien",
+      "\"Pavlov\" \"joshua_pavlov_23\" vidéo récente vues"
+    ]
   }
 ]
