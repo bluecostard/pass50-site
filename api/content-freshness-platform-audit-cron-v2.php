@@ -5,7 +5,7 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/content-intelligence-core.php';
 
-const P50_CONTENT_PLATFORM_AUDIT_V2='CONTENT-PLATFORM-AUDIT-V2.0';
+const P50_CONTENT_PLATFORM_AUDIT_V2='CONTENT-PLATFORM-AUDIT-V2.1';
 const P50_CONTENT_FRESHNESS_RUNTIME='CONTENT-FRESHNESS-V3.2';
 const P50_CONTENT_FRESHNESS_BUCKET_MINUTES=5;
 
@@ -58,9 +58,10 @@ function p50_cpa2_x_health(PDO $pdo): array {
     if($token==='')return $base;
     $threshold=p50_mc_threshold();
     $stmt=$pdo->prepare("SELECT s.normalized_url FROM p50_social_links s JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY s.profile_id
-      WHERE r.alive=1 AND s.platform='X' AND s.status='verified' AND s.confidence>=? ORDER BY s.confidence DESC,s.id LIMIT 1");
+      WHERE r.alive=1 AND s.platform='X' AND s.status='verified' AND s.confidence>=?
+      ORDER BY s.confidence DESC,s.profile_id ASC LIMIT 1");
     $stmt->execute([$threshold]);$url=(string)($stmt->fetchColumn()?:'');$handle=p50_mc_x_handle($url);
-    if($handle==='')return $base+['category'=>'verified_source_missing'];
+    if($handle==='')return array_replace($base,['category'=>'verified_source_missing']);
     $response=p50_mc_http('https://api.x.com/2/users/by/username/'.rawurlencode($handle).'?user.fields=id',['Authorization: Bearer '.$token]);
     $status=(int)($response['status']??0);
     return ['configured'=>true,'requestAttempted'=>true,'requestSucceeded'=>$status>=200&&$status<300,'httpStatus'=>$status?:null,'category'=>p50_cpa2_http_category($status)];
@@ -134,6 +135,6 @@ try{
         'profilesExposed'=>false,'secretsExposed'=>false,'publicStateWrites'=>0,'durationMs'=>(int)round((microtime(true)-$started)*1000),
     ]);
 }catch(Throwable $error){
-    error_log('PASS50 content platform audit V2: '.p50_metrics_safe_error($error->getMessage()));
+    error_log('PASS50 content platform audit V2.1: '.p50_metrics_safe_error($error->getMessage()));
     json_response(['error'=>'Audit multiréseau interrompu.','dispatchId'=>$dispatchId,'contract'=>P50_CONTENT_PLATFORM_AUDIT_V2,'profilesExposed'=>false,'secretsExposed'=>false,'publicStateWrites'=>0],500);
 }
