@@ -39,6 +39,8 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("bool $forceBootstrap=false", core)
         self.assertIn("p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now,$forceBootstrap)", core)
         self.assertIn("$forceBootstrap||!p50_mrp_apply_has_prior_success($pdo)", core)
+        self.assertIn("function p50_mrp_apply_state_actor", core)
+        self.assertIn("p50_mrp_apply_state_actor($appliedBy)", core)
 
     def test_config_exposes_publication_flags(self):
         example = read("api/config.example.php")
