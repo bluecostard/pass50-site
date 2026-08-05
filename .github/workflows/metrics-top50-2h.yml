@@ -1,4 +1,5 @@
 name: Metrics Top 50 P1
+# Audit manuel du bloc métrique 1 — 2026-08-05T12:50+02:00
 
 on:
   schedule:
