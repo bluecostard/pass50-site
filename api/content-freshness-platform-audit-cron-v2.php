@@ -6,7 +6,7 @@ require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/content-intelligence-core.php';
 
 const P50_CONTENT_PLATFORM_AUDIT_V2='CONTENT-PLATFORM-AUDIT-V2.1';
-const P50_CONTENT_FRESHNESS_RUNTIME='CONTENT-FRESHNESS-V3.2';
+const P50_CONTENT_FRESHNESS_RUNTIME='CONTENT-FRESHNESS-V4.0';
 const P50_CONTENT_FRESHNESS_BUCKET_MINUTES=5;
 
 header('Content-Type: application/json; charset=utf-8');
