@@ -7,12 +7,13 @@ CENSUS = ROOT / "pass50_nouveaux_candidats_90_v19.json"
 V9 = ROOT / "v9-tools.js"
 INDEX = ROOT / "index.html"
 SW = ROOT / "sw.js"
-VALIDATION = ROOT / ".github/workflows/validate-canonical-lionel-yasmine-v24.yml"
 TEST = ROOT / "tests/test_kehou_pavlov_canonical_profiles.py"
 TEMP_PATHS = [
-    ROOT / ".github/workflows/one-shot-add-kehou-mousso.yml",
-    ROOT / ".github/workflows/one-shot-integrate-profiles.yml",
     ROOT / "scripts/one_shot_add_kehou_pavlov.py",
+    ROOT / ".pass50-integrate-kehou-pavlov-v6",
+    ROOT / ".pass50-run-profile-integration",
+    ROOT / ".pass50-run-profile-integration-v2",
+    ROOT / ".pass50-run-profile-integration-v3",
 ]
 
 CANDIDATES = [
@@ -252,20 +253,6 @@ if __name__ == "__main__":
     )
 
 
-def update_validation_workflow():
-    text = VALIDATION.read_text(encoding="utf-8")
-    text = text.replace("name: Validate Canonical Profiles V25", "name: Validate Canonical Profiles V26")
-    path_line = "      - 'tests/test_kehou_pavlov_canonical_profiles.py'\n"
-    if path_line not in text:
-        anchor = "      - 'tests/test_andrea_naomi_canonical_profile.py'\n"
-        text = text.replace(anchor, anchor + path_line)
-    run_line = "          python3 -m unittest tests.test_kehou_pavlov_canonical_profiles\n"
-    if run_line not in text:
-        anchor = "          python3 -m unittest tests.test_andrea_naomi_canonical_profile\n"
-        text = text.replace(anchor, anchor + run_line)
-    VALIDATION.write_text(text, encoding="utf-8")
-
-
 def remove_temporary_files():
     for path in TEMP_PATHS:
         if path.exists():
@@ -276,5 +263,4 @@ if __name__ == "__main__":
     upsert_candidates()
     update_versions()
     write_test()
-    update_validation_workflow()
     remove_temporary_files()
