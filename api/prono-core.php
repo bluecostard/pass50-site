@@ -1,14 +1,16 @@
 <?php
 declare(strict_types=1);
 
-const P50_PRONO_VERSION = 'PRONO-V1.0';
-const P50_PRONO_POINTS_CORRECT = 500;
+const P50_PRONO_VERSION = 'PRONO-V1.1';
+const P50_PRONO_POINTS_CORRECT = 100; // mise de base (gain = mise × cote)
 const P50_PRONO_POINTS_DAILY_FIRST = 50;
 const P50_PRONO_POINTS_STREAK_3 = 200;
 const P50_PRONO_POINTS_STREAK_7 = 600;
 const P50_PRONO_POINTS_STATUS_LIKE = 0.25;
 const P50_PRONO_STATUS_LIKE_CAP = 200; // max likes counted per status (50 pts max)
 const P50_PRONO_STATUS_DURATIONS = [12, 24, 48];
+const P50_PRONO_ODD_MIN = 1.10;
+const P50_PRONO_ODD_MAX = 25.00;
 
 function p50_prono_ensure_schema(): void {
     $pdo = db();
@@ -23,7 +25,7 @@ function p50_prono_ensure_schema(): void {
         opens_at DATETIME NOT NULL,
         closes_at DATETIME NOT NULL,
         measure_at DATETIME NULL,
-        points_correct INT UNSIGNED NOT NULL DEFAULT 500,
+        points_correct INT UNSIGNED NOT NULL DEFAULT 100,
         status VARCHAR(24) NOT NULL DEFAULT 'draft',
         winning_option_key VARCHAR(40) NOT NULL DEFAULT '',
         evidence_json JSON NULL,
@@ -40,6 +42,7 @@ function p50_prono_ensure_schema(): void {
         question_id CHAR(36) CHARACTER SET ascii NOT NULL,
         user_id CHAR(36) NOT NULL,
         option_key VARCHAR(40) NOT NULL,
+        odd_locked DECIMAL(8,2) NOT NULL DEFAULT 1.00,
         created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         UNIQUE KEY uq_p50_prono_vote(question_id,user_id),
@@ -91,6 +94,7 @@ function p50_prono_ensure_schema(): void {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'measure_at', 'DATETIME NULL AFTER closes_at');
+    p50_prono_ensure_column($pdo, 'p50_prono_votes', 'odd_locked', 'DECIMAL(8,2) NOT NULL DEFAULT 1.00 AFTER option_key');
 }
 
 function p50_prono_ensure_column(PDO $pdo, string $table, string $column, string $definition): void {
@@ -118,18 +122,86 @@ function p50_prono_now(): DateTimeImmutable {
     return new DateTimeImmutable('now', new DateTimeZone('UTC'));
 }
 
+function p50_prono_normalize_odd(mixed $value, ?float $fallback = null): float {
+    $odd = is_numeric($value) ? (float)$value : ($fallback ?? 2.0);
+    if ($odd < P50_PRONO_ODD_MIN) $odd = P50_PRONO_ODD_MIN;
+    if ($odd > P50_PRONO_ODD_MAX) $odd = P50_PRONO_ODD_MAX;
+    return round($odd, 2);
+}
+
+function p50_prono_default_odd(int $optionCount): float {
+    if ($optionCount <= 1) return 2.0;
+    return p50_prono_normalize_odd(round(max(1.2, min(8.0, $optionCount * 0.85)), 2));
+}
+
 function p50_prono_options(mixed $json): array {
     $rows = is_array($json) ? $json : decode_json_column(is_string($json) ? $json : null, []);
     if (!is_array($rows)) return [];
-    $out = [];
+    $raw = [];
     foreach ($rows as $row) {
         if (!is_array($row)) continue;
         $key = trim((string)($row['key'] ?? ''));
         $label = trim((string)($row['label'] ?? ''));
         if ($key === '' || $label === '') continue;
-        $out[] = ['key' => mb_substr($key, 0, 40), 'label' => mb_substr($label, 0, 160)];
+        $raw[] = [
+            'key' => mb_substr($key, 0, 40),
+            'label' => mb_substr($label, 0, 160),
+            'odd' => $row['odd'] ?? $row['cote'] ?? null,
+        ];
     }
-    return array_slice($out, 0, 4);
+    $raw = array_slice($raw, 0, 4);
+    $fallback = p50_prono_default_odd(count($raw));
+    $out = [];
+    foreach ($raw as $row) {
+        $out[] = [
+            'key' => $row['key'],
+            'label' => $row['label'],
+            'odd' => p50_prono_normalize_odd($row['odd'], $fallback),
+        ];
+    }
+    return $out;
+}
+
+function p50_prono_option_odd(array $options, string $optionKey): float {
+    foreach ($options as $opt) {
+        if (($opt['key'] ?? '') === $optionKey) {
+            return p50_prono_normalize_odd($opt['odd'] ?? null);
+        }
+    }
+    return p50_prono_normalize_odd(null);
+}
+
+function p50_prono_payout(int $stake, float $odd): int {
+    return max(1, (int)round($stake * $odd));
+}
+
+function p50_prono_vote_tallies(PDO $pdo, string $questionId, array $options): array {
+    $counts = [];
+    foreach ($options as $opt) {
+        $counts[(string)$opt['key']] = 0;
+    }
+    $stmt = $pdo->prepare('SELECT option_key, COUNT(*) AS c FROM p50_prono_votes WHERE question_id=? GROUP BY option_key');
+    $stmt->execute([$questionId]);
+    $total = 0;
+    foreach ($stmt->fetchAll() ?: [] as $row) {
+        $key = (string)$row['option_key'];
+        $c = (int)$row['c'];
+        if (!array_key_exists($key, $counts)) $counts[$key] = 0;
+        $counts[$key] = $c;
+        $total += $c;
+    }
+    $tallies = [];
+    foreach ($options as $opt) {
+        $key = (string)$opt['key'];
+        $count = (int)($counts[$key] ?? 0);
+        $pct = $total > 0 ? round(100 * $count / $total, 1) : 0.0;
+        $tallies[] = [
+            'key' => $key,
+            'count' => $count,
+            'percent' => $pct,
+        ];
+    }
+    return ['totalVotes' => $total, 'tallies' => $tallies];
 }
 
 function p50_prono_expire_statuses(PDO $pdo): void {
@@ -193,8 +265,13 @@ function p50_prono_touch_streak(PDO $pdo, string $userId): array {
     return ['streak' => $streak, 'dailyFirst' => true, 'bonus' => $bonus, 'bonusReason' => $bonusReason];
 }
 
-function p50_prono_question_public(array $row, ?array $vote = null): array {
+function p50_prono_question_public(array $row, ?array $vote = null, ?array $tallyBundle = null): array {
     $options = p50_prono_options($row['options_json'] ?? []);
+    $stake = (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
+    foreach ($options as &$opt) {
+        $opt['payout'] = p50_prono_payout($stake, (float)$opt['odd']);
+    }
+    unset($opt);
     $item = [
         'id' => (string)$row['id'],
         'title' => (string)$row['title'],
@@ -208,12 +285,32 @@ function p50_prono_question_public(array $row, ?array $vote = null): array {
             ? gmdate('c', strtotime((string)$row['measure_at'] . ' UTC'))
             : null,
         'status' => (string)$row['status'],
-        'pointsCorrect' => (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT),
+        'stake' => $stake,
+        'pointsCorrect' => $stake, // alias rétrocompat
         'myVote' => null,
+        'totalVotes' => 0,
+        'tallies' => [],
     ];
+    if ($tallyBundle) {
+        $item['totalVotes'] = (int)($tallyBundle['totalVotes'] ?? 0);
+        $item['tallies'] = $tallyBundle['tallies'] ?? [];
+        $byKey = [];
+        foreach ($item['tallies'] as $t) {
+            $byKey[(string)$t['key']] = $t;
+        }
+        foreach ($item['options'] as &$opt) {
+            $t = $byKey[(string)$opt['key']] ?? null;
+            $opt['voteCount'] = $t ? (int)$t['count'] : 0;
+            $opt['votePercent'] = $t ? (float)$t['percent'] : 0.0;
+        }
+        unset($opt);
+    }
     if ($vote) {
+        $locked = isset($vote['odd_locked']) ? p50_prono_normalize_odd($vote['odd_locked']) : p50_prono_option_odd($options, (string)$vote['option_key']);
         $item['myVote'] = [
             'optionKey' => (string)$vote['option_key'],
+            'oddLocked' => $locked,
+            'potentialPayout' => p50_prono_payout($stake, $locked),
             'updatedAt' => gmdate('c', strtotime((string)$vote['updated_at'] . ' UTC')),
         ];
     }

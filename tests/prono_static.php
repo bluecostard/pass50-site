@@ -32,7 +32,7 @@ foreach ($required as $rel) {
 }
 
 $core = file_get_contents($root.'/api/prono-core.php');
-foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed'] as $needle) {
+foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout'] as $needle) {
     if (!str_contains($core, $needle)) {
         fwrite(STDERR, "CORE missing $needle\n");
         exit(1);
@@ -48,7 +48,7 @@ foreach (['voteDurationDays', 'measureAt', '[2, 3, 7]'] as $needle) {
 }
 
 $js = file_get_contents($root.'/pronostics.js');
-foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sans argent réel', 'durationHours', 'measureAt', 'timingMeta'] as $needle) {
+foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sans argent réel', 'durationHours', 'measureAt', 'timingMeta', 'fmtOdd', 'odd'] as $needle) {
     if (!str_contains($js, $needle)) {
         fwrite(STDERR, "JS missing $needle\n");
         exit(1);
@@ -56,7 +56,7 @@ foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sa
 }
 
 $admin = file_get_contents($root.'/admin-pronostics.html');
-foreach (['voteDays', 'measureAt', 'prono-admin-list.php'] as $needle) {
+foreach (['voteDays', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 'stake'] as $needle) {
     if (!str_contains($admin, $needle)) {
         fwrite(STDERR, "ADMIN-UI missing $needle\n");
         exit(1);
