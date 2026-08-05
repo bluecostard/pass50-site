@@ -25,7 +25,7 @@ jobs:
       - name: Runtime metadata smoke tests
         run: |
           php -r '$_GET=["type"=>"site"]; include "partage.php";' > /tmp/share-site.html
-          grep -F 'PASS50 — Qui fait le buzz maintenant ?' /tmp/share-site.html
+          grep -F 'content="Qui fait le buzz ?"' /tmp/share-site.html
           grep -F 'property="og:title"' /tmp/share-site.html
           php -r '$_GET=["type"=>"profile","id"=>"demo"]; include "partage.php";' > /tmp/share-profile.html
           grep -F 'Fiche influenceur' /tmp/share-profile.html
