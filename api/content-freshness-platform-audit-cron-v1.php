@@ -84,7 +84,7 @@ function p50_cpa_displayed_top(PDO $pdo,string $period): array {
         AND t.calculated_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 30 MINUTE)
       ORDER BY t.rank_position LIMIT 80");
     $stmt->execute([$period,$freshSince]);
-    $selected=[];$perProfile=[];$eligibleByPlatform=[];$nonYoutubeAvailable=false;
+    $selected=[];$perProfile=[];$eligibleByPlatform=[];$nonYoutubeAvailable=false;$latestCalculatedAt=null;
     foreach($stmt->fetchAll() as $row){
         $profileId=(string)$row['profile_id'];
         if(($perProfile[$profileId]??0)>=2)continue;
@@ -95,6 +95,7 @@ function p50_cpa_displayed_top(PDO $pdo,string $period): array {
         $title=trim((string)$row['title']);
         $titleLength=function_exists('mb_strlen')?mb_strlen($title,'UTF-8'):strlen($title);
         if(strcasecmp($platform,'Facebook')===0&&$titleLength<12&&$thumbnail==='')continue;
+        if($latestCalculatedAt===null)$latestCalculatedAt=(string)$row['calculated_at'];
         $eligibleByPlatform[$platform]=($eligibleByPlatform[$platform]??0)+1;
         if(strcasecmp($platform,'YouTube')!==0)$nonYoutubeAvailable=true;
         if(count($selected)<5){
@@ -127,7 +128,7 @@ function p50_cpa_displayed_top(PDO $pdo,string $period): array {
         'youtubeSharePercent'=>$selected?round(100*$youtubeCount/count($selected),2):0,
         'allYoutube'=>count($selected)===5&&$youtubeCount===5,
         'nonYoutubeCandidatesAvailable'=>$nonYoutubeAvailable,
-        'latestCalculatedAt'=>$selected?p50_cpa_iso((string)($stmtRow['calculated_at']??'')):null,
+        'latestCalculatedAt'=>p50_cpa_iso($latestCalculatedAt),
     ];
 }
 
@@ -209,7 +210,7 @@ try{
         AND (expires_at IS NULL OR expires_at>UTC_TIMESTAMP())");
 
     $trendRun=$pdo->query("SELECT run_uuid,status,contents_considered,rows_written,started_at,finished_at
-      FROM p50_content_trend_runs ORDER BY id DESC LIMIT 1")->fetch()?:null;
+      FROM p50_content_trend_runs WHERE status='success' AND finished_at IS NOT NULL ORDER BY finished_at DESC,id DESC LIMIT 1")->fetch()?:null;
     $trends=[];$youtubeOnlyPeriods=[];
     foreach(array_keys(p50_ci_periods()) as $period){
         $trends[$period]=p50_cpa_displayed_top($pdo,$period);
@@ -229,6 +230,11 @@ try{
 
     $diagnosis=[
         'fiveMinuteScheduleConfigured'=>true,
+        'scheduleMinutes'=>5,
+        'collectionIdempotencyBucketMinutes'=>15,
+        'scheduledCyclesPerCollectionBucket'=>3,
+        'recalculationCanRunEveryFiveMinutes'=>true,
+        'sameProfilePlatformCollectionUsuallyDeduplicatedWithinBucket'=>true,
         'latestPriority5JobAt'=>p50_cpa_iso((string)$lastJob),
         'latestPriority5JobAgeMinutes'=>p50_cpa_age_minutes((string)$lastJob),
         'latestPriority5RunAt'=>p50_cpa_iso((string)$lastFreshRun),
