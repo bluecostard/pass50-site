@@ -11,8 +11,8 @@ class MetricsRankingFreshCaptureV1Tests(unittest.TestCase):
     def test_gate_preserves_recent_success_without_new_capture(self):
         self.assertIn("MR-FRESH-CAPTURE-V1.0", GATE)
         self.assertIn("reason'=>'recent_success'", GATE)
-        self.assertIn("$finishedAt>$now->modify", GATE) if False else None
         self.assertIn("$finishedAt<=$now->modify", GATE)
+        self.assertIn("if($latestCapture===null)return", GATE)
 
     def test_only_new_usable_confident_captures_override_delay(self):
         self.assertIn("quality_status='usable'", GATE)
