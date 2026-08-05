@@ -67,6 +67,7 @@ return [
         'tiktok_research_token' => getenv('PASS50_TIKTOK_RESEARCH_TOKEN') ?: '',
         'tiktok_research_approved' => filter_var(getenv('PASS50_TIKTOK_RESEARCH_APPROVED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
         // Un jeton présent rend le collecteur statique opérationnel même si le drapeau est resté false.
+        // Kill switch : instagram_enabled=false coupe TOUTE collecte IG (tokens + OAuth Meta inclus).
         'instagram_enabled' => filter_var(getenv('PASS50_INSTAGRAM_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN),
         'instagram_mode' => getenv('PASS50_INSTAGRAM_MODE') ?: (getenv('PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID') ? 'business_discovery' : 'professional_authorized'),
         'instagram_access_token' => getenv('PASS50_INSTAGRAM_ACCESS_TOKEN') ?: '',

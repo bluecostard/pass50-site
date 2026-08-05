@@ -73,11 +73,12 @@ function p50_cf_candidate_rows(PDO $pdo,array $profileIds): array {
         AND s.status='verified' AND s.confidence>=?
         AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')");
     $stmt->execute([...$profileIds,$threshold]);
-    return p50_mo_unique_candidate_rows(array_merge(
+    $rows=p50_mo_unique_candidate_rows(array_merge(
         $stmt->fetchAll(),
         p50_mo_oauth_youtube_rows($pdo,$profileIds),
         p50_mo_oauth_meta_rows($pdo,$profileIds)
     ));
+    return array_values(array_filter($rows,static fn($row)=>p50_mc_platform_enabled((string)($row['platform']??''))));
 }
 
 set_time_limit(240);

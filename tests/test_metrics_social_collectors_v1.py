@@ -36,6 +36,8 @@ class SocialCollectorsV1Tests(unittest.TestCase):
     def test_credentials_are_server_only_and_diagnostic_is_boolean(self):
         self.assertIn("function p50_mc_credentials",SOCIAL)
         self.assertIn("function p50_mc_public_access",SOCIAL)
+        self.assertIn("function p50_mc_platform_enabled",SOCIAL)
+        self.assertIn("'mode'=>'disabled'",SOCIAL)
         public=SOCIAL[SOCIAL.index("function p50_mc_public_access"):SOCIAL.index("function p50_mc_dispatch")]
         self.assertNotIn("'secret'",public)
         for field in ("configured","authorized","mode","authorizationRequired"):

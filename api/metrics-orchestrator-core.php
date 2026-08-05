@@ -160,7 +160,21 @@ function p50_metrics_recover_stale_jobs(PDO $pdo,?int $minutes=null): array {
       WHERE status='running' AND locked_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL ".$minutes." MINUTE) AND attempts<max_attempts");$retry->execute();
     $failed=$pdo->prepare("UPDATE p50_metric_jobs SET status='failed',next_attempt_at=NULL,locked_at=NULL,lock_token=NULL,last_error='Tâche interrompue après le maximum de tentatives'
       WHERE status='running' AND locked_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL ".$minutes." MINUTE) AND attempts>=max_attempts");$failed->execute();
-    return ['retried'=>$retry->rowCount(),'failed'=>$failed->rowCount()];
+    $cancelled=p50_mo_cancel_disabled_platform_jobs($pdo);
+    return ['retried'=>$retry->rowCount(),'failed'=>$failed->rowCount(),'cancelledDisabled'=>$cancelled];
+}
+
+/** Annule la file des plateformes coupées (ex. Instagram disabled). */
+function p50_mo_cancel_disabled_platform_jobs(PDO $pdo): int {
+    $total=0;
+    foreach(['YouTube','X','TikTok','Instagram','Facebook','Snapchat'] as $platform){
+        if(p50_mc_platform_enabled($platform))continue;
+        $stmt=$pdo->prepare("UPDATE p50_metric_jobs SET status='skipped',next_attempt_at=NULL,locked_at=NULL,lock_token=NULL,last_error=?
+          WHERE platform=? AND status IN ('pending','running','retry_wait')");
+        $stmt->execute(['platform_disabled:'.$platform,$platform]);
+        $total+=$stmt->rowCount();
+    }
+    return $total;
 }
 
 function p50_mo_dispatch(PDO $pdo,string $cadenceKey,string $dispatchId,array $options=[]): array {
