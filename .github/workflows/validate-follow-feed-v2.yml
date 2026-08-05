@@ -3,6 +3,10 @@ name: Validate Follow Feed V2
 on:
   pull_request:
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -26,6 +30,7 @@ jobs:
           if grep -F 'data-p50-tab="live"' mobile-bottom-nav-v1.js; then exit 1; fi
           if grep -F 'id="liveSection"' mon-fil.html; then exit 1; fi
       - name: Vérifier Apoutchou avec le lecteur Facebook V1.2
+        id: apoutchou
         shell: bash
         run: |
           set -euo pipefail
@@ -45,7 +50,7 @@ jobs:
             echo "Lecteur Facebook V1.2 en attente ($attempt/24)."
             sleep 5
           done
-          [ "$ready" = true ] || { echo '::error::Le lecteur Facebook V1.2 n’est pas servi'; exit 1; }
+          [ "$ready" = true ] || { echo 'result=not_deployed' >> "$GITHUB_OUTPUT"; echo '::error::Le lecteur Facebook V1.2 n’est pas servi'; exit 1; }
 
           curl --fail-with-body --location --silent --show-error --max-time 30 \
             -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' \
@@ -54,7 +59,7 @@ jobs:
           jq -e '.ok==true and .ready==true' apoutchou-feed.json >/dev/null
           jq '[.news[] | select((.platform|ascii_downcase)=="facebook")]' apoutchou-feed.json > apoutchou-facebook.json
           count="$(jq 'length' apoutchou-facebook.json)"
-          [ "$count" -gt 0 ] || { echo '::error::Aucune publication Facebook sur la fiche Apoutchou'; exit 1; }
+          [ "$count" -gt 0 ] || { echo 'result=no_item' >> "$GITHUB_OUTPUT"; echo '::error::Aucune publication Facebook sur la fiche Apoutchou'; exit 1; }
           source="$(jq -r '.[0].url // ""' apoutchou-facebook.json)"
           item_type="$(jq -r '.[0].itemType // "unknown"' apoutchou-facebook.json)"
           playable="$(jq -r '.[0].playableInPass50 // false' apoutchou-facebook.json)"
@@ -74,8 +79,31 @@ PY
             > facebook-post.html
           unavailable=false
           if grep -Eqi "ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible" facebook-post.html; then unavailable=true; fi
-          [ "$unavailable" = false ] || { echo '::error::La publication réelle d’Apoutchou reste indisponible dans post.php'; exit 1; }
+          [ "$unavailable" = false ] || { echo 'result=post_unavailable' >> "$GITHUB_OUTPUT"; echo '::error::La publication réelle d’Apoutchou reste indisponible dans post.php'; exit 1; }
+          {
+            printf 'result=success\n'
+            printf 'count=%s\n' "$count"
+            printf 'item_type=%s\n' "$item_type"
+            printf 'playable=%s\n' "$playable"
+          } >> "$GITHUB_OUTPUT"
           printf 'APOUTCHOU_V12_RESULT count=%s itemType=%s playable=%s viewer=all-facebook-items postUnavailable=%s path=%s\n' \
             "$count" "$item_type" "$playable" "$unavailable" "$path"
+      - name: Publier le verdict Apoutchou V1.2
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.apoutchou.outcome }}
+          RESULT: ${{ steps.apoutchou.outputs.result }}
+          COUNT: ${{ steps.apoutchou.outputs.count }}
+          ITEM_TYPE: ${{ steps.apoutchou.outputs.item_type }}
+          PLAYABLE: ${{ steps.apoutchou.outputs.playable }}
+        run: |
+          set -euo pipefail
+          state=success
+          description="Apoutchou V1.2 servi: ${COUNT:-0} publication(s), type ${ITEM_TYPE:-?}, ancien playable ${PLAYABLE:-?}, post.php accepté"
+          if [ "${OUTCOME:-failure}" != success ]; then state=failure; description="Apoutchou V1.2 échec: ${RESULT:-inconnu}"; fi
+          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/apoutchou-v12-production' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
       - name: Diff check
         run: git diff --check origin/${{ github.base_ref }}...HEAD
