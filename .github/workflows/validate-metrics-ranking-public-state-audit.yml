@@ -1,0 +1,43 @@
+name: Validate Metrics Ranking Public State Audit
+
+on:
+  pull_request:
+    paths:
+      - 'api/metrics-ranking-public-state-audit-cron-v1.php'
+      - '.github/workflows/metrics-ranking-public-state-audit.yml'
+      - 'tests/test_metrics_ranking_public_state_audit.py'
+      - '.github/workflows/validate-metrics-ranking-public-state-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'api/metrics-ranking-public-state-audit-cron-v1.php'
+      - '.github/workflows/metrics-ranking-public-state-audit.yml'
+      - 'tests/test_metrics_ranking_public_state_audit.py'
+      - '.github/workflows/validate-metrics-ranking-public-state-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PHP lint
+        run: php -l api/metrics-ranking-public-state-audit-cron-v1.php
+      - name: Aggregated public-state contract
+        run: python3 -m unittest tests.test_metrics_ranking_public_state_audit -v
+      - name: Workflow safety markers
+        run: |
+          grep -q 'action:\"probe\"' .github/workflows/metrics-ranking-public-state-audit.yml
+          grep -q 'action:\"audit\"' .github/workflows/metrics-ranking-public-state-audit.yml
+          ! grep -q 'action:\"apply\"' .github/workflows/metrics-ranking-public-state-audit.yml
+          ! grep -q 'confirm:true' .github/workflows/metrics-ranking-public-state-audit.yml
+          ! grep -q 'actions: write' .github/workflows/metrics-ranking-public-state-audit.yml
+          ! grep -q 'backup_json' api/metrics-ranking-public-state-audit-cron-v1.php
+          ! grep -q 'report_json' api/metrics-ranking-public-state-audit-cron-v1.php
+      - name: Diff safety
+        run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD
