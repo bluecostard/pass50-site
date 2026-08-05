@@ -32,6 +32,7 @@ if($action==='probe'){
         'publicationEnabled'=>$cfg['publicationEnabled'],
         'automaticPublicationEnabled'=>$cfg['automaticPublicationEnabled'],
         'bootstrapAllowed'=>$cfg['bootstrapAllowed'],
+        'forcedBootstrapEnabled'=>false,
     ]);
 }
 
@@ -42,26 +43,20 @@ try{
         if($keys!==['action','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
         $preview=p50_mrp_apply_preview($pdo);
         $preview['ok']=true;$preview['dispatchId']=$dispatchId;
+        $preview['forcedBootstrapEnabled']=false;
         $preview['durationMs']=(int)round((microtime(true)-$started)*1000);
         json_response($preview);
     }
-    // Keys sorted: action, confirm, dispatchId — optional bootstrap for recovery.
-    $forceBootstrap=array_key_exists('bootstrap',$input);
-    if($forceBootstrap){
-        if($keys!==['action','bootstrap','confirm','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
-        if($input['bootstrap']!==true)json_response(['error'=>'bootstrap invalide.'],422);
-    }elseif($keys!==['action','confirm','dispatchId']){
-        json_response(['error'=>'Corps JSON invalide.'],422);
-    }
+    // Après consommation du recovery unique, le cron accepte uniquement l’application standard.
+    if($keys!==['action','confirm','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
     if(empty($input['confirm']))json_response(['error'=>'Confirmation requise.'],422);
     if(!$cfg['automaticPublicationEnabled'])json_response(['error'=>'Publication automatique désactivée.','skipped'=>true,'reason'=>'automatic_disabled'],200);
-    if($forceBootstrap&&!$cfg['bootstrapAllowed'])json_response(['error'=>'Bootstrap désactivé.','skipped'=>true,'reason'=>'bootstrap_disabled'],200);
     $result=p50_mrp_apply_execute($pdo,[
         'mode'=>'automatic',
         'dispatchId'=>$dispatchId,
-        'appliedBy'=>$forceBootstrap?'cron-bootstrap-recovery':'cron-automatic',
+        'appliedBy'=>'cron-automatic',
         'confirm'=>true,
-        'bootstrap'=>$forceBootstrap,
+        'bootstrap'=>false,
     ]);
     $result['durationMs']=(int)round((microtime(true)-$started)*1000);
     json_response($result);
@@ -69,7 +64,7 @@ try{
     error_log('PASS50 publication apply cron: '.p50_mr_safe_error($error));
     $msg=$error->getMessage();
     // Soft-skip when gates block — avoids failing the workflow every cycle.
-    if(str_contains($msg,'Garde-fous')||str_contains($msg,'Aucune mutation')||str_contains($msg,'Bootstrap')){
+    if(str_contains($msg,'Garde-fous')||str_contains($msg,'Aucune mutation')){
         json_response([
             'ok'=>true,'skipped'=>true,'reason'=>'gates_or_empty',
             'error'=>$msg,'dispatchId'=>$dispatchId,
