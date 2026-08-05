@@ -1,0 +1,245 @@
+name: One-shot Add Kehou Mousso
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/one-shot-add-kehou-mousso.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ajouter Kehou Mousso au recensement canonique
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          ROOT = Path('.')
+          CENSUS = ROOT / 'pass50_nouveaux_candidats_90_v19.json'
+          V9 = ROOT / 'v9-tools.js'
+          INDEX = ROOT / 'index.html'
+          SW = ROOT / 'sw.js'
+          VALIDATION = ROOT / '.github/workflows/validate-canonical-lionel-yasmine-v24.yml'
+          TEMP_WORKFLOW = ROOT / '.github/workflows/one-shot-add-kehou-mousso.yml'
+          TEST = ROOT / 'tests/test_kehou_mousso_canonical_profile.py'
+
+          candidate = {
+              'id': 'census-kehou-mousso',
+              'name': 'Kehou Mousso',
+              'known_alias': 'Tano Nadia Marcel / Reine du coupé-décalé / @reine_du_couper_decaler',
+              'entity_type': 'Personne',
+              'zone': 'CI',
+              'category': 'Danse / Biama / Coupé-décalé / Divertissement / Musique',
+              'census_status': 'Recensé confirmé — intégration prioritaire',
+              'verification_priority': 'P0',
+              'eligible': False,
+              'classable': False,
+              'official_socials': {
+                  'TikTok': 'https://www.tiktok.com/@reine_du_couper_decaler'
+              },
+              'source': {
+                  'publisher': 'The Guardian',
+                  'date': '2026-08-04',
+                  'url': 'https://www.theguardian.com/world/2026/aug/04/biama-dance-ivorian-pop-culture-cote-d-ivoire-tik-tok'
+              },
+              'source_secondary': {
+                  'publisher': 'Le Monde',
+                  'date': '2026-04-29',
+                  'url': 'https://www.lemonde.fr/afrique/article/2026/04/29/en-cote-d-ivoire-le-biama-a-reveille-le-coupe-decale_6684063_3212.html'
+              },
+              'notes': 'Ajout approuvé PASS50 le 5 août 2026. Kehou Mousso est une danseuse de biama et une artiste de la scène coupé-décalé ivoirienne. Le compte TikTok direct @reine_du_couper_decaler est le seul réseau social enregistré à ce stade. Profil non classable jusqu’à validation des métriques récentes.',
+              'curated_social_sources': {
+                  'TikTok': {
+                      'url': 'https://www.tiktok.com/@reine_du_couper_decaler',
+                      'source_name': 'Hafi — classement TikTok Côte d’Ivoire',
+                      'source_url': 'https://hafi.pro/top/most-followed-tiktok/ivory-coast',
+                      'confidence': 94
+                  }
+              },
+              'curated_facts': {
+                  'civil_name': {
+                      'value': 'Tano Nadia Marcel',
+                      'source_name': 'Linfodrome — émission Inside',
+                      'source_url': 'https://www.dailymotion.com/video/xa5ndki',
+                      'confidence': 90
+                  },
+                  'cultural_position': {
+                      'value': 'Danseuse de biama et figure féminine du coupé-décalé ivoirien',
+                      'source_name': 'The Guardian',
+                      'source_url': 'https://www.theguardian.com/world/2026/aug/04/biama-dance-ivorian-pop-culture-cote-d-ivoire-tik-tok',
+                      'confidence': 96
+                  }
+              },
+              'research_queries': [
+                  '"Kehou Mousso" compte officiel Instagram Facebook YouTube',
+                  '"reine_du_couper_decaler" Kehou Mousso TikTok',
+                  '"Kehou Mousso" vidéo récente vues abonnés'
+              ]
+          }
+
+          def normalized(value=''):
+              return re.sub(r'[^a-z0-9]+', '', str(value).lower())
+
+          census = json.loads(CENSUS.read_text(encoding='utf-8'))
+          matches = [
+              item for item in census
+              if item.get('id') == candidate['id']
+              or normalized(item.get('name')) == normalized(candidate['name'])
+              or normalized((item.get('official_socials') or {}).get('TikTok')) == normalized(candidate['official_socials']['TikTok'])
+          ]
+          if len(matches) > 1:
+              raise RuntimeError('Plusieurs entrées Kehou Mousso détectées avant intégration.')
+          if matches:
+              position = census.index(matches[0])
+              census[position] = candidate
+          else:
+              census.append(candidate)
+          CENSUS.write_text(json.dumps(census, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          def replace_once(path, old, new):
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  if new in text:
+                      return
+                  raise RuntimeError(f'Marqueur introuvable dans {path}: {old}')
+              if text.count(old) != 1:
+                  raise RuntimeError(f'Marqueur non unique dans {path}: {old}')
+              path.write_text(text.replace(old, new), encoding='utf-8')
+
+          replace_once(V9, "const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.8';", "const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.9';")
+          replace_once(V9, "const CENSUS_VERSION='93-v25';", "const CENSUS_VERSION='94-v26';")
+          replace_once(INDEX, './v9-tools.js?v=15.6', './v9-tools.js?v=15.7')
+          replace_once(SW, './v9-tools.js?v=15.6', './v9-tools.js?v=15.7')
+          replace_once(SW, './pass50_nouveaux_candidats_90_v19.json?v=22.8', './pass50_nouveaux_candidats_90_v19.json?v=22.9')
+
+          for test_path in (ROOT / 'tests').glob('test_*.py'):
+              text = test_path.read_text(encoding='utf-8')
+              updated = text.replace('pass50_nouveaux_candidats_90_v19.json?v=22.8', 'pass50_nouveaux_candidats_90_v19.json?v=22.9')
+              updated = updated.replace("CENSUS_VERSION='93-v25'", "CENSUS_VERSION='94-v26'")
+              updated = updated.replace('v9-tools.js?v=15.6', 'v9-tools.js?v=15.7')
+              if updated != text:
+                  test_path.write_text(updated, encoding='utf-8')
+
+          validation = VALIDATION.read_text(encoding='utf-8')
+          validation = validation.replace('name: Validate Canonical Profiles V25', 'name: Validate Canonical Profiles V26')
+          test_path_line = "      - 'tests/test_kehou_mousso_canonical_profile.py'\n"
+          if test_path_line not in validation:
+              anchor = "      - 'tests/test_andrea_naomi_canonical_profile.py'\n"
+              if anchor not in validation:
+                  raise RuntimeError('Ancre de fichier de test canonique introuvable.')
+              validation = validation.replace(anchor, anchor + test_path_line)
+          test_run_line = '          python3 -m unittest tests.test_kehou_mousso_canonical_profile\n'
+          if test_run_line not in validation:
+              anchor = '          python3 -m unittest tests.test_andrea_naomi_canonical_profile\n'
+              if anchor not in validation:
+                  raise RuntimeError('Ancre de commande de test canonique introuvable.')
+              validation = validation.replace(anchor, anchor + test_run_line)
+          VALIDATION.write_text(validation, encoding='utf-8')
+
+          TEST.write_text('''import json
+import re
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CENSUS_PATH = ROOT / "pass50_nouveaux_candidats_90_v19.json"
+V9_PATH = ROOT / "v9-tools.js"
+INDEX_PATH = ROOT / "index.html"
+SW_PATH = ROOT / "sw.js"
+
+
+class KehouMoussoCanonicalProfileTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.census = json.loads(CENSUS_PATH.read_text(encoding="utf-8"))
+        cls.v9 = V9_PATH.read_text(encoding="utf-8")
+        cls.index = INDEX_PATH.read_text(encoding="utf-8")
+        cls.sw = SW_PATH.read_text(encoding="utf-8")
+
+    def profile(self):
+        return next(item for item in self.census if item.get("id") == "census-kehou-mousso")
+
+    def test_profile_is_present_once(self):
+        matches = [
+            item for item in self.census
+            if item.get("id") == "census-kehou-mousso"
+            or item.get("name") == "Kehou Mousso"
+        ]
+        self.assertEqual(len(matches), 1)
+
+    def test_profile_is_priority_zero_but_not_yet_classable(self):
+        profile = self.profile()
+        self.assertEqual(profile["zone"], "CI")
+        self.assertEqual(profile["verification_priority"], "P0")
+        self.assertFalse(profile["eligible"])
+        self.assertFalse(profile["classable"])
+        self.assertIn("Biama", profile["category"])
+        self.assertIn("Coupé-décalé", profile["category"])
+
+    def test_only_verified_tiktok_is_registered(self):
+        profile = self.profile()
+        self.assertEqual(
+            profile["official_socials"],
+            {"TikTok": "https://www.tiktok.com/@reine_du_couper_decaler"},
+        )
+        source = profile["curated_social_sources"]["TikTok"]
+        self.assertEqual(source["url"], profile["official_socials"]["TikTok"])
+        self.assertGreaterEqual(source["confidence"], 90)
+
+    def test_two_editorial_sources_and_identity_fact_are_recorded(self):
+        profile = self.profile()
+        self.assertEqual(profile["source"]["publisher"], "The Guardian")
+        self.assertEqual(profile["source"]["date"], "2026-08-04")
+        self.assertEqual(profile["source_secondary"]["publisher"], "Le Monde")
+        self.assertEqual(profile["curated_facts"]["civil_name"]["value"], "Tano Nadia Marcel")
+
+    def test_browser_loads_census_revision_94_v26(self):
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.9", self.v9)
+        self.assertIn("CENSUS_VERSION='94-v26'", self.v9)
+        index_version = re.search(r"v9-tools\\.js\\?v=([0-9.]+)", self.index)
+        worker_version = re.search(r"v9-tools\\.js\\?v=([0-9.]+)", self.sw)
+        self.assertIsNotNone(index_version)
+        self.assertIsNotNone(worker_version)
+        self.assertEqual(index_version.group(1), "15.7")
+        self.assertEqual(worker_version.group(1), "15.7")
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.9", self.sw)
+
+
+if __name__ == "__main__":
+    unittest.main()
+''', encoding='utf-8')
+
+          if TEMP_WORKFLOW.exists():
+              TEMP_WORKFLOW.unlink()
+          PY
+
+      - name: Valider l’intégration
+        run: |
+          python3 -m json.tool pass50_nouveaux_candidats_90_v19.json >/dev/null
+          node --check v9-tools.js
+          node --check index.html >/dev/null 2>&1 || true
+          node --check sw.js
+          python3 -m unittest tests.test_canonical_lionel_yasmine_v24
+          python3 -m unittest tests.test_andrea_naomi_canonical_profile
+          python3 -m unittest tests.test_kehou_mousso_canonical_profile
+          python3 -m unittest tests.test_live_radar_v3
+          python3 -m unittest tests.test_live_trust_gate_v1
+          python3 -m unittest tests.test_metrics_ranking_calibration_v1
+          python3 -m unittest tests.test_mobile_public_ux_polish
+
+      - name: Publier l’intégration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pass50_nouveaux_candidats_90_v19.json v9-tools.js index.html sw.js tests .github/workflows
+          git commit -m 'Ajouter Kehou Mousso au recensement PASS50'
+          git push origin HEAD:main
