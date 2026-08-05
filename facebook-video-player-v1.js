@@ -1,8 +1,8 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-FACEBOOK-VIDEO-PLAYER-V1.1';
-  const state={profileId:'',videos:new Map(),requestId:0,previousFocus:null,previousOverflow:'',source:'',title:'',embedType:'post'};
+  const VERSION='PASS50-FACEBOOK-VIDEO-PLAYER-V1.2';
+  const state={profileId:'',items:new Map(),requestId:0,previousFocus:null,previousOverflow:'',source:'',title:'',embedType:'post'};
 
   function facebookSourceUrl(value){
     try{
@@ -31,6 +31,11 @@
     const url=new URL(source),host=url.hostname.toLowerCase(),path=url.pathname.toLowerCase();
     if(host==='fb.watch'||/(?:^|\/)(?:watch\/?|reel\/|share\/(?:v|r)\/|[^/]+\/videos\/)/i.test(path))return 'video';
     return 'post';
+  }
+
+  function itemIsVideo(item){
+    const type=String(item?.itemType||item?.contentType||'').toLowerCase();
+    return item?.playableInPass50===true||['video','reel','live'].includes(type)||facebookEmbedTypeFromUrl(item?.url)==='video';
   }
 
   function facebookEmbedUrl(value,embedType){
@@ -70,7 +75,7 @@
     player.setAttribute('aria-modal','true');
     player.setAttribute('aria-labelledby','p50FacebookVideoTitle');
     player.innerHTML=`<div class="p50fb-dialog">
-      <div class="p50fb-head"><div id="p50FacebookVideoTitle" class="p50fb-title">Vidéo Facebook</div><button type="button" class="p50fb-close" data-p50fb-close aria-label="Fermer le lecteur">×</button></div>
+      <div class="p50fb-head"><div id="p50FacebookVideoTitle" class="p50fb-title">Publication Facebook</div><button type="button" class="p50fb-close" data-p50fb-close aria-label="Fermer le lecteur">×</button></div>
       <div class="p50fb-frame"><iframe title="Lecteur Facebook" src="about:blank" loading="eager" scrolling="yes" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe></div>
       <div class="p50fb-foot"><div class="p50fb-note" data-p50fb-note>Chargement de la publication Facebook…</div><div class="p50fb-foot-actions"><button type="button" class="btn small" data-p50fb-alternate>Essayer le lecteur vidéo</button><a class="btn small" data-p50fb-external href="#" target="_blank" rel="noopener">Ouvrir Facebook ↗</a></div></div>
     </div>`;
@@ -90,7 +95,7 @@
     }
     if(alternate)alternate.textContent=type==='post'?'Essayer le lecteur vidéo':'Essayer comme publication';
     if(note)note.textContent=type==='post'
-      ?'Cette vidéo est ouverte comme une publication Facebook, car son lien officiel est un lien de post.'
+      ?'La publication Facebook est affichée ici. Si elle contient une vidéo, lancez-la directement dans la publication.'
       :'Cette adresse est ouverte avec le lecteur vidéo Facebook.';
   }
 
@@ -110,7 +115,7 @@
     state.previousFocus=document.activeElement;
     state.previousOverflow=document.body.style.overflow;
     state.source=url;
-    state.title=String(title||'Vidéo Facebook').trim()||'Vidéo Facebook';
+    state.title=String(title||'Publication Facebook').trim()||'Publication Facebook';
     state.embedType=normalizeEmbedType(embedType||facebookEmbedTypeFromUrl(url));
     document.body.style.overflow='hidden';
     if(heading)heading.textContent=state.title;
@@ -124,31 +129,32 @@
     return document.querySelector('[data-p50ci-period].active')?.dataset?.p50ciPeriod||'24h';
   }
 
-  async function fetchProfileVideos(profileId){
+  async function fetchProfileItems(profileId){
     const requestId=++state.requestId;
     const query=new URLSearchParams({profileId,period:activePeriod(),newsLimit:'30',_:String(Date.now())});
     try{
       const response=await fetch(`./api/content-feed.php?${query}`,{headers:{Accept:'application/json'},cache:'no-store'});
       const data=await response.json().catch(()=>({}));
       if(requestId!==state.requestId||profileId!==state.profileId)return;
-      state.videos.clear();
+      state.items.clear();
       if(response.ok){
         for(const item of data.news||[]){
-          if(String(item.platform||'').toLowerCase()!=='facebook'||item.playableInPass50!==true)continue;
-          const key=facebookKey(item.url);if(key)state.videos.set(key,item);
+          if(String(item.platform||'').toLowerCase()!=='facebook')continue;
+          const key=facebookKey(item.url);if(key)state.items.set(key,item);
         }
       }
       decorateCards();
-    }catch(error){console.warn('PASS50 Facebook video player',error);}
+    }catch(error){console.warn('PASS50 Facebook publication viewer',error);}
   }
 
   function decorateCards(){
-    if(!state.profileId||state.videos.size===0)return;
+    if(!state.profileId||state.items.size===0)return;
     document.querySelectorAll('#p50ciProfileNews .p50ci-news-card.facebook').forEach(card=>{
       if(card.querySelector('[data-p50fb-play]'))return;
       const external=card.querySelector('a[href]');if(!external)return;
-      const item=state.videos.get(facebookKey(external.href));if(!item)return;
-      const title=String(item.title||card.querySelector('h4')?.textContent||'Vidéo Facebook').trim();
+      const item=state.items.get(facebookKey(external.href));if(!item)return;
+      const isVideo=itemIsVideo(item);
+      const title=String(item.title||card.querySelector('h4')?.textContent||(isVideo?'Vidéo Facebook':'Publication Facebook')).trim();
       const embedType=normalizeEmbedType(item.facebookEmbedType||facebookEmbedTypeFromUrl(item.url));
       const button=document.createElement('button');
       button.type='button';
@@ -157,13 +163,15 @@
       button.dataset.url=facebookSourceUrl(item.url);
       button.dataset.title=title;
       button.dataset.embedType=embedType;
-      button.textContent='▶ Lire la vidéo';
+      button.textContent=isVideo?'▶ Lire la vidéo':'Voir dans Pass50';
       const actions=document.createElement('div');
       actions.className='p50fb-actions';
       external.replaceWith(actions);
       actions.append(button,external);
       const note=card.querySelector('.p50ci-facebook-note');
-      if(note)note.textContent=embedType==='post'?'Vidéo lisible via la publication Facebook.':'Vidéo publique lisible dans Pass50.';
+      if(note)note.textContent=isVideo
+        ?(embedType==='post'?'Vidéo accessible dans la publication Facebook.':'Vidéo publique lisible dans Pass50.')
+        :'Publication Facebook consultable dans Pass50.';
     });
   }
 
@@ -177,8 +185,8 @@
     document.addEventListener('p50:profile-opened',event=>{
       closePlayer();
       state.profileId=String(event?.detail?.profileId||'').trim();
-      state.videos.clear();
-      if(state.profileId)fetchProfileVideos(state.profileId);
+      state.items.clear();
+      if(state.profileId)fetchProfileItems(state.profileId);
     });
     document.addEventListener('click',event=>{
       const play=event.target.closest('[data-p50fb-play]');
