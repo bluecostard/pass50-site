@@ -1,3 +1,4 @@
+// Déclenchement du déploiement ciblé de l’onglet unique — 2026-08-06T18:51+02:00
 (function(){
   'use strict';
 
