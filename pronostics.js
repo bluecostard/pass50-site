@@ -67,7 +67,7 @@
   }
 
   function statusCoverSrc(item) {
-    const direct = String(item.coverPhoto || item.authorPhoto || '').trim();
+    const direct = String(item.coverPhoto || '').trim();
     if (direct && !direct.startsWith('data:image/svg')) return direct;
     return statusCoverDataUri(item, 'feed');
   }

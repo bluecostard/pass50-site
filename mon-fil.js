@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.8';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.9';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -13,6 +13,7 @@
     period: '24H',
     user: null,
     profiles: [],
+    events: [],
     following: [],
     news: [],
     pronoStatuses: [],
@@ -59,7 +60,43 @@
   }
 
   function profileFor(profileId) {
-    return profileMap().get(String(profileId)) || null;
+    const raw = String(profileId || '').trim();
+    if (!raw) return null;
+    const exact = profileMap().get(raw);
+    if (exact) return exact;
+    const norm = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '');
+    const tokens = (value) => norm(value).match(/[a-z0-9]{3,}/g) || [];
+    const queryKey = norm(raw);
+    const queryTokens = tokens(raw);
+    let best = null;
+    let bestScore = 0;
+    for (const profile of state.profiles) {
+      const id = String(profile?.id || '');
+      const name = String(profile?.name || '');
+      if (queryKey && (norm(id) === queryKey || norm(name) === queryKey)) return profile;
+      if (!queryTokens.length) continue;
+      const cand = [...new Set([...tokens(id), ...tokens(name)])];
+      const matched = queryTokens.every((q) => cand.some((c) => c === q || c.startsWith(q) || q.startsWith(c)));
+      if (!matched) continue;
+      const score = queryTokens.length * 10;
+      if (score > bestScore) {
+        bestScore = score;
+        best = profile;
+      }
+    }
+    return best;
+  }
+
+  function photo(profile) {
+    return String(profile?.photoUrl || profile?.photoCandidateUrl || '').trim();
+  }
+
+  function eventCoverFor(profileId) {
+    const profile = profileFor(profileId);
+    if (!profile) return '';
+    const events = Array.isArray(state.events) ? state.events : [];
+    const hit = events.find((event) => String(event?.profileId || '') === String(profile.id) && String(event?.coverStatus || '') === 'validated' && (event.coverUrl || event.coverCandidateUrl));
+    return String(hit?.coverUrl || hit?.coverCandidateUrl || '').trim();
   }
 
   function scoreFor(profile) {
@@ -95,10 +132,6 @@
   function initials(profile) {
     if (profile?.initials) return String(profile.initials).slice(0, 2).toUpperCase();
     return String(profile?.name || 'P50').split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'P50';
-  }
-
-  function photo(profile) {
-    return String(profile?.photoUrl || profile?.photoCandidateUrl || '').trim();
   }
 
   function avatarHtml(profile) {
@@ -155,12 +188,14 @@
   }
 
   function statusCoverSrc(item) {
+    const apiCover = String(item.coverPhoto || '').trim();
+    if (apiCover && !apiCover.startsWith('data:image/svg')) return apiCover;
     if (item.profileId) {
+      const eventCover = eventCoverFor(item.profileId);
+      if (eventCover) return eventCover;
       const fiPhoto = photo(profileFor(item.profileId));
       if (fiPhoto) return fiPhoto;
     }
-    const direct = String(item.coverPhoto || item.authorPhoto || '').trim();
-    if (direct && !String(direct).startsWith('data:image/svg')) return direct;
     return statusCoverDataUri(item, 'feed');
   }
 
@@ -168,7 +203,7 @@
     const odd = Number(item.odd) > 0 ? Number(item.odd) : 2;
     const stake = Number(item.stake) > 0 ? Number(item.stake) : 100;
     const payout = Number(item.potentialPayout) > 0 ? Number(item.potentialPayout) : Math.round(stake * odd);
-    const direct = String(item.authorPhoto || item.authorAvatar || item.photoUrl || '').trim();
+    const direct = String(item.authorPhoto || item.authorAvatar || '').trim();
     const faces = communityFaces();
     const authorPhoto = direct || (faces.length ? faces[index % faces.length] : syntheticPhoto(item.authorPseudo || item.id || 'pass50'));
     const enriched = {
@@ -213,15 +248,19 @@
 
   async function loadProfiles() {
     let publicProfiles = [];
+    let publicEvents = [];
     try {
       const data = await apiFetch('state.php');
       if (Array.isArray(data?.data?.profiles)) publicProfiles = data.data.profiles;
+      if (Array.isArray(data?.data?.events)) publicEvents = data.data.events;
     } catch (error) {
       console.warn('État public indisponible pour Mon fil', error);
     }
     const localProfiles = Array.isArray(localDb().profiles) ? localDb().profiles : [];
+    const localEvents = Array.isArray(localDb().events) ? localDb().events : [];
     const merged = new Map(localProfiles.map(profile => [String(profile.id), profile]));
     publicProfiles.forEach(profile => merged.set(String(profile.id), { ...(merged.get(String(profile.id)) || {}), ...profile }));
+    state.events = publicEvents.length ? publicEvents : localEvents;
     return [...merged.values()];
   }
 
