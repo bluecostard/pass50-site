@@ -20,6 +20,7 @@ $stmt->execute([$now, $now]);
 $questions = $stmt->fetchAll() ?: [];
 
 $votes = [];
+$statusPublished = [];
 if ($user) {
     $ids = array_map(static fn($q) => (string)$q['id'], $questions);
     if ($ids) {
@@ -29,6 +30,15 @@ if ($user) {
         foreach ($voteStmt->fetchAll() ?: [] as $vote) {
             $votes[(string)$vote['question_id']] = $vote;
         }
+        $voteIds = array_values(array_map(static fn($v) => (string)$v['id'], $votes));
+        if ($voteIds) {
+            $statusPlaceholders = implode(',', array_fill(0, count($voteIds), '?'));
+            $statusStmt = $pdo->prepare("SELECT vote_id FROM p50_prono_statuses WHERE vote_id IN ($statusPlaceholders)");
+            $statusStmt->execute($voteIds);
+            foreach ($statusStmt->fetchAll() ?: [] as $statusRow) {
+                $statusPublished[(string)$statusRow['vote_id']] = true;
+            }
+        }
     }
 }
 
@@ -37,7 +47,10 @@ foreach ($questions as $row) {
     $qid = (string)$row['id'];
     $options = p50_prono_options($row['options_json'] ?? []);
     $tallies = p50_prono_vote_tallies($pdo, $qid, $options);
-    $items[] = p50_prono_question_public($row, $votes[$qid] ?? null, $tallies);
+    $item = p50_prono_question_public($row, $votes[$qid] ?? null, $tallies);
+    $vote = $votes[$qid] ?? null;
+    $item['statusPublished'] = $vote ? isset($statusPublished[(string)$vote['id']]) : false;
+    $items[] = $item;
 }
 
 $balance = $user ? p50_prono_balance($pdo, (string)$user['id']) : ['balance' => 0, 'streak' => 0, 'lastPlayDate' => null, 'floor' => P50_PRONO_BALANCE_FLOOR];

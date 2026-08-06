@@ -191,13 +191,16 @@
   function card(item) {
     const selected = item.myVote?.optionKey || '';
     const voted = Boolean(selected);
+    const statusPublished = Boolean(item.statusPublished);
     const stake = item.stake || item.pointsCorrect || 100;
     const showTally = voted || Number(item.totalVotes || 0) > 0;
     const opts = (item.options || []).map((opt) => {
       const odd = opt.odd ?? 2;
       const payout = opt.payout ?? Math.round(stake * odd);
       const pct = Number(opt.votePercent || 0);
-      return `<button type="button" class="opt ${selected === opt.key ? 'selected' : ''}" data-vote="${esc(item.id)}" data-opt="${esc(opt.key)}">
+      const isSelected = selected === opt.key;
+      const lockAttrs = voted ? ' disabled aria-disabled="true"' : ` data-vote="${esc(item.id)}" data-opt="${esc(opt.key)}"`;
+      return `<button type="button" class="opt ${isSelected ? 'selected' : ''}${voted && !isSelected ? ' locked' : ''}"${lockAttrs}>
         <span>
           <span class="label">${esc(opt.label)}</span>
           ${showTally ? `<span class="pct">${esc(pct)}% · ${esc(opt.voteCount || 0)} joueurs</span><div class="bar"><i style="width:${Math.min(100, pct)}%"></i></div>` : ''}
@@ -206,16 +209,19 @@
       </button>`;
     }).join('');
     const locked = item.myVote?.potentialPayout
-      ? `Ta cote ${fmtOdd(item.myVote.oddLocked)} · mise ${item.myVote.stakeLocked ?? stake} · +${item.myVote.potentialPayout} si correct`
+      ? `Prono verrouillé · cote ${fmtOdd(item.myVote.oddLocked)} · mise ${item.myVote.stakeLocked ?? stake} · +${item.myVote.potentialPayout} si correct`
       : `Mise ${stake} pts · perdu = mise perdue (plancher 100) · gagné = mise × cote`;
-    return `<article class="card" data-qid="${esc(item.id)}">
-      <p class="card-kicker">${esc(closesLabel(item.closesAt))}${item.totalVotes ? ` · ${esc(item.totalVotes)} joueurs` : ''}</p>
+    const publishBtn = statusPublished
+      ? `<button type="button" class="btn" disabled>Statut publié</button>`
+      : `<button type="button" class="btn primary" data-publish="${esc(item.id)}">Publier en statut</button>`;
+    return `<article class="card${voted ? ' is-voted' : ''}" data-qid="${esc(item.id)}">
+      <p class="card-kicker">${esc(closesLabel(item.closesAt))}${item.totalVotes ? ` · ${esc(item.totalVotes)} joueurs` : ''}${voted ? ' · Pari validé' : ''}</p>
       <h2>${esc(item.title)}</h2>
       ${item.context ? `<div class="ctx">${esc(item.context)}</div>` : ''}
       <div class="opts">${opts}</div>
       <div class="meta">${esc(measureLabel(item.measureAt) || 'Résolution à la date de mesure')} · ${esc(locked)} · Sans argent réel</div>
       <div class="actions">
-        ${voted ? `<button type="button" class="btn primary" data-publish="${esc(item.id)}">Publier en statut</button>
+        ${voted ? `${publishBtn}
         <button type="button" class="btn" data-share="${esc(item.id)}">Partager</button>` : '<span class="meta" style="margin:0">Choisis une cote</span>'}
       </div>
     </article>`;
@@ -458,24 +464,28 @@
 
   function openStatusModal() {
     document.body.classList.add('p50-status-open');
-    openStatusModal();
+    $('#statusModal')?.classList.add('show');
   }
 
   function closeStatusModal() {
     document.body.classList.remove('p50-status-open');
-    closeStatusModal();
+    $('#statusModal')?.classList.remove('show');
   }
 
   async function vote(questionId, optionKey) {
+    const existing = state.items.find((row) => row.id === questionId);
+    if (existing?.myVote) {
+      toast('Prono déjà validé — modification impossible');
+      return;
+    }
     if (state.demo) {
       const item = state.items.find((row) => row.id === questionId);
       if (item) {
         const opt = (item.options || []).find((o) => o.key === optionKey);
         const odd = Number(opt?.odd || 2);
         const payout = opt?.payout ?? Math.round((item.stake || 100) * odd);
-        const hadVote = Boolean(item.myVote);
         item.myVote = { optionKey, oddLocked: odd, potentialPayout: payout, updatedAt: new Date().toISOString() };
-        if (!hadVote) item.totalVotes = Number(item.totalVotes || 0) + 1;
+        item.totalVotes = Number(item.totalVotes || 0) + 1;
         renderList();
         toast(`Prono enregistré · cote ${fmtOdd(odd)} · +${payout} pts si correct`);
       }
@@ -491,9 +501,11 @@
         item.myVote = {
           optionKey,
           oddLocked: data.oddLocked,
+          stakeLocked: data.stakeLocked,
           potentialPayout: data.potentialPayout,
           updatedAt: new Date().toISOString(),
         };
+        item.statusPublished = false;
         if (Array.isArray(data.tallies)) {
           item.totalVotes = data.totalVotes || 0;
           const byKey = Object.fromEntries(data.tallies.map((t) => [t.key, t]));
@@ -516,20 +528,27 @@
 
   async function publishStatus() {
     if (!state.pendingQuestionId) return;
+    const qid = state.pendingQuestionId;
     if (state.demo) {
+      const item = state.items.find((row) => row.id === qid);
+      if (item) item.statusPublished = true;
       closeStatusModal();
       toast(`Statut démo publié · ${state.durationHours} h · visible dans Mon fil`);
       state.pendingQuestionId = null;
+      renderList();
       return;
     }
     try {
       await api('prono-status-publish.php', {
         method: 'POST',
-        body: { questionId: state.pendingQuestionId, durationHours: state.durationHours },
+        body: { questionId: qid, durationHours: state.durationHours },
       });
+      const item = state.items.find((row) => row.id === qid);
+      if (item) item.statusPublished = true;
       closeStatusModal();
       toast('Statut publié dans Mon fil');
       state.pendingQuestionId = null;
+      renderList();
       await loadStatuses();
     } catch (error) {
       toast(error.message);
