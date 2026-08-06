@@ -1,0 +1,93 @@
+name: Déployer l’onglet Intelligence & Signaux unique
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-profile-alphabetical-v1.js'
+      - '.github/workflows/deploy-admin-single-intelligence-signals-tab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-admin-single-intelligence-signals-tab
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Vérifier la syntaxe JavaScript
+        run: node --check admin-profile-alphabetical-v1.js
+
+      - name: Installer SFTP
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Déployer le correctif d’administration
+        env:
+          HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          USER: ${{ secrets.IONOS_SFTP_USER }}
+          PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+        run: |
+          set -euo pipefail
+          test -n "${HOST:-}" && test -n "${USER:-}" && test -n "${PASSWORD:-}" && test -n "${REMOTE_DIR:-}"
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 20
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          put -O "$REMOTE_DIR" admin-profile-alphabetical-v1.js
+          bye
+          LFTP
+
+      - name: Vérifier la version servie en production
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          for site in 'https://pass50.store' 'https://www.pass50.store'; do
+            ready=false
+            for attempt in $(seq 1 24); do
+              runtime="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/admin-profile-alphabetical-v1.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              if grep -q 'PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.2' <<<"$runtime" \
+                && grep -q 'Intelligence & Signaux' <<<"$runtime" \
+                && grep -q 'signalTabs.forEach(node=>node.remove())' <<<"$runtime" \
+                && grep -q "ui.adminTab='intelligence'" <<<"$runtime"; then
+                ready=true
+                echo "$site sert le correctif d’onglet unique."
+                break
+              fi
+              sleep 5
+            done
+            test "$ready" = true
+          done
+
+      - name: Publier le statut
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.verify.outcome }}
+        run: |
+          set -euo pipefail
+          state=success
+          description='Un seul onglet Intelligence & Signaux est servi en production'
+          if [ "${OUTCOME:-failure}" != success ]; then
+            state=failure
+            description='Le correctif de l’onglet unique n’est pas confirmé en production'
+          fi
+          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/admin-intelligence-signals-single-tab' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
