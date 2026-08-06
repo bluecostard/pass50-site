@@ -1,0 +1,105 @@
+name: Déployer la protection définitive des liens officiels
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'official-links-protection-v4.js'
+      - 'public-copy-fixes.js'
+      - 'api/state.php'
+      - '.github/workflows/deploy-official-links-protection-v4.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-official-links-protection-v4-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Vérifier les syntaxes
+        run: |
+          set -euo pipefail
+          node --check official-links-protection-v4.js
+          php -l api/state.php
+
+      - name: Installer SFTP
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Déployer les protections sur IONOS
+        env:
+          HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          USER: ${{ secrets.IONOS_SFTP_USER }}
+          PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+        run: |
+          set -euo pipefail
+          test -n "${HOST:-}" && test -n "${USER:-}" && test -n "${PASSWORD:-}" && test -n "${REMOTE_DIR:-}"
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 20
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          put -O "$REMOTE_DIR" official-links-protection-v4.js
+          put -O "$REMOTE_DIR" public-copy-fixes.js
+          put -O "$REMOTE_DIR/api" api/state.php
+          bye
+          LFTP
+
+      - name: Vérifier la protection réellement servie
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          for site in 'https://pass50.store' 'https://www.pass50.store'; do
+            ready=false
+            for attempt in $(seq 1 36); do
+              runtime="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/official-links-protection-v4.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              loader="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/public-copy-fixes.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              state="$(curl --location --silent --show-error --max-time 30 -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' "$site/api/state.php?sha=$GITHUB_SHA&attempt=$attempt" || true)"
+              if grep -q 'PASS50-OFFICIAL-LINKS-PROTECTION-V4.1' <<<"$runtime" \
+                && grep -q 'official-links-protection-v4.js' <<<"$loader" \
+                && jq -e '.ok==true and .linkProtectionVersion=="PASS50-STATE-LINK-PROTECTION-V4.1"' >/dev/null 2>&1 <<<"$state"; then
+                ready=true
+                echo "$site sert la protection V4.1 des liens officiels."
+                echo "$state" | jq '{stateRevision,linkProtectionVersion,linkProtection}'
+                break
+              fi
+              echo "Propagation de la protection V4.1 en attente pour $site ($attempt/36)."
+              sleep 5
+            done
+            test "$ready" = true
+          done
+
+      - name: Publier le statut
+        if: always()
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.verify.outcome }}
+        run: |
+          set -euo pipefail
+          state=success
+          description='Liens vérifiés protégés et restauration V4.1 active en production'
+          if [ "${OUTCOME:-failure}" != success ]; then
+            state=failure
+            description='Protection V4.1 des liens officiels non confirmée en production'
+          fi
+          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/official-links-protection-v4' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
