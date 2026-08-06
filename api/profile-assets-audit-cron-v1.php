@@ -105,7 +105,7 @@ try{
     if($changed&&$action==='repair'){
         $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
         $state['profileAssetsRepair']=['version'=>P50_PROFILE_ASSETS_AUDIT_VERSION,'updatedAt'=>gmdate(DATE_ATOM),'profilesChanged'=>$profilesChanged,'linksRestored'=>$restoredLinks,'photosRestored'=>$restoredPhotos];
-        p50_de_save_public_state($state,'profile-assets-audit',false);
+        p50_de_save_public_state($state,null,false);
     }
     $pdo->commit();
     $withoutLinks=count(array_filter($rows,static fn($r)=>$r['currentLinkCount']===0));
