@@ -86,10 +86,29 @@ function auth_user(bool $required = true): ?array {
         if ($required) json_response(['error' => 'Connexion requise.'], 401);
         return null;
     }
+    if (is_file(__DIR__.'/member-profile-core.php')) {
+        require_once __DIR__.'/member-profile-core.php';
+        try {
+            p50_member_ensure_schema();
+        } catch (Throwable $e) {
+            error_log('PASS50 member schema: '.$e->getMessage());
+        }
+    }
     $hash = hash('sha256', $token);
-    $stmt = db()->prepare('SELECT u.id,u.email,u.display_name,u.role,u.email_confirmed_at,u.deleted_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>NOW() LIMIT 1');
-    $stmt->execute([$hash]);
-    $u = $stmt->fetch();
+    $stmt = db()->prepare('SELECT u.id,u.email,u.display_name,u.avatar_url,u.birth_date,u.role,u.email_confirmed_at,u.deleted_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>NOW() LIMIT 1');
+    try {
+        $stmt->execute([$hash]);
+        $u = $stmt->fetch();
+    } catch (Throwable $e) {
+        // Colonnes absentes (ancien schéma) : repli sans avatar/naissance
+        $stmt = db()->prepare('SELECT u.id,u.email,u.display_name,u.role,u.email_confirmed_at,u.deleted_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>NOW() LIMIT 1');
+        $stmt->execute([$hash]);
+        $u = $stmt->fetch();
+        if (is_array($u)) {
+            $u['avatar_url'] = null;
+            $u['birth_date'] = null;
+        }
+    }
     if (!$u || $u['deleted_at'] !== null) {
         if ($required) json_response(['error' => 'Session expirée.'], 401);
         return null;
@@ -125,6 +144,8 @@ function user_payload(array $u): array {
         'id' => $u['id'],
         'email' => $u['email'],
         'displayName' => $u['display_name'],
+        'avatarUrl' => trim((string)($u['avatar_url'] ?? '')),
+        'birthDate' => $u['birth_date'] ? (string)$u['birth_date'] : null,
         'role' => $u['role'],
         'favorites' => decode_json_column($p['favorites'] ?? null, []),
         'following' => decode_json_column($p['following'] ?? null, []),

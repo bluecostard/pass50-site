@@ -18,6 +18,12 @@ Options -Indexes
   RewriteCond %{HTTPS} !=on
   RewriteCond %{HTTP:X-Forwarded-Proto} !=https [NC]
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Pages FI publiques SEO : /fi/{id}
+  RewriteRule ^fi/([A-Za-z0-9][A-Za-z0-9_-]{0,99})/?$ fi.php?id=$1 [L,QSA]
+
+  # Sitemap dynamique (profils FI inclus)
+  RewriteRule ^sitemap\.xml$ sitemap.php [L]
 </IfModule>
 
 <IfModule mod_headers.c>
@@ -43,6 +49,13 @@ Options -Indexes
   <FilesMatch "\.(php)$">
     Header always set Cache-Control "no-store"
   </FilesMatch>
+
+  <Files "fi.php">
+    Header always set Cache-Control "public, max-age=300"
+  </Files>
+  <Files "sitemap.php">
+    Header always set Cache-Control "public, max-age=600"
+  </Files>
 </IfModule>
 
 <IfModule mod_expires.c>

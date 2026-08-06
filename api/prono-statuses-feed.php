@@ -3,9 +3,11 @@ declare(strict_types=1);
 
 require __DIR__.'/bootstrap.php';
 require_once __DIR__.'/prono-core.php';
+require_once __DIR__.'/member-profile-core.php';
 
 require_method('GET');
 p50_prono_ensure_schema();
+p50_member_ensure_schema();
 p50_prono_expire_statuses(db());
 
 $user = auth_user(false);
@@ -13,7 +15,7 @@ $pdo = db();
 $limit = max(1, min(40, (int)($_GET['limit'] ?? 20)));
 
 $stmt = $pdo->query("SELECT s.*, q.title AS question_title, q.options_json, q.profile_id, q.points_correct,
-    v.odd_locked, v.stake_locked, u.display_name AS author_display_name
+    v.odd_locked, v.stake_locked, u.display_name AS author_display_name, u.avatar_url AS author_avatar_url
   FROM p50_prono_statuses s
   JOIN p50_prono_questions q ON q.id=s.question_id
   JOIN p50_prono_votes v ON v.id=s.vote_id

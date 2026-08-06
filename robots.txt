@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 
 # Pages privées / outils
+Disallow: /mon-fil.html
 Disallow: /admin-pronostics.html
 Disallow: /classement-fictif.html
 Disallow: /live-scout.html

@@ -455,6 +455,17 @@
     await loadResults();
   }
 
+
+  function openStatusModal() {
+    document.body.classList.add('p50-status-open');
+    openStatusModal();
+  }
+
+  function closeStatusModal() {
+    document.body.classList.remove('p50-status-open');
+    closeStatusModal();
+  }
+
   async function vote(questionId, optionKey) {
     if (state.demo) {
       const item = state.items.find((row) => row.id === questionId);
@@ -469,7 +480,7 @@
         toast(`Prono enregistré · cote ${fmtOdd(odd)} · +${payout} pts si correct`);
       }
       state.pendingQuestionId = questionId;
-      $('#statusModal')?.classList.add('show');
+      openStatusModal();
       return;
     }
     try {
@@ -497,7 +508,7 @@
       renderList();
       toast(data.message || 'Prono enregistré');
       state.pendingQuestionId = questionId;
-      $('#statusModal')?.classList.add('show');
+      openStatusModal();
     } catch (error) {
       toast(error.message);
     }
@@ -506,7 +517,7 @@
   async function publishStatus() {
     if (!state.pendingQuestionId) return;
     if (state.demo) {
-      $('#statusModal')?.classList.remove('show');
+      closeStatusModal();
       toast(`Statut démo publié · ${state.durationHours} h · visible dans Mon fil`);
       state.pendingQuestionId = null;
       return;
@@ -516,7 +527,7 @@
         method: 'POST',
         body: { questionId: state.pendingQuestionId, durationHours: state.durationHours },
       });
-      $('#statusModal')?.classList.remove('show');
+      closeStatusModal();
       toast('Statut publié dans Mon fil');
       state.pendingQuestionId = null;
       await loadStatuses();
@@ -549,7 +560,7 @@
       const publish = event.target.closest('[data-publish]');
       if (publish) {
         state.pendingQuestionId = publish.getAttribute('data-publish');
-        $('#statusModal')?.classList.add('show');
+        openStatusModal();
         return;
       }
       const share = event.target.closest('[data-share]');
@@ -579,11 +590,11 @@
     });
     $('#confirmStatus')?.addEventListener('click', publishStatus);
     $('#skipStatus')?.addEventListener('click', () => {
-      $('#statusModal')?.classList.remove('show');
+      closeStatusModal();
       state.pendingQuestionId = null;
     });
     $('#statusModal')?.addEventListener('click', (event) => {
-      if (event.target.id === 'statusModal') $('#statusModal').classList.remove('show');
+      if (event.target.id === 'statusModal') closeStatusModal();
     });
   }
 
