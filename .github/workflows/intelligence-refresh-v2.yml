@@ -1,0 +1,73 @@
+name: PASS50 Intelligence Refresh V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'api/intelligence-refresh-cron-v2.php'
+      - 'api/intelligence-dashboard-v2.php'
+      - 'api/intelligence.php'
+      - '.github/workflows/intelligence-refresh-v2.yml'
+      - '.htaccess'
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Refresh PASS50 Intelligence
+        id: refresh
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${CRON_URL:-}" in
+            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/intelligence-refresh-cron-v2.php" ;;
+            *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
+          esac
+          body="$(jq -nc --arg dispatchId "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" '{dispatchId:$dispatchId}')"
+          for attempt in $(seq 1 36); do
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            code="$(curl --silent --show-error --max-time 180 --output /tmp/intelligence-v2.json --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT" || true)"
+            if [ "$code" = 200 ] && jq -e '.ok==true and .version=="PASS50-INTELLIGENCE-REFRESH-V2.0"' /tmp/intelligence-v2.json >/dev/null 2>&1; then break; fi
+            echo "Endpoint en attente · tentative $attempt/36 · HTTP ${code:-000}"
+            sleep 10
+          done
+          jq -e '.ok==true and .version=="PASS50-INTELLIGENCE-REFRESH-V2.0"' /tmp/intelligence-v2.json >/dev/null
+          cat /tmp/intelligence-v2.json
+          echo "processed=$(jq -r '.profilesProcessed' /tmp/intelligence-v2.json)" >> "$GITHUB_OUTPUT"
+          echo "trusted=$(jq -r '.dashboard.summary.profilesTrusted' /tmp/intelligence-v2.json)" >> "$GITHUB_OUTPUT"
+          echo "declines=$(jq -r '.dashboard.declines|length' /tmp/intelligence-v2.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish refresh status
+        if: always()
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.refresh.outcome }}
+          PROCESSED: ${{ steps.refresh.outputs.processed }}
+          TRUSTED: ${{ steps.refresh.outputs.trusted }}
+          DECLINES: ${{ steps.refresh.outputs.declines }}
+        run: |
+          state=success
+          description="${PROCESSED:-0} profils recalculés · ${TRUSTED:-0} fiables · ${DECLINES:-0} reculs"
+          if [ "$OUTCOME" != success ]; then state=failure; description='Refresh Intelligence V2 interrompu'; fi
+          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/intelligence-v2' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archive report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pass50-intelligence-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/intelligence-v2.json
+          if-no-files-found: warn
+          retention-days: 30
