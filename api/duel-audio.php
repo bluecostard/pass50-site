@@ -117,15 +117,24 @@ if($method==='GET'){
     }else{
         $ids=array_values(array_unique(array_filter(array_map('trim',explode(',',$profileIdsRaw)),static fn($id)=>$id!==''&&preg_match('/^[A-Za-z0-9._:-]{1,100}$/',$id))));
         $ids=array_slice($ids,0,5);
-        if(!$ids)json_response(['error'=>'Influenceurs requis.'],422);
-        $placeholders=implode(',',array_fill(0,count($ids),'?'));
-        $stmt=$pdo->prepare("SELECT p.*,u.display_name author_display_name
-          FROM p50_duel_audio_posts p
-          JOIN users u ON u.id=p.user_id AND u.deleted_at IS NULL
-          WHERE p.status='published' AND p.expires_at>UTC_TIMESTAMP()
-            AND (p.candidate_a_id IN ($placeholders) OR p.candidate_b_id IN ($placeholders))
-          ORDER BY p.created_at DESC LIMIT ".$limit);
-        $stmt->execute(array_merge($ids,$ids));
+        if($ids){
+            $placeholders=implode(',',array_fill(0,count($ids),'?'));
+            $stmt=$pdo->prepare("SELECT p.*,u.display_name author_display_name
+              FROM p50_duel_audio_posts p
+              JOIN users u ON u.id=p.user_id AND u.deleted_at IS NULL
+              WHERE p.status='published' AND p.expires_at>UTC_TIMESTAMP()
+                AND (p.candidate_a_id IN ($placeholders) OR p.candidate_b_id IN ($placeholders))
+              ORDER BY p.created_at DESC LIMIT ".$limit);
+            $stmt->execute(array_merge($ids,$ids));
+        }else{
+            // Fil communauté : tous les audios Coulés récents, sans filtre suivis.
+            $stmt=$pdo->prepare("SELECT p.*,u.display_name author_display_name
+              FROM p50_duel_audio_posts p
+              JOIN users u ON u.id=p.user_id AND u.deleted_at IS NULL
+              WHERE p.status='published' AND p.expires_at>UTC_TIMESTAMP()
+              ORDER BY p.created_at DESC LIMIT ".$limit);
+            $stmt->execute();
+        }
     }
     $items=array_map('p50_duel_audio_item',$stmt->fetchAll());
     json_response(['ok'=>true,'version'=>P50_DUEL_AUDIO_VERSION,'items'=>$items,'rules'=>['lastPerDuel'=>3,'retentionDays'=>P50_DUEL_AUDIO_RETENTION_DAYS,'anonymousAuthor'=>false,'authorIdentity'=>'account_display_name'],'generatedAt'=>gmdate('c')]);
