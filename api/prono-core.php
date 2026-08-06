@@ -328,6 +328,199 @@ function p50_prono_count_open_for_subject(PDO $pdo, string $subjectKey, string $
     return (int)$stmt->fetchColumn();
 }
 
+function p50_prono_public_state(): array {
+    static $loaded = false;
+    static $state = [];
+    if ($loaded) {
+        return $state;
+    }
+    $loaded = true;
+    try {
+        $raw = db()->query("SELECT data FROM app_state WHERE id='public' LIMIT 1")->fetchColumn();
+        $decoded = is_string($raw) ? json_decode($raw, true) : [];
+        $state = is_array($decoded) ? $decoded : [];
+    } catch (Throwable $e) {
+        error_log('PASS50 prono public state: '.$e->getMessage());
+        $state = [];
+    }
+    return $state;
+}
+
+function p50_prono_norm_key(string $value): string {
+    $value = trim(mb_strtolower($value));
+    if ($value === '') {
+        return '';
+    }
+    if (function_exists('iconv')) {
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        if (is_string($ascii) && $ascii !== '') {
+            $value = $ascii;
+        }
+    }
+    $value = preg_replace('/[^a-z0-9]+/', '', $value) ?? '';
+    return $value;
+}
+
+/** @return list<string> */
+function p50_prono_tokens(string $value): array {
+    $value = trim(mb_strtolower($value));
+    if ($value === '') {
+        return [];
+    }
+    if (function_exists('iconv')) {
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        if (is_string($ascii) && $ascii !== '') {
+            $value = $ascii;
+        }
+    }
+    $parts = preg_split('/[^a-z0-9]+/', $value) ?: [];
+    $out = [];
+    foreach ($parts as $part) {
+        $part = trim((string)$part);
+        if (strlen($part) >= 3) {
+            $out[] = $part;
+        }
+    }
+    return array_values(array_unique($out));
+}
+
+function p50_prono_tokens_match(array $query, array $candidate): bool {
+    if ($query === [] || $candidate === []) {
+        return false;
+    }
+    foreach ($query as $q) {
+        $ok = false;
+        foreach ($candidate as $c) {
+            if ($q === $c || str_starts_with($c, $q) || str_starts_with($q, $c)) {
+                $ok = true;
+                break;
+            }
+        }
+        if (!$ok) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function p50_prono_abs_media_url(string $url): string {
+    $url = trim($url);
+    if ($url === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $url)) {
+        return $url;
+    }
+    if (str_starts_with($url, '/')) {
+        try {
+            $config = require __DIR__.'/config.php';
+            $base = rtrim((string)($config['app']['base_url'] ?? 'https://pass50.store'), '/');
+        } catch (Throwable) {
+            $base = 'https://pass50.store';
+        }
+        return $base.$url;
+    }
+    return '';
+}
+
+function p50_prono_profile_photo(array $profile): string {
+    if (strtolower(trim((string)($profile['photoStatus'] ?? ''))) !== 'validated') {
+        return '';
+    }
+    $url = trim((string)($profile['photoUrl'] ?? ''));
+    if ($url === '') {
+        $url = trim((string)($profile['photoCandidateUrl'] ?? ''));
+    }
+    return p50_prono_abs_media_url($url);
+}
+
+function p50_prono_event_cover(array $event): string {
+    $status = strtolower(trim((string)($event['coverStatus'] ?? '')));
+    if ($status !== '' && $status !== 'validated') {
+        return '';
+    }
+    $url = trim((string)($event['coverUrl'] ?? ''));
+    if ($url === '') {
+        $url = trim((string)($event['coverCandidateUrl'] ?? ''));
+    }
+    return p50_prono_abs_media_url($url);
+}
+
+/**
+ * Résout la couverture d’un statut : photo/événement de la FI, jamais l’avatar membre.
+ * @return array{coverPhoto:string,resolvedProfileId:string}
+ */
+function p50_prono_resolve_cover(string $profileIdOrName, string $questionTitle = ''): array {
+    $raw = trim($profileIdOrName);
+    $state = p50_prono_public_state();
+    $profiles = is_array($state['profiles'] ?? null) ? $state['profiles'] : [];
+    $events = is_array($state['events'] ?? null) ? $state['events'] : [];
+    $queryKey = p50_prono_norm_key($raw);
+    $queryTokens = p50_prono_tokens($raw !== '' ? $raw : $questionTitle);
+    $matched = null;
+
+    foreach ($profiles as $profile) {
+        if (!is_array($profile)) {
+            continue;
+        }
+        $id = trim((string)($profile['id'] ?? ''));
+        $name = trim((string)($profile['name'] ?? ''));
+        if ($id !== '' && strcasecmp($id, $raw) === 0) {
+            $matched = $profile;
+            break;
+        }
+        if ($queryKey !== '' && ($queryKey === p50_prono_norm_key($id) || $queryKey === p50_prono_norm_key($name))) {
+            $matched = $profile;
+            break;
+        }
+    }
+
+    if ($matched === null && $queryTokens !== []) {
+        $best = null;
+        $bestScore = 0;
+        foreach ($profiles as $profile) {
+            if (!is_array($profile)) {
+                continue;
+            }
+            $id = trim((string)($profile['id'] ?? ''));
+            $name = trim((string)($profile['name'] ?? ''));
+            $candTokens = array_values(array_unique(array_merge(p50_prono_tokens($id), p50_prono_tokens($name))));
+            if (!p50_prono_tokens_match($queryTokens, $candTokens)) {
+                continue;
+            }
+            $score = count($queryTokens) * 10 + count(array_intersect($queryTokens, $candTokens));
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $profile;
+            }
+        }
+        $matched = $best;
+    }
+
+    if ($matched === null) {
+        return ['coverPhoto' => '', 'resolvedProfileId' => ''];
+    }
+
+    $resolvedId = trim((string)($matched['id'] ?? ''));
+    $cover = '';
+    foreach ($events as $event) {
+        if (!is_array($event)) {
+            continue;
+        }
+        if (strcasecmp(trim((string)($event['profileId'] ?? '')), $resolvedId) !== 0) {
+            continue;
+        }
+        $cover = p50_prono_event_cover($event);
+        if ($cover !== '') {
+            break;
+        }
+    }
+    if ($cover === '') {
+        $cover = p50_prono_profile_photo($matched);
+    }
+    return ['coverPhoto' => $cover, 'resolvedProfileId' => $resolvedId];
+}
+
 function p50_prono_question_public(array $row, ?array $vote = null, ?array $tallyBundle = null): array {
     $options = p50_prono_options($row['options_json'] ?? []);
     $stake = (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
@@ -398,12 +591,16 @@ function p50_prono_status_public(array $row, bool $likedByMe = false): array {
     $stake = isset($row['stake_locked']) && (int)$row['stake_locked'] > 0
         ? (int)$row['stake_locked']
         : (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
+    $profileId = (string)($row['profile_id'] ?? '');
+    $questionTitle = (string)($row['question_title'] ?? '');
+    $cover = p50_prono_resolve_cover($profileId, $questionTitle);
     return [
         'id' => (string)$row['id'],
         'feedType' => 'prono_status',
         'questionId' => (string)$row['question_id'],
-        'questionTitle' => (string)($row['question_title'] ?? ''),
-        'profileId' => (string)($row['profile_id'] ?? ''),
+        'questionTitle' => $questionTitle,
+        'profileId' => $cover['resolvedProfileId'] !== '' ? $cover['resolvedProfileId'] : $profileId,
+        'coverPhoto' => $cover['coverPhoto'],
         'optionKey' => $optionKey,
         'optionLabel' => (string)($row['option_label'] ?? $optionKey),
         'odd' => $odd,

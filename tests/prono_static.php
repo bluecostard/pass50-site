@@ -32,7 +32,7 @@ foreach ($required as $rel) {
 }
 
 $core = file_get_contents($root.'/api/prono-core.php');
-foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked', 'P50_PRONO_VOTE_HOURS', '[6, 12, 24]', 'P50_PRONO_MAX_OPEN_PER_SUBJECT', 'p50_prono_subject_key'] as $needle) {
+foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked', 'P50_PRONO_VOTE_HOURS', '[6, 12, 24]', 'P50_PRONO_MAX_OPEN_PER_SUBJECT', 'p50_prono_subject_key', 'p50_prono_resolve_cover', 'coverPhoto'] as $needle) {
     if (!str_contains($core, $needle)) {
         fwrite(STDERR, "CORE missing $needle\n");
         exit(1);
@@ -72,7 +72,7 @@ foreach (["['pronostics','Pronostics']", 'deRenderPronosticsAdmin', 'admin-prono
 }
 
 $fil = file_get_contents($root.'/mon-fil.js');
-foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'pronoStoriesStrip', 'openPronoDiapo', 'memberAvatarHtml', 'PASS50-FOLLOW-FEED-PAGE-V2.8'] as $needle) {
+foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'pronoStoriesStrip', 'openPronoDiapo', 'memberAvatarHtml', 'PASS50-FOLLOW-FEED-PAGE-V2.9'] as $needle) {
     if (!str_contains($fil, $needle)) {
         fwrite(STDERR, "MON-FIL missing $needle\n");
         exit(1);
