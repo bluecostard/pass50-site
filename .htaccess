@@ -9,7 +9,7 @@ Options -Indexes
   # Les appels HMAC utilisent encore le domaine www dans le secret GitHub.
   # Ne pas rediriger ces endpoints signés : un 301 interromprait le POST avant PHP.
   RewriteCond %{HTTP_HOST} ^www\.pass50\.store$ [NC]
-  RewriteCond %{REQUEST_URI} ^/api/(metrics-ranking-publication-simulate-cron|content-freshness-cron-v4|metrics-ranking-cron-v2)\.php$ [NC]
+  RewriteCond %{REQUEST_URI} ^/api/(metrics-cron|metrics-ranking-publication-simulate-cron|content-freshness-cron-v4|metrics-ranking-cron-v2)\.php$ [NC]
   RewriteRule ^ - [L]
 
   # Canonique : https://pass50.store (sans www)
@@ -27,8 +27,6 @@ Options -Indexes
 
   # Pages FI publiques SEO : /fi/{id}
   RewriteRule ^fi/([A-Za-z0-9][A-Za-z0-9_-]{0,99})/?$ fi.php?id=$1 [L,QSA]
-
-  # Sitemap dynamique (profils FI inclus)
   RewriteRule ^sitemap\.xml$ sitemap.php [L]
 </IfModule>
 
