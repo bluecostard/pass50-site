@@ -55,7 +55,6 @@ $trendStmt=$pdo->prepare("SELECT t.rank_position,t.previous_rank,t.rank_delta,t.
   LEFT JOIN p50_news_items n ON n.content_id=c.id AND n.validation_status='published'
   WHERE t.period_key=? AND c.status='active' AND r.alive=1
     AND COALESCE(c.published_at,c.first_seen_at)>=?
-    AND t.calculated_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 30 MINUTE)
   ORDER BY t.rank_position LIMIT 80");
 $trendStmt->execute([$period,$trendFreshSince]);
 $trends=[];$perProfile=[];
@@ -125,12 +124,18 @@ if($profileId!==''){
 }
 
 $lastRun=$pdo->query("SELECT run_uuid,status,contents_considered,rows_written,finished_at FROM p50_content_trend_runs WHERE status='success' ORDER BY finished_at DESC,id DESC LIMIT 1")->fetch();
+$runFinishedAt=$lastRun&&$lastRun['finished_at']?strtotime((string)$lastRun['finished_at'].' UTC'):false;
+$trendAgeMinutes=$runFinishedAt===false?null:max(0,(int)floor((time()-$runFinishedAt)/60));
+$trendDataStale=$trendAgeMinutes!==null&&$trendAgeMinutes>30;
 json_response([
     'ok'=>true,'ready'=>true,'version'=>P50_CONTENT_INTELLIGENCE_VERSION,'period'=>$period,
     'periods'=>array_keys(p50_ci_periods()),'trends'=>$trends,'news'=>$news,
+    'trendDataStale'=>$trendDataStale,'trendAgeMinutes'=>$trendAgeMinutes,
+    'message'=>$trendDataStale?'Mise à jour des tendances en attente. Le dernier Top 5 valide reste affiché.':null,
     'rules'=>[
         'maxPerProfile'=>2,'topLimit'=>5,'officialContentAutomatic'=>true,'externalNewsHumanValidation'=>true,
         'officialNewsMaxAgeHours'=>72,'externalNewsMaxAgeDays'=>7,'trendMaxAgeHours'=>$trendMaxAgeHours,'maxTrendRunAgeMinutes'=>30,
+        'staleTrendsRemainVisible'=>true,
         'facebookPreviewInPass50'=>true,'facebookVideoPlaybackInPass50'=>true,'facebookEmbedRouting'=>true,
     ],
     'run'=>$lastRun?['runUuid'=>(string)$lastRun['run_uuid'],'contentsConsidered'=>(int)$lastRun['contents_considered'],'rowsWritten'=>(int)$lastRun['rows_written'],'finishedAt'=>gmdate('c',strtotime((string)$lastRun['finished_at'].' UTC'))]:null,
