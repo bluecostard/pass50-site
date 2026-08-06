@@ -4,7 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require __DIR__ . '/data-engine-core.php';
 
-const P50_STATE_LINK_PROTECTION_VERSION='PASS50-STATE-LINK-PROTECTION-V4.0';
+const P50_STATE_LINK_PROTECTION_VERSION='PASS50-STATE-LINK-PROTECTION-V4.1';
 
 function p50_state_v4_confirmed_status(string $status): bool {
     return in_array($status,['verified','owner_verified','manual_verified','ok'],true);
@@ -19,25 +19,22 @@ function p50_state_v4_direct_link(string $platform,string $url): string {
 }
 
 function p50_state_v4_authoritative_links(PDO $pdo): array {
-    $result=[];
+    $byProfile=[];
     try {
         $stmt=$pdo->query("SELECT profile_id,platform,normalized_url,source_types,confidence
             FROM p50_social_links
             WHERE status='verified' AND normalized_url<>''
-            ORDER BY confidence DESC,updated_at DESC,id DESC");
+            ORDER BY confidence DESC,profile_id ASC,platform ASC");
         foreach($stmt->fetchAll() as $row){
             $profileId=(string)($row['profile_id']??'');
             $platform=(string)($row['platform']??'');
             $url=p50_state_v4_direct_link($platform,(string)($row['normalized_url']??''));
             if($profileId===''||$platform===''||$url==='')continue;
-            $key=$profileId.'|'.$platform;
-            if(isset($result[$key]))continue;
+            if(isset($byProfile[$profileId][$platform]))continue;
             $types=json_decode((string)($row['source_types']??'[]'),true);
             if(!is_array($types))$types=[];
             $owner=in_array('manual_owner',$types,true);
-            $result[$key]=[
-                'profileId'=>$profileId,
-                'platform'=>$platform,
+            $byProfile[$profileId][$platform]=[
                 'url'=>$url,
                 'status'=>$owner?'owner_verified':'manual_verified',
                 'message'=>$owner
@@ -48,7 +45,7 @@ function p50_state_v4_authoritative_links(PDO $pdo): array {
     } catch(Throwable $error) {
         error_log('PASS50 state link protection: '.$error->getMessage());
     }
-    return $result;
+    return $byProfile;
 }
 
 function p50_state_v4_profile_map(array $state): array {
@@ -60,8 +57,7 @@ function p50_state_v4_profile_map(array $state): array {
 }
 
 function p50_state_v4_protect_links(array &$state,array $current=[]): array {
-    $pdo=db();
-    $authoritative=p50_state_v4_authoritative_links($pdo);
+    $authoritative=p50_state_v4_authoritative_links(db());
     $currentProfiles=p50_state_v4_profile_map($current);
     $removed=0;$restored=0;$protected=0;
 
@@ -102,19 +98,19 @@ function p50_state_v4_protect_links(array &$state,array $current=[]): array {
             }
         }
 
-        foreach($authoritative as $item){
-            if($item['profileId']!==$profileId)continue;
-            $platform=(string)$item['platform'];
-            $url=(string)$item['url'];
+        foreach((array)($authoritative[$profileId]??[]) as $platform=>$item){
+            $platform=(string)$platform;
+            $url=(string)($item['url']??'');
+            if($url==='')continue;
             if(($cleanLinks[$platform]??'')!==$url)$restored++;
+            $existingCheck=is_array($cleanChecks[$platform]??null)?$cleanChecks[$platform]:[];
             $cleanLinks[$platform]=$url;
-            $cleanChecks[$platform]=[
-                'status'=>(string)$item['status'],
-                'checkedAt'=>gmdate(DATE_ATOM),
-                'message'=>(string)$item['message'],
+            $cleanChecks[$platform]=array_merge($existingCheck,[
+                'status'=>(string)($item['status']??'manual_verified'),
+                'message'=>(string)($item['message']??'Compte officiel protégé par PASS50'),
                 'persistedServerSide'=>true,
                 'protectedBy'=>P50_STATE_LINK_PROTECTION_VERSION,
-            ];
+            ]);
             $protected++;
         }
 
@@ -130,10 +126,6 @@ function p50_state_v4_protect_links(array &$state,array $current=[]): array {
     $state['officialLinksProtection']=[
         'version'=>4,
         'runtime'=>P50_STATE_LINK_PROTECTION_VERSION,
-        'checkedAt'=>gmdate(DATE_ATOM),
-        'genericLinksRemoved'=>$removed,
-        'verifiedLinksRestored'=>$restored,
-        'protectedLinks'=>$protected,
     ];
     return ['removed'=>$removed,'restored'=>$restored,'protected'=>$protected];
 }
@@ -142,13 +134,15 @@ if ($_SERVER['REQUEST_METHOD']==='GET') {
     $stmt=db()->query("SELECT data,updated_at FROM app_state WHERE id='public' LIMIT 1");
     $row=$stmt->fetch();
     $data=$row?json_decode((string)$row['data'],true):null;
-    if(is_array($data))p50_state_v4_protect_links($data,$data);
+    $protection=['removed'=>0,'restored'=>0,'protected'=>0];
+    if(is_array($data))$protection=p50_state_v4_protect_links($data,$data);
     json_response([
         'ok'=>true,
         'data'=>$data,
         'stateRevision'=>(int)($data['stateRevision']??0),
         'updatedAt'=>$row['updated_at']??null,
         'linkProtectionVersion'=>P50_STATE_LINK_PROTECTION_VERSION,
+        'linkProtection'=>$protection,
     ]);
 }
 
@@ -181,7 +175,7 @@ try {
     $incoming=$data;
     $incoming['stateRevision']=$currentRevision;
     $currentComparable=$current;
-    p50_state_v4_protect_links($currentComparable,$currentComparable);
+    p50_state_v4_protect_links($currentComparable,$current);
     $currentComparable['stateRevision']=$currentRevision;
 
     if($raw&&json_encode($incoming,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)===json_encode($currentComparable,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)){
