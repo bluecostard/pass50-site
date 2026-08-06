@@ -43,22 +43,18 @@ $existing = $pdo->prepare('SELECT id,stake_locked FROM p50_prono_votes WHERE que
 $existing->execute([$questionId, $userId]);
 $voteRow = $existing->fetch();
 
+if ($voteRow) {
+    json_response(['error' => 'Prono déjà validé — modification impossible.'], 409);
+}
+
 $pdo->beginTransaction();
 try {
     $streakInfo = p50_prono_touch_streak($pdo, $userId);
-    if ($voteRow) {
-        $voteId = (string)$voteRow['id'];
-        $stakeLocked = (int)($voteRow['stake_locked'] ?? 0);
-        $pdo->prepare('UPDATE p50_prono_votes SET option_key=?, odd_locked=?, updated_at=UTC_TIMESTAMP(6) WHERE id=?')
-            ->execute([$optionKey, $oddLocked, $voteId]);
-        $created = false;
-    } else {
-        $voteId = p50_prono_uuid();
-        $stakeLocked = p50_prono_debit_stake($pdo, $userId, $stakeDesired, $questionId);
-        $pdo->prepare('INSERT INTO p50_prono_votes(id,question_id,user_id,option_key,odd_locked,stake_locked) VALUES(?,?,?,?,?,?)')
-            ->execute([$voteId, $questionId, $userId, $optionKey, $oddLocked, $stakeLocked]);
-        $created = true;
-    }
+    $voteId = p50_prono_uuid();
+    $stakeLocked = p50_prono_debit_stake($pdo, $userId, $stakeDesired, $questionId);
+    $pdo->prepare('INSERT INTO p50_prono_votes(id,question_id,user_id,option_key,odd_locked,stake_locked) VALUES(?,?,?,?,?,?)')
+        ->execute([$voteId, $questionId, $userId, $optionKey, $oddLocked, $stakeLocked]);
+    $created = true;
     $pdo->commit();
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();

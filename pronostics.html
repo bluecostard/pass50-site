@@ -150,6 +150,12 @@
       border-color:var(--lime);background:rgba(183,255,0,.1);
       box-shadow:inset 0 0 0 1px rgba(183,255,0,.2);
     }
+    .opt:disabled,.opt.locked{cursor:not-allowed;transform:none}
+    .opt:disabled:not(.selected),.opt.locked:not(.selected){opacity:.42;filter:grayscale(.35);pointer-events:none}
+    .opt:disabled.selected,.opt.selected:disabled{cursor:default;pointer-events:none}
+    .opt:disabled:hover,.opt.locked:hover{transform:none;border-color:rgba(255,255,255,.08)}
+    .opt.selected:disabled:hover,.opt.selected.locked:hover{border-color:var(--lime)}
+    .card.is-voted .opts{opacity:.98}
     .opt .label{font-weight:800;font-size:14px;line-height:1.25}
     .opt .pct{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-top:4px}
     .opt.selected .pct{color:rgba(183,255,0,.8)}
@@ -356,6 +362,6 @@
 
   <div class="toast" id="toast"></div>
   <script src="./mobile-bottom-nav-v1.js?v=1.4"></script>
-  <script src="./pronostics.js?v=2.1"></script>
+  <script src="./pronostics.js?v=2.2"></script>
 </body>
 </html>
