@@ -104,4 +104,5 @@
   loadScript('script[data-pass50-duel-audio-feed]','./duel-audio-feed-v1.js?v=1.1','pass50DuelAudioFeed','1.1',false);
   loadScript('script[data-pass50-mobile-modal-video-progress]','./mobile-modal-video-progress-v1.js?v=1.0','pass50MobileModalVideoProgress','1.0',false);
   loadScript('script[data-pass50-facebook-video-player]','./facebook-video-player-v1.js?v=1.2','pass50FacebookVideoPlayer','1.2',false);
+  loadScript('script[data-pass50-admin-profile-alphabetical]','./admin-profile-alphabetical-v1.js?v=1.0','pass50AdminProfileAlphabetical','1.0',false);
 })();
