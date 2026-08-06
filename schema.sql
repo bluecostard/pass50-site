@@ -6,6 +6,8 @@ CREATE TABLE users (
   email VARCHAR(190) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   display_name VARCHAR(80) NOT NULL,
+  avatar_url VARCHAR(500) NULL,
+  birth_date DATE NULL,
   role ENUM('owner','admin','editor','verifier','member') NOT NULL DEFAULT 'member',
   email_confirmed_at DATETIME NULL,
   confirmation_token_hash CHAR(64) NULL,

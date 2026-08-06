@@ -410,6 +410,7 @@ function p50_prono_status_public(array $row, bool $likedByMe = false): array {
         'stake' => $stake,
         'potentialPayout' => p50_prono_payout($stake, $odd),
         'authorPseudo' => (string)($row['author_display_name'] ?? 'Membre PASS50'),
+        'authorPhoto' => trim((string)($row['author_avatar_url'] ?? '')),
         'authorUserId' => (string)$row['user_id'],
         'likeCount' => (int)$row['like_count'],
         'likedByMe' => $likedByMe,
