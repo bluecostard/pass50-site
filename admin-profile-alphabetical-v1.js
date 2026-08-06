@@ -1,10 +1,11 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.1';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.2';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
   let linksRendererInstalled=false;
+  let redirectingSignalsTab=false;
 
   function label(value){
     return String(value||'').replace(/^[#\s\d.–—-]+/,'').trim();
@@ -21,6 +22,44 @@
 
   function activeAdminTab(){
     return document.querySelector('#adminModal .admin-menu [data-admin-tab].primary')?.dataset.adminTab||'';
+  }
+
+  function currentAdminTab(){
+    try{return String(ui?.adminTab||'');}
+    catch{return '';}
+  }
+
+  function openUnifiedIntelligence(){
+    if(redirectingSignalsTab)return;
+    redirectingSignalsTab=true;
+    try{
+      if(typeof ui==='object'&&ui)ui.adminTab='intelligence';
+      if(typeof window.renderAdmin==='function')window.renderAdmin();
+      else if(typeof renderAdmin==='function')renderAdmin();
+    }catch(error){
+      console.warn('PASS50 redirection Intelligence & Signaux',error);
+    }finally{
+      setTimeout(()=>{redirectingSignalsTab=false;unifyIntelligenceSignalsTabs();},0);
+    }
+  }
+
+  function unifyIntelligenceSignalsTabs(){
+    const signalTabs=[...document.querySelectorAll('[data-admin-tab="signals"]')];
+    signalTabs.forEach(node=>node.remove());
+
+    document.querySelectorAll('[data-admin-tab="intelligence"]').forEach(node=>{
+      if(node.classList.contains('de-admin-home-card')){
+        const title=node.querySelector('strong');
+        const description=node.querySelector('span');
+        if(title)title.textContent='Intelligence & Signaux';
+        if(description)description.textContent='Détecter, qualifier et valider les signaux dans un moteur unique.';
+      }else{
+        node.textContent='Intelligence & Signaux';
+        node.setAttribute('aria-label','Intelligence & Signaux');
+      }
+    });
+
+    if(currentAdminTab()==='signals')openUnifiedIntelligence();
   }
 
   function reorder(parent,nodes,getLabel){
@@ -73,6 +112,7 @@
   }
 
   function applyAlphabeticalOrder(){
+    unifyIntelligenceSignalsTabs();
     installOfficialLinksRenderer();
     const pane=document.querySelector('#adminPane');
     if(!pane)return;
@@ -91,7 +131,7 @@
       reorder(grid,[...grid.children],node=>node.querySelector('h4')?.textContent||node.textContent||'');
     });
 
-    if(tab==='signals'||tab==='live')sortSignals(pane);
+    if(tab==='live')sortSignals(pane);
   }
 
   function schedule(){
@@ -108,12 +148,21 @@
     const root=document.querySelector('#adminModal')||document.body;
     new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
     document.addEventListener('click',event=>{
+      const obsoleteSignalTab=event.target.closest('[data-admin-tab="signals"]');
+      if(obsoleteSignalTab){
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openUnifiedIntelligence();
+        return;
+      }
       if(event.target.closest('[data-admin-tab]'))setTimeout(schedule,0);
-    });
+    },true);
     schedule();
+    setTimeout(schedule,250);
+    setTimeout(schedule,1200);
   }
 
-  window.PASS50_ADMIN_PROFILE_ALPHABETICAL={version:VERSION,apply:applyAlphabeticalOrder,compare};
+  window.PASS50_ADMIN_PROFILE_ALPHABETICAL={version:VERSION,apply:applyAlphabeticalOrder,compare,unifyIntelligenceSignalsTabs};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
 })();
