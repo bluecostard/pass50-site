@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.9';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.10';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -277,8 +277,7 @@
   }
 
   async function loadDuelAudios() {
-    if (!state.following.length) return [];
-    const query = new URLSearchParams({ profileIds: state.following.join(','), limit: String(DUEL_AUDIO_LIMIT), _: String(Date.now()) });
+    const query = new URLSearchParams({ limit: String(DUEL_AUDIO_LIMIT), _: String(Date.now()) });
     try {
       const data = await apiFetch(`duel-audio.php?${query}`);
       return (Array.isArray(data?.items) ? data.items : []).map(item => ({ ...item, feedType: 'duel_audio' }));
@@ -487,7 +486,7 @@
     const profileB = profileFor(b.profileId) || { id: b.profileId, name: b.name || 'Influenceur', initials: 'B' };
     const selected = String(item.selectedProfileId) === String(a.profileId) ? profileA : profileB;
     const matched = [profileA, profileB].filter(profile => state.following.includes(String(profile.id)));
-    const because = matched.length ? `Parce que vous suivez ${matched.map(profile => profile.name).join(' et ')}` : 'Duel lié à vos suivis';
+    const because = matched.length ? `Parce que vous suivez ${matched.map(profile => profile.name).join(' et ')}` : 'Audios de la communauté Les Coulés';
     const author = String(item.authorPseudo || 'Membre PASS50').trim() || 'Membre PASS50';
     return `<article class="feed-card duel-audio-feed-card"><div class="duel-audio-feed-head"><div class="duel-audio-avatars">${avatarHtml(profileA)}<span>VS</span>${avatarHtml(profileB)}</div><div><div class="duel-audio-kicker">🎙 LES COULÉS · ${esc(author)}</div><strong>${esc(profileA.name)} VS ${esc(profileB.name)}</strong><div class="feed-meta">${esc(because)} · ${esc(relativeDate(item.publishedAt))}</div></div></div><div class="duel-audio-feed-body"><h2>${esc(author)} commente son vote pour ${esc(selected.name)}</h2><div class="duel-audio-player"><span>${durationLabel(item.durationMs)}</span><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio de ${attr(author)}"></audio></div><div class="feed-meta">Pseudo issu de son compte utilisateur PASS50 · Audio publié volontairement lors du partage</div><div class="feed-actions"><a class="btn primary" href="./?section=coules">Voir le duel</a><a class="btn" href="./?profile=${encodeURIComponent(selected.id || '')}">Voir la fiche de ${esc(selected.name)}</a></div></div></article>`;
   }
@@ -515,7 +514,7 @@
       return;
     }
     if (!state.following.length && !state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Votre fil d’actualités est vide.</strong>Suis jusqu’à 5 influenceurs. Les statuts prono de la communauté restent au-dessus.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./pronostics.html">Ouvrir Pronostics</a><a class="btn" href="./">Voir le classement</a></div></div>';
+      list.innerHTML = '<div class="empty"><strong>Votre fil d’actualités est vide.</strong>Suis jusqu’à 5 influenceurs pour leurs actus. Les audios Les Coulés et les statuts prono restent visibles pour toute la communauté.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./?section=coules">Voir Les Coulés</a><a class="btn" href="./pronostics.html">Ouvrir Pronostics</a></div></div>';
       end.classList.add('hidden');
       return;
     }

@@ -68,18 +68,19 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
             self.assertIn(marker, CLIENT)
         self.assertNotIn("audio_recorded','download", CLIENT)
 
-    def test_follow_feed_includes_attributed_audio_when_either_candidate_is_followed(self):
+    def test_follow_feed_includes_community_duel_audio_without_follow_filter(self):
         for marker in (
-            "duel-audio.php", "profileIds: state.following.join(',')",
+            "duel-audio.php", "limit: String(DUEL_AUDIO_LIMIT)",
             "feedType: 'duel_audio'", "candidateA", "candidateB",
-            "Parce que vous suivez", "item.authorPseudo",
+            "Audios de la communauté Les Coulés", "item.authorPseudo",
             "commente son vote pour",
             "Pseudo issu de son compte utilisateur PASS50",
-            "<audio controls", "PASS50-FOLLOW-FEED-PAGE-V2.8",
+            "<audio controls", "PASS50-FOLLOW-FEED-PAGE-V2.10",
         ):
             self.assertIn(marker, FEED)
+        self.assertNotIn("profileIds: state.following.join(',')", FEED)
         self.assertNotIn("Identité non affichée", FEED)
-        self.assertIn("mon-fil.js?v=2.8", FEED_HTML)
+        self.assertIn("mon-fil.js?v=2.10", FEED_HTML)
 
     def test_no_ranking_or_public_state_write(self):
         combined = API + CLIENT + FEED
@@ -94,7 +95,7 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
         self.assertIn("duel-audio-feed-v1.js?v=1.1", LOADER)
         self.assertIn("data-pass50-duel-audio-feed", LOADER)
         self.assertIn("duel-audio-feed-v1.js?v=1.1", SW)
-        self.assertIn("mon-fil.js?v=2.8", SW)
+        self.assertIn("mon-fil.js?v=2.10", SW)
         self.assertIn("pass50-v75-duel-audio-identity", SW)
 
 
