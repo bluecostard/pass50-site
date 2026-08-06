@@ -80,7 +80,7 @@ foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'p
 }
 
 $filHtml = file_get_contents($root.'/mon-fil.html');
-foreach (['pronoStoriesStrip', 'pronoDiapo', 'pronoDiapoShare', 'pronoDiapoOdd', 'mon-fil.js?v=2.8'] as $needle) {
+foreach (['pronoStoriesStrip', 'pronoDiapo', 'pronoDiapoShare', 'pronoDiapoOdd', 'mon-fil.js?v=2.10'] as $needle) {
     if (!str_contains($filHtml, $needle)) {
         fwrite(STDERR, "MON-FIL-HTML missing $needle\n");
         exit(1);
