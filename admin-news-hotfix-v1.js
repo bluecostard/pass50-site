@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-NEWS-HOTFIX-V1.1';
+  const VERSION='PASS50-ADMIN-NEWS-HOTFIX-V1.2';
 
   async function runNewsSearch(){
     const select=document.getElementById('newsProfile');
@@ -31,6 +31,14 @@
     }
   }
 
-  window.p50v9SearchNews=runNewsSearch;
+  function interceptNewsSearch(event){
+    const button=event.target.closest('#searchNewsBtn');
+    if(!button)return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    runNewsSearch();
+  }
+
+  document.addEventListener('click',interceptNewsSearch,true);
   window.PASS50_ADMIN_NEWS_HOTFIX={version:VERSION,run:runNewsSearch};
 })();
