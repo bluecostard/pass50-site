@@ -1,4 +1,5 @@
 name: Profile Cleanup
+# Déclenchement opérationnel 2026-08-06T14:16Z
 
 on:
   workflow_dispatch:
