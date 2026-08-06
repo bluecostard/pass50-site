@@ -1,0 +1,100 @@
+(function(){
+  'use strict';
+
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.0';
+  const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
+  let scheduled=false;
+
+  function label(value){
+    return String(value||'').replace(/^[#\s\d.–—-]+/,'').trim();
+  }
+
+  function compare(a,b){
+    return collator.compare(label(a),label(b));
+  }
+
+  function activeAdminTab(){
+    return document.querySelector('#adminModal .admin-menu [data-admin-tab].primary')?.dataset.adminTab||'';
+  }
+
+  function reorder(parent,nodes,getLabel){
+    if(!parent||nodes.length<2)return;
+    const current=[...nodes];
+    const sorted=[...current].sort((a,b)=>compare(getLabel(a),getLabel(b)));
+    if(sorted.every((node,index)=>node===current[index]))return;
+    const fragment=document.createDocumentFragment();
+    sorted.forEach(node=>fragment.appendChild(node));
+    parent.appendChild(fragment);
+  }
+
+  function sortSelect(select){
+    if(!select||select.options.length<2)return;
+    const selected=select.value;
+    const options=[...select.options];
+    const placeholders=options.filter(option=>option.disabled||option.value==='');
+    const choices=options.filter(option=>!placeholders.includes(option)).sort((a,b)=>compare(a.textContent,b.textContent));
+    const sorted=[...placeholders,...choices];
+    if(sorted.every((option,index)=>option===options[index]))return;
+    const fragment=document.createDocumentFragment();
+    sorted.forEach(option=>fragment.appendChild(option));
+    select.appendChild(fragment);
+    select.value=selected;
+  }
+
+  function sortNamedTable(table){
+    const headers=[...table.querySelectorAll('thead th')].map(th=>label(th.textContent).toLocaleLowerCase('fr'));
+    let column=headers.findIndex(text=>text==='nom'||text.includes('influenceur')||text.includes('profil'));
+    if(column<0)return;
+    const body=table.tBodies[0];
+    if(!body)return;
+    reorder(body,[...body.rows],row=>row.cells[column]?.textContent||'');
+  }
+
+  function sortSignals(pane){
+    const signals=[...pane.querySelectorAll(':scope > .signal')];
+    reorder(pane,signals,node=>node.querySelector('strong')?.textContent||'');
+  }
+
+  function applyAlphabeticalOrder(){
+    const pane=document.querySelector('#adminPane');
+    if(!pane)return;
+    const tab=activeAdminTab();
+
+    // Le classement public et son aperçu administratif restent ordonnés par score.
+    if(tab==='ranking')return;
+
+    pane.querySelectorAll('select[name="profileId"],#newsProfile,select[data-profile-select]').forEach(sortSelect);
+    pane.querySelectorAll('table.admin-table').forEach(sortNamedTable);
+
+    const links=pane.querySelector('#linksCards');
+    if(links)reorder(links,[...links.querySelectorAll(':scope > .link-card')],node=>node.querySelector('.link-card-head strong')?.textContent||'');
+
+    pane.querySelectorAll('.media-grid').forEach(grid=>{
+      reorder(grid,[...grid.children],node=>node.querySelector('h4')?.textContent||node.textContent||'');
+    });
+
+    if(tab==='signals'||tab==='live')sortSignals(pane);
+  }
+
+  function schedule(){
+    if(scheduled)return;
+    scheduled=true;
+    requestAnimationFrame(()=>{
+      scheduled=false;
+      applyAlphabeticalOrder();
+    });
+  }
+
+  function boot(){
+    const root=document.querySelector('#adminModal')||document.body;
+    new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
+    document.addEventListener('click',event=>{
+      if(event.target.closest('[data-admin-tab]'))setTimeout(schedule,0);
+    });
+    schedule();
+  }
+
+  window.PASS50_ADMIN_PROFILE_ALPHABETICAL={version:VERSION,apply:applyAlphabeticalOrder,compare};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();
