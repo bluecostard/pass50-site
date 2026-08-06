@@ -1,4 +1,5 @@
 name: Déployer la protection définitive des liens officiels
+# Déclenchement opérationnel après installation du workflow — 2026-08-06T22:05+02:00
 
 on:
   workflow_dispatch:
