@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V87';
+  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V88';
   const INTERNAL_TEXT='Lien original à valider dans Administration → Actualité';
   const PUBLIC_TEXT='Source en cours de validation';
   const LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0';
@@ -108,4 +108,5 @@
   loadScript('script[data-pass50-admin-news-hotfix]','./admin-news-hotfix-v1.js?v=1.2','pass50AdminNewsHotfix','1.2',false);
   loadScript('script[data-pass50-intelligence-signals-ui]','./intelligence-signals-ui-v1.js?v=1.1','pass50IntelligenceSignalsUi','1.1',false);
   loadScript('script[data-pass50-intelligence-signals-diagnostic]','./intelligence-signals-diagnostic-v1.js?v=1.0','pass50IntelligenceSignalsDiagnostic','1.0',false);
+  loadScript('script[data-pass50-official-links-protection-v4]','./official-links-protection-v4.js?v=4.0','pass50OfficialLinksProtectionV4','4.0',false);
 })();
