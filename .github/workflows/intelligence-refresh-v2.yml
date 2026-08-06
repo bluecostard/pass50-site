@@ -1,5 +1,4 @@
-name: PASS50 Intelligence Refresh V2
-# Déclenchement opérationnel 2026-08-06T16:55+02:00
+name: PASS50 Intelligence & Signaux Refresh
 
 on:
   workflow_dispatch:
@@ -8,7 +7,10 @@ on:
     paths:
       - 'api/intelligence-refresh-cron-v2.php'
       - 'api/intelligence-dashboard-v2.php'
+      - 'api/intelligence-signals-core.php'
       - 'api/intelligence.php'
+      - 'intelligence-signals-ui-v1.js'
+      - 'public-copy-fixes.js'
       - '.github/workflows/intelligence-refresh-v2.yml'
       - '.htaccess'
 
@@ -25,7 +27,7 @@ jobs:
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Refresh PASS50 Intelligence
+      - name: Refresh PASS50 Intelligence & Signaux
         id: refresh
         shell: bash
         run: |
@@ -38,16 +40,17 @@ jobs:
           for attempt in $(seq 1 36); do
             timestamp="$(date +%s)"
             signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
-            code="$(curl --silent --show-error --max-time 180 --output /tmp/intelligence-v2.json --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT" || true)"
-            if [ "$code" = 200 ] && jq -e '.ok==true and .version=="PASS50-INTELLIGENCE-REFRESH-V2.0"' /tmp/intelligence-v2.json >/dev/null 2>&1; then break; fi
+            code="$(curl --silent --show-error --max-time 180 --output /tmp/intelligence-signals.json --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT" || true)"
+            if [ "$code" = 200 ] && jq -e '.ok==true and .version=="PASS50-INTELLIGENCE-SIGNALS-REFRESH-V3.0"' /tmp/intelligence-signals.json >/dev/null 2>&1; then break; fi
             echo "Endpoint en attente · tentative $attempt/36 · HTTP ${code:-000}"
             sleep 10
           done
-          jq -e '.ok==true and .version=="PASS50-INTELLIGENCE-REFRESH-V2.0"' /tmp/intelligence-v2.json >/dev/null
-          cat /tmp/intelligence-v2.json
-          echo "processed=$(jq -r '.profilesProcessed' /tmp/intelligence-v2.json)" >> "$GITHUB_OUTPUT"
-          echo "trusted=$(jq -r '.dashboard.summary.profilesTrusted' /tmp/intelligence-v2.json)" >> "$GITHUB_OUTPUT"
-          echo "declines=$(jq -r '.dashboard.declines|length' /tmp/intelligence-v2.json)" >> "$GITHUB_OUTPUT"
+          jq -e '.ok==true and .version=="PASS50-INTELLIGENCE-SIGNALS-REFRESH-V3.0"' /tmp/intelligence-signals.json >/dev/null
+          cat /tmp/intelligence-signals.json
+          echo "processed=$(jq -r '.profilesProcessed' /tmp/intelligence-signals.json)" >> "$GITHUB_OUTPUT"
+          echo "alerts=$(jq -r '.dashboard.summary.priorityAlerts' /tmp/intelligence-signals.json)" >> "$GITHUB_OUTPUT"
+          echo "buzz=$(jq -r '.dashboard.summary.confirmedBuzz' /tmp/intelligence-signals.json)" >> "$GITHUB_OUTPUT"
+          echo "pending=$(jq -r '.dashboard.summary.signalsPending' /tmp/intelligence-signals.json)" >> "$GITHUB_OUTPUT"
 
       - name: Publish refresh status
         if: always()
@@ -55,20 +58,21 @@ jobs:
         env:
           OUTCOME: ${{ steps.refresh.outcome }}
           PROCESSED: ${{ steps.refresh.outputs.processed }}
-          TRUSTED: ${{ steps.refresh.outputs.trusted }}
-          DECLINES: ${{ steps.refresh.outputs.declines }}
+          ALERTS: ${{ steps.refresh.outputs.alerts }}
+          BUZZ: ${{ steps.refresh.outputs.buzz }}
+          PENDING: ${{ steps.refresh.outputs.pending }}
         run: |
           state=success
-          description="${PROCESSED:-0} profils recalculés · ${TRUSTED:-0} fiables · ${DECLINES:-0} reculs"
-          if [ "$OUTCOME" != success ]; then state=failure; description='Refresh Intelligence V2 interrompu'; fi
-          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/intelligence-v2' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          description="${PROCESSED:-0} profils · ${ALERTS:-0} alertes · ${BUZZ:-0} buzz · ${PENDING:-0} à valider"
+          if [ "$OUTCOME" != success ]; then state=failure; description='Refresh Intelligence & Signaux interrompu'; fi
+          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/intelligence-signals' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
           curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
 
       - name: Archive report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pass50-intelligence-v2-${{ github.run_id }}-${{ github.run_attempt }}
-          path: /tmp/intelligence-v2.json
+          name: pass50-intelligence-signals-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/intelligence-signals.json
           if-no-files-found: warn
           retention-days: 30
