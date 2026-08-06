@@ -422,13 +422,26 @@
 
   function sharePronoStatus(item) {
     if (!item) return;
-    const odd = fmtOdd(item.odd);
-    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd !== '—' ? ` @${odd}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
+    const odd = Number(item.odd) || 0;
+    const stake = Number(item.stake) || 100;
+    const payout = Number(item.potentialPayout) || Math.round(stake * odd);
     const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`;
-    // Hors app : on privilégie le texte + lien (carte partage = palette vive côté image si disponible)
+    if (window.PASS50_PRONO_SHARE?.open) {
+      window.PASS50_PRONO_SHARE.open({
+        mode: 'status',
+        title: item.questionTitle || 'Pronostic',
+        choice: item.optionLabel || item.optionKey || '—',
+        odd,
+        stake,
+        payout,
+        author: item.authorPseudo || '',
+        url,
+      }).catch(() => toast('Partage indisponible'));
+      return;
+    }
+    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd ? ` @${fmtOdd(odd)}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
     if (navigator.share) {
-      const payload = { title: 'Statut prono PASS50', text, url };
-      navigator.share(payload).catch(() => {});
+      navigator.share({ title: 'Statut prono PASS50', text, url }).catch(() => {});
       return;
     }
     navigator.clipboard?.writeText(`${text}\n${url}`).then(() => toast('Lien copié')).catch(() => toast(text));

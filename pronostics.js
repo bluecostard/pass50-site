@@ -287,9 +287,24 @@
 
   function shareStatus(item) {
     if (!item) return;
-    const odd = fmtOdd(item.odd);
-    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd !== '—' ? ` @${odd}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
+    const odd = Number(item.odd) || 0;
+    const stake = Number(item.stake) || 100;
+    const payout = Number(item.potentialPayout) || Math.round(stake * odd);
     const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`;
+    if (window.PASS50_PRONO_SHARE?.open) {
+      window.PASS50_PRONO_SHARE.open({
+        mode: 'status',
+        title: item.questionTitle || 'Pronostic',
+        choice: item.optionLabel || item.optionKey || '—',
+        odd,
+        stake,
+        payout,
+        author: item.authorPseudo || '',
+        url,
+      }).catch(() => toast('Partage indisponible'));
+      return;
+    }
+    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd ? ` @${fmtOdd(odd)}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
     if (navigator.share) {
       navigator.share({ title: 'Statut prono PASS50', text, url }).catch(() => {});
       return;
@@ -559,9 +574,23 @@
     const item = state.items.find((row) => row.id === questionId);
     if (!item) return;
     const opt = item.options?.find((o) => o.key === item.myVote?.optionKey);
-    const cote = item.myVote?.oddLocked ?? opt?.odd;
-    const text = `Mon prono PASS50 : ${item.title}${opt ? ` → ${opt.label}` : ''}${cote ? ` @${fmtOdd(cote)}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
+    const cote = Number(item.myVote?.oddLocked ?? opt?.odd) || 0;
+    const stake = Number(item.myVote?.stakeLocked ?? item.stake ?? item.pointsCorrect ?? 100) || 100;
+    const payout = Number(item.myVote?.potentialPayout ?? opt?.payout) || Math.round(stake * cote);
     const url = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`;
+    if (window.PASS50_PRONO_SHARE?.open) {
+      window.PASS50_PRONO_SHARE.open({
+        mode: 'mine',
+        title: item.title || 'Pronostic',
+        choice: opt?.label || item.myVote?.optionKey || '—',
+        odd: cote,
+        stake,
+        payout,
+        url,
+      }).catch(() => toast('Partage indisponible'));
+      return;
+    }
+    const text = `Mon prono PASS50 : ${item.title}${opt ? ` → ${opt.label}` : ''}${cote ? ` @${fmtOdd(cote)}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
     if (navigator.share) {
       navigator.share({ title: 'Prono PASS50', text, url }).catch(() => {});
       return;
