@@ -6,10 +6,10 @@ Options -Indexes
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # Les appels HMAC de simulation utilisent encore le domaine www dans le secret GitHub.
-  # Ne pas les rediriger : une redirection 301 interromprait le POST signé avant PHP.
+  # Les appels HMAC utilisent encore le domaine www dans le secret GitHub.
+  # Ne pas rediriger ces deux endpoints signés : un 301 interromprait le POST avant PHP.
   RewriteCond %{HTTP_HOST} ^www\.pass50\.store$ [NC]
-  RewriteCond %{REQUEST_URI} ^/api/metrics-ranking-publication-simulate-cron\.php$ [NC]
+  RewriteCond %{REQUEST_URI} ^/api/(metrics-ranking-publication-simulate-cron|content-freshness-cron-v4)\.php$ [NC]
   RewriteRule ^ - [L]
 
   # Canonique : https://pass50.store (sans www)
