@@ -1,9 +1,10 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.0';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.1';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
+  let linksRendererInstalled=false;
 
   function label(value){
     return String(value||'').replace(/^[#\s\d.–—-]+/,'').trim();
@@ -11,6 +12,11 @@
 
   function compare(a,b){
     return collator.compare(label(a),label(b));
+  }
+
+  function alphabeticalProfiles(){
+    try{return [...(db.profiles||[])].sort((a,b)=>compare(a?.name,b?.name));}
+    catch{return [];}
   }
 
   function activeAdminTab(){
@@ -43,7 +49,7 @@
 
   function sortNamedTable(table){
     const headers=[...table.querySelectorAll('thead th')].map(th=>label(th.textContent).toLocaleLowerCase('fr'));
-    let column=headers.findIndex(text=>text==='nom'||text.includes('influenceur')||text.includes('profil'));
+    const column=headers.findIndex(text=>text==='nom'||text.includes('influenceur')||text.includes('profil'));
     if(column<0)return;
     const body=table.tBodies[0];
     if(!body)return;
@@ -55,7 +61,19 @@
     reorder(pane,signals,node=>node.querySelector('strong')?.textContent||'');
   }
 
+  function installOfficialLinksRenderer(){
+    if(linksRendererInstalled||typeof p50v9RenderLinks!=='function'||typeof p50v9LinkCard!=='function')return;
+    p50v9RenderLinks=function(){
+      const pane=document.querySelector('#adminPane');
+      if(!pane)return;
+      const profiles=alphabeticalProfiles();
+      pane.innerHTML=`<div class="media-hint"><strong>Objectif :</strong> seuls les profils officiels directs sont visibles au public. Les liens de recherche sont masqués.</div><div class="admin-toolbar"><button class="btn primary" id="checkTop10Links">Vérifier les liens du Top 10</button></div><div id="linksCards">${profiles.map(p50v9LinkCard).join('')}</div>`;
+    };
+    linksRendererInstalled=true;
+  }
+
   function applyAlphabeticalOrder(){
+    installOfficialLinksRenderer();
     const pane=document.querySelector('#adminPane');
     if(!pane)return;
     const tab=activeAdminTab();
@@ -86,6 +104,7 @@
   }
 
   function boot(){
+    installOfficialLinksRenderer();
     const root=document.querySelector('#adminModal')||document.body;
     new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
     document.addEventListener('click',event=>{
