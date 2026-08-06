@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.0';
+  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.1';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
   let installed=false;
   let restoring=false;
@@ -26,6 +26,17 @@
   }
 
   function isDirect(platform,url=''){
+    if(platform==='Web'){
+      try{
+        const parsed=new URL(normalize(url));
+        const path=parsed.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
+        return /^https?:$/.test(parsed.protocol)
+          && Boolean(parsed.hostname)
+          && !/(^|\/)(search|results)(\/|$)/i.test(path)
+          && !/(^|\/)explore\/search(\/|$)/i.test(path)
+          && !parsed.searchParams.has('search_query');
+      }catch{return false;}
+    }
     try{
       if(typeof window.p50v9IsDirectPlatformLink==='function')return window.p50v9IsDirectPlatformLink(platform,url);
       if(typeof p50v9IsDirectPlatformLink==='function')return p50v9IsDirectPlatformLink(platform,url);
@@ -44,7 +55,6 @@
       if(platform==='X')return (host==='x.com'||host==='twitter.com')&&segments.length===1&&!['search','home','explore'].includes(first);
       if(platform==='LinkedIn')return host.endsWith('linkedin.com')&&/^\/(in|company)\//i.test(path);
       if(platform==='Snapchat')return host.endsWith('snapchat.com')&&/^\/add\//i.test(path);
-      if(platform==='Web')return path!=='/';
       return false;
     }catch{return false;}
   }
@@ -107,7 +117,7 @@
     try{
       const data=await apiFetch('official-links-bulk.php',{
         method:'POST',
-        body:{action:'integrity_sync',profiles:[],clientVersion:'4.0'}
+        body:{action:'integrity_sync',profiles:[],clientVersion:'4.1'}
       });
       if(typeof CLOUD==='object'&&CLOUD&&Number.isFinite(Number(data.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
       if(typeof loadCloudState==='function')await loadCloudState();
