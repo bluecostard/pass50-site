@@ -1,0 +1,93 @@
+name: Profile Assets Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'api/profile-assets-audit-cron-v1.php'
+      - '.github/workflows/profile-assets-audit.yml'
+      - '.htaccess'
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  audit-repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Audit, repair and verify all profiles
+        id: run
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${CRON_URL:-}" in
+            */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/profile-assets-audit-cron-v1.php" ;;
+            *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
+          esac
+          [ -n "${CRON_SECRET:-}" ] || { echo '::error::Secret absent'; exit 1; }
+          mkdir -p /tmp/pass50-profile-assets
+          call_endpoint(){
+            local action="$1" output="$2" attempt body timestamp signature code
+            for attempt in $(seq 1 36); do
+              body="$(jq -nc --arg action "$action" --arg dispatchId "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${action}-${attempt}" '{action:$action,dispatchId:$dispatchId}')"
+              timestamp="$(date +%s)"
+              signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+              code="$(curl --silent --show-error --max-time 90 --output "$output" --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT" || true)"
+              if [ "$code" = 200 ] && jq -e '.ok==true and .version=="PROFILE-ASSETS-AUDIT-V1.0"' "$output" >/dev/null 2>&1; then return 0; fi
+              echo "Endpoint en attente · $action · tentative $attempt/36 · HTTP ${code:-000}"
+              sleep 10
+            done
+            cat "$output" 2>/dev/null || true
+            return 1
+          }
+          call_endpoint audit /tmp/pass50-profile-assets/before.json
+          call_endpoint repair /tmp/pass50-profile-assets/repair.json
+          call_endpoint audit /tmp/pass50-profile-assets/after.json
+          jq -e '.summary.profilesAudited >= 100' /tmp/pass50-profile-assets/after.json >/dev/null
+          before_links="$(jq -r '.summary.profilesWithoutLinks' /tmp/pass50-profile-assets/before.json)"
+          after_links="$(jq -r '.summary.profilesWithoutLinks' /tmp/pass50-profile-assets/after.json)"
+          before_photos="$(jq -r '.summary.profilesWithoutPhoto' /tmp/pass50-profile-assets/before.json)"
+          after_photos="$(jq -r '.summary.profilesWithoutPhoto' /tmp/pass50-profile-assets/after.json)"
+          restored_links="$(jq -r '.summary.linksRestored' /tmp/pass50-profile-assets/repair.json)"
+          restored_photos="$(jq -r '.summary.photosRestored' /tmp/pass50-profile-assets/repair.json)"
+          audited="$(jq -r '.summary.profilesAudited' /tmp/pass50-profile-assets/after.json)"
+          {
+            echo '### Audit liens officiels et photos'
+            printf -- '- Fiches auditées : %s\n' "$audited"
+            printf -- '- Liens restaurés : %s\n' "$restored_links"
+            printf -- '- Photos restaurées : %s\n' "$restored_photos"
+            printf -- '- Fiches sans lien avant / après : %s / %s\n' "$before_links" "$after_links"
+            printf -- '- Fiches sans photo avant / après : %s / %s\n' "$before_photos" "$after_photos"
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf 'audited=%s\nrestored_links=%s\nrestored_photos=%s\nafter_links=%s\nafter_photos=%s\n' "$audited" "$restored_links" "$restored_photos" "$after_links" "$after_photos" >> "$GITHUB_OUTPUT"
+
+      - name: Publish audit status
+        if: always()
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.run.outcome }}
+          AUDITED: ${{ steps.run.outputs.audited }}
+          LINKS: ${{ steps.run.outputs.restored_links }}
+          PHOTOS: ${{ steps.run.outputs.restored_photos }}
+        run: |
+          state=success
+          description="${AUDITED:-0} fiches · ${LINKS:-0} liens · ${PHOTOS:-0} photos restaurés"
+          if [ "$OUTCOME" != success ]; then state=failure; description='Audit des fiches interrompu'; fi
+          payload="$(jq -nc --arg state "$state" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --arg description "$description" --arg context 'pass50/profile-assets-audit' '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error -X POST -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' --data "$payload" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+
+      - name: Archive full profile-by-profile reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile-assets-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/pass50-profile-assets/*.json
+          if-no-files-found: warn
+          retention-days: 30
