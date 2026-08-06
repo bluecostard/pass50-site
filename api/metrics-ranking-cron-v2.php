@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+// Déclencheur opérationnel MR V2 — 2026-08-06, sans changement fonctionnel.
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/metrics-ranking-core.php';

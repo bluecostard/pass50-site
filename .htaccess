@@ -7,9 +7,9 @@ Options -Indexes
   RewriteEngine On
 
   # Les appels HMAC utilisent encore le domaine www dans le secret GitHub.
-  # Ne pas rediriger ces deux endpoints signés : un 301 interromprait le POST avant PHP.
+  # Ne pas rediriger ces endpoints signés : un 301 interromprait le POST avant PHP.
   RewriteCond %{HTTP_HOST} ^www\.pass50\.store$ [NC]
-  RewriteCond %{REQUEST_URI} ^/api/(metrics-ranking-publication-simulate-cron|content-freshness-cron-v4)\.php$ [NC]
+  RewriteCond %{REQUEST_URI} ^/api/(metrics-ranking-publication-simulate-cron|content-freshness-cron-v4|metrics-ranking-cron-v2)\.php$ [NC]
   RewriteRule ^ - [L]
 
   # Canonique : https://pass50.store (sans www)
@@ -33,29 +33,22 @@ Options -Indexes
 </IfModule>
 
 <IfModule mod_headers.c>
-  # HSTS : 1 jour au démarrage (passer à 31536000 après 1 semaine stable)
   Header always set Strict-Transport-Security "max-age=86400; includeSubDomains"
-
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
   Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
   Header always unset X-Powered-By
-
-  # CSP en observation d’abord (ne bloque pas ; à durcir ensuite)
   Header always set Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https:; worker-src 'self' blob:; upgrade-insecure-requests"
-
   <FilesMatch "\.(html?|js|css|json|webmanifest)$">
     Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
     Header always set Pragma "no-cache"
     Header always set Expires "0"
   </FilesMatch>
-
   <FilesMatch "\.(php)$">
     Header always set Cache-Control "no-store"
   </FilesMatch>
-
   <Files "fi.php">
     Header always set Cache-Control "public, max-age=300"
   </Files>
@@ -68,7 +61,6 @@ Options -Indexes
   ExpiresActive Off
 </IfModule>
 
-# Fichiers sensibles (accès HTTP refusé ; include PHP reste possible)
 <FilesMatch "(?i)\.(env|sql|sqlite|bak|old|log|ini)$">
   <IfModule mod_authz_core.c>
     Require all denied
@@ -87,7 +79,5 @@ Options -Indexes
   </IfModule>
 </FilesMatch>
 
-# Dossiers hors web
 RedirectMatch 404 (?i)^/(private|emails|mobile|live-scout-standalone|node_modules)/
-
 DirectoryIndex index.html
