@@ -1,4 +1,5 @@
 name: Emmanuelle Buzz Refresh
+# Déclenchement opérationnel 2026-08-06T16:30+02:00
 
 on:
   workflow_dispatch:
