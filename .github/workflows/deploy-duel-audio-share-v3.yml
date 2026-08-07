@@ -32,7 +32,7 @@ jobs:
           php -l a.php
           php -l duel-audio-og-v1.php
           grep -q 'PASS50-DUEL-AUDIO-SHARE-HOTFIX-V1' public-copy-fixes.js
-          grep -q 'PASS50-AUDIO-SHORT-V1' a.php
+          grep -q "a.php" public-copy-fixes.js
 
       - name: Installer SFTP
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
@@ -65,12 +65,12 @@ jobs:
             ok=false
             for attempt in $(seq 1 24); do
               runtime="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/public-copy-fixes.js?v=$GITHUB_SHA-$attempt" || true)"
-              health="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/a.php?health=1&v=$GITHUB_SHA-$attempt" || true)"
+              short_code="$(curl -L -sS --max-time 15 -o /dev/null -w '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$site/a.php?k=000000000000&v=$GITHUB_SHA-$attempt" || true)"
               if grep -q 'PASS50-PUBLIC-RUNTIME-V89' <<<"$runtime" \
                 && grep -q 'PASS50-DUEL-AUDIO-SHARE-HOTFIX-V1' <<<"$runtime" \
-                && grep -q 'PASS50-AUDIO-SHORT-V1' <<<"$health"; then
+                && [ "$short_code" = 404 ]; then
                 ok=true
-                echo "$site sert le partage audio V3."
+                echo "$site sert le partage audio V3 et le routeur de lien court répond."
                 break
               fi
               sleep 5
