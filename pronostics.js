@@ -300,6 +300,9 @@
         stake,
         payout,
         author: item.authorPseudo || '',
+        authorPhoto: item.authorPhoto || '',
+        coverPhoto: statusCoverSrc(item),
+        durationHours: item.durationHours || 24,
         url,
       }).catch(() => toast('Partage indisponible'));
       return;

@@ -1,32 +1,29 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-PRONO-SHARE-V1.0';
+  const CONTRACT = 'PASS50-PRONO-SHARE-V1.2';
   if (window.PASS50_PRONO_SHARE) return;
 
+  // Même proportions que .diapo-frame / .prono-diapo-frame (Stories 1080×1350)
   const W = 1080;
   const H = 1350;
   const COLORS = {
     bg: '#050705',
-    panel: '#0c100c',
-    panel2: '#121812',
-    ink: '#f4f7f0',
+    frame: '#0a0d0a',
+    media: '#101610',
+    ticket: '#0a0d0a',
+    ink: '#f6f8f4',
     muted: '#8f998c',
+    soft: '#c9d2c4',
     lime: '#b7ff00',
     line: 'rgba(183,255,0,0.22)',
-    dim: 'rgba(183,255,0,0.10)',
+    lineSoft: 'rgba(255,255,255,0.12)',
   };
 
   let modal = null;
   let previewUrl = null;
   let currentFile = null;
   let currentPayload = null;
-
-  function esc(value) {
-    return String(value ?? '').replace(/[&<>"']/g, (c) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    }[c]));
-  }
 
   function fmtOdd(odd) {
     const n = Number(odd);
@@ -71,32 +68,226 @@
     ctx.closePath();
   }
 
-  function draw(ctx, payload) {
+  function absUrl(url) {
+    let value = String(url || '').trim();
+    if (!value || value.startsWith('data:image/svg')) return '';
+    if (value.startsWith('//')) value = `${location.protocol}${value}`;
+    else if (value.startsWith('/')) value = `${location.origin}${value}`;
+    else if (!/^https?:|^data:|^blob:/i.test(value)) {
+      try { value = new URL(value, location.href).href; } catch (_) { return ''; }
+    }
+    return value;
+  }
+
+  function loadImage(url) {
+    return new Promise((resolve) => {
+      const src = absUrl(url);
+      if (!src) return resolve(null);
+      const image = new Image();
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+      if (!src.startsWith('data:')) image.crossOrigin = 'anonymous';
+      image.onload = () => finish(image);
+      image.onerror = () => finish(null);
+      image.src = src;
+      setTimeout(() => finish(null), 6000);
+    });
+  }
+
+  function drawImageCover(ctx, image, x, y, w, h) {
+    const ratio = Math.max(w / image.width, h / image.height);
+    const dw = image.width * ratio;
+    const dh = image.height * ratio;
+    ctx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  }
+
+  function drawAvatar(ctx, image, x, y, size, fallback) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    if (image) {
+      drawImageCover(ctx, image, x, y, size, size);
+    } else {
+      ctx.fillStyle = '#1a211a';
+      ctx.fillRect(x, y, size, size);
+      ctx.fillStyle = COLORS.ink;
+      ctx.font = `1000 ${Math.round(size * 0.34)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.fillText((fallback || 'P50').slice(0, 2).toUpperCase(), x + size / 2, y + size * 0.64);
+      ctx.textAlign = 'left';
+    }
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(183,255,0,0.35)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
+  function drawFallbackCover(ctx, x, y, w, h, title) {
+    ctx.fillStyle = COLORS.media;
+    ctx.fillRect(x, y, w, h);
+    const g = ctx.createLinearGradient(x, y, x + w, y + h);
+    g.addColorStop(0, '#151a15');
+    g.addColorStop(1, '#050705');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#6b7568';
+    ctx.font = '800 28px Arial';
+    ctx.fillText('PASS50', x + 48, y + 80);
+    ctx.fillStyle = '#c9d2c4';
+    ctx.font = '800 42px Arial';
+    const lines = wrapLines(ctx, String(title || 'PRONO').slice(0, 40), w - 96, 2);
+    let ty = y + h * 0.55;
+    lines.forEach((line) => {
+      ctx.fillText(line, x + 48, ty);
+      ty += 52;
+    });
+  }
+
+  /** Carte = clone visuel du statut diapo publié */
+  function drawStatusDiapo(ctx, payload, coverImage, avatarImage) {
+    const title = String(payload.title || 'Pronostic');
+    const choice = String(payload.choice || '—');
+    const odd = fmtOdd(payload.odd);
+    const payout = Math.round(Number(payload.payout) || 0);
+    const author = String(payload.author || 'Membre').trim() || 'Membre';
+    const hours = Number(payload.durationHours) > 0 ? Number(payload.durationHours) : 24;
+
+    // Fond page
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Frame (comme .diapo-frame)
+    const fx = 36;
+    const fy = 48;
+    const fw = W - 72;
+    const fh = H - 96;
+    const radius = 48;
+    roundRect(ctx, fx, fy, fw, fh, radius);
+    ctx.fillStyle = COLORS.frame;
+    ctx.fill();
+    ctx.strokeStyle = COLORS.line;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.save();
+    roundRect(ctx, fx, fy, fw, fh, radius);
+    ctx.clip();
+
+    // Media top ~42%
+    const mediaH = Math.round(fh * 0.42);
+    ctx.fillStyle = COLORS.media;
+    ctx.fillRect(fx, fy, fw, mediaH);
+    if (coverImage) {
+      drawImageCover(ctx, coverImage, fx, fy, fw, mediaH);
+    } else {
+      drawFallbackCover(ctx, fx, fy, fw, mediaH, choice);
+    }
+
+    const shade = ctx.createLinearGradient(fx, fy + mediaH * 0.15, fx, fy + mediaH);
+    shade.addColorStop(0, 'rgba(5,7,5,0.18)');
+    shade.addColorStop(1, 'rgba(5,7,5,0.94)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(fx, fy, fw, mediaH);
+
+    // Brand badge
+    ctx.fillStyle = 'rgba(246,248,244,0.72)';
+    ctx.font = '1000 22px Arial';
+    ctx.fillText('PASS50 · STATUT', fx + 36, fy + 52);
+
+    // Body
+    const bodyX = fx + 40;
+    const bodyW = fw - 80;
+    let y = fy + mediaH + 40;
+
+    // Author row
+    const avatarSize = 88;
+    drawAvatar(ctx, avatarImage, bodyX, y, avatarSize, author);
+    ctx.fillStyle = COLORS.ink;
+    ctx.font = '900 34px Arial';
+    ctx.fillText(author.slice(0, 28), bodyX + avatarSize + 24, y + 38);
+    ctx.fillStyle = COLORS.muted;
+    ctx.font = '700 24px Arial';
+    ctx.fillText(`Statut · ${hours} h`, bodyX + avatarSize + 24, y + 72);
+    y += avatarSize + 48;
+
+    // Question
+    ctx.fillStyle = COLORS.ink;
+    ctx.font = '1000 52px Arial Black, Impact, Arial';
+    const qLines = wrapLines(ctx, title, bodyW, 4);
+    qLines.forEach((line) => {
+      ctx.fillText(line, bodyX, y);
+      y += 62;
+    });
+    y += 28;
+
+    // Ticket (comme .diapo-ticket)
+    const ticketH = 220;
+    const ticketY = Math.min(y, fy + fh - ticketH - 140);
+    roundRect(ctx, bodyX, ticketY, bodyW, ticketH, 32);
+    ctx.fillStyle = COLORS.ticket;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(183,255,0,0.16)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = COLORS.muted;
+    ctx.font = '900 22px Arial';
+    ctx.fillText('SON CHOIX', bodyX + 32, ticketY + 48);
+
+    ctx.fillStyle = COLORS.ink;
+    ctx.font = '1000 40px Arial';
+    const choiceLines = wrapLines(ctx, choice, bodyW - 220, 2);
+    let cy = ticketY + 100;
+    choiceLines.forEach((line) => {
+      ctx.fillText(line, bodyX + 32, cy);
+      cy += 48;
+    });
+
+    ctx.fillStyle = COLORS.lime;
+    ctx.font = '1000 54px Arial Black, Impact, Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`@${odd}`, bodyX + bodyW - 32, ticketY + 118);
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = COLORS.soft;
+    ctx.font = '800 26px Arial';
+    ctx.fillText(
+      payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel',
+      bodyX + 32,
+      ticketY + ticketH - 36,
+    );
+
+    // CTA bas (remplace Like / Partager / Jouer)
+    const ctaY = fy + fh - 108;
+    roundRect(ctx, bodyX, ctaY, bodyW, 72, 22);
+    ctx.fillStyle = COLORS.lime;
+    ctx.fill();
+    ctx.fillStyle = COLORS.bg;
+    ctx.font = '1000 28px Arial';
+    ctx.fillText('Pronostique aussi sur pass50.store', bodyX + 36, ctaY + 46);
+
+    ctx.restore();
+  }
+
+  /** Fallback « mon prono » (hors statut) — ticket simple */
+  function drawMine(ctx, payload) {
     const title = String(payload.title || 'Pronostic PASS50');
     const choice = String(payload.choice || '—');
     const odd = fmtOdd(payload.odd);
     const payout = Math.round(Number(payload.payout) || 0);
     const stake = Math.round(Number(payload.stake) || 100);
-    const author = String(payload.author || '').trim();
-    const mode = payload.mode === 'status' ? 'status' : 'mine';
 
-    // Background
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, W, H);
-    const glow = ctx.createRadialGradient(W * 0.5, -40, 40, W * 0.5, 80, 720);
-    glow.addColorStop(0, 'rgba(183,255,0,0.22)');
-    glow.addColorStop(0.45, 'rgba(183,255,0,0.06)');
-    glow.addColorStop(1, 'rgba(183,255,0,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, W, 760);
 
-    const orb = ctx.createRadialGradient(W - 80, H - 220, 20, W - 80, H - 220, 340);
-    orb.addColorStop(0, 'rgba(183,255,0,0.10)');
-    orb.addColorStop(1, 'rgba(183,255,0,0)');
-    ctx.fillStyle = orb;
-    ctx.fillRect(W - 480, H - 560, 480, 560);
-
-    // Brand
     ctx.fillStyle = COLORS.lime;
     ctx.fillRect(64, 72, 28, 28);
     ctx.fillStyle = COLORS.ink;
@@ -106,86 +297,57 @@
     ctx.font = '800 22px Arial';
     ctx.fillText('PRONOSTICS', 110, 136);
 
-    // Kicker
     ctx.fillStyle = COLORS.lime;
     ctx.font = '900 24px Arial';
-    ctx.fillText(mode === 'status' ? 'STATUT PRONO' : 'MON PRONO', 64, 220);
+    ctx.fillText('MON PRONO', 64, 220);
 
-    // Question
     ctx.fillStyle = COLORS.ink;
-    ctx.font = '1000 58px Arial Black, Impact, Arial';
+    ctx.font = '1000 56px Arial Black, Impact, Arial';
     const titleLines = wrapLines(ctx, title, W - 128, 4);
     let y = 290;
     titleLines.forEach((line) => {
       ctx.fillText(line, 64, y);
-      y += 72;
+      y += 68;
     });
 
-    // Ticket card
-    const ticketY = Math.max(560, y + 48);
-    const ticketH = 420;
-    roundRect(ctx, 64, ticketY, W - 128, ticketH, 36);
-    ctx.fillStyle = COLORS.panel;
+    const ticketY = Math.max(560, y + 40);
+    roundRect(ctx, 64, ticketY, W - 128, 400, 36);
+    ctx.fillStyle = COLORS.frame;
     ctx.fill();
     ctx.strokeStyle = COLORS.line;
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Ticket inner glow bar
-    ctx.fillStyle = COLORS.dim;
-    roundRect(ctx, 64, ticketY, W - 128, 12, 0);
-    ctx.fill();
-    ctx.fillStyle = COLORS.lime;
-    ctx.fillRect(64, ticketY, 18, ticketH);
-
     ctx.fillStyle = COLORS.muted;
     ctx.font = '900 22px Arial';
-    ctx.fillText(mode === 'status' && author ? `CHOIX DE ${author.toUpperCase().slice(0, 28)}` : 'MON CHOIX', 110, ticketY + 58);
-
+    ctx.fillText('MON CHOIX', 110, ticketY + 58);
     ctx.fillStyle = COLORS.ink;
-    ctx.font = '1000 52px Arial Black, Impact, Arial';
-    const choiceLines = wrapLines(ctx, choice, W - 280, 2);
-    let cy = ticketY + 128;
-    choiceLines.forEach((line) => {
-      ctx.fillText(line, 110, cy);
-      cy += 62;
+    ctx.font = '1000 48px Arial';
+    wrapLines(ctx, choice, W - 280, 2).forEach((line, i) => {
+      ctx.fillText(line, 110, ticketY + 130 + i * 58);
     });
 
-    // Odd block
-    const oddBoxX = W - 64 - 250;
-    const oddBoxY = ticketY + 86;
-    roundRect(ctx, oddBoxX, oddBoxY, 210, 210, 28);
-    ctx.fillStyle = COLORS.panel2;
+    roundRect(ctx, W - 314, ticketY + 86, 210, 210, 28);
+    ctx.fillStyle = '#121812';
     ctx.fill();
     ctx.strokeStyle = COLORS.lime;
     ctx.lineWidth = 3;
     ctx.stroke();
-
+    ctx.textAlign = 'center';
     ctx.fillStyle = COLORS.muted;
     ctx.font = '900 20px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('COTE', oddBoxX + 105, oddBoxY + 52);
+    ctx.fillText('COTE', W - 209, ticketY + 138);
     ctx.fillStyle = COLORS.lime;
     ctx.font = '1000 72px Arial Black, Impact, Arial';
-    ctx.fillText(odd, oddBoxX + 105, oddBoxY + 130);
+    ctx.fillText(odd, W - 209, ticketY + 216);
     ctx.fillStyle = COLORS.ink;
     ctx.font = '800 22px Arial';
-    ctx.fillText(`mise ${stake}`, oddBoxX + 105, oddBoxY + 172);
+    ctx.fillText(`mise ${stake}`, W - 209, ticketY + 258);
     ctx.textAlign = 'left';
 
-    // Payout line
-    const payY = ticketY + ticketH - 58;
     ctx.fillStyle = COLORS.lime;
-    ctx.font = '1000 36px Arial';
-    ctx.fillText(payout > 0 ? `Gain pot. +${payout} pts` : 'Sans argent réel', 110, payY);
-    ctx.fillStyle = COLORS.muted;
-    ctx.font = '700 22px Arial';
-    ctx.fillText('si le prono est correct', 110, payY + 36);
-
-    // Disclaimer + CTA
-    ctx.fillStyle = COLORS.muted;
-    ctx.font = '800 24px Arial';
-    ctx.fillText('Sans argent réel · points PASS50 uniquement', 64, H - 168);
+    ctx.font = '1000 34px Arial';
+    ctx.fillText(payout > 0 ? `Gain pot. +${payout} pts` : 'Sans argent réel', 110, ticketY + 340);
 
     roundRect(ctx, 64, H - 128, W - 128, 72, 20);
     ctx.fillStyle = COLORS.lime;
@@ -204,6 +366,9 @@
       stake: Number(input.stake) || 100,
       payout: Number(input.payout) || Math.round((Number(input.stake) || 100) * (Number(input.odd) || 0)),
       author: String(input.author || input.authorPseudo || '').trim(),
+      authorPhoto: absUrl(input.authorPhoto || input.authorAvatar || ''),
+      coverPhoto: absUrl(input.coverPhoto || input.coverUrl || input.image || ''),
+      durationHours: Number(input.durationHours) || 24,
       url: String(input.url || `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`),
     };
   }
@@ -223,11 +388,21 @@
     canvas.height = H;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas indisponible');
-    draw(ctx, payload);
+
+    if (payload.mode === 'status') {
+      const [coverImage, avatarImage] = await Promise.all([
+        loadImage(payload.coverPhoto),
+        loadImage(payload.authorPhoto),
+      ]);
+      drawStatusDiapo(ctx, payload, coverImage, avatarImage);
+    } else {
+      drawMine(ctx, payload);
+    }
+
     const blob = await new Promise((resolve, reject) => {
       canvas.toBlob((b) => (b && b.size ? resolve(b) : reject(new Error('Image impossible'))), 'image/png', 0.95);
     });
-    return new File([blob], 'pass50-prono.png', { type: 'image/png' });
+    return new File([blob], 'pass50-statut-prono.png', { type: 'image/png' });
   }
 
   function ensureModal() {
@@ -258,17 +433,17 @@
     modal.className = 'p50-prono-share-modal';
     modal.id = 'p50PronoShareModal';
     modal.innerHTML = `
-      <div class="p50-prono-share-box" role="dialog" aria-modal="true" aria-label="Partager mon prono">
+      <div class="p50-prono-share-box" role="dialog" aria-modal="true" aria-label="Partager le statut prono">
         <div class="p50-prono-share-head">
-          <strong>Carte prono</strong>
+          <strong>Statut prono</strong>
           <button type="button" class="p50-prono-share-close" data-prono-share-close aria-label="Fermer">×</button>
         </div>
-        <div class="p50-prono-share-preview"><img alt="Aperçu carte prono PASS50"></div>
+        <div class="p50-prono-share-preview"><img alt="Aperçu carte statut prono PASS50"></div>
         <div class="p50-prono-share-actions">
           <button type="button" class="primary" data-prono-share-native>Partager</button>
           <button type="button" data-prono-share-download>Télécharger</button>
         </div>
-        <div class="p50-prono-share-note">Sans argent réel · image prête pour Stories / WhatsApp</div>
+        <div class="p50-prono-share-note">Même rendu que le statut publié · sans argent réel</div>
       </div>`;
     document.body.appendChild(modal);
 
@@ -288,7 +463,7 @@
     if (!currentFile || !previewUrl) return;
     const a = document.createElement('a');
     a.href = previewUrl;
-    a.download = currentFile.name || 'pass50-prono.png';
+    a.download = currentFile.name || 'pass50-statut-prono.png';
     a.click();
   }
 
@@ -297,12 +472,12 @@
     const text = shareText(currentPayload);
     try {
       if (navigator.canShare?.({ files: [currentFile] })) {
-        await navigator.share({ title: 'Prono PASS50', text, files: [currentFile] });
+        await navigator.share({ title: 'Statut prono PASS50', text, files: [currentFile] });
         close();
         return;
       }
       if (navigator.share) {
-        await navigator.share({ title: 'Prono PASS50', text, url: currentPayload.url });
+        await navigator.share({ title: 'Statut prono PASS50', text, url: currentPayload.url });
         close();
         return;
       }
@@ -323,12 +498,11 @@
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = URL.createObjectURL(file);
 
-    // Mobile: try native share with image first (skip modal when file share works)
     const preferNative = window.matchMedia('(max-width:680px)').matches
       && navigator.canShare?.({ files: [file] });
     if (preferNative) {
       try {
-        await navigator.share({ title: 'Prono PASS50', text: shareText(payload), files: [file] });
+        await navigator.share({ title: 'Statut prono PASS50', text: shareText(payload), files: [file] });
         return { ok: true, shared: true, file };
       } catch (error) {
         if (error?.name === 'AbortError') return { ok: true, shared: false, aborted: true, file };
