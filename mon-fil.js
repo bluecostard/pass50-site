@@ -399,7 +399,7 @@
     const choice = $('#pronoDiapoChoice');
     if (choice) choice.textContent = item.optionLabel || item.optionKey || '—';
     const oddInline = $('#pronoDiapoOddInline');
-    if (oddInline) oddInline.textContent = `@${odd}`;
+    if (oddInline) oddInline.textContent = `x ${odd}`;
     const ret = $('#pronoDiapoReturn');
     if (ret) ret.textContent = payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel';
     const like = $('#pronoDiapoLike');
@@ -436,13 +436,14 @@
         payout,
         author: item.authorPseudo || '',
         authorPhoto: item.authorPhoto || '',
+        profileId: item.profileId || '',
         coverPhoto: statusCoverSrc(item),
         durationHours: item.durationHours || 24,
         url,
       }).catch(() => toast('Partage indisponible'));
       return;
     }
-    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd ? ` @${fmtOdd(odd)}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
+    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd ? ` x ${fmtOdd(odd)}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
     if (navigator.share) {
       navigator.share({ title: 'Statut prono PASS50', text, url }).catch(() => {});
       return;

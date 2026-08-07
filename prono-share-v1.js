@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-PRONO-SHARE-V1.3';
+  const CONTRACT = 'PASS50-PRONO-SHARE-V1.4';
   if (window.PASS50_PRONO_SHARE) return;
 
   const W = 1080;
@@ -35,11 +35,76 @@
     return value;
   }
 
+  function sameOrigin(url) {
+    try {
+      return new URL(url, location.href).origin === location.origin;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /** Photo FI canvas-safe (same-origin) via partage-photo.php */
+  function shareSafeCover(input) {
+    const profileId = String(input?.profileId || '').trim();
+    const direct = absUrl(input?.coverPhoto || input?.coverUrl || '');
+    if (direct && sameOrigin(direct)) return direct;
+    if (/^[A-Za-z0-9._:-]{1,100}$/.test(profileId)) {
+      try {
+        const url = new URL('partage-photo.php', location.href);
+        url.searchParams.set('id', profileId);
+        url.searchParams.set('size', '512');
+        return url.href;
+      } catch (_) {}
+    }
+    return direct;
+  }
+
   function loadAsDataUrl(url) {
     return new Promise((resolve) => {
       const src = absUrl(url);
       if (!src) return resolve('');
       if (src.startsWith('data:')) return resolve(src);
+
+      const finishFromBlob = async (blob) => {
+        if (!blob || !blob.size) return resolve('');
+        try {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(blob);
+        } catch (_) {
+          resolve('');
+        }
+      };
+
+      // Same-origin : fetch (fiable pour canvas / WhatsApp)
+      if (sameOrigin(src)) {
+        fetch(src, { credentials: 'same-origin', cache: 'force-cache' })
+          .then((res) => (res.ok ? res.blob() : Promise.reject()))
+          .then(finishFromBlob)
+          .catch(() => {
+            const image = new Image();
+            image.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = image.naturalWidth || image.width;
+                canvas.height = image.naturalHeight || image.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx || !canvas.width) return resolve('');
+                ctx.drawImage(image, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg', 0.92));
+              } catch (_) {
+                resolve('');
+              }
+            };
+            image.onerror = () => resolve('');
+            image.src = src;
+          });
+        setTimeout(() => resolve(''), 6000);
+        return;
+      }
+
+      // Cross-origin : tente CORS
       const image = new Image();
       let settled = false;
       const finish = (value) => {
@@ -147,7 +212,7 @@
           <div class="media">
             ${mediaInner}
             <div class="shade"></div>
-            <div class="brand">PASS50 · STATUT</div>
+            <div class="brand">EN COURS</div>
           </div>
           <div class="body">
             <div class="top">
@@ -161,7 +226,7 @@
               <div class="lbl">Son choix</div>
               <div class="pick">
                 <strong>${esc(payload.choice || '—')}</strong>
-                <em>@${esc(fmtOdd(payload.odd))}</em>
+                <em>x ${esc(fmtOdd(payload.odd))}</em>
               </div>
               <div class="ret">${esc(ret)}</div>
             </div>
@@ -302,7 +367,7 @@
 
     ctx.fillStyle = 'rgba(246,248,244,0.7)';
     ctx.font = '1000 22px Inter, Arial';
-    ctx.fillText('PASS50 · STATUT', fx + 36, fy + 52);
+    ctx.fillText('EN COURS', fx + 36, fy + 52);
 
     const bodyX = fx + 40;
     let y = fy + mediaH + 40;
@@ -377,7 +442,7 @@
     ctx.fillStyle = '#b7ff00';
     ctx.font = '900 56px "Archivo Black", Impact, Arial';
     ctx.textAlign = 'right';
-    ctx.fillText(`@${fmtOdd(payload.odd)}`, bodyX + fw - 80 - 32, ticketY + 118);
+    ctx.fillText(`x ${fmtOdd(payload.odd)}`, bodyX + fw - 80 - 32, ticketY + 118);
     ctx.textAlign = 'left';
     const payout = Math.round(Number(payload.payout) || 0);
     ctx.fillStyle = '#c9d2c4';
@@ -417,7 +482,8 @@
       payout: Number(input.payout) || Math.round((Number(input.stake) || 100) * (Number(input.odd) || 0)),
       author: String(input.author || input.authorPseudo || '').trim(),
       authorPhoto: absUrl(input.authorPhoto || input.authorAvatar || ''),
-      coverPhoto: absUrl(input.coverPhoto || input.coverUrl || input.image || ''),
+      profileId: String(input.profileId || '').trim(),
+      coverPhoto: shareSafeCover(input),
       durationHours: Number(input.durationHours) || 24,
       url: String(input.url || `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`),
     };
@@ -427,15 +493,15 @@
     const odd = fmtOdd(payload.odd);
     const who = payload.mode === 'status' && payload.author ? `${payload.author} · ` : '';
     const line = payload.mode === 'status'
-      ? `Statut prono PASS50 — ${who}${payload.title} → ${payload.choice}${odd !== '—' ? ` @${odd}` : ''}`
-      : `Mon prono PASS50 : ${payload.title} → ${payload.choice}${odd !== '—' ? ` @${odd}` : ''}`;
+      ? `Statut prono PASS50 — ${who}${payload.title} → ${payload.choice}${odd !== '—' ? ` x ${odd}` : ''}`
+      : `Mon prono PASS50 : ${payload.title} → ${payload.choice}${odd !== '—' ? ` x ${odd}` : ''}`;
     return `${line}\nSans argent réel · ${payload.url.replace(/^https?:\/\//, '')}`;
   }
 
   async function imageFile(payload) {
     if (payload.mode === 'status') {
       const [coverData, avatarData] = await Promise.all([
-        loadAsDataUrl(payload.coverPhoto),
+        loadAsDataUrl(shareSafeCover(payload)),
         loadAsDataUrl(payload.authorPhoto),
       ]);
       let canvas;
@@ -513,7 +579,7 @@
     ctx.fillStyle = '#b7ff00';
     ctx.font = '900 56px "Archivo Black", Impact, Arial';
     ctx.textAlign = 'right';
-    ctx.fillText(`@${fmtOdd(payload.odd)}`, W - 100, ty + 130);
+    ctx.fillText(`x ${fmtOdd(payload.odd)}`, W - 100, ty + 130);
     ctx.textAlign = 'left';
     const payout = Math.round(Number(payload.payout) || 0);
     ctx.fillStyle = '#c9d2c4';
