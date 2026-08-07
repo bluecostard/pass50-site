@@ -1,0 +1,185 @@
+name: Control Instagram Collector
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: État souhaité du collecteur Instagram
+        required: true
+        type: choice
+        options:
+          - pause
+          - resume
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pass50-instagram-collector-control
+  cancel-in-progress: false
+
+jobs:
+  control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HOST: ${{ secrets.IONOS_SFTP_HOST }}
+      USER: ${{ secrets.IONOS_SFTP_USER }}
+      PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+      REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+      INSTAGRAM_ACCESS_TOKEN: ${{ secrets.PASS50_INSTAGRAM_ACCESS_TOKEN }}
+      INSTAGRAM_ACCOUNT_ID: ${{ secrets.PASS50_INSTAGRAM_ACCOUNT_ID }}
+      INSTAGRAM_DISCOVERY_ACCOUNT_ID: ${{ secrets.PASS50_INSTAGRAM_DISCOVERY_ACCOUNT_ID }}
+      REQUESTED_ACTION: ${{ inputs.action }}
+    steps:
+      - name: Installer les outils
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp php-cli
+
+      - name: Appliquer le contrôle Instagram sur IONOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${HOST:-}" ] || [ -z "${USER:-}" ] || [ -z "${PASSWORD:-}" ] || [ -z "${REMOTE_DIR:-}" ]; then
+            echo "::error::Secrets IONOS SFTP manquants."
+            exit 1
+          fi
+          if [ "$REQUESTED_ACTION" != "pause" ] && [ "$REQUESTED_ACTION" != "resume" ]; then
+            echo "::error::Action Instagram invalide."
+            exit 1
+          fi
+          if [ "$REQUESTED_ACTION" = "resume" ] && [ -z "${INSTAGRAM_ACCESS_TOKEN:-}" ]; then
+            echo "::error::Le secret PASS50_INSTAGRAM_ACCESS_TOKEN est requis pour reprendre."
+            exit 1
+          fi
+
+          mkdir -p /tmp/p50-instagram-control
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          get "$REMOTE_DIR/api/config.php" -o /tmp/p50-instagram-control/config.php
+          bye
+          LFTP
+
+          python3 <<'PY'
+          from pathlib import Path
+          import json, os, re
+
+          path=Path('/tmp/p50-instagram-control/config.php')
+          text=path.read_text(encoding='utf-8')
+          original=text
+          patched=[]
+          action=os.environ['REQUESTED_ACTION'].strip()
+
+          def php_string(value: str) -> str:
+              return "'" + value.replace('\\','\\\\').replace("'","\\'") + "'"
+
+          def metrics_open(src: str):
+              for pattern in (r"(['\"]metrics['\"]\s*=>\s*\[)",r"(['\"]metrics['\"]\s*=>\s*array\s*\()"):
+                  match=re.search(pattern,src,re.I)
+                  if match:return match
+              return None
+
+          def upsert(src: str,key: str,rhs: str) -> str:
+              line=re.compile(rf"^(\s*)['\"]{re.escape(key)}['\"]\s*=>.*?,\s*$",re.M)
+              match=line.search(src)
+              if match:
+                  replacement=f"{match.group(1)}'{key}' => {rhs},"
+                  if match.group(0).strip()==replacement.strip():return src
+                  patched.append(key)
+                  return src[:match.start()]+replacement+src[match.end():]
+              opening=metrics_open(src)
+              if opening is None:raise SystemExit('Section metrics introuvable dans api/config.php')
+              patched.append(key)
+              return src[:opening.end()]+f"\n        '{key}' => {rhs},"+src[opening.end():]
+
+          if action=='pause':
+              text=upsert(text,'instagram_enabled','false')
+              text=upsert(text,'instagram_access_token',php_string(''))
+              text=upsert(text,'instagram_account_id',php_string(''))
+              text=upsert(text,'instagram_discovery_account_id',php_string(''))
+              text=upsert(text,'instagram_mode',php_string('suspended_pending_business_verification'))
+          else:
+              token=os.environ.get('INSTAGRAM_ACCESS_TOKEN','').strip()
+              account=os.environ.get('INSTAGRAM_ACCOUNT_ID','').strip()
+              discovery=os.environ.get('INSTAGRAM_DISCOVERY_ACCOUNT_ID','').strip()
+              text=upsert(text,'instagram_enabled','true')
+              text=upsert(text,'instagram_access_token',php_string(token))
+              text=upsert(text,'instagram_account_id',php_string(account))
+              text=upsert(text,'instagram_discovery_account_id',php_string(discovery))
+              text=upsert(text,'instagram_mode',php_string('business_discovery' if discovery else 'professional_authorized'))
+
+          path.write_text(text,encoding='utf-8')
+          report={
+              'version':'INSTAGRAM-COLLECTOR-CONTROL-V1.0',
+              'requestedAction':action,
+              'patchedKeys':sorted(set(patched)),
+              'configChanged':text!=original,
+              'credentialsRetainedInGitHub':True,
+              'secretsExposed':False,
+              'publicStateWrites':0,
+          }
+          Path('/tmp/p50-instagram-control/control-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('Contrôle Instagram appliqué :',action)
+          PY
+
+          php -l /tmp/p50-instagram-control/config.php
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          get "$REMOTE_DIR/api/config.php" -o /tmp/p50-instagram-control/config.php.bak
+          put /tmp/p50-instagram-control/config.php.bak -o "$REMOTE_DIR/api/config.php.bak-instagram-control-$stamp"
+          put /tmp/p50-instagram-control/config.php -o "$REMOTE_DIR/api/config.php"
+          bye
+          LFTP
+
+      - name: Vérifier l’état sans lancer de collecte
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Secrets cron métriques manquants."
+            exit 1
+          fi
+          case "$CRON_URL" in
+            */metrics-cron.php) PROBE_URL="${CRON_URL%/metrics-cron.php}/metrics-collector-readiness-cron.php" ;;
+            *) echo "::error::PASS50_METRICS_CRON_URL invalide"; exit 1 ;;
+          esac
+          body="$(jq -nc --arg id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-instagram-control" '{action:"probe",dispatchId:$id}')"
+          timestamp="$(date +%s)"
+          signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+          code="$(curl --silent --show-error --max-time 35 --output /tmp/p50-instagram-control/probe.json --write-out '%{http_code}' \
+            -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+            --data "$body" "$PROBE_URL" || true)"
+          if [ "$code" != "200" ] || ! jq -e '.ok == true and .secretsExposed == false and .publicStateWrites == 0' /tmp/p50-instagram-control/probe.json >/dev/null; then
+            echo "::error::La vérification du contrôle Instagram a échoué."
+            exit 1
+          fi
+          p0="$(jq '.p0Preview.candidatesByPlatform.Instagram // 0' /tmp/p50-instagram-control/probe.json)"
+          p1="$(jq '.p1Preview.candidatesByPlatform.Instagram // 0' /tmp/p50-instagram-control/probe.json)"
+          if [ "$REQUESTED_ACTION" = "pause" ] && { [ "$p0" != "0" ] || [ "$p1" != "0" ]; }; then
+            echo "::error::Instagram est encore présent dans une file de collecte."
+            exit 1
+          fi
+          {
+            echo '### Contrôle du collecteur Instagram'
+            echo "- Action : \`$REQUESTED_ACTION\`"
+            echo "- Candidats Instagram P0 / P1 : $p0 / $p1"
+            echo '- Jetons GitHub supprimés : `non`'
+            echo '- Écriture app_state : `0`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Archiver le rapport sans secrets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instagram-collector-control-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/p50-instagram-control/control-report.json
+            /tmp/p50-instagram-control/probe.json
+          if-no-files-found: warn
+          retention-days: 30
