@@ -1,71 +1,27 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-PRONO-SHARE-V1.2';
+  const CONTRACT = 'PASS50-PRONO-SHARE-V1.3';
   if (window.PASS50_PRONO_SHARE) return;
 
-  // Même proportions que .diapo-frame / .prono-diapo-frame (Stories 1080×1350)
   const W = 1080;
   const H = 1350;
-  const COLORS = {
-    bg: '#050705',
-    frame: '#0a0d0a',
-    media: '#101610',
-    ticket: '#0a0d0a',
-    ink: '#f6f8f4',
-    muted: '#8f998c',
-    soft: '#c9d2c4',
-    lime: '#b7ff00',
-    line: 'rgba(183,255,0,0.22)',
-    lineSoft: 'rgba(255,255,255,0.12)',
-  };
 
   let modal = null;
   let previewUrl = null;
   let currentFile = null;
   let currentPayload = null;
 
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
   function fmtOdd(odd) {
     const n = Number(odd);
     if (!Number.isFinite(n) || n <= 0) return '—';
     return n.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-  }
-
-  function wrapLines(ctx, text, maxWidth, maxLines = 4) {
-    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
-    if (!words.length) return [''];
-    const lines = [];
-    let line = '';
-    for (const word of words) {
-      const next = line ? `${line} ${word}` : word;
-      if (ctx.measureText(next).width <= maxWidth) {
-        line = next;
-        continue;
-      }
-      if (line) lines.push(line);
-      line = word;
-      if (lines.length >= maxLines - 1) break;
-    }
-    if (lines.length < maxLines && line) lines.push(line);
-    if (words.length && lines.length === maxLines) {
-      let last = lines[maxLines - 1];
-      while (ctx.measureText(`${last}…`).width > maxWidth && last.length > 3) {
-        last = last.slice(0, -1);
-      }
-      lines[maxLines - 1] = `${last}…`;
-    }
-    return lines;
-  }
-
-  function roundRect(ctx, x, y, w, h, r) {
-    const radius = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.arcTo(x + w, y, x + w, y + h, radius);
-    ctx.arcTo(x + w, y + h, x, y + h, radius);
-    ctx.arcTo(x, y + h, x, y, radius);
-    ctx.arcTo(x, y, x + w, y, radius);
-    ctx.closePath();
   }
 
   function absUrl(url) {
@@ -79,282 +35,376 @@
     return value;
   }
 
-  function loadImage(url) {
+  function loadAsDataUrl(url) {
     return new Promise((resolve) => {
       const src = absUrl(url);
-      if (!src) return resolve(null);
+      if (!src) return resolve('');
+      if (src.startsWith('data:')) return resolve(src);
       const image = new Image();
       let settled = false;
       const finish = (value) => {
         if (settled) return;
         settled = true;
-        resolve(value);
+        resolve(value || '');
       };
-      if (!src.startsWith('data:')) image.crossOrigin = 'anonymous';
-      image.onload = () => finish(image);
-      image.onerror = () => finish(null);
+      image.crossOrigin = 'anonymous';
+      image.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = image.naturalWidth || image.width;
+          canvas.height = image.naturalHeight || image.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx || !canvas.width) return finish('');
+          ctx.drawImage(image, 0, 0);
+          finish(canvas.toDataURL('image/jpeg', 0.92));
+        } catch (_) {
+          finish('');
+        }
+      };
+      image.onerror = () => finish('');
       image.src = src;
-      setTimeout(() => finish(null), 6000);
+      setTimeout(() => finish(''), 5000);
     });
   }
 
-  function drawImageCover(ctx, image, x, y, w, h) {
-    const ratio = Math.max(w / image.width, h / image.height);
-    const dw = image.width * ratio;
-    const dh = image.height * ratio;
-    ctx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  function initials(name) {
+    return (String(name || 'P').trim().split(/\s+/).map((p) => p[0]).join('') || 'P').slice(0, 2).toUpperCase();
   }
 
-  function drawAvatar(ctx, image, x, y, size, fallback) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    if (image) {
-      drawImageCover(ctx, image, x, y, size, size);
-    } else {
-      ctx.fillStyle = '#1a211a';
-      ctx.fillRect(x, y, size, size);
-      ctx.fillStyle = COLORS.ink;
-      ctx.font = `1000 ${Math.round(size * 0.34)}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.fillText((fallback || 'P50').slice(0, 2).toUpperCase(), x + size / 2, y + size * 0.64);
-      ctx.textAlign = 'left';
+  /** Styles extraits du diapo publié (pronostics / mon-fil) */
+  const DIAPO_CSS = `
+    *{box-sizing:border-box;margin:0;padding:0}
+    .shot{
+      width:${W}px;height:${H}px;padding:40px 36px;background:#050705;color:#f6f8f4;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+      display:flex;align-items:stretch;
     }
-    ctx.restore();
-    ctx.beginPath();
-    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(183,255,0,0.35)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    .frame{
+      flex:1;min-height:0;display:grid;grid-template-rows:42fr 58fr;
+      border:2.5px solid rgba(183,255,0,.22);border-radius:48px;overflow:hidden;background:#0a0d0a;
+    }
+    .media{position:relative;min-height:0;background:#101610;overflow:hidden}
+    .media img.cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+    .fallback{
+      position:absolute;inset:0;padding:48px;display:flex;flex-direction:column;justify-content:flex-end;gap:16px;
+      background:linear-gradient(180deg,#151a15,#050705);
+    }
+    .fallback b{font-size:26px;font-weight:800;letter-spacing:.14em;color:#6b7568}
+    .fallback span{font-family:"Archivo Black",Impact,"Arial Black",sans-serif;font-size:44px;line-height:1.1;color:#c9d2c4}
+    .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,5,.2),rgba(5,7,5,.94) 90%)}
+    .brand{
+      position:absolute;left:36px;top:36px;z-index:2;
+      font-size:22px;font-weight:1000;letter-spacing:.14em;color:rgba(246,248,244,.7);
+    }
+    .body{padding:40px;display:flex;flex-direction:column;gap:28px;min-height:0}
+    .top{display:flex;justify-content:space-between;gap:20px;align-items:center}
+    .author{display:grid;grid-template-columns:88px minmax(0,1fr);gap:22px;align-items:center;font-weight:800}
+    .avatar{
+      width:88px;height:88px;border-radius:50%;overflow:hidden;border:3px solid #050705;
+      background:linear-gradient(160deg,#1a211a,#0a0d0a);display:grid;place-items:center;
+      font-family:"Archivo Black",Impact,sans-serif;font-size:30px;letter-spacing:-.02em;
+    }
+    .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    .author strong{display:block;font-size:34px;font-weight:800}
+    .author small{display:block;color:#8f998c;font-weight:700;margin-top:6px;font-size:24px}
+    .q{
+      font-family:"Archivo Black",Impact,"Arial Black",sans-serif;
+      font-size:52px;letter-spacing:-.03em;line-height:1.15;font-weight:900;
+    }
+    .ticket{margin-top:auto;padding:32px;border-radius:32px;background:#0a0d0a;border:2px solid rgba(183,255,0,.14)}
+    .lbl{font-size:20px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#8f998c}
+    .pick{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-top:18px}
+    .pick strong{font-size:40px;line-height:1.2;font-weight:800;max-width:68%}
+    .pick em{
+      font-style:normal;font-family:"Archivo Black",Impact,"Arial Black",sans-serif;
+      font-size:56px;color:#b7ff00;letter-spacing:-.03em;font-weight:900;white-space:nowrap;
+    }
+    .ret{margin-top:18px;font-size:26px;font-weight:800;color:#c9d2c4}
+    .foot{display:flex;gap:16px}
+    .btn{
+      flex:1;min-height:84px;border-radius:24px;border:2px solid rgba(255,255,255,.10);
+      background:#0a0d0a;color:#f6f8f4;font-size:28px;font-weight:900;
+      display:grid;place-items:center;
+    }
+    .btn.primary{background:#b7ff00;border-color:#b7ff00;color:#050705}
+  `;
+
+  function statusMarkup(payload, coverData, avatarData) {
+    const author = esc(payload.author || 'Membre');
+    const hours = Number(payload.durationHours) > 0 ? Number(payload.durationHours) : 24;
+    const payout = Math.round(Number(payload.payout) || 0);
+    const ret = payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel';
+    const avatarInner = avatarData
+      ? `<img src="${avatarData}" alt="">`
+      : `<span>${esc(initials(payload.author))}</span>`;
+    const mediaInner = coverData
+      ? `<img class="cover" src="${coverData}" alt="">`
+      : `<div class="fallback"><b>PASS50</b><span>${esc(String(payload.choice || 'PRONO').slice(0, 32))}</span></div>`;
+
+    return `
+      <div class="shot">
+        <div class="frame">
+          <div class="media">
+            ${mediaInner}
+            <div class="shade"></div>
+            <div class="brand">PASS50 · STATUT</div>
+          </div>
+          <div class="body">
+            <div class="top">
+              <div class="author">
+                <div class="avatar">${avatarInner}</div>
+                <div><strong>${author}</strong><small>Statut · ${hours} h</small></div>
+              </div>
+            </div>
+            <h1 class="q">${esc(payload.title || 'Pronostic')}</h1>
+            <div class="ticket">
+              <div class="lbl">Son choix</div>
+              <div class="pick">
+                <strong>${esc(payload.choice || '—')}</strong>
+                <em>@${esc(fmtOdd(payload.odd))}</em>
+              </div>
+              <div class="ret">${esc(ret)}</div>
+            </div>
+            <div class="foot">
+              <div class="btn">♡ Like</div>
+              <div class="btn">Partager</div>
+              <div class="btn primary">Jouer</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
   }
 
-  function drawFallbackCover(ctx, x, y, w, h, title) {
-    ctx.fillStyle = COLORS.media;
-    ctx.fillRect(x, y, w, h);
-    const g = ctx.createLinearGradient(x, y, x + w, y + h);
-    g.addColorStop(0, '#151a15');
-    g.addColorStop(1, '#050705');
-    ctx.fillStyle = g;
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = '#6b7568';
-    ctx.font = '800 28px Arial';
-    ctx.fillText('PASS50', x + 48, y + 80);
-    ctx.fillStyle = '#c9d2c4';
-    ctx.font = '800 42px Arial';
-    const lines = wrapLines(ctx, String(title || 'PRONO').slice(0, 40), w - 96, 2);
-    let ty = y + h * 0.55;
-    lines.forEach((line) => {
-      ctx.fillText(line, x + 48, ty);
-      ty += 52;
+  function waitFrames(n = 2) {
+    return new Promise((resolve) => {
+      const step = () => {
+        if (n <= 0) return resolve();
+        n -= 1;
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
     });
   }
 
-  /** Carte = clone visuel du statut diapo publié */
-  function drawStatusDiapo(ctx, payload, coverImage, avatarImage) {
-    const title = String(payload.title || 'Pronostic');
-    const choice = String(payload.choice || '—');
-    const odd = fmtOdd(payload.odd);
-    const payout = Math.round(Number(payload.payout) || 0);
-    const author = String(payload.author || 'Membre').trim() || 'Membre';
-    const hours = Number(payload.durationHours) > 0 ? Number(payload.durationHours) : 24;
+  async function rasterizeDom(html, css) {
+    const host = document.createElement('div');
+    host.setAttribute('aria-hidden', 'true');
+    host.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + W + 'px;height:' + H + 'px;opacity:0;pointer-events:none;z-index:-1';
+    host.innerHTML = `<style>${css}</style>${html}`;
+    document.body.appendChild(host);
 
-    // Fond page
-    ctx.fillStyle = COLORS.bg;
+    // Attendre images
+    const imgs = [...host.querySelectorAll('img')];
+    await Promise.all(imgs.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise((r) => {
+        img.onload = () => r();
+        img.onerror = () => r();
+        setTimeout(r, 4000);
+      });
+    }));
+    await waitFrames(3);
+
+    try {
+      // SVG foreignObject à partir du nœud réel (même CSS appliqué)
+      const clone = host.cloneNode(true);
+      clone.style.cssText = `width:${W}px;height:${H}px;background:#050705`;
+      const serializer = new XMLSerializer();
+      const xhtml = serializer.serializeToString(clone);
+      // serializeToString sur HTML élément peut produire HTML — forcer xhtml wrapper
+      const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+  <foreignObject width="100%" height="100%">
+    ${xhtml.replace(/iframe/gi, 'div')}
+  </foreignObject>
+</svg>`;
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('SVG render failed'));
+        img.src = url;
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#050705';
+      ctx.fillRect(0, 0, W, H);
+      ctx.drawImage(image, 0, 0);
+      URL.revokeObjectURL(url);
+      host.remove();
+      return canvas;
+    } catch (error) {
+      host.remove();
+      throw error;
+    }
+  }
+
+  /** Fallback canvas si FO échoue — proportions diapo */
+  async function drawStatusCanvas(payload, coverData, avatarData) {
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const load = (src) => new Promise((resolve) => {
+      if (!src) return resolve(null);
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+    const [cover, avatar] = await Promise.all([load(coverData), load(avatarData)]);
+
+    ctx.fillStyle = '#050705';
     ctx.fillRect(0, 0, W, H);
 
-    // Frame (comme .diapo-frame)
     const fx = 36;
-    const fy = 48;
+    const fy = 40;
     const fw = W - 72;
-    const fh = H - 96;
-    const radius = 48;
-    roundRect(ctx, fx, fy, fw, fh, radius);
-    ctx.fillStyle = COLORS.frame;
+    const fh = H - 80;
+    const r = 48;
+    const rr = (x, y, w, h, rad) => {
+      ctx.beginPath();
+      ctx.moveTo(x + rad, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rad);
+      ctx.arcTo(x + w, y + h, x, y + h, rad);
+      ctx.arcTo(x, y + h, x, y, rad);
+      ctx.arcTo(x, y, x + w, y, rad);
+      ctx.closePath();
+    };
+
+    rr(fx, fy, fw, fh, r);
+    ctx.fillStyle = '#0a0d0a';
     ctx.fill();
-    ctx.strokeStyle = COLORS.line;
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(183,255,0,0.22)';
+    ctx.lineWidth = 2.5;
     ctx.stroke();
 
     ctx.save();
-    roundRect(ctx, fx, fy, fw, fh, radius);
+    rr(fx, fy, fw, fh, r);
     ctx.clip();
 
-    // Media top ~42%
     const mediaH = Math.round(fh * 0.42);
-    ctx.fillStyle = COLORS.media;
+    ctx.fillStyle = '#101610';
     ctx.fillRect(fx, fy, fw, mediaH);
-    if (coverImage) {
-      drawImageCover(ctx, coverImage, fx, fy, fw, mediaH);
-    } else {
-      drawFallbackCover(ctx, fx, fy, fw, mediaH, choice);
+    if (cover) {
+      const ratio = Math.max(fw / cover.width, mediaH / cover.height);
+      const dw = cover.width * ratio;
+      const dh = cover.height * ratio;
+      ctx.drawImage(cover, fx + (fw - dw) / 2, fy + (mediaH - dh) / 2, dw, dh);
     }
-
-    const shade = ctx.createLinearGradient(fx, fy + mediaH * 0.15, fx, fy + mediaH);
-    shade.addColorStop(0, 'rgba(5,7,5,0.18)');
-    shade.addColorStop(1, 'rgba(5,7,5,0.94)');
-    ctx.fillStyle = shade;
+    const g = ctx.createLinearGradient(fx, fy + mediaH * 0.2, fx, fy + mediaH);
+    g.addColorStop(0, 'rgba(5,7,5,0.2)');
+    g.addColorStop(1, 'rgba(5,7,5,0.94)');
+    ctx.fillStyle = g;
     ctx.fillRect(fx, fy, fw, mediaH);
 
-    // Brand badge
-    ctx.fillStyle = 'rgba(246,248,244,0.72)';
-    ctx.font = '1000 22px Arial';
+    ctx.fillStyle = 'rgba(246,248,244,0.7)';
+    ctx.font = '1000 22px Inter, Arial';
     ctx.fillText('PASS50 · STATUT', fx + 36, fy + 52);
 
-    // Body
     const bodyX = fx + 40;
-    const bodyW = fw - 80;
     let y = fy + mediaH + 40;
+    const av = 88;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(bodyX + av / 2, y + av / 2, av / 2, 0, Math.PI * 2);
+    ctx.clip();
+    if (avatar) {
+      const ratio = Math.max(av / avatar.width, av / avatar.height);
+      const dw = avatar.width * ratio;
+      const dh = avatar.height * ratio;
+      ctx.drawImage(avatar, bodyX + (av - dw) / 2, y + (av - dh) / 2, dw, dh);
+    } else {
+      ctx.fillStyle = '#1a211a';
+      ctx.fillRect(bodyX, y, av, av);
+    }
+    ctx.restore();
 
-    // Author row
-    const avatarSize = 88;
-    drawAvatar(ctx, avatarImage, bodyX, y, avatarSize, author);
-    ctx.fillStyle = COLORS.ink;
-    ctx.font = '900 34px Arial';
-    ctx.fillText(author.slice(0, 28), bodyX + avatarSize + 24, y + 38);
-    ctx.fillStyle = COLORS.muted;
-    ctx.font = '700 24px Arial';
-    ctx.fillText(`Statut · ${hours} h`, bodyX + avatarSize + 24, y + 72);
-    y += avatarSize + 48;
+    const author = String(payload.author || 'Membre');
+    ctx.fillStyle = '#f6f8f4';
+    ctx.font = '800 34px Inter, Arial';
+    ctx.fillText(author.slice(0, 26), bodyX + av + 22, y + 36);
+    ctx.fillStyle = '#8f998c';
+    ctx.font = '700 24px Inter, Arial';
+    ctx.fillText(`Statut · ${Number(payload.durationHours) || 24} h`, bodyX + av + 22, y + 70);
+    y += av + 40;
 
-    // Question
-    ctx.fillStyle = COLORS.ink;
-    ctx.font = '1000 52px Arial Black, Impact, Arial';
-    const qLines = wrapLines(ctx, title, bodyW, 4);
-    qLines.forEach((line) => {
+    const wrap = (text, font, maxW, maxLines) => {
+      ctx.font = font;
+      const words = String(text || '').split(/\s+/);
+      const lines = [];
+      let line = '';
+      for (const word of words) {
+        const next = line ? `${line} ${word}` : word;
+        if (ctx.measureText(next).width <= maxW) line = next;
+        else {
+          if (line) lines.push(line);
+          line = word;
+          if (lines.length >= maxLines - 1) break;
+        }
+      }
+      if (line && lines.length < maxLines) lines.push(line);
+      return lines;
+    };
+
+    ctx.fillStyle = '#f6f8f4';
+    const qFont = '900 52px "Archivo Black", Impact, Arial Black, Arial';
+    wrap(payload.title || 'Pronostic', qFont, fw - 80, 4).forEach((line) => {
+      ctx.font = qFont;
       ctx.fillText(line, bodyX, y);
-      y += 62;
+      y += 60;
     });
-    y += 28;
 
-    // Ticket (comme .diapo-ticket)
-    const ticketH = 220;
-    const ticketY = Math.min(y, fy + fh - ticketH - 140);
-    roundRect(ctx, bodyX, ticketY, bodyW, ticketH, 32);
-    ctx.fillStyle = COLORS.ticket;
+    const ticketH = 210;
+    const ticketY = Math.min(Math.max(y + 24, fy + fh - ticketH - 140), fy + fh - ticketH - 140);
+    rr(bodyX, ticketY, fw - 80, ticketH, 32);
+    ctx.fillStyle = '#0a0d0a';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(183,255,0,0.16)';
+    ctx.strokeStyle = 'rgba(183,255,0,0.14)';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    ctx.fillStyle = COLORS.muted;
-    ctx.font = '900 22px Arial';
-    ctx.fillText('SON CHOIX', bodyX + 32, ticketY + 48);
-
-    ctx.fillStyle = COLORS.ink;
-    ctx.font = '1000 40px Arial';
-    const choiceLines = wrapLines(ctx, choice, bodyW - 220, 2);
-    let cy = ticketY + 100;
-    choiceLines.forEach((line) => {
-      ctx.fillText(line, bodyX + 32, cy);
-      cy += 48;
-    });
-
-    ctx.fillStyle = COLORS.lime;
-    ctx.font = '1000 54px Arial Black, Impact, Arial';
+    ctx.fillStyle = '#8f998c';
+    ctx.font = '900 20px Inter, Arial';
+    ctx.fillText('SON CHOIX', bodyX + 32, ticketY + 46);
+    ctx.fillStyle = '#f6f8f4';
+    ctx.font = '800 40px Inter, Arial';
+    const choice = String(payload.choice || '—');
+    const choiceLine = ctx.measureText(choice).width > fw - 320 ? `${choice.slice(0, 22)}…` : choice;
+    ctx.fillText(choiceLine, bodyX + 32, ticketY + 110);
+    ctx.fillStyle = '#b7ff00';
+    ctx.font = '900 56px "Archivo Black", Impact, Arial';
     ctx.textAlign = 'right';
-    ctx.fillText(`@${odd}`, bodyX + bodyW - 32, ticketY + 118);
+    ctx.fillText(`@${fmtOdd(payload.odd)}`, bodyX + fw - 80 - 32, ticketY + 118);
     ctx.textAlign = 'left';
+    const payout = Math.round(Number(payload.payout) || 0);
+    ctx.fillStyle = '#c9d2c4';
+    ctx.font = '800 26px Inter, Arial';
+    ctx.fillText(payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel', bodyX + 32, ticketY + ticketH - 40);
 
-    ctx.fillStyle = COLORS.soft;
-    ctx.font = '800 26px Arial';
-    ctx.fillText(
-      payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel',
-      bodyX + 32,
-      ticketY + ticketH - 36,
-    );
-
-    // CTA bas (remplace Like / Partager / Jouer)
-    const ctaY = fy + fh - 108;
-    roundRect(ctx, bodyX, ctaY, bodyW, 72, 22);
-    ctx.fillStyle = COLORS.lime;
-    ctx.fill();
-    ctx.fillStyle = COLORS.bg;
-    ctx.font = '1000 28px Arial';
-    ctx.fillText('Pronostique aussi sur pass50.store', bodyX + 36, ctaY + 46);
+    // Foot buttons
+    const by = fy + fh - 120;
+    const bw = (fw - 80 - 32) / 3;
+    const labels = [['♡ Like', false], ['Partager', false], ['Jouer', true]];
+    labels.forEach(([label, primary], i) => {
+      const bx = bodyX + i * (bw + 16);
+      rr(bx, by, bw, 84, 24);
+      ctx.fillStyle = primary ? '#b7ff00' : '#0a0d0a';
+      ctx.fill();
+      ctx.strokeStyle = primary ? '#b7ff00' : 'rgba(255,255,255,0.10)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = primary ? '#050705' : '#f6f8f4';
+      ctx.font = '900 28px Inter, Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, bx + bw / 2, by + 54);
+      ctx.textAlign = 'left';
+    });
 
     ctx.restore();
-  }
-
-  /** Fallback « mon prono » (hors statut) — ticket simple */
-  function drawMine(ctx, payload) {
-    const title = String(payload.title || 'Pronostic PASS50');
-    const choice = String(payload.choice || '—');
-    const odd = fmtOdd(payload.odd);
-    const payout = Math.round(Number(payload.payout) || 0);
-    const stake = Math.round(Number(payload.stake) || 100);
-
-    ctx.fillStyle = COLORS.bg;
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.fillStyle = COLORS.lime;
-    ctx.fillRect(64, 72, 28, 28);
-    ctx.fillStyle = COLORS.ink;
-    ctx.font = '1000 54px Arial Black, Impact, Arial';
-    ctx.fillText('PASS50', 110, 100);
-    ctx.fillStyle = COLORS.muted;
-    ctx.font = '800 22px Arial';
-    ctx.fillText('PRONOSTICS', 110, 136);
-
-    ctx.fillStyle = COLORS.lime;
-    ctx.font = '900 24px Arial';
-    ctx.fillText('MON PRONO', 64, 220);
-
-    ctx.fillStyle = COLORS.ink;
-    ctx.font = '1000 56px Arial Black, Impact, Arial';
-    const titleLines = wrapLines(ctx, title, W - 128, 4);
-    let y = 290;
-    titleLines.forEach((line) => {
-      ctx.fillText(line, 64, y);
-      y += 68;
-    });
-
-    const ticketY = Math.max(560, y + 40);
-    roundRect(ctx, 64, ticketY, W - 128, 400, 36);
-    ctx.fillStyle = COLORS.frame;
-    ctx.fill();
-    ctx.strokeStyle = COLORS.line;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    ctx.fillStyle = COLORS.muted;
-    ctx.font = '900 22px Arial';
-    ctx.fillText('MON CHOIX', 110, ticketY + 58);
-    ctx.fillStyle = COLORS.ink;
-    ctx.font = '1000 48px Arial';
-    wrapLines(ctx, choice, W - 280, 2).forEach((line, i) => {
-      ctx.fillText(line, 110, ticketY + 130 + i * 58);
-    });
-
-    roundRect(ctx, W - 314, ticketY + 86, 210, 210, 28);
-    ctx.fillStyle = '#121812';
-    ctx.fill();
-    ctx.strokeStyle = COLORS.lime;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.textAlign = 'center';
-    ctx.fillStyle = COLORS.muted;
-    ctx.font = '900 20px Arial';
-    ctx.fillText('COTE', W - 209, ticketY + 138);
-    ctx.fillStyle = COLORS.lime;
-    ctx.font = '1000 72px Arial Black, Impact, Arial';
-    ctx.fillText(odd, W - 209, ticketY + 216);
-    ctx.fillStyle = COLORS.ink;
-    ctx.font = '800 22px Arial';
-    ctx.fillText(`mise ${stake}`, W - 209, ticketY + 258);
-    ctx.textAlign = 'left';
-
-    ctx.fillStyle = COLORS.lime;
-    ctx.font = '1000 34px Arial';
-    ctx.fillText(payout > 0 ? `Gain pot. +${payout} pts` : 'Sans argent réel', 110, ticketY + 340);
-
-    roundRect(ctx, 64, H - 128, W - 128, 72, 20);
-    ctx.fillStyle = COLORS.lime;
-    ctx.fill();
-    ctx.fillStyle = COLORS.bg;
-    ctx.font = '1000 30px Arial';
-    ctx.fillText('Pronostique aussi sur pass50.store', 96, H - 80);
+    return canvas;
   }
 
   function buildPayload(input = {}) {
@@ -383,26 +433,103 @@
   }
 
   async function imageFile(payload) {
-    const canvas = document.createElement('canvas');
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas indisponible');
-
     if (payload.mode === 'status') {
-      const [coverImage, avatarImage] = await Promise.all([
-        loadImage(payload.coverPhoto),
-        loadImage(payload.authorPhoto),
+      const [coverData, avatarData] = await Promise.all([
+        loadAsDataUrl(payload.coverPhoto),
+        loadAsDataUrl(payload.authorPhoto),
       ]);
-      drawStatusDiapo(ctx, payload, coverImage, avatarImage);
-    } else {
-      drawMine(ctx, payload);
+      let canvas;
+      try {
+        canvas = await rasterizeDom(statusMarkup(payload, coverData, avatarData), DIAPO_CSS);
+      } catch (_) {
+        canvas = await drawStatusCanvas(payload, coverData, avatarData);
+      }
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b && b.size ? resolve(b) : reject(new Error('Image impossible'))), 'image/png', 0.95);
+      });
+      return new File([blob], 'pass50-statut-prono.png', { type: 'image/png' });
     }
+
+    // Mon prono — ticket simple aligné diapo-ticket
+    const canvas = await drawStatusCanvas({
+      ...payload,
+      author: 'Moi',
+      durationHours: 24,
+      title: payload.title,
+    }, '', '');
+    // Override label path — use dedicated mine paint
+    const ctx = canvas.getContext('2d');
+    // Actually reuse a cleaner mine layout
+    ctx.fillStyle = '#050705';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#b7ff00';
+    ctx.fillRect(64, 80, 28, 28);
+    ctx.fillStyle = '#f6f8f4';
+    ctx.font = '1000 54px Arial Black, Arial';
+    ctx.fillText('PASS50', 110, 108);
+    ctx.fillStyle = '#8f998c';
+    ctx.font = '800 22px Arial';
+    ctx.fillText('PRONOSTICS', 110, 144);
+    ctx.fillStyle = '#b7ff00';
+    ctx.font = '900 24px Arial';
+    ctx.fillText('MON PRONO', 64, 230);
+    ctx.fillStyle = '#f6f8f4';
+    ctx.font = '900 54px "Archivo Black", Impact, Arial';
+    const words = String(payload.title || '').split(/\s+/);
+    let line = '';
+    let y = 310;
+    words.forEach((word) => {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width > W - 128) {
+        ctx.fillText(line, 64, y);
+        y += 64;
+        line = word;
+      } else line = next;
+    });
+    if (line) ctx.fillText(line, 64, y);
+    y += 80;
+    const ty = Math.max(y, 620);
+    const rr = (x, yy, w, h, rad) => {
+      ctx.beginPath();
+      ctx.moveTo(x + rad, yy);
+      ctx.arcTo(x + w, yy, x + w, yy + h, rad);
+      ctx.arcTo(x + w, yy + h, x, yy + h, rad);
+      ctx.arcTo(x, yy + h, x, yy, rad);
+      ctx.arcTo(x, yy, x + w, yy, rad);
+      ctx.closePath();
+    };
+    rr(64, ty, W - 128, 320, 32);
+    ctx.fillStyle = '#0a0d0a';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(183,255,0,0.22)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#8f998c';
+    ctx.font = '900 20px Arial';
+    ctx.fillText('MON CHOIX', 100, ty + 52);
+    ctx.fillStyle = '#f6f8f4';
+    ctx.font = '800 42px Arial';
+    ctx.fillText(String(payload.choice || '—').slice(0, 28), 100, ty + 120);
+    ctx.fillStyle = '#b7ff00';
+    ctx.font = '900 56px "Archivo Black", Impact, Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`@${fmtOdd(payload.odd)}`, W - 100, ty + 130);
+    ctx.textAlign = 'left';
+    const payout = Math.round(Number(payload.payout) || 0);
+    ctx.fillStyle = '#c9d2c4';
+    ctx.font = '800 26px Arial';
+    ctx.fillText(payout > 0 ? `Gain pot. +${payout} pts · mise ${Math.round(payload.stake || 100)}` : 'Sans argent réel', 100, ty + 220);
+    rr(64, H - 140, W - 128, 84, 24);
+    ctx.fillStyle = '#b7ff00';
+    ctx.fill();
+    ctx.fillStyle = '#050705';
+    ctx.font = '1000 30px Arial';
+    ctx.fillText('Pronostique aussi sur pass50.store', 100, H - 86);
 
     const blob = await new Promise((resolve, reject) => {
       canvas.toBlob((b) => (b && b.size ? resolve(b) : reject(new Error('Image impossible'))), 'image/png', 0.95);
     });
-    return new File([blob], 'pass50-statut-prono.png', { type: 'image/png' });
+    return new File([blob], 'pass50-prono.png', { type: 'image/png' });
   }
 
   function ensureModal() {
@@ -412,41 +539,36 @@
     style.textContent = `
       .p50-prono-share-modal{position:fixed;inset:0;z-index:16000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(5,7,5,.78);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
       .p50-prono-share-modal.show{display:flex}
-      .p50-prono-share-box{width:min(420px,100%);max-height:94vh;overflow:auto;border:1px solid rgba(183,255,0,.22);border-radius:22px;background:linear-gradient(180deg,#101610,#070a07);box-shadow:0 24px 70px rgba(0,0,0,.5);padding:14px}
-      .p50-prono-share-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;color:#f4f7f0}
-      .p50-prono-share-head strong{font-size:15px;font-weight:950;letter-spacing:.02em}
+      .p50-prono-share-box{width:min(420px,100%);max-height:94vh;overflow:auto;border:1px solid rgba(183,255,0,.22);border-radius:22px;background:#0a0d0a;padding:14px}
+      .p50-prono-share-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:#f4f7f0}
+      .p50-prono-share-head strong{font-size:15px;font-weight:950}
       .p50-prono-share-close{width:42px;height:42px;border:1px solid rgba(183,255,0,.2);border-radius:12px;background:#0a0d0a;color:#fff;font-size:22px}
       .p50-prono-share-preview{border-radius:16px;overflow:hidden;border:1px solid rgba(183,255,0,.16);background:#050705}
       .p50-prono-share-preview img{display:block;width:100%;height:auto}
       .p50-prono-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
       .p50-prono-share-actions button{min-height:48px;border-radius:14px;border:1px solid rgba(183,255,0,.2);background:#0a0d0a;color:#f4f7f0;font-weight:900}
       .p50-prono-share-actions button.primary{background:#b7ff00;border-color:#b7ff00;color:#050705}
-      .p50-prono-share-note{margin-top:10px;color:#8f998c;font-size:11px;font-weight:700;line-height:1.4;text-align:center}
+      .p50-prono-share-note{margin-top:10px;color:#8f998c;font-size:11px;font-weight:700;text-align:center}
       @media(max-width:680px){
         .p50-prono-share-modal{align-items:flex-end;padding:0}
-        .p50-prono-share-box{width:100vw;max-width:100vw;border-radius:22px 22px 0 0;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
-      }
-    `;
+        .p50-prono-share-box{width:100vw;border-radius:22px 22px 0 0;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+      }`;
     document.head.appendChild(style);
-
     modal = document.createElement('div');
     modal.className = 'p50-prono-share-modal';
-    modal.id = 'p50PronoShareModal';
     modal.innerHTML = `
       <div class="p50-prono-share-box" role="dialog" aria-modal="true" aria-label="Partager le statut prono">
-        <div class="p50-prono-share-head">
-          <strong>Statut prono</strong>
+        <div class="p50-prono-share-head"><strong>Statut prono</strong>
           <button type="button" class="p50-prono-share-close" data-prono-share-close aria-label="Fermer">×</button>
         </div>
-        <div class="p50-prono-share-preview"><img alt="Aperçu carte statut prono PASS50"></div>
+        <div class="p50-prono-share-preview"><img alt="Aperçu statut prono"></div>
         <div class="p50-prono-share-actions">
           <button type="button" class="primary" data-prono-share-native>Partager</button>
           <button type="button" data-prono-share-download>Télécharger</button>
         </div>
-        <div class="p50-prono-share-note">Même rendu que le statut publié · sans argent réel</div>
+        <div class="p50-prono-share-note">Même carte que le statut publié</div>
       </div>`;
     document.body.appendChild(modal);
-
     modal.addEventListener('click', (event) => {
       if (event.target === modal || event.target.closest('[data-prono-share-close]')) close();
       if (event.target.closest('[data-prono-share-native]')) nativeShare().catch(() => {});
@@ -455,9 +577,7 @@
     return modal;
   }
 
-  function close() {
-    modal?.classList.remove('show');
-  }
+  function close() { modal?.classList.remove('show'); }
 
   function download() {
     if (!currentFile || !previewUrl) return;
@@ -485,9 +605,6 @@
       if (error?.name === 'AbortError') return;
     }
     download();
-    try {
-      await navigator.clipboard?.writeText(`${text}\n${currentPayload.url}`);
-    } catch (_) {}
   }
 
   async function open(input = {}) {
