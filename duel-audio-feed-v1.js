@@ -3,7 +3,7 @@
 
 if(window.PASS50_DUEL_AUDIO_FEED)return;
 
-const CONTRACT='PASS50-DUEL-AUDIO-FEED-V1.1';
+const CONTRACT='PASS50-DUEL-AUDIO-FEED-V1.2';
 const API='./api/duel-audio.php';
 const MAX_DUEL_AUDIOS=3;
 const SHARE_EVENTS=new Set(['native_share_triggered','download','platform_selected']);
@@ -102,6 +102,28 @@ function audioDurationMs(blob){
 
 function extensionFor(type){const mime=String(type||'').toLowerCase();if(mime.includes('ogg'))return 'ogg';if(mime.includes('mp4')||mime.includes('m4a'))return 'm4a';return 'webm';}
 
+function compactAudioShareData(data){
+  try{
+    if(!data||!data.url)return data;
+    const url=new URL(String(data.url),location.href);
+    if(url.searchParams.get('type')!=='duel-audio')return data;
+    const audio=String(url.searchParams.get('audio')||'');
+    const stem=audio.split('.')[0].toLowerCase();
+    if(!/^[a-f0-9]{12,}$/.test(stem))return {...data,files:undefined,text:'🎙 Écoutez ce commentaire audio du duel Les Coulés sur PASS50.'};
+    const shortUrl=new URL('./a.php',location.href);shortUrl.searchParams.set('k',stem.slice(0,12));
+    return {title:'PASS50 · Les Coulés',text:'🎙 Écoutez ce commentaire audio du duel Les Coulés sur PASS50.',url:shortUrl.href};
+  }catch(_){return data;}
+}
+
+function installCompactNativeShare(){
+  if(!navigator.share||navigator.share.__p50CompactDuel)return;
+  const original=navigator.share.bind(navigator);
+  const wrapped=function(data){return original(compactAudioShareData(data));};
+  wrapped.__p50CompactDuel=true;
+  try{Object.defineProperty(navigator,'share',{configurable:true,writable:true,value:wrapped});}
+  catch(_){try{navigator.share=wrapped;}catch(__){}}
+}
+
 async function publishCurrentAudio(trigger='share'){
   const share=currentVoteShare();if(!share?.shareId||!share?.audioBlob||!consentEnabled())return null;
   const shareId=String(share.shareId),blob=share.audioBlob,key=`${shareId}:${blob.size}:${blob.type}`;
@@ -141,8 +163,8 @@ function installEvents(){
 }
 
 function init(){
-  ensureStyles();ensureDuelSection();installEvents();installAnalyticsBridge();fetchDuelAudios(true);
-  setInterval(()=>{ensureDuelSection();installAnalyticsBridge();injectConsent();fetchDuelAudios(false);},1000);
+  ensureStyles();ensureDuelSection();installEvents();installAnalyticsBridge();installCompactNativeShare();fetchDuelAudios(true);
+  setInterval(()=>{ensureDuelSection();installAnalyticsBridge();installCompactNativeShare();injectConsent();fetchDuelAudios(false);},1000);
   window.PASS50_DUEL_AUDIO_FEED=Object.freeze({contract:CONTRACT,maxPerDuel:MAX_DUEL_AUDIOS,refresh:()=>fetchDuelAudios(true),publish:publishCurrentAudio});
 }
 
