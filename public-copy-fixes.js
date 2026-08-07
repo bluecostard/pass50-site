@@ -1,12 +1,14 @@
 (function(){
   'use strict';
 
-  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V88';
+  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V89';
+  const DUEL_SHARE_HOTFIX='PASS50-DUEL-AUDIO-SHARE-HOTFIX-V1';
   const INTERNAL_TEXT='Lien original à valider dans Administration → Actualité';
   const PUBLIC_TEXT='Source en cours de validation';
   const LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0';
   const FACEBOOK_VIEWER_DEPLOY_TRIGGER='V1.2-20260805';
   void PASS50_PUBLIC_RUNTIME;
+  void DUEL_SHARE_HOTFIX;
   void LEGACY_CONTEXT_SHARE_DISABLED;
   void FACEBOOK_VIEWER_DEPLOY_TRIGGER;
 
@@ -51,6 +53,40 @@
     }
   }
 
+  function installDuelAudioShareHotfix(){
+    if(window.PASS50_DUEL_AUDIO_SHARE_HOTFIX)return;
+    const proto=window.Navigator&&Navigator.prototype;
+    const original=proto&&typeof proto.share==='function'?proto.share:null;
+    if(!original)return;
+    try{
+      proto.share=function(data){
+        try{
+          const rawUrl=String(data&&data.url||'');
+          const parsed=new URL(rawUrl,location.href);
+          const isDuel=parsed.searchParams.get('type')==='duel-audio';
+          const audio=String(parsed.searchParams.get('audio')||'');
+          if(isDuel&&/^[A-Za-z0-9._-]{12,180}$/.test(audio)){
+            const key=audio.slice(0,12).toLowerCase();
+            const shortUrl=new URL('./a.php',location.href);
+            shortUrl.searchParams.set('k',key);
+            const cleanText=String(data&&data.text||'')
+              .replace(/https?:\/\/\S+/gi,' ')
+              .replace(/\s+/g,' ')
+              .trim();
+            const transformed={
+              title:String(data&&data.title||'PASS50 · Les Coulés'),
+              text:cleanText||'🎙 Écoutez ce commentaire audio sur PASS50',
+              url:shortUrl.href
+            };
+            return original.call(this,transformed);
+          }
+        }catch(error){console.warn('PASS50 duel share hotfix',error);}
+        return original.call(this,data);
+      };
+      window.PASS50_DUEL_AUDIO_SHARE_HOTFIX=Object.freeze({contract:DUEL_SHARE_HOTFIX,mode:'single-short-link-no-attachments'});
+    }catch(error){console.warn('PASS50 duel share install',error);}
+  }
+
   function runPublicFixes(){
     replaceInternalCopy(document);
     installLegalLinks();
@@ -69,7 +105,7 @@
   function loadContextShareV2(){
     if(window.PASS50_CONTEXT_SHARE_V2||document.querySelector('script[data-pass50-context-share-v2]'))return;
     const script=document.createElement('script');
-    script.src='./context-share-v2.js?v=2.4';
+    script.src='./context-share-v2.js?v=2.5';
     script.async=false;
     script.dataset.pass50ContextShare='2.1';
     script.dataset.pass50ContextShareV2='2.1';
@@ -77,6 +113,7 @@
   }
 
   function boot(){
+    installDuelAudioShareHotfix();
     runPublicFixes();
     disableServiceWorkers();
     loadContextShareV2();
