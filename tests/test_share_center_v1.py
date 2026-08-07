@@ -32,7 +32,7 @@ class ShareCenterV1Tests(unittest.TestCase):
         self.assertIn("share-center-v1.js?v=1.3", APP_CONFIG)
         self.assertLess(
             APP_CONFIG.index("share-center-v1.js?v=1.3"),
-            APP_CONFIG.index("fi-engagement-v3.js?v=1.3"),
+            APP_CONFIG.index("fi-engagement-v3.js?v=1.4"),
         )
 
     def test_mobile_site_share_is_forced_visible(self):
@@ -60,8 +60,8 @@ class ShareCenterV1Tests(unittest.TestCase):
     def test_site_and_coules_land_on_the_right_content(self):
         self.assertIn("'site'=>['color'=>'#0e7c7b'", SHARE_PAGE)
         self.assertIn("$query['section']='coules'", SHARE_PAGE)
-        self.assertIn("'type'=>'coules'", VOTE_SHARE)
-        self.assertIn("'type'=>'coules-audio'", VOTE_SHARE)
+        self.assertIn("'/c/'.$slug", VOTE_SHARE)
+        self.assertIn("'/c/'.$slug.'/audio'", VOTE_SHARE)
         self.assertIn("'campaignAudioUrl'=>$campaignAudio", VOTE_SHARE)
         self.assertNotIn("$base.'/?'.http_build_query(['profile'=>$selectedId", VOTE_SHARE)
 
@@ -94,7 +94,7 @@ class ShareCenterV1Tests(unittest.TestCase):
 
     def test_service_worker_keeps_share_center_and_versioned_cache(self):
         self.assertIn("./share-center-v1.js?v=1.3", SW)
-        self.assertIn("./coules-share-simple-v1.js?v=1.0", SW)
+        self.assertIn("./coules-share-simple-v1.js?v=1.2", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
 

@@ -476,8 +476,8 @@ function voteSharePanel(){
   const selected=card.candidates.find(candidate=>candidate.profileId===card.selectedProfileId),opponent=card.candidates.find(candidate=>candidate.profileId!==card.selectedProfileId);
   const result=card.percentagesAvailable?` · ${card.candidates.map(candidate=>`${voteShareEscape(candidate.name)} ${Number(candidate.percentage)} %`).join(' / ')}`:'';
   const shareText=voteShareMessage(card);
-  $('#voteShareBody').innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1920" aria-label="Aperçu de la card du duel voté"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><h2 style="margin:7px 0">${voteShareEscape(selected?.name)} <span class="muted">VS</span> ${voteShareEscape(opponent?.name)}</h2><div>Mon vote : <strong style="color:var(--lime)">${voteShareEscape(selected?.name)}</strong>${result}</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(card.pass50Url)}</div>${card.snapshotSource==='current_fallback'?`<div class="share-note" style="margin-top:7px">${voteShareEscape(card.fallbackReason)}</div>`:''}</div><div class="vote-share-audio"><strong>Commentaire audio facultatif</strong><div class="share-note">Le micro ne démarre qu’après ton action. Durée maximale : 15 secondes. Aucun commentaire écrit n’est demandé.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s/15s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un commentaire audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer l’audio</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio><button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Confirmer et générer la vidéo</button>`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareGenerateImage">Image portrait</button><button class="btn" id="voteShareGenerateSquare">Image carrée</button><button class="btn" id="voteShareNative" ${VOTE_SHARE.mediaFile?'':'disabled'}>Partager le média</button><button class="btn" id="voteShareDownload" ${VOTE_SHARE.mediaFile?'':'disabled'}>Télécharger</button><button class="btn" id="voteShareCopy">Copier le lien</button><button class="btn" id="voteShareWhatsapp">WhatsApp</button></div><div class="vote-share-status" id="voteShareStatus">${VOTE_SHARE.mediaFile?`${voteShareEscape(VOTE_SHARE.mediaFile.name)} prêt à partager.`:'Choisis une image ou ajoute un commentaire audio.'}</div><div class="share-note">Le partage s’ouvre dans l’application choisie. PASS50 ne publie jamais automatiquement à ta place.</div></div></div>`;
-  const _vsCanvas=$('#voteShareCanvas');if(_vsCanvas){_vsCanvas.width=1080;_vsCanvas.height=1920;drawVoteShareCard(_vsCanvas,card,{vertical:true});}
+  $('#voteShareBody').innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1350" aria-label="Aperçu de la card du duel voté"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><h2 style="margin:7px 0">${voteShareEscape(selected?.name)} <span class="muted">VS</span> ${voteShareEscape(opponent?.name)}</h2><div>Mon vote : <strong style="color:var(--lime)">${voteShareEscape(selected?.name)}</strong>${result}</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(card.pass50Url)}</div>${card.snapshotSource==='current_fallback'?`<div class="share-note" style="margin-top:7px">${voteShareEscape(card.fallbackReason)}</div>`:''}</div><div class="vote-share-audio"><strong>Commentaire audio facultatif</strong><div class="share-note">Le micro ne démarre qu’après ton action. Durée maximale : 15 secondes. Aucun commentaire écrit n’est demandé.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s/15s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un commentaire audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer l’audio</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio><button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Confirmer et générer la vidéo</button>`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareGenerateImage">Image portrait</button><button class="btn" id="voteShareGenerateSquare">Image carrée</button><button class="btn" id="voteShareNative" ${VOTE_SHARE.mediaFile?'':'disabled'}>Partager le média</button><button class="btn" id="voteShareDownload" ${VOTE_SHARE.mediaFile?'':'disabled'}>Télécharger</button><button class="btn" id="voteShareCopy">Copier le lien</button><button class="btn" id="voteShareWhatsapp">WhatsApp</button></div><div class="vote-share-status" id="voteShareStatus">${VOTE_SHARE.mediaFile?`${voteShareEscape(VOTE_SHARE.mediaFile.name)} prêt à partager.`:'Choisis une image ou ajoute un commentaire audio.'}</div><div class="share-note">Le partage s’ouvre dans l’application choisie. PASS50 ne publie jamais automatiquement à ta place.</div></div></div>`;
+  const _vsCanvas=$('#voteShareCanvas');if(_vsCanvas){_vsCanvas.width=1080;_vsCanvas.height=1350;drawVoteShareCard(_vsCanvas,card,{vertical:true});}
 }
 async function openVoteShare(profileId){
   if(!CLOUD.enabled||!CLOUD.token)return toast('Le partage nécessite un vote confirmé en ligne');
@@ -504,98 +504,198 @@ function shareImage(url){
 async function drawVoteShareCard(canvas,card,{vertical=false,progress=0,wave=0}={}){
   const candidates=card.candidates.slice(0,2);
   const photos=await Promise.all(candidates.map(candidate=>shareImage(candidate.photoUrl)));
-  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,isStory=vertical&&h>=1800;
-  const base=ctx.createLinearGradient(0,0,w,h);base.addColorStop(0,'#eef1ec');base.addColorStop(1,'#e4e9e1');ctx.fillStyle=base;ctx.fillRect(0,0,w,h);
-  ctx.fillStyle='#b45309';ctx.fillRect(0,0,w,14);
-  ctx.fillStyle='#b7ff00';ctx.fillRect(24,isStory?56:40,18,18);ctx.fillStyle='#0b0f0b';ctx.font=`1000 ${isStory?44:36}px Arial`;ctx.fillText('PASS50',52,isStory?74:56);ctx.fillStyle='#b45309';ctx.font=`800 ${isStory?26:20}px Arial`;ctx.fillText('LES COULÉS · MON VOTE',24,isStory?120:96);
-  const margin=24,gap=34,panelW=(w-margin*2-gap)/2,py=isStory?230:(w===h?145:Math.round(h*0.086)),photoH=isStory?Math.round(h*0.604):(w===h?Math.round(h*0.555):Math.round(h*0.618));
+  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  const tall=vertical||h>=1300||h/w>=1.2;
+  // Fond sombre type carte PASS50 (pas de marge crème)
+  const bg=ctx.createLinearGradient(0,0,w,h);
+  bg.addColorStop(0,'#0c120c');bg.addColorStop(.55,'#070a07');bg.addColorStop(1,'#101810');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  // Bandeau marque
+  ctx.fillStyle='#b7ff00';ctx.fillRect(0,0,w,tall?10:8);
+  const brandY=tall?64:52;
+  ctx.fillStyle='#b7ff00';ctx.fillRect(28,brandY-22,16,16);
+  ctx.fillStyle='#f6f8f4';ctx.font=`1000 ${tall?48:40}px Arial`;ctx.fillText('PASS50',54,brandY);
+  ctx.fillStyle='#b7ff00';ctx.font=`900 ${tall?24:20}px Arial`;ctx.fillText('LES COULÉS',28,brandY+(tall?42:34));
+  // Photos : quasi pleine largeur, très grandes
+  const top=tall?130:110;
+  const bottom=tall?210:180;
+  const gap=16;
+  const margin=20;
+  const panelW=(w-margin*2-gap)/2;
+  const photoH=h-top-bottom;
   candidates.forEach((candidate,index)=>{
     const x=margin+index*(panelW+gap),photo=photos[index],selected=candidate.profileId===card.selectedProfileId;
-    roundRectPath(ctx,x,py,panelW,photoH,18);ctx.save();ctx.clip();
-    if(photo){const scale=Math.max(panelW/photo.width,photoH/photo.height),dw=photo.width*scale,dh=photo.height*scale;ctx.drawImage(photo,x+(panelW-dw)/2,py+(photoH-dh)/2,dw,dh);}
-    else{ctx.fillStyle=selected?'#dde8c8':'#dde3d8';ctx.fillRect(x,py,panelW,photoH);ctx.fillStyle='#0b0f0b';ctx.font=`1000 ${isStory?150:122}px Arial`;ctx.textAlign='center';ctx.fillText(candidate.initials||'P50',x+panelW/2,py+photoH/2+42);ctx.textAlign='left';}
-    ctx.restore();ctx.strokeStyle=selected?'#0b0f0b':'#a8b2a4';ctx.lineWidth=selected?10:4;roundRectPath(ctx,x,py,panelW,photoH,18);ctx.stroke();
-    if(selected){ctx.fillStyle='#b7ff00';roundRectPath(ctx,x+16,py+16,isStory?218:190,54,10);ctx.fill();ctx.fillStyle='#0b0f0b';ctx.font=`1000 ${isStory?26:23}px Arial`;ctx.fillText('✓ MON VOTE',x+31,py+52);}
-    const nameY=py+photoH+(isStory?64:58);ctx.fillStyle=selected?'#0b0f0b':'#5c665c';ctx.font=`1000 ${isStory?46:38}px Arial`;ctx.textAlign='center';ctx.fillText(String(candidate.name).toUpperCase().slice(0,17),x+panelW/2,nameY);
-    if(card.percentagesAvailable&&Number.isFinite(Number(candidate.percentage))){ctx.fillStyle='#0b0f0b';ctx.font=`1000 ${isStory?64:54}px Arial`;ctx.fillText(`${Number(candidate.percentage)} %`,x+panelW/2,nameY+(isStory?78:68));}
+    roundRectPath(ctx,x,top,panelW,photoH,28);ctx.save();ctx.clip();
+    if(photo){
+      const scale=Math.max(panelW/photo.width,photoH/photo.height);
+      const dw=photo.width*scale,dh=photo.height*scale;
+      ctx.drawImage(photo,x+(panelW-dw)/2,top+(photoH-dh)/2,dw,dh);
+    }else{
+      ctx.fillStyle=selected?'#1a2a12':'#151a15';ctx.fillRect(x,top,panelW,photoH);
+      ctx.fillStyle='#b7ff00';ctx.font=`1000 ${tall?140:110}px Arial`;ctx.textAlign='center';
+      ctx.fillText(candidate.initials||'P50',x+panelW/2,top+photoH/2+40);ctx.textAlign='left';
+    }
+    // Légère teinte bas
+    const shade=ctx.createLinearGradient(x,top+photoH*0.55,x,top+photoH);
+    shade.addColorStop(0,'rgba(5,7,5,0)');shade.addColorStop(1,'rgba(5,7,5,.92)');
+    ctx.fillStyle=shade;ctx.fillRect(x,top,panelW,photoH);
+    ctx.restore();
+    ctx.lineWidth=selected?10:3;
+    ctx.strokeStyle=selected?'#b7ff00':'rgba(255,255,255,.18)';
+    roundRectPath(ctx,x,top,panelW,photoH,28);ctx.stroke();
+    if(selected){
+      ctx.fillStyle='#b7ff00';roundRectPath(ctx,x+14,top+14,tall?210:180,50,12);ctx.fill();
+      ctx.fillStyle='#050705';ctx.font=`1000 ${tall?24:21}px Arial`;ctx.fillText('✓ MON VOTE',x+28,top+47);
+    }
+    ctx.fillStyle='#f6f8f4';ctx.font=`1000 ${tall?40:34}px Arial`;ctx.textAlign='center';
+    ctx.fillText(String(candidate.name||'').toUpperCase().slice(0,16),x+panelW/2,top+photoH-(tall?54:44));
+    if(card.percentagesAvailable&&Number.isFinite(Number(candidate.percentage))){
+      ctx.fillStyle='#b7ff00';ctx.font=`1000 ${tall?52:44}px Arial`;
+      ctx.fillText(`${Number(candidate.percentage)} %`,x+panelW/2,top+photoH-(tall?14:10));
+    }
     ctx.textAlign='left';
   });
-  const vsX=w/2,vsY=py+photoH*.48;ctx.fillStyle='#0b0f0b';ctx.beginPath();ctx.arc(vsX,vsY,isStory?54:48,0,Math.PI*2);ctx.fill();ctx.fillStyle='#eef1ec';ctx.font=`1000 ${isStory?36:32}px Arial`;ctx.textAlign='center';ctx.fillText('VS',vsX,vsY+12);ctx.textAlign='left';
-  const dateY=py+photoH+(card.percentagesAvailable?(isStory?190:156):(isStory?115:92));ctx.fillStyle='#5c665c';ctx.font=`700 ${isStory?28:23}px Arial`;ctx.fillText(`Vote du ${new Date(card.voteDate).toLocaleDateString('fr-FR')}`,24,dateY);
-  if(vertical){ctx.strokeStyle='#b45309';ctx.lineWidth=5;ctx.beginPath();for(let x=70;x<w-70;x+=18){const amp=14+Math.abs(Math.sin(x*.031+progress*9))*wave*70;ctx.moveTo(x,h-390-amp);ctx.lineTo(x,h-390+amp);}ctx.stroke();}
-  ctx.fillStyle='#0b0f0b';ctx.font=`900 ${isStory?28:24}px Arial`;ctx.fillText('Vote toi aussi',24,h-92);ctx.fillStyle='#5c665c';ctx.font=`700 ${isStory?23:20}px Arial`;ctx.fillText(String(card.shortUrl||card.campaignUrl||card.pass50Url||'').replace(/^https?:\/\//,''),24,h-52);
+  // Badge VS centré
+  const vsX=w/2,vsY=top+photoH*0.48,vsR=tall?58:50;
+  ctx.beginPath();ctx.arc(vsX,vsY,vsR,0,Math.PI*2);ctx.fillStyle='#050705';ctx.fill();
+  ctx.lineWidth=4;ctx.strokeStyle='#b7ff00';ctx.stroke();
+  ctx.fillStyle='#b7ff00';ctx.font=`1000 ${tall?34:30}px Arial`;ctx.textAlign='center';ctx.fillText('VS',vsX,vsY+12);ctx.textAlign='left';
+  // Forme d’onde audio (si vidéo)
+  if(wave>0.05){
+    ctx.strokeStyle='rgba(183,255,0,.85)';ctx.lineWidth=4;ctx.beginPath();
+    for(let x=60;x<w-60;x+=14){
+      const amp=10+Math.abs(Math.sin(x*.04+progress*10))*wave*56;
+      ctx.moveTo(x,h-bottom+36-amp);ctx.lineTo(x,h-bottom+36+amp);
+    }
+    ctx.stroke();
+  }
+  // CTA barre pleine largeur
+  const ctaH=tall?92:78;
+  ctx.fillStyle='#b7ff00';roundRectPath(ctx,margin,h-ctaH-margin,w-margin*2,ctaH,18);ctx.fill();
+  ctx.fillStyle='#050705';ctx.font=`1000 ${tall?32:28}px Arial`;ctx.textAlign='center';
+  ctx.fillText('VOTE TOI AUSSI SUR PASS50',w/2,h-ctaH-margin+(tall?38:32));
+  ctx.font=`800 ${tall?22:18}px Arial`;
+  ctx.fillText(String(card.shortUrl||card.campaignUrl||'pass50.store').replace(/^https?:\/\//,''),w/2,h-ctaH-margin+(tall?68:58));
+  ctx.textAlign='left';
 }
-function canvasFile(canvas,name='mon-vote-pass50.png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob&&blob.size>0?resolve(new File([blob],name,{type:'image/png'})):reject(new Error('Génération image impossible')),'image/png'))}
+function canvasFile(canvas,name='mon-vote-pass50.png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob&&blob.size>0?resolve(new File([blob],name,{type:'image/png'})):reject(new Error('Génération image impossible')),'image/png',0.95))}
 async function generateVoteShareImage(square=false){
   const canvas=$('#voteShareCanvas');
-  canvas.width = square ? 1080 : 1080;
-  canvas.height = square ? 1080 : 1920;
+  // 4:5 = grande carte dans le fil WhatsApp (mieux qu’un 9:16 trop compressé)
+  canvas.width = 1080;
+  canvas.height = square ? 1080 : 1350;
   await drawVoteShareCard(canvas,VOTE_SHARE.card,{vertical:!square});
   const file=await canvasFile(canvas,square?'mon-vote-pass50-carre.png':'mon-vote-pass50.png');
   setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();return file;
 }
 function supportedVoteVideoType(){
-  if(!window.MediaRecorder)return '';
-  return ['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus'].find(type=>MediaRecorder.isTypeSupported(type))||'';
+  if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)return '';
+  return ['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(type=>MediaRecorder.isTypeSupported(type))||'';
+}
+function isPlayableShareVideo(file){
+  if(!file)return false;
+  const type=String(file.type||'');
+  if(!type.startsWith('video/'))return false;
+  // Un vrai clip carte+son fait typiquement plus de ~80 Ko ; en-dessous = souvent audio seul / fichier cassé
+  return Number(file.size||0)>=80000;
 }
 async function generateVoteShareVideo(){
-  if(!VOTE_SHARE.audioBlob)return;
+  if(!VOTE_SHARE.audioBlob)return null;
   const type=supportedVoteVideoType();
-  if(!type||!HTMLCanvasElement.prototype.captureStream){await generateVoteShareImage();$('#voteShareStatus').textContent='Vidéo indisponible sur ce navigateur : card PNG prête, audio conservé séparément.';return;}
-  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1920;
-  const audioContext=new (window.AudioContext||window.webkitAudioContext)(),buffer=await audioContext.decodeAudioData(await VOTE_SHARE.audioBlob.arrayBuffer()),destination=audioContext.createMediaStreamDestination(),source=audioContext.createBufferSource();source.buffer=buffer;source.connect(destination);
-  const duration=Math.min(18,Math.max(3,buffer.duration+3)),videoStream=canvas.captureStream(24),stream=new MediaStream([...videoStream.getVideoTracks(),...destination.stream.getAudioTracks()]),chunks=[],recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:4500000});
-  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};const done=new Promise(resolve=>recorder.onstop=resolve);recorder.start(250);source.start(audioContext.currentTime+.4);
-  const started=performance.now();await new Promise(resolve=>{const frame=async now=>{const elapsed=(now-started)/1000,progress=Math.min(1,elapsed/duration);await drawVoteShareCard(canvas,VOTE_SHARE.card,{vertical:true,progress,wave:elapsed>.35&&elapsed<buffer.duration+.5?.85:.12});if(progress<1)requestAnimationFrame(frame);else resolve()};requestAnimationFrame(frame)});
-  recorder.stop();await done;stream.getTracks().forEach(track=>track.stop());source.disconnect();await audioContext.close();
-  const ext=type.startsWith('video/mp4')?'mp4':'webm',file=new File(chunks,`pass50-vote-${VOTE_SHARE.card.profileId}.${ext}`,{type:type.split(';')[0]});
-  setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();
-}
-function setVoteShareMedia(file){if(VOTE_SHARE.mediaUrl)URL.revokeObjectURL(VOTE_SHARE.mediaUrl);VOTE_SHARE.mediaFile=file;VOTE_SHARE.mediaUrl=URL.createObjectURL(file)}
-async function startVoteShareRecording(){
-  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)return toast('Enregistrement audio indisponible sur ce navigateur');
+  if(!type){
+    if($('#voteShareStatus'))$('#voteShareStatus').textContent='Vidéo impossible sur cet appareil.';
+    return null;
+  }
+  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
+  let audioContext=null;
   try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true},video:false});
-    const mime=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(type=>MediaRecorder.isTypeSupported(type))||'',chunks=[],recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
-    voteShareCleanup({keepCard:true});VOTE_SHARE.stream=stream;VOTE_SHARE.recorder=recorder;VOTE_SHARE.seconds=0;
-    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});if(blob.size>3*1024*1024){toast('Audio trop volumineux');voteShareCleanup({keepCard:true});voteSharePanel();return;}VOTE_SHARE.audioBlob=blob;VOTE_SHARE.audioUrl=URL.createObjectURL(blob);VOTE_SHARE.recorder=null;VOTE_SHARE.stream=null;stream.getTracks().forEach(track=>track.stop());clearInterval(VOTE_SHARE.timer);voteShareAnalytics('audio_recorded');voteSharePanel();generateVoteShareVideo().catch(()=>{});};
-    recorder.start(250);VOTE_SHARE.timer=setInterval(()=>{VOTE_SHARE.seconds++;if(VOTE_SHARE.seconds>=15)stopVoteShareRecording();else voteSharePanel()},1000);voteSharePanel();
-  }catch(err){toast(err?.name==='NotAllowedError'?'Autorisation microphone refusée':'Microphone indisponible');}
+    audioContext=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioContext.state==='suspended')await audioContext.resume();
+    const buffer=await audioContext.decodeAudioData(await VOTE_SHARE.audioBlob.arrayBuffer());
+    const destination=audioContext.createMediaStreamDestination();
+    const source=audioContext.createBufferSource();source.buffer=buffer;source.connect(destination);
+    const duration=Math.min(16,Math.max(3.2,buffer.duration+1.4));
+    // Amorcer 1 frame avant capture (iOS)
+    await drawVoteShareCard(canvas,VOTE_SHARE.card,{vertical:true,progress:0,wave:0.2});
+    const videoStream=canvas.captureStream(30);
+    const stream=new MediaStream([...videoStream.getVideoTracks(),...destination.stream.getAudioTracks()]);
+    const chunks=[];
+    const recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:5500000,audioBitsPerSecond:128000});
+    recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+    const stopped=new Promise(resolve=>{recorder.onstop=resolve;recorder.onerror=resolve});
+    recorder.start(100);
+    source.start(audioContext.currentTime+0.15);
+    const started=performance.now();
+    await new Promise(resolve=>{
+      const frame=async now=>{
+        const elapsed=(now-started)/1000;
+        const progress=Math.min(1,elapsed/duration);
+        const wave=elapsed>0.2&&elapsed<buffer.duration+0.4?0.9:0.15;
+        await drawVoteShareCard(canvas,VOTE_SHARE.card,{vertical:true,progress,wave});
+        if(progress<1)requestAnimationFrame(frame);else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+    if(recorder.state!=='inactive')recorder.stop();
+    await stopped;
+    stream.getTracks().forEach(track=>track.stop());
+    source.disconnect();
+    await audioContext.close();audioContext=null;
+    const mime=type.split(';')[0];
+    const ext=mime.includes('mp4')?'mp4':'webm';
+    const file=new File(chunks,`pass50-vote.${ext}`,{type:mime});
+    if(!isPlayableShareVideo(file)){
+      if($('#voteShareStatus'))$('#voteShareStatus').textContent='Vidéo invalide — l’audio sera envoyé seul.';
+      return null;
+    }
+    setVoteShareMedia(file);voteShareAnalytics('card_generated');voteSharePanel();
+    return file;
+  }catch(err){
+    console.warn('PASS50 vote video',err);
+    try{if(audioContext)await audioContext.close()}catch(_){ }
+    if($('#voteShareStatus'))$('#voteShareStatus').textContent='Vidéo impossible — l’audio sera envoyé seul.';
+    return null;
+  }
 }
-function stopVoteShareRecording(){if(VOTE_SHARE.recorder?.state==='recording')VOTE_SHARE.recorder.stop()}
+function voteShareAudioFile(){
+  if(!VOTE_SHARE.audioBlob)return null;
+  const mime=VOTE_SHARE.audioBlob.type||'audio/mp4';
+  const ext=mime.includes('webm')?'webm':mime.includes('mpeg')?'mp3':'m4a';
+  return new File([VOTE_SHARE.audioBlob],`pass50-vote-audio.${ext}`,{type:mime});
+}
+async function prepareVoteShareFile({preferVideo=true}={}){
+  if(preferVideo&&VOTE_SHARE.audioBlob){
+    if(isPlayableShareVideo(VOTE_SHARE.mediaFile))return VOTE_SHARE.mediaFile;
+    const video=await generateVoteShareVideo();
+    if(video)return video;
+    // Un seul fichier : audio jouable dans WhatsApp (pas image + audio séparés)
+    return voteShareAudioFile();
+  }
+  if(VOTE_SHARE.mediaFile&&String(VOTE_SHARE.mediaFile.type||'').startsWith('image/'))return VOTE_SHARE.mediaFile;
+  return await generateVoteShareImage(false);
+}
 async function nativeVoteShare(){
-  let file=VOTE_SHARE.mediaFile;
-  try{
-    if(VOTE_SHARE.audioBlob&&!String(file?.type||'').startsWith('video/')){await generateVoteShareVideo();file=VOTE_SHARE.mediaFile;}
-    else if(!file){file=await generateVoteShareImage(false);}
-  }catch(_){ }
-  if(!file)return;
+  const statusEl=$('#voteShareStatus');
+  if(statusEl)statusEl.textContent=VOTE_SHARE.audioBlob?'Préparation du média unique…':'Préparation de la carte…';
+  let file=null;
+  try{file=await prepareVoteShareFile({preferVideo:true})}catch(_){ }
+  if(!file){toast('Partage indisponible');return;}
   const shareText=voteShareMessage(VOTE_SHARE.card);
   voteShareAnalytics('native_share_triggered');
-  if(navigator.share&&navigator.canShare?.({files:[file]})){try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}}
+  if(navigator.share&&navigator.canShare?.({files:[file]})){
+    try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return;}
+    catch(err){if(err?.name==='AbortError')return;}
+  }
   downloadVoteShare();
 }
 async function shareVoteWhatsapp(){
   voteShareAnalytics('platform_selected','whatsapp');
   const statusEl=$('#voteShareStatus');
-  try{
-    const mediaType=String(VOTE_SHARE.mediaFile?.type||'');
-    if(VOTE_SHARE.audioBlob&&!mediaType.startsWith('video/')){
-      if(statusEl)statusEl.textContent='Préparation de la vidéo (audio inclus) pour WhatsApp…';
-      await generateVoteShareVideo();
-    }else if(!VOTE_SHARE.mediaFile){
-      if(statusEl)statusEl.textContent='Préparation de la carte…';
-      await generateVoteShareImage(false);
-    }
-  }catch(_){ }
-  let file=VOTE_SHARE.mediaFile;
-  // Si la vidéo a échoué, envoyer l’audio brut : WhatsApp le lit comme message vocal.
-  if((!file||!String(file.type||'').startsWith('video/'))&&VOTE_SHARE.audioBlob){
-    const mime=VOTE_SHARE.audioBlob.type||'audio/mp4';
-    const ext=mime.includes('webm')?'webm':mime.includes('mpeg')?'mp3':'m4a';
-    file=new File([VOTE_SHARE.audioBlob],`pass50-vote-audio.${ext}`,{type:mime});
-  }
+  if(statusEl)statusEl.textContent=VOTE_SHARE.audioBlob?'1 seul média pour WhatsApp (vidéo ou audio)…':'Préparation de la carte…';
+  let file=null;
+  try{file=await prepareVoteShareFile({preferVideo:Boolean(VOTE_SHARE.audioBlob)})}catch(_){ }
   const shareText=voteShareMessage(VOTE_SHARE.card);
+  // Un seul fichier : jamais image + m4a en deux messages
   if(file&&navigator.share&&navigator.canShare?.({files:[file]})){
     try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return;}
     catch(err){if(err?.name==='AbortError')return;}

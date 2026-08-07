@@ -13,30 +13,43 @@ function install(){
     const canvas=document.getElementById('voteShareCanvas');
     if(!canvas||!card)return;
     canvas.width=1080;
-    canvas.height=1920;
+    canvas.height=1350;
     drawVoteShareCard(canvas,card,{vertical:true});
+  }
+
+  function mediaHint(){
+    const type=String(VOTE_SHARE.mediaFile?.type||'');
+    if(type.startsWith('video/')&&typeof isPlayableShareVideo==='function'&&isPlayableShareVideo(VOTE_SHARE.mediaFile)){
+      return 'Vidéo prête : 1 seul message WhatsApp avec son.';
+    }
+    if(VOTE_SHARE.audioBlob)return 'Audio prêt. WhatsApp enverra 1 seul média (vidéo si possible, sinon audio).';
+    if(VOTE_SHARE.mediaFile)return 'Carte prête à partager.';
+    return '';
   }
 
   function simpleVoteSharePanel(){
     const card=VOTE_SHARE.card;if(!card)return;
     const audio=Boolean(VOTE_SHARE.audioBlob);
     const recording=Boolean(VOTE_SHARE.recorder&&VOTE_SHARE.recorder.state==='recording');
-    const ready=Boolean(VOTE_SHARE.mediaFile);
-    const videoReady=String(VOTE_SHARE.mediaFile?.type||'').startsWith('video/');
+    const videoReady=String(VOTE_SHARE.mediaFile?.type||'').startsWith('video/')
+      && (typeof isPlayableShareVideo!=='function'||isPlayableShareVideo(VOTE_SHARE.mediaFile));
     const body=document.getElementById('voteShareBody');if(!body)return;
     const shortLink=String(card.campaignUrl||card.shortUrl||'https://pass50.store').replace(/^https?:\/\//,'');
 
-    body.innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1920" aria-label="Aperçu de la carte Les Coulés"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(shortLink)}</div></div><div class="vote-share-audio"><strong>Audio facultatif · 15 s max</strong><div class="share-note" style="margin-top:6px">Sur WhatsApp, l’audio est envoyé dans une vidéo de la carte pour pouvoir le lire.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio>${videoReady?'':'<button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Créer la vidéo WhatsApp</button>'}`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareNative">Partager</button><button class="btn" id="voteShareWhatsapp">WhatsApp</button><button class="btn" id="voteShareCopy">Copier</button></div><div class="vote-share-status" id="voteShareStatus">${videoReady?'Vidéo prête : l’audio sera lisible sur WhatsApp.':(ready?'Carte prête à partager.':'')}</div></div></div>`;
+    body.innerHTML=`<div class="vote-share-shell"><div class="vote-share-preview"><canvas id="voteShareCanvas" width="1080" height="1350" aria-label="Aperçu de la carte Les Coulés"></canvas></div><div class="vote-share-panel"><div class="vote-share-facts"><div class="eyebrow">MON VOTE PASS50</div><div class="muted">${new Date(card.voteDate).toLocaleDateString('fr-FR')} · ${voteShareEscape(shortLink)}</div></div><div class="vote-share-audio"><strong>Audio facultatif · 15 s max</strong><div class="share-note" style="margin-top:6px">WhatsApp reçoit <strong>un seul</strong> fichier : vidéo (carte+son) ou, à défaut, l’audio. Jamais image + m4a séparés.</div><div class="vote-share-actions" style="margin-top:10px">${recording?`<button class="btn danger" id="voteShareStop"><span class="recording-dot"></span>Arrêter · ${VOTE_SHARE.seconds}s</button>`:`<button class="btn" id="voteShareRecord">${audio?'Recommencer':'Ajouter un audio'}</button>`}${audio&&!recording?'<button class="btn danger" id="voteShareDeleteAudio">Supprimer</button>':''}</div>${audio&&!recording?`<audio controls src="${voteShareEscape(VOTE_SHARE.audioUrl)}"></audio>${videoReady?'':'<button class="btn primary" id="voteShareConfirmVideo" style="margin-top:10px">Préparer la vidéo</button>'}`:''}</div><div class="vote-share-actions"><button class="btn primary" id="voteShareNative">Partager</button><button class="btn" id="voteShareWhatsapp">WhatsApp</button><button class="btn" id="voteShareCopy">Copier</button></div><div class="vote-share-status" id="voteShareStatus">${mediaHint()}</div></div></div>`;
     paintPreview(card);
   }
 
   async function simpleNativeVoteShare(){
-    let file=VOTE_SHARE.mediaFile;
+    if(typeof prepareVoteShareFile==='function'){
+      return nativeVoteShare();
+    }
+    // Repli si helpers absents
     try{
-      if(VOTE_SHARE.audioBlob&&!String(file?.type||'').startsWith('video/')){
-        await generateVoteShareVideo();
-        file=VOTE_SHARE.mediaFile;
-      }else if(!file){
+      let file=VOTE_SHARE.mediaFile;
+      if(VOTE_SHARE.audioBlob&&typeof generateVoteShareVideo==='function'){
+        file=await generateVoteShareVideo()||(typeof voteShareAudioFile==='function'?voteShareAudioFile():null);
+      }else if(!file&&typeof generateVoteShareImage==='function'){
         file=await generateVoteShareImage(false);
       }
       if(!file)return;
@@ -47,7 +60,6 @@ function install(){
         catch(error){if(error?.name==='AbortError')return;}
       }
       downloadVoteShare();
-      if(typeof toast==='function')toast('Carte téléchargée');
     }catch{
       if(typeof toast==='function')toast('Partage indisponible');
     }
@@ -57,7 +69,7 @@ function install(){
   try{nativeVoteShare=simpleNativeVoteShare;}catch{}
   window.voteSharePanel=simpleVoteSharePanel;
   window.nativeVoteShare=simpleNativeVoteShare;
-  window.PASS50_COULES_SHARE_SIMPLE_VERSION='1.1';
+  window.PASS50_COULES_SHARE_SIMPLE_VERSION='1.2';
   return true;
 }
 

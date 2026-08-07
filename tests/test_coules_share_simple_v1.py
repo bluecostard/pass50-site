@@ -26,19 +26,20 @@ class CoulesShareSimpleV1Tests(unittest.TestCase):
         self.assertIn('id="voteShareCopy">Copier</button>', MODULE)
         self.assertNotIn('id="voteShareDownload"', MODULE)
 
-    def test_standard_image_is_generated_automatically(self):
-        self.assertIn('file=await generateVoteShareImage(false)', MODULE)
-        self.assertIn('await generateVoteShareVideo()', MODULE)
-        self.assertIn("window.PASS50_COULES_SHARE_SIMPLE_VERSION='1.0'", MODULE)
+    def test_single_media_share_path(self):
+        self.assertIn('prepareVoteShareFile', MODULE)
+        self.assertIn('generateVoteShareVideo', MODULE)
+        self.assertIn("window.PASS50_COULES_SHARE_SIMPLE_VERSION='1.2'", MODULE)
+        self.assertIn('un seul', MODULE.lower())
 
     def test_audio_option_stays_available(self):
         self.assertIn('Audio facultatif · 15 s max', MODULE)
-        self.assertIn("id=\"voteShareRecord\"", MODULE)
-        self.assertIn('Créer la vidéo', MODULE)
+        self.assertIn('id="voteShareRecord"', MODULE)
+        self.assertIn('Préparer la vidéo', MODULE)
 
     def test_module_is_loaded_and_cached(self):
-        self.assertIn("coules-share-simple-v1.js?v=1.0", CONFIG)
-        self.assertIn("coules-share-simple-v1.js?v=1.0", SW)
+        self.assertIn("coules-share-simple-v1.js?v=1.2", CONFIG)
+        self.assertIn("coules-share-simple-v1.js?v=1.2", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
     def test_no_public_state_write_path(self):
