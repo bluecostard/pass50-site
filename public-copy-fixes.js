@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V90';
+  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V91';
   const DUEL_SHARE_HOTFIX='PASS50-DUEL-AUDIO-SHARE-HOTFIX-V1';
   const INTERNAL_TEXT='Lien original à valider dans Administration → Actualité';
   const PUBLIC_TEXT='Source en cours de validation';
@@ -37,6 +37,29 @@
     document.querySelectorAll('[data-p50-context-share="ranking"]').forEach(node=>node.remove());
     document.getElementById('p50ContextShareModal')?.remove();
     document.getElementById('p50ContextShareStyles')?.remove();
+  }
+
+  function removePublicTrendScores(root=document){
+    const sections=[...root.querySelectorAll('section,.section,[class*="trend"],[id*="trend"]')];
+    sections.forEach(section=>{
+      const heading=String(section.textContent||'').replace(/\s+/g,' ').toUpperCase();
+      if(!heading.includes('TOP 5')||!heading.includes('TENDANCE'))return;
+      [...section.querySelectorAll('*')].forEach(node=>{
+        const text=String(node.textContent||'').replace(/\s+/g,' ').trim();
+        if(/^Score\s+(?:tendance\s*:\s*)?\d+(?:[.,]\d+)?\s*\/\s*100$/i.test(text)&&node.children.length===0){
+          const parent=node.parentElement;
+          node.remove();
+          if(parent&&parent.children.length===0&&!String(parent.textContent||'').trim())parent.remove();
+        }
+      });
+    });
+  }
+
+  function watchTrendScores(){
+    if(window.__pass50TrendScoreObserver)return;
+    const observer=new MutationObserver(()=>removePublicTrendScores(document));
+    observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+    window.__pass50TrendScoreObserver=observer;
   }
 
   async function disableServiceWorkers(){
@@ -91,6 +114,7 @@
     replaceInternalCopy(document);
     installLegalLinks();
     removeLegacyShareUi();
+    removePublicTrendScores(document);
   }
 
   function loadScript(selector,src,datasetKey,datasetValue,asyncValue){
@@ -115,6 +139,7 @@
   function boot(){
     installDuelAudioShareHotfix();
     runPublicFixes();
+    watchTrendScores();
     disableServiceWorkers();
     loadScript('script[data-pass50-duel-audio-share-intercept]','./duel-audio-share-intercept-v1.js?v=1.0','pass50DuelAudioShareIntercept','1.0',false);
     loadContextShareV2();
