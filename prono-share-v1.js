@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-PRONO-SHARE-V1.5';
+  const CONTRACT = 'PASS50-PRONO-SHARE-V1.6';
   if (window.PASS50_PRONO_SHARE) return;
 
   const W = 1080;
@@ -634,6 +634,7 @@
         <div class="p50-prono-share-preview"><img alt="Aperçu statut prono"></div>
         <div class="p50-prono-share-actions">
           <button type="button" class="primary" data-prono-share-native>Partager</button>
+          <button type="button" data-prono-share-whatsapp>WhatsApp</button>
           <button type="button" data-prono-share-download>Télécharger</button>
         </div>
         <div class="p50-prono-share-note">Même carte que le statut publié</div>
@@ -642,6 +643,7 @@
     modal.addEventListener('click', (event) => {
       if (event.target === modal || event.target.closest('[data-prono-share-close]')) close();
       if (event.target.closest('[data-prono-share-native]')) nativeShare().catch(() => {});
+      if (event.target.closest('[data-prono-share-whatsapp]')) whatsappShare();
       if (event.target.closest('[data-prono-share-download]')) download();
     });
     return modal;
@@ -655,6 +657,24 @@
     a.href = previewUrl;
     a.download = currentFile.name || 'pass50-statut-prono.png';
     a.click();
+  }
+
+  function whatsappShare() {
+    if (!currentPayload) return;
+    const text = shareText(currentPayload);
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+    if (mobile) {
+      location.href = url;
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   async function nativeShare() {

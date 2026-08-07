@@ -226,9 +226,9 @@ class ShareVoteMessageTests(unittest.TestCase):
     def test_native_whatsapp_and_copy_use_identical_text(self):
         self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.whatsapp)
         self.assertIn("encodeURIComponent(shareText)", self.whatsapp)
+        self.assertIn("api.whatsapp.com/send?text=", self.whatsapp)
         self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.native)
         self.assertIn("text:shareText", self.native)
-        self.assertIn("text:shareText", self.whatsapp)
         self.assertIn("navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card))", INDEX)
 
 
@@ -287,11 +287,12 @@ class ShareCardLargeThumbnailTests(unittest.TestCase):
         self.assertIn("fallback=ctx.createLinearGradient", self.draw)
         self.assertIn("candidate.initials||'P50'", self.draw)
 
-    def test_whatsapp_shares_png_or_downloads_before_text_fallback(self):
-        self.assertIn("navigator.canShare({files:[file]})", self.whatsapp)
-        self.assertIn("files:[file]", self.whatsapp)
-        self.assertLess(self.whatsapp.index("downloadVoteShare()"), self.whatsapp.index("window.open("))
-        self.assertIn("https://wa.me/?text=${encodeURIComponent(shareText)}", self.whatsapp)
+    def test_whatsapp_opens_whatsapp_directly_without_native_share(self):
+        self.assertIn("api.whatsapp.com/send?text=", self.whatsapp)
+        self.assertIn("encodeURIComponent(shareText)", self.whatsapp)
+        self.assertNotIn("navigator.share", self.whatsapp)
+        self.assertNotIn("downloadVoteShare()", self.whatsapp)
+        self.assertIn("location.href=url", self.whatsapp)
 
     def test_open_graph_metadata_is_complete_and_absolute(self):
         expected = (

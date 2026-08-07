@@ -570,13 +570,13 @@ async function nativeVoteShare(){
 }
 async function shareVoteWhatsapp(){
   const shareText=voteShareMessage(VOTE_SHARE.card);
-  let file=VOTE_SHARE.mediaFile;
-  if(!file||file.type!=='image/png')file=await generateVoteShareImage(false);
-  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-    try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return}catch(err){if(err?.name==='AbortError')return;}
-  }
-  downloadVoteShare();
-  window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`,'_blank','noopener');
+  voteShareAnalytics('platform_selected','whatsapp');
+  // Ouvre WhatsApp tout de suite (geste utilisateur). Pas de sheet native ni d'await avant,
+  // sinon iOS bloque le lien.
+  const url=`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+  const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
+  if(mobile){location.href=url;return;}
+  const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove();
 }
 function downloadVoteShare(){if(!VOTE_SHARE.mediaFile)return;const a=document.createElement('a');a.href=VOTE_SHARE.mediaUrl;a.download=VOTE_SHARE.mediaFile.name;a.click();voteShareAnalytics('download')}
 async function copyVoteShareLink(){try{await navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card));voteShareAnalytics('link_copied');toast('Message copié')}catch{toast('Copie impossible')}}
@@ -603,7 +603,7 @@ function renderHeader(){const u=currentUser();$('#accountBtn').textContent=u?'Mo
 function heroCard(p,index,scoreMotion=false){const u=userPrefs(),fav=u?.favorites.includes(p.id),fol=u?.following.includes(p.id),scoreClass=scoreMotion?'score score-animate':'score';return `<article class="rank-card ${['first','second','third'][index]}" data-profile="${p.id}"><div class="rank-num">${index+1}</div>${avatarHtml(p)}<div style="min-height:26px">${(Array.isArray(p.badges)?p.badges:[]).slice(0,2).map(b=>badgeHtml(b,p.id)).join(' ')}</div><div class="rank-name"><a href="/fi/${encodeURIComponent(p.id)}" data-fi-link="${safeAttr(p.id)}">${p.name.toUpperCase()}</a></div><div class="handle">${p.handle}</div><div class="score-row"><div class="score-block"><span class="score-label">TREND SCORE <span class="score-info" tabindex="0">i</span></span><div class="${scoreClass}" data-score="${score(p)}">${formatTrendScore(score(p))}</div></div><div class="${arrowClass(p)}">${arrow(p)}</div></div><div class="card-actions"><button class="btn fav ${fav?'on':''}" data-id="${p.id}">${fav?'★ Favori':'☆ Favori'}</button><button class="btn follow ${fol?'on':''}" data-id="${p.id}">${fol?'Ne plus suivre':'＋ Suivre'}</button></div></article>`}
 function publishedTime(){return new Date(db.publishedAt||Date.now()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
 function renderHero(scoreMotion=false){
-  const r=ranking(),top=r.slice(0,3),total=top.reduce((a,p)=>a+score(p),0);
+  const r=ranking(),top=r.slice(0,3),total=Math.round(top.reduce((a,p)=>a+Number(score(p)||0),0));
   const slides=[
     'assets/hero-media-1.jpg', // Willy à Midi
     'assets/hero-media-2.jpg', // Le Club
@@ -723,8 +723,8 @@ function openProfile(id){
   const p=profile(id);
   if(!p){toast('Profil introuvable');return;}
   const u=userPrefs(),bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)],badges=Array.isArray(p.badges)?p.badges:[],platforms=Array.isArray(p.platforms)?p.platforms:[],links=p.links&&typeof p.links==='object'?p.links:{};
-  $('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category||''}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name||'Influenceur'}</h2><div class="handle">${p.handle||''}</div><div style="margin-top:11px">${badges.map(b=>badgeHtml(b,id)).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Plateformes</span><b>${platforms.length}</b></div></div>${eventHtml(p)}<div class="chart">${bars.map(h=>`<div class="bar" style="height:${Math.max(8,h)}%"></div>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${platforms.map(x=>links[x]?`<a class="btn small" href="${safeAttr(links[x])}" target="_blank" rel="noopener">${x} ↗</a>`:'').join('')}</div></div></div>`;open('profileModal');}
-function personRow(id,type){const p=profile(id),u=userPrefs(),follow=type==='follow';return `<div class="person-row" data-profile="${id}">${avatarHtml(p)}<div><strong>${p.name}</strong><div class="muted">Score ${score(p)} · ${arrow(p)}</div></div><div class="person-actions">${follow?`<button class="btn small alert-toggle ${u.followAlerts[id]!==false?'on':''}" data-id="${id}">${u.followAlerts[id]!==false?'🔔':'🔕'}</button>`:''}<button class="btn small ${follow?'follow':'fav'}" data-id="${id}">Retirer</button></div></div>`}
+  $('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category||''}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name||'Influenceur'}</h2><div class="handle">${p.handle||''}</div><div style="margin-top:11px">${badges.map(b=>badgeHtml(b,id)).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${formatTrendScore(score(p))}</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Plateformes</span><b>${platforms.length}</b></div></div>${eventHtml(p)}<div class="chart">${bars.map(h=>`<div class="bar" style="height:${Math.max(8,h)}%"></div>`).join('')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${platforms.map(x=>links[x]?`<a class="btn small" href="${safeAttr(links[x])}" target="_blank" rel="noopener">${x} ↗</a>`:'').join('')}</div></div></div>`;open('profileModal');}
+function personRow(id,type){const p=profile(id),u=userPrefs(),follow=type==='follow';return `<div class="person-row" data-profile="${id}">${avatarHtml(p)}<div><strong>${p.name}</strong><div class="muted">Score ${Math.round(Number(score(p)||0))} · ${arrow(p)}</div></div><div class="person-actions">${follow?`<button class="btn small alert-toggle ${u.followAlerts[id]!==false?'on':''}" data-id="${id}">${u.followAlerts[id]!==false?'🔔':'🔕'}</button>`:''}<button class="btn small ${follow?'follow':'fav'}" data-id="${id}">Retirer</button></div></div>`}
 function userFoldState(){try{return JSON.parse(localStorage.getItem('pass50_user_folds')||'{}')||{}}catch{return{}}}
 function setUserFold(key,collapsed){const s=userFoldState();s[key]=!!collapsed;localStorage.setItem('pass50_user_folds',JSON.stringify(s))}
 function isUserFoldCollapsed(key,fallback=false){const s=userFoldState();return Object.prototype.hasOwnProperty.call(s,key)?!!s[key]:!!fallback}
@@ -838,7 +838,7 @@ document.addEventListener('click',async e=>{
   if(e.target.matches('.fav'))toggleFavorite(e.target.dataset.id);if(e.target.matches('.follow'))toggleFollow(e.target.dataset.id);if(e.target.matches('.coule-vote'))voteCoule(e.target.dataset.id);if(e.target.matches('[data-share-vote]'))openVoteShare(e.target.dataset.shareVote);
   if(e.target.id==='voteShareRecord')startVoteShareRecording();if(e.target.id==='voteShareStop')stopVoteShareRecording();if(e.target.id==='voteShareDeleteAudio'){voteShareCleanup({keepCard:true});voteSharePanel();}
   if(e.target.id==='voteShareGenerateImage')generateVoteShareImage(false);if(e.target.id==='voteShareGenerateSquare')generateVoteShareImage(true);if(e.target.id==='voteShareConfirmVideo')generateVoteShareVideo();
-  if(e.target.id==='voteShareNative')nativeVoteShare();if(e.target.id==='voteShareDownload')downloadVoteShare();if(e.target.id==='voteShareCopy')copyVoteShareLink();if(e.target.id==='voteShareWhatsapp'){voteShareAnalytics('platform_selected','whatsapp');shareVoteWhatsapp();}
+  if(e.target.id==='voteShareNative')nativeVoteShare();if(e.target.id==='voteShareDownload')downloadVoteShare();if(e.target.id==='voteShareCopy')copyVoteShareLink();if(e.target.id==='voteShareWhatsapp'){shareVoteWhatsapp();}
   if(e.target.matches('[data-close]'))close(e.target.dataset.close);
   if(e.target.matches('[data-auth-tab]'))openAuth(e.target.dataset.authTab);
   if(e.target.matches('[data-scroll]'))document.getElementById(e.target.dataset.scroll)?.scrollIntoView({behavior:'smooth'});

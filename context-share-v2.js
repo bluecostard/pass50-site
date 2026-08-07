@@ -674,10 +674,25 @@
     area.remove();
   }
 
+  function openWhatsApp(text) {
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(String(text || ''))}`;
+    const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+    if (mobile) {
+      location.href = url;
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   function whatsappShare() {
     if (!state.current) return;
-    const opened = window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage(state.current))}`, '_blank');
-    if (opened) try { opened.opener = null; } catch (_) {}
+    openWhatsApp(shareMessage(state.current));
   }
 
   async function copyShare() {

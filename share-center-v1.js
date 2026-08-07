@@ -252,9 +252,10 @@ async function nativeShare(){
 
 function whatsapp(){
   if(!current)return;
-  const url=`https://wa.me/?text=${encodeURIComponent(message(current))}`;
-  const opened=window.open(url,'_blank');
-  if(opened)try{opened.opener=null}catch{}
+  const url=`https://api.whatsapp.com/send?text=${encodeURIComponent(message(current))}`;
+  const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
+  if(mobile){location.href=url;return;}
+  const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove();
 }
 
 async function copy(){

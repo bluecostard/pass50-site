@@ -7,7 +7,7 @@ window.PASS50_API = {
 (function () {
   if (document.querySelector('script[data-pass50-share-center]')) return;
   var script = document.createElement('script');
-  script.src = './share-center-v1.js?v=1.2';
+  script.src = './share-center-v1.js?v=1.3';
   script.async = false;
   script.dataset.pass50ShareCenter = '1.0';
   document.head.appendChild(script);

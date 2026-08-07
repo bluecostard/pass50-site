@@ -542,8 +542,19 @@
   function whatsappShare() {
     const payload = state.current;
     if (!payload) return;
-    const opened = window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage(payload))}`, '_blank');
-    if (opened) try { opened.opener = null; } catch (_) {}
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage(payload))}`;
+    const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+    if (mobile) {
+      location.href = url;
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   async function copyShare() {

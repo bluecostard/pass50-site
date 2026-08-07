@@ -242,7 +242,13 @@ async function nativeShare(){
   }catch(error){if(error?.name!=='AbortError')notify('Partage indisponible');}
 }
 
-function whatsappShare(){if(!currentShare)return;const text=shareMessage(currentShare.live,currentShare.name);openNewTab(`https://wa.me/?text=${encodeURIComponent(text)}`);}
+function whatsappShare(){
+  if(!currentShare)return;
+  const text=shareMessage(currentShare.live,currentShare.name);
+  const url=`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  if(isMobile()){location.href=url;return;}
+  openNewTab(url);
+}
 
 async function copyText(text){
   if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(text);
