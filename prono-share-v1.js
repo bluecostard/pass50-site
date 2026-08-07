@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-PRONO-SHARE-V1.4';
+  const CONTRACT = 'PASS50-PRONO-SHARE-V1.5';
   if (window.PASS50_PRONO_SHARE) return;
 
   const W = 1080;
@@ -43,19 +43,16 @@
     }
   }
 
-  /** Photo FI canvas-safe (same-origin) via partage-photo.php */
+  /** Photo FI canvas-safe : priorise le proxy same-origin */
   function shareSafeCover(input) {
     const profileId = String(input?.profileId || '').trim();
     const direct = absUrl(input?.coverPhoto || input?.coverUrl || '');
-    if (direct && sameOrigin(direct)) return direct;
+    // 1) Proxy FI (fiable pour canvas / WhatsApp)
     if (/^[A-Za-z0-9._:-]{1,100}$/.test(profileId)) {
-      try {
-        const url = new URL('partage-photo.php', location.href);
-        url.searchParams.set('id', profileId);
-        url.searchParams.set('size', '512');
-        return url.href;
-      } catch (_) {}
+      return `${location.origin}/partage-photo.php?id=${encodeURIComponent(profileId)}&size=512&v=1`;
     }
+    // 2) Cover déjà sur pass50.store
+    if (direct && sameOrigin(direct)) return direct;
     return direct;
   }
 
@@ -65,70 +62,54 @@
       if (!src) return resolve('');
       if (src.startsWith('data:')) return resolve(src);
 
-      const finishFromBlob = async (blob) => {
-        if (!blob || !blob.size) return resolve('');
-        try {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result || ''));
-          reader.onerror = () => resolve('');
-          reader.readAsDataURL(blob);
-        } catch (_) {
-          resolve('');
-        }
-      };
-
-      // Same-origin : fetch (fiable pour canvas / WhatsApp)
-      if (sameOrigin(src)) {
-        fetch(src, { credentials: 'same-origin', cache: 'force-cache' })
-          .then((res) => (res.ok ? res.blob() : Promise.reject()))
-          .then(finishFromBlob)
-          .catch(() => {
-            const image = new Image();
-            image.onload = () => {
-              try {
-                const canvas = document.createElement('canvas');
-                canvas.width = image.naturalWidth || image.width;
-                canvas.height = image.naturalHeight || image.height;
-                const ctx = canvas.getContext('2d');
-                if (!ctx || !canvas.width) return resolve('');
-                ctx.drawImage(image, 0, 0);
-                resolve(canvas.toDataURL('image/jpeg', 0.92));
-              } catch (_) {
-                resolve('');
-              }
-            };
-            image.onerror = () => resolve('');
-            image.src = src;
-          });
-        setTimeout(() => resolve(''), 6000);
-        return;
-      }
-
-      // Cross-origin : tente CORS
-      const image = new Image();
       let settled = false;
       const finish = (value) => {
         if (settled) return;
         settled = true;
         resolve(value || '');
       };
-      image.crossOrigin = 'anonymous';
-      image.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = image.naturalWidth || image.width;
-          canvas.height = image.naturalHeight || image.height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx || !canvas.width) return finish('');
-          ctx.drawImage(image, 0, 0);
-          finish(canvas.toDataURL('image/jpeg', 0.92));
-        } catch (_) {
-          finish('');
-        }
+
+      const fromImage = (useCors) => {
+        const image = new Image();
+        if (useCors) image.crossOrigin = 'anonymous';
+        image.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = image.naturalWidth || image.width;
+            canvas.height = image.naturalHeight || image.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx || !canvas.width) return finish('');
+            ctx.drawImage(image, 0, 0);
+            finish(canvas.toDataURL('image/jpeg', 0.92));
+          } catch (_) {
+            finish('');
+          }
+        };
+        image.onerror = () => finish('');
+        image.src = src;
       };
-      image.onerror = () => finish('');
-      image.src = src;
-      setTimeout(() => finish(''), 5000);
+
+      // Same-origin : fetch → data URL (ne taint pas le canvas)
+      if (sameOrigin(src) || src.startsWith(location.origin)) {
+        fetch(src, { credentials: 'omit', cache: 'force-cache', mode: 'same-origin' })
+          .then((res) => {
+            if (!res.ok) throw new Error(String(res.status));
+            return res.blob();
+          })
+          .then((blob) => {
+            if (!blob || !blob.size) throw new Error('empty');
+            const reader = new FileReader();
+            reader.onload = () => finish(String(reader.result || ''));
+            reader.onerror = () => fromImage(false);
+            reader.readAsDataURL(blob);
+          })
+          .catch(() => fromImage(false));
+        setTimeout(() => finish(''), 8000);
+        return;
+      }
+
+      fromImage(true);
+      setTimeout(() => finish(''), 6000);
     });
   }
 
@@ -204,7 +185,7 @@
       : `<span>${esc(initials(payload.author))}</span>`;
     const mediaInner = coverData
       ? `<img class="cover" src="${coverData}" alt="">`
-      : `<div class="fallback"><b>PASS50</b><span>${esc(String(payload.choice || 'PRONO').slice(0, 32))}</span></div>`;
+      : `<div class="fallback"><span>${esc(String(payload.choice || 'PRONO').slice(0, 32))}</span></div>`;
 
     return `
       <div class="shot">
@@ -212,7 +193,7 @@
           <div class="media">
             ${mediaInner}
             <div class="shade"></div>
-            <div class="brand">EN COURS</div>
+            <div class="brand">PARIS EN COURS</div>
           </div>
           <div class="body">
             <div class="top">
@@ -367,7 +348,7 @@
 
     ctx.fillStyle = 'rgba(246,248,244,0.7)';
     ctx.font = '1000 22px Inter, Arial';
-    ctx.fillText('EN COURS', fx + 36, fy + 52);
+    ctx.fillText('PARIS EN COURS', fx + 36, fy + 52);
 
     const bodyX = fx + 40;
     let y = fy + mediaH + 40;
@@ -483,7 +464,7 @@
       author: String(input.author || input.authorPseudo || '').trim(),
       authorPhoto: absUrl(input.authorPhoto || input.authorAvatar || ''),
       profileId: String(input.profileId || '').trim(),
-      coverPhoto: shareSafeCover(input),
+      coverPhoto: absUrl(input.coverPhoto || input.coverUrl || input.image || ''),
       durationHours: Number(input.durationHours) || 24,
       url: String(input.url || `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`),
     };
@@ -500,16 +481,39 @@
 
   async function imageFile(payload) {
     if (payload.mode === 'status') {
-      const [coverData, avatarData] = await Promise.all([
-        loadAsDataUrl(shareSafeCover(payload)),
-        loadAsDataUrl(payload.authorPhoto),
-      ]);
-      let canvas;
-      try {
-        canvas = await rasterizeDom(statusMarkup(payload, coverData, avatarData), DIAPO_CSS);
-      } catch (_) {
-        canvas = await drawStatusCanvas(payload, coverData, avatarData);
+      let coverData = '';
+
+      // 1) Capture directe de l’image déjà visible dans le diapo (si non tainted)
+      const liveCover = document.querySelector('#diapoCover, #pronoDiapoCover');
+      if (liveCover && liveCover.complete && liveCover.naturalWidth > 0) {
+        try {
+          const c = document.createElement('canvas');
+          c.width = liveCover.naturalWidth;
+          c.height = liveCover.naturalHeight;
+          c.getContext('2d').drawImage(liveCover, 0, 0);
+          coverData = c.toDataURL('image/jpeg', 0.92);
+        } catch (_) {
+          coverData = '';
+        }
       }
+
+      // 2) Proxy FI + cover API
+      if (!coverData) {
+        const tryUrls = [
+          shareSafeCover(payload),
+          absUrl(liveCover?.currentSrc || liveCover?.src || ''),
+          payload.coverPhoto,
+        ].filter(Boolean);
+        const unique = [...new Set(tryUrls)];
+        for (const candidate of unique) {
+          if (coverData) break;
+          // eslint-disable-next-line no-await-in-loop
+          coverData = await loadAsDataUrl(candidate);
+        }
+      }
+
+      const avatarData = await loadAsDataUrl(payload.authorPhoto);
+      const canvas = await drawStatusCanvas(payload, coverData, avatarData);
       const blob = await new Promise((resolve, reject) => {
         canvas.toBlob((b) => (b && b.size ? resolve(b) : reject(new Error('Image impossible'))), 'image/png', 0.95);
       });
