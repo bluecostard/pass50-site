@@ -1,12 +1,17 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.3';
+  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.6';
   const LEGACY_CONTEXT_SHARE_ASSET = './context-share-v1.js?v=1.0';
   const path = location.pathname || '';
   const isFeed = /(?:^|\/)mon-fil\.html$/i.test(path);
   const isProno = /(?:^|\/)pronostics\.html$/i.test(path);
   const isHome = !isFeed && !isProno;
+  let navigating = false;
+  let pressLink = null;
+  let pressX = 0;
+  let pressY = 0;
+  let activatedAt = 0;
 
   function injectStyles() {
     if (document.getElementById('p50BottomNavStyles')) return;
@@ -15,30 +20,44 @@
     style.textContent = `
       .p50-bottom-nav{display:none}
       @media(max-width:680px){
-        body{padding-bottom:calc(110px + env(safe-area-inset-bottom))!important}
+        html{scroll-behavior:auto}
+        body{padding-bottom:calc(110px + env(safe-area-inset-bottom))!important;overscroll-behavior-y:contain}
         body:not([data-pass50-page="feed"]) .app{padding-bottom:calc(118px + env(safe-area-inset-bottom))!important}
         body:not([data-pass50-page="feed"]) header>nav{display:none!important}
+        body[data-pass50-page="feed"] .shell{padding-bottom:calc(120px + env(safe-area-inset-bottom))!important}
+        body.p50-status-open .p50-bottom-nav,
+        body.p50-diapo-open .p50-bottom-nav,
+        body.p50-modal-active .p50-bottom-nav{
+          visibility:hidden!important;pointer-events:none!important;
+        }
         .p50-bottom-nav{
-          position:fixed;left:50%;right:auto;bottom:calc(10px + env(safe-area-inset-bottom));z-index:120;
+          position:fixed;left:50%;right:auto;bottom:calc(8px + env(safe-area-inset-bottom));z-index:240;
           display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:end;
-          width:min(400px,calc(100vw - 20px));min-height:70px;padding:8px 8px;
+          width:min(400px,calc(100vw - 16px));min-height:72px;padding:6px 6px;
           border:1px solid rgba(183,255,0,.22);border-radius:24px;
-          background:linear-gradient(180deg,rgba(16,21,16,.97),rgba(6,9,6,.98));
-          -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+          background:linear-gradient(180deg,rgba(16,21,16,.98),rgba(6,9,6,.99));
+          -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
           box-shadow:0 14px 42px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.035);
           transform:translateX(-50%);
-          contain:layout paint;
+          touch-action:manipulation;
+          -webkit-user-select:none;user-select:none;
         }
         .p50-bottom-link{
-          min-width:0;min-height:52px;border:0;background:transparent;color:#98a295;
-          display:grid;align-content:center;justify-items:center;gap:4px;padding:6px 2px;border-radius:16px;
+          min-width:0;min-height:56px;border:0;background:transparent;color:#98a295;
+          display:grid;align-content:center;justify-items:center;gap:4px;padding:8px 2px;border-radius:16px;
           font-size:8.5px;font-weight:950;letter-spacing:.04px;line-height:1.1;text-decoration:none;
-          transition:color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease;
+          transition:color .12s ease,background .12s ease,transform .12s ease,opacity .12s ease;
           -webkit-tap-highlight-color:transparent;
+          touch-action:manipulation;
+          cursor:pointer;
         }
-        .p50-bottom-icon{display:grid;place-items:center;width:29px;height:27px}
+        .p50-bottom-icon{display:grid;place-items:center;width:29px;height:27px;pointer-events:none}
         .p50-bottom-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+        .p50-bottom-link span{pointer-events:none}
         .p50-bottom-link.active:not(.p50-bottom-link-ranking){color:var(--lime,#b7ff00);background:rgba(183,255,0,.075)}
+        .p50-bottom-link.is-pressed{opacity:.72;transform:scale(.96)}
+        body.p50-nav-leaving .p50-bottom-nav{opacity:.55;pointer-events:none}
+        body.p50-nav-leaving .p50-bottom-link.active{opacity:1}
         .p50-bottom-link-ranking{
           position:relative;z-index:2;min-height:78px;margin-top:-18px;padding:7px 6px 6px;
           border:1px solid rgba(183,255,0,.38);border-radius:21px;
@@ -57,12 +76,15 @@
           box-shadow:0 14px 31px rgba(0,0,0,.45);
         }
         .p50-bottom-link-ranking.active .p50-bottom-icon{border-color:rgba(5,7,5,.2);background:rgba(5,7,5,.12);color:#050705}
-        .p50-bottom-link:active{transform:scale(.96)}
-        .p50-bottom-link-ranking:active{transform:translateY(-3px) scale(.96)}
+        .p50-bottom-link-ranking.is-pressed{transform:translateY(-3px) scale(.96);opacity:.85}
         .p50-bottom-link:focus-visible{outline:2px solid var(--lime,#b7ff00);outline-offset:2px}
+        .p50-ranking-share-fab{
+          bottom:calc(126px + env(safe-area-inset-bottom))!important;
+          z-index:110!important;
+        }
       }
       @media(max-width:360px){
-        .p50-bottom-nav{width:calc(100vw - 14px);padding-inline:5px}
+        .p50-bottom-nav{width:calc(100vw - 12px);padding-inline:4px}
         .p50-bottom-link{font-size:8px}
       }
     `;
@@ -97,6 +119,21 @@
   function injectNav() {
     if (document.querySelector('.p50-bottom-nav')) return;
     document.body.insertAdjacentHTML('beforeend', navHtml());
+  }
+
+  function prefetchRoutes() {
+    const targets = [];
+    if (!isFeed) targets.push('./mon-fil.html');
+    if (!isProno) targets.push('./pronostics.html');
+    if (!isHome) targets.push('./');
+    targets.forEach((href) => {
+      if (document.querySelector(`link[data-p50-prefetch="${href}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = href;
+      link.dataset.p50Prefetch = href;
+      document.head.appendChild(link);
+    });
   }
 
   function injectUserEntry() {
@@ -148,15 +185,143 @@
     if (profileId) callWhenReady('openProfile', fn => fn(profileId));
   }
 
-  function installEvents() {
-    document.addEventListener('click', event => {
-      const link = event.target.closest('.p50-bottom-link');
-      if (!link || isFeed || isProno || link.dataset.p50Tab !== 'account') return;
+  function openAccount(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof window.currentUser === 'function' && window.currentUser()) {
+      if (typeof window.openUser === 'function') window.openUser();
+    } else if (typeof window.openAuth === 'function') window.openAuth('login');
+  }
+
+  function freezeScroll() {
+    try {
+      const y = window.scrollY || window.pageYOffset || 0;
+      window.scrollTo(0, y);
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    } catch (_) {}
+  }
+
+  function go(href) {
+    if (navigating) return;
+    navigating = true;
+    freezeScroll();
+    document.body.classList.add('p50-nav-leaving');
+    location.assign(href);
+  }
+
+  function activateLink(link, event) {
+    if (!link || navigating) return false;
+    // Ignore si le doigt a glissé (vrai scroll sur la barre)
+    if (event && typeof event.clientX === 'number') {
+      const dx = event.clientX - pressX;
+      const dy = event.clientY - pressY;
+      if ((dx * dx) + (dy * dy) > 196) return false;
+    }
+
+    const tab = link.dataset.p50Tab || '';
+    if (tab === 'account' && isHome) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      openAccount(event || { preventDefault() {}, stopPropagation() {} });
+      activatedAt = Date.now();
+      return true;
+    }
+
+    if (link.classList.contains('active') && tab !== 'account') {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      activatedAt = Date.now();
+      return true;
+    }
+
+    const href = link.getAttribute('href');
+    if (!href) return false;
+    if (event) {
       event.preventDefault();
-      if (typeof window.currentUser === 'function' && window.currentUser()) {
-        if (typeof window.openUser === 'function') window.openUser();
-      } else if (typeof window.openAuth === 'function') window.openAuth('login');
-    });
+      event.stopPropagation();
+    }
+    activatedAt = Date.now();
+    go(new URL(href, location.href).href);
+    return true;
+  }
+
+  function installEvents() {
+    const nav = document.querySelector('.p50-bottom-nav');
+    if (!nav || nav.dataset.p50NavBound === '1') return;
+    nav.dataset.p50NavBound = '1';
+
+    const clearPress = () => {
+      pressLink?.classList.remove('is-pressed');
+      nav.querySelectorAll('.is-pressed').forEach((el) => el.classList.remove('is-pressed'));
+      pressLink = null;
+    };
+
+    // Dès que le doigt pose sur la barre : coupe le momentum (sinon iOS mange le 1er tap)
+    const onPressStart = (event) => {
+      const link = event.target.closest?.('.p50-bottom-link');
+      if (!link || !nav.contains(link)) return;
+      pressLink = link;
+      pressX = event.clientX || 0;
+      pressY = event.clientY || 0;
+      link.classList.add('is-pressed');
+      freezeScroll();
+      // Relâche overflow juste après pour ne pas bloquer la page si l’utilisateur abandonne
+      window.setTimeout(() => {
+        if (navigating) return;
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }, 280);
+    };
+
+    nav.addEventListener('touchstart', onPressStart, { passive: true, capture: true });
+    nav.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'touch') return; // déjà géré par touchstart
+      if (event.button != null && event.button !== 0) return;
+      onPressStart(event);
+    }, { passive: true, capture: true });
+
+    // touchend / pointerup : navigue au 1er contact (même pendant un scroll)
+    const onPressEnd = (event) => {
+      if (event.type === 'pointerup' && event.pointerType === 'touch') return;
+      if (event.type === 'pointerup' && event.button != null && event.button !== 0) return;
+      const link = pressLink || event.target.closest?.('.p50-bottom-link');
+      clearPress();
+      if (!link || !nav.contains(link)) return;
+      activateLink(link, event);
+    };
+
+    nav.addEventListener('touchend', onPressEnd, { passive: false, capture: true });
+    nav.addEventListener('pointerup', onPressEnd, { passive: false, capture: true });
+    nav.addEventListener('touchcancel', clearPress, { passive: true, capture: true });
+    nav.addEventListener('pointercancel', clearPress, { passive: true, capture: true });
+
+    // Fallback souris / accessibilité : le click natif ne doit jamais être “mangé”
+    nav.addEventListener('click', (event) => {
+      const link = event.target.closest('.p50-bottom-link');
+      if (!link || !nav.contains(link)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      // Si touchend vient de naviguer, ignore le click fantôme
+      if (navigating || (Date.now() - activatedAt) < 450) return;
+      activateLink(link, event);
+    }, true);
+  }
+
+  function watchOverlays() {
+    // Masque la nav si un diapo Mon fil s’ouvre
+    const diapo = document.getElementById('pronoDiapo') || document.getElementById('diapo');
+    if (!diapo) return;
+    const sync = () => {
+      document.body.classList.toggle('p50-diapo-open', diapo.classList.contains('show'));
+    };
+    new MutationObserver(sync).observe(diapo, { attributes: true, attributeFilter: ['class'] });
+    sync();
   }
 
   function init() {
@@ -164,6 +329,8 @@
     injectNav();
     loadContextShare();
     installEvents();
+    prefetchRoutes();
+    watchOverlays();
     const userBody = document.getElementById('userBody');
     if (userBody) {
       new MutationObserver(injectUserEntry).observe(userBody, { childList: true, subtree: true });
