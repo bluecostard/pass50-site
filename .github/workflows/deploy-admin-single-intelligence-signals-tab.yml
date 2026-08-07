@@ -1,4 +1,5 @@
 name: Déployer l’onglet Intelligence & Signaux unique
+# Relance opérationnelle après rétablissement GitHub Actions — 2026-08-07T02:54+02:00
 
 on:
   push:
