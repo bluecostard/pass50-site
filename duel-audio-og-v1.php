@@ -107,7 +107,7 @@ p50_audio_og_text($image, 38, 430, 320, $white, p50_audio_og_initials($b));
 p50_audio_og_text($image, 20, 325, 312, $lime, 'VS');
 
 foreach (p50_audio_og_fit($a, 20, 2) as $i => $lineText) p50_audio_og_text($image, 18, 126, 425 + $i * 28, $white, $lineText);
-foreach (p50_audio_og_fit($b, 20, 2) as $i => $lineText) p50_audio_og_text($image, 376, 425 + $i * 28, $white, $lineText);
+foreach (p50_audio_og_fit($b, 20, 2) as $i => $lineText) p50_audio_og_text($image, 18, 376, 425 + $i * 28, $white, $lineText);
 
 p50_audio_og_text($image, 18, 625, 205, $lime, mb_strtoupper(mb_substr($author, 0, 28), 'UTF-8'));
 foreach (p50_audio_og_fit('Commente son vote pour '.$selected, 26, 4) as $i => $lineText) {
