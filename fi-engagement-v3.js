@@ -252,12 +252,17 @@ document.addEventListener('click',async event=>{
   if(like){
     event.preventDefault();event.stopPropagation();
     const id=like.dataset.id;
-    if(liked(id)){toast?.('Vous avez déjà aimé cette fiche');return;}
-    const result=await record('like',id);
+    const wasLiked=liked(id);
+    const result=await record(wasLiked?'unlike':'like',id);
     if(result?.ok){
-      localStorage.setItem('pass50.like.'+id,'1');
-      document.querySelectorAll(`.p50-like[data-id="${CSS.escape(id)}"]`).forEach(button=>{button.classList.add('on');button.setAttribute('aria-pressed','true')});
-      toast?.('Merci pour votre soutien');
+      if(wasLiked)localStorage.removeItem('pass50.like.'+id);
+      else localStorage.setItem('pass50.like.'+id,'1');
+      const active=!wasLiked;
+      document.querySelectorAll(`.p50-like[data-id="${CSS.escape(id)}"]`).forEach(button=>{
+        button.classList.toggle('on',active);
+        button.setAttribute('aria-pressed',active?'true':'false');
+      });
+      toast?.(active?'Merci pour votre soutien':'Like retiré');
     }
   }
 

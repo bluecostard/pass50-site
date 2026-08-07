@@ -343,20 +343,20 @@
 
   async function likeCurrentDiapo() {
     const item = state.statuses[state.diapoIndex];
-    if (!item || item.likedByMe) return;
+    if (!item) return;
     if (state.demo) {
-      item.likedByMe = true;
-      item.likeCount = Number(item.likeCount || 0) + 1;
+      item.likedByMe = !item.likedByMe;
+      item.likeCount = Math.max(0, Number(item.likeCount || 0) + (item.likedByMe ? 1 : -1));
       renderDiapo();
-      toast('+0,25 pt pour l’auteur (démo)');
+      toast(item.likedByMe ? '+0,25 pt pour l’auteur (démo)' : 'Like retiré (démo)');
       return;
     }
     try {
       const data = await api('prono-status-like.php', { method: 'POST', body: { statusId: item.id } });
-      item.likedByMe = true;
+      item.likedByMe = Boolean(data.liked);
       item.likeCount = Number(data.likeCount || item.likeCount || 0);
       renderDiapo();
-      toast(data.alreadyLiked ? 'Déjà liké' : 'Like envoyé');
+      toast(item.likedByMe ? 'Like envoyé' : 'Like retiré');
     } catch (error) {
       toast(error.message);
     }

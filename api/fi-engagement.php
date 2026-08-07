@@ -41,16 +41,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string)($input['action'] ?? '');
     $profileId = trim((string)($input['profileId'] ?? ''));
     $liveUrl = trim((string)($input['liveUrl'] ?? ''));
-    if (!in_array($action, ['like', 'profile_share', 'live_share'], true)) json_response(['error' => 'Action invalide.'], 422);
+    if (!in_array($action, ['like', 'unlike', 'profile_share', 'live_share'], true)) json_response(['error' => 'Action invalide.'], 422);
     if ($profileId === '' || !preg_match('/^[A-Za-z0-9_-]{1,100}$/', $profileId)) json_response(['error' => 'Profil invalide.'], 422);
     if ($action === 'live_share' && ($liveUrl === '' || !filter_var($liveUrl, FILTER_VALIDATE_URL))) json_response(['error' => 'Lien du live invalide.'], 422);
+
+    if ($action === 'unlike') {
+        $actorHash = engagement_actor_hash();
+        try {
+            $stmt = db()->prepare("DELETE FROM p50_fi_engagement WHERE profile_id=? AND action_type='like' AND actor_hash=?");
+            $stmt->execute([$profileId, $actorHash]);
+            json_response(['ok' => true, 'liked' => false, 'removed' => $stmt->rowCount() > 0]);
+        } catch (PDOException $e) {
+            error_log('FI engagement unlike: ' . $e->getMessage());
+            json_response(['error' => 'Retrait impossible.'], 500);
+        }
+    }
+
     $actorHash = $action === 'like' ? engagement_actor_hash() : null;
     try {
         $stmt = db()->prepare('INSERT INTO p50_fi_engagement(profile_id,action_type,actor_hash,live_url,created_at) VALUES(?,?,?,?,UTC_TIMESTAMP())');
         $stmt->execute([$profileId, $action, $actorHash, $action === 'live_share' ? $liveUrl : null]);
-        json_response(['ok' => true, 'created' => true]);
+        json_response(['ok' => true, 'created' => true, 'liked' => $action === 'like' ? true : null]);
     } catch (PDOException $e) {
-        if ($action === 'like' && (string)$e->getCode() === '23000') json_response(['ok' => true, 'created' => false, 'duplicate' => true]);
+        if ($action === 'like' && (string)$e->getCode() === '23000') json_response(['ok' => true, 'created' => false, 'duplicate' => true, 'liked' => true]);
         error_log('FI engagement: ' . $e->getMessage());
         json_response(['error' => 'Enregistrement impossible.'], 500);
     }

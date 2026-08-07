@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.10';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.17';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -346,7 +346,8 @@
       if (!profile) return '';
       const rank = rankFor(profile.id);
       const change = movement(profile);
-      return `<a class="follow-chip" href="./?profile=${encodeURIComponent(profile.id)}">${avatarHtml(profile)}<div><strong>${esc(profile.name || 'Influenceur')}</strong><span class="rank">${rank ? `#${rank}` : 'À vérifier'} · Score ${Math.round(scoreFor(profile))}</span><span class="${change.className}">${esc(change.text)}</span></div></a>`;
+      const label = String(profile.handle || profile.name || 'Influenceur').trim() || 'Influenceur';
+      return `<a class="follow-chip" href="./?profile=${encodeURIComponent(profile.id)}">${avatarHtml(profile)}<div><strong>${esc(label)}</strong><span class="rank">${rank ? `#${rank}` : 'À vérifier'} · Score ${Math.round(scoreFor(profile))}</span><span class="${change.className}">${esc(change.text)}</span></div></a>`;
     }).join('');
   }
 
@@ -406,7 +407,7 @@
     if (like) {
       like.textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
       like.classList.toggle('liked', Boolean(item.likedByMe));
-      like.disabled = Boolean(item.sample || item.likedByMe);
+      like.disabled = Boolean(item.sample);
     }
     const bars = $('#pronoDiapoBars');
     if (bars) {
@@ -478,7 +479,7 @@
 
   async function likeCurrentPronoDiapo() {
     const item = state.pronoStatuses[state.diapoIndex];
-    if (!item || item.sample || item.likedByMe) return;
+    if (!item || item.sample) return;
     try {
       const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
       const token = localStorage.getItem('pass50_api_token') || '';
@@ -487,10 +488,10 @@
       const response = await fetch('./api/prono-status-like.php', { method: 'POST', headers, body: JSON.stringify({ statusId: item.id }), cache: 'no-store' });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Like impossible');
-      item.likedByMe = true;
+      item.likedByMe = Boolean(data.liked);
       item.likeCount = Number(data.likeCount || item.likeCount || 0);
       renderPronoDiapo();
-      toast(data.alreadyLiked ? 'Déjà liké' : 'Like envoyé · +0,25 pt pour l’auteur');
+      toast(item.likedByMe ? 'Like envoyé · +0,25 pt pour l’auteur' : 'Like retiré');
     } catch (error) {
       toast(error.message || 'Like impossible');
     }

@@ -32,24 +32,34 @@ if ((string)$status['user_id'] === $userId) {
 
 $likeCheck = $pdo->prepare('SELECT 1 FROM p50_prono_status_likes WHERE status_id=? AND user_id=? LIMIT 1');
 $likeCheck->execute([$statusId, $userId]);
-if ($likeCheck->fetch()) {
-    json_response(['ok' => true, 'alreadyLiked' => true, 'likeCount' => (int)$status['like_count']]);
-}
+$alreadyLiked = (bool)$likeCheck->fetch();
 
 $pdo->beginTransaction();
 try {
-    $pdo->prepare('INSERT INTO p50_prono_status_likes(status_id,user_id) VALUES(?,?)')->execute([$statusId, $userId]);
-    $pdo->prepare('UPDATE p50_prono_statuses SET like_count=like_count+1 WHERE id=?')->execute([$statusId]);
-
     $fresh = $pdo->prepare('SELECT like_count,like_points_awarded,user_id FROM p50_prono_statuses WHERE id=? FOR UPDATE');
     $fresh->execute([$statusId]);
     $row = $fresh->fetch();
-    $likeCount = (int)$row['like_count'];
+    if (!$row) {
+        throw new RuntimeException('Statut introuvable');
+    }
+
+    if ($alreadyLiked) {
+        $pdo->prepare('DELETE FROM p50_prono_status_likes WHERE status_id=? AND user_id=?')->execute([$statusId, $userId]);
+        $pdo->prepare('UPDATE p50_prono_statuses SET like_count=GREATEST(0,like_count-1) WHERE id=?')->execute([$statusId]);
+        $likeCount = max(0, (int)$row['like_count'] - 1);
+        $liked = false;
+    } else {
+        $pdo->prepare('INSERT INTO p50_prono_status_likes(status_id,user_id) VALUES(?,?)')->execute([$statusId, $userId]);
+        $pdo->prepare('UPDATE p50_prono_statuses SET like_count=like_count+1 WHERE id=?')->execute([$statusId]);
+        $likeCount = (int)$row['like_count'] + 1;
+        $liked = true;
+    }
+
     $awarded = (float)$row['like_points_awarded'];
     $target = min($likeCount, P50_PRONO_STATUS_LIKE_CAP) * P50_PRONO_POINTS_STATUS_LIKE;
     $delta = round($target - $awarded, 2);
-    if ($delta > 0) {
-        p50_prono_credit($pdo, (string)$row['user_id'], $delta, 'status_like', $statusId);
+    if (abs($delta) >= 0.0001) {
+        p50_prono_credit($pdo, (string)$row['user_id'], $delta, $liked ? 'status_like' : 'status_unlike', $statusId);
         $pdo->prepare('UPDATE p50_prono_statuses SET like_points_awarded=? WHERE id=?')->execute([$target, $statusId]);
     }
     $pdo->commit();
@@ -61,6 +71,7 @@ try {
 
 json_response([
     'ok' => true,
+    'liked' => $liked,
     'likeCount' => $likeCount,
     'pointsAwardedToAuthor' => $delta ?? 0,
 ]);
