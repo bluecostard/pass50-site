@@ -17,7 +17,7 @@ window.PASS50_API = {
 (function () {
   if (document.querySelector('script[data-pass50-coules-share-simple]')) return;
   var script = document.createElement('script');
-  script.src = './coules-share-simple-v1.js?v=1.0';
+  script.src = './coules-share-simple-v1.js?v=1.1';
   script.async = false;
   script.dataset.pass50CoulesShareSimple = '1.0';
   document.head.appendChild(script);

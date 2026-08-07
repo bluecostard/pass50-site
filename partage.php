@@ -86,7 +86,11 @@ if($type==='profile'){
     if($choice!=='')$query['choice']=$choice;
 }
 $destination=$base.'/'.($query?'?'.http_build_query($query):'');
-$canonical=$base.'/partage.php?'.http_build_query(array_filter(['type'=>$type,'id'=>$id,'choice'=>$choice,'platform'=>$platform],static fn($v)=>$v!==''));
+if(($type==='coules'||$type==='coules-audio')&&$id!==''){
+    $canonical=$base.'/c/'.rawurlencode($id).($type==='coules-audio'?'/audio':'');
+}else{
+    $canonical=$base.'/partage.php?'.http_build_query(array_filter(['type'=>$type,'id'=>$id,'choice'=>$choice,'platform'=>$platform],static fn($v)=>$v!==''));
+}
 $image=$base.'/partage-image.php?'.http_build_query(['type'=>$type,'label'=>$name,'platform'=>$platform]);
 $title=(string)$theme['title'];
 $description=(string)$theme['description'];

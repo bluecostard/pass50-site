@@ -210,11 +210,14 @@
     .diapo-bars i{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
     .diapo-bars i b{display:block;height:100%;width:0;background:var(--lime)}
     .diapo-bars i.done b{width:100%}.diapo-bars i.active b{width:100%;animation:diapoFill 6s linear forwards}
+    .diapo-bars i.active.paused b{animation-play-state:paused!important}
     @keyframes diapoFill{from{width:0}to{width:100%}}
     .diapo-frame{
       position:relative;border:1px solid rgba(183,255,0,.22);border-radius:24px;overflow:hidden;min-height:0;
       background:#0a0d0a;display:grid;grid-template-rows:minmax(210px,42%) minmax(0,1fr);
+      -webkit-user-select:none;user-select:none;touch-action:manipulation;
     }
+    .diapo.is-paused .diapo-frame{cursor:grabbing}
     .diapo-media{position:relative;min-height:210px;background:#101610;overflow:hidden}
     .diapo-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
     .diapo-media-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,5,.2),rgba(5,7,5,.94) 90%)}
@@ -362,7 +365,7 @@
 
   <div class="toast" id="toast"></div>
   <script src="./mobile-bottom-nav-v1.js?v=1.6"></script>
-  <script src="./prono-share-v1.js?v=1.6"></script>
-  <script src="./pronostics.js?v=2.10"></script>
+  <script src="./prono-share-v1.js?v=1.7"></script>
+  <script src="./pronostics.js?v=2.11"></script>
 </body>
 </html>

@@ -3,6 +3,8 @@
 (() => {
   const API = './api';
   const DEMO = new URLSearchParams(location.search).has('demo');
+  const DIAPO_MS = 6000;
+  const DIAPO_HOLD_MS = 200;
   const state = {
     items: [],
     results: [],
@@ -14,6 +16,13 @@
     demo: DEMO,
     diapoIndex: 0,
     diapoTimer: null,
+    diapoPaused: false,
+    diapoStartedAt: 0,
+    diapoRemaining: DIAPO_MS,
+    diapoHold: false,
+    diapoHoldAt: 0,
+    diapoHoldTimer: null,
+    diapoSuppressClick: false,
     seen: new Set(JSON.parse(sessionStorage.getItem('p50_prono_seen') || '[]')),
   };
   const $ = (s) => document.querySelector(s);
@@ -253,6 +262,46 @@
       clearTimeout(state.diapoTimer);
       state.diapoTimer = null;
     }
+    if (state.diapoHoldTimer) {
+      clearTimeout(state.diapoHoldTimer);
+      state.diapoHoldTimer = null;
+    }
+  }
+
+  function setDiapoBarPaused(paused) {
+    const root = $('#diapo');
+    root?.classList.toggle('is-paused', paused);
+    root?.querySelector('#diapoBars i.active')?.classList.toggle('paused', paused);
+  }
+
+  function pauseDiapo() {
+    if (state.diapoPaused || !$('#diapo')?.classList.contains('show')) return;
+    state.diapoPaused = true;
+    if (state.diapoTimer) {
+      clearTimeout(state.diapoTimer);
+      state.diapoTimer = null;
+    }
+    const elapsed = Date.now() - (state.diapoStartedAt || Date.now());
+    state.diapoRemaining = Math.max(120, (state.diapoRemaining || DIAPO_MS) - elapsed);
+    setDiapoBarPaused(true);
+  }
+
+  function resumeDiapo() {
+    if (!state.diapoPaused || !$('#diapo')?.classList.contains('show')) return;
+    state.diapoPaused = false;
+    setDiapoBarPaused(false);
+    state.diapoStartedAt = Date.now();
+    state.diapoTimer = setTimeout(() => nextDiapo(), state.diapoRemaining || DIAPO_MS);
+  }
+
+  function armDiapoTimer(ms = DIAPO_MS) {
+    stopDiapoTimer();
+    state.diapoPaused = false;
+    state.diapoHold = false;
+    state.diapoRemaining = ms;
+    state.diapoStartedAt = Date.now();
+    setDiapoBarPaused(false);
+    state.diapoTimer = setTimeout(() => nextDiapo(), ms);
   }
 
   function renderDiapo() {
@@ -281,8 +330,7 @@
       return `<i class="${cls}"><b></b></i>`;
     }).join('');
     renderStories();
-    stopDiapoTimer();
-    state.diapoTimer = setTimeout(() => nextDiapo(), 6000);
+    armDiapoTimer(DIAPO_MS);
   }
 
   function shareStatus(item) {
@@ -308,12 +356,12 @@
       }).catch(() => toast('Partage indisponible'));
       return;
     }
-    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd ? ` x ${fmtOdd(odd)}` : ''}\nSans argent réel · pass50.store/pronostics.html`;
+    const text = `Statut prono PASS50 — ${item.authorPseudo || 'Membre'} : ${item.questionTitle || 'Pronostic'} → ${item.optionLabel || item.optionKey || ''}${odd ? ` x ${fmtOdd(odd)}` : ''}\nSans argent réel\n\nJoue aussi sur PASS50 👇\n${url}`;
     if (navigator.share) {
       navigator.share({ title: 'Statut prono PASS50', text, url }).catch(() => {});
       return;
     }
-    navigator.clipboard?.writeText(`${text}\n${url}`).then(() => toast('Lien copié')).catch(() => toast(text));
+    navigator.clipboard?.writeText(`${text}`).then(() => toast('Lien copié')).catch(() => toast(text));
   }
 
   function openDiapo(index = 0) {
@@ -325,8 +373,63 @@
 
   function closeDiapo() {
     stopDiapoTimer();
+    state.diapoPaused = false;
+    state.diapoHold = false;
+    state.diapoSuppressClick = false;
+    setDiapoBarPaused(false);
     $('#diapo')?.classList.remove('show');
     renderStories();
+  }
+
+  function installDiapoHold() {
+    const frame = document.querySelector('#diapoFrame') || document.querySelector('#diapo .diapo-frame');
+    if (!frame || frame.dataset.holdBound === '1') return;
+    frame.dataset.holdBound = '1';
+
+    const isUi = (target) => {
+      const el = target?.closest?.('button, a, .btn, input, textarea, select');
+      if (!el) return false;
+      if (el.id === 'diapoPrev' || el.id === 'diapoNext') return false;
+      return true;
+    };
+
+    const endHold = (event) => {
+      if (!state.diapoHold) return;
+      const heldFor = Date.now() - (state.diapoHoldAt || 0);
+      state.diapoHold = false;
+      if (state.diapoHoldTimer) {
+        clearTimeout(state.diapoHoldTimer);
+        state.diapoHoldTimer = null;
+      }
+      try {
+        if (event?.pointerId != null) frame.releasePointerCapture(event.pointerId);
+      } catch (_) {}
+      if (state.diapoPaused) {
+        resumeDiapo();
+        if (heldFor >= DIAPO_HOLD_MS) state.diapoSuppressClick = true;
+      }
+    };
+
+    frame.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (isUi(event.target)) return;
+      if (!$('#diapo')?.classList.contains('show')) return;
+      state.diapoHold = true;
+      state.diapoHoldAt = Date.now();
+      try { frame.setPointerCapture(event.pointerId); } catch (_) {}
+      if (state.diapoHoldTimer) clearTimeout(state.diapoHoldTimer);
+      state.diapoHoldTimer = setTimeout(() => {
+        if (state.diapoHold) pauseDiapo();
+      }, DIAPO_HOLD_MS);
+    });
+    frame.addEventListener('pointerup', endHold);
+    frame.addEventListener('pointercancel', endHold);
+    frame.addEventListener('click', (event) => {
+      if (!state.diapoSuppressClick) return;
+      state.diapoSuppressClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
   }
 
   function nextDiapo() {
@@ -628,6 +731,7 @@
     $('#diapoClose')?.addEventListener('click', closeDiapo);
     $('#diapoLike')?.addEventListener('click', likeCurrentDiapo);
     $('#diapoShare')?.addEventListener('click', () => shareStatus(state.statuses[state.diapoIndex]));
+    installDiapoHold();
     document.addEventListener('keydown', (event) => {
       if (!$('#diapo')?.classList.contains('show')) return;
       if (event.key === 'Escape') closeDiapo();

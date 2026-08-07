@@ -1,7 +1,7 @@
 // Hotfix V81 : désactivation complète du service worker PASS50.
 // Le site repasse temporairement en accès réseau direct afin d'éliminer
 // les boucles de mise à jour, les caches obsolètes et les préchargements massifs.
-const CACHE='pass50-v83-espace-toggle';
+const CACHE='pass50-v85-coules-wa-audio';
 const PASS50_SW_DISABLED_VERSION=CACHE;
 
 // Jalons de compatibilité uniquement. Ces ressources ne sont plus préchargées,
@@ -15,12 +15,12 @@ const ASSETS=[
   'pass50-v79-cache-bust-hotfix',
   'pass50-v80-site-recovery',
   './','./index.html','./mon-fil.html','./offline.html','./app-config.js',
-  './content-intelligence.js?v=1.2','./mon-fil.js?v=2.17',
+  './content-intelligence.js?v=1.2','./mon-fil.js?v=2.18',
   './duel-audio-feed-v1.js?v=1.1','./mobile-modal-video-progress-v1.js?v=1.0',
   './context-share-v1.js?v=1.0','./context-share-v2.js?v=2.4',
   './classability-sync-v1.js?v=1.4','./mobile-bottom-nav-v1.js?v=1.1',
   './mobile-bottom-nav-v1.js?v=1.2','./mobile-bottom-nav-v1.js?v=1.3','./mobile-bottom-nav-v1.js?v=1.6','./share-center-v1.js?v=1.3',
-  './coules-share-simple-v1.js?v=1.0','./fi-navigation-v3.js?v=1.2',
+  './coules-share-simple-v1.js?v=1.1','./fi-navigation-v3.js?v=1.2',
   './fi-engagement-v3.js?v=1.4','./live-modal-layout-v1.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.0','./profile-kawaii-nanami.js?v=1.0',
   './profile-melanie-tms.js?v=1.0','./profile-ivorian-kid.js?v=1.0',

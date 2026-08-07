@@ -1,12 +1,14 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.17';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.18';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
   const NEWS_PER_PROFILE = 2;
   const DUEL_AUDIO_LIMIT = 12;
+  const DIAPO_MS = 6000;
+  const DIAPO_HOLD_MS = 200;
   const PERIODS = { '2H': '2h', '24H': '24h', '48H': '48h', '7J': '7d', '15J': '15d' };
   const PERIOD_LABELS = { '2H': '2 h', '24H': '24 h', '48H': '48 h', '7J': '7 jours', '15J': '15 jours' };
   const state = {
@@ -20,6 +22,13 @@
     liveStreams: [],
     diapoIndex: 0,
     diapoTimer: null,
+    diapoPaused: false,
+    diapoStartedAt: 0,
+    diapoRemaining: DIAPO_MS,
+    diapoHold: false,
+    diapoHoldAt: 0,
+    diapoHoldTimer: null,
+    diapoSuppressClick: false,
     seenPronos: new Set(),
   };
   const $ = selector => document.querySelector(selector);
@@ -378,6 +387,46 @@
       clearTimeout(state.diapoTimer);
       state.diapoTimer = null;
     }
+    if (state.diapoHoldTimer) {
+      clearTimeout(state.diapoHoldTimer);
+      state.diapoHoldTimer = null;
+    }
+  }
+
+  function setPronoDiapoBarPaused(paused) {
+    const root = $('#pronoDiapo');
+    root?.classList.toggle('is-paused', paused);
+    root?.querySelector('#pronoDiapoBars i.active')?.classList.toggle('paused', paused);
+  }
+
+  function pausePronoDiapo() {
+    if (state.diapoPaused || !$('#pronoDiapo')?.classList.contains('show')) return;
+    state.diapoPaused = true;
+    if (state.diapoTimer) {
+      clearTimeout(state.diapoTimer);
+      state.diapoTimer = null;
+    }
+    const elapsed = Date.now() - (state.diapoStartedAt || Date.now());
+    state.diapoRemaining = Math.max(120, (state.diapoRemaining || DIAPO_MS) - elapsed);
+    setPronoDiapoBarPaused(true);
+  }
+
+  function resumePronoDiapo() {
+    if (!state.diapoPaused || !$('#pronoDiapo')?.classList.contains('show')) return;
+    state.diapoPaused = false;
+    setPronoDiapoBarPaused(false);
+    state.diapoStartedAt = Date.now();
+    state.diapoTimer = setTimeout(() => nextPronoDiapo(), state.diapoRemaining || DIAPO_MS);
+  }
+
+  function armPronoDiapoTimer(ms = DIAPO_MS) {
+    stopPronoDiapoTimer();
+    state.diapoPaused = false;
+    state.diapoHold = false;
+    state.diapoRemaining = ms;
+    state.diapoStartedAt = Date.now();
+    setPronoDiapoBarPaused(false);
+    state.diapoTimer = setTimeout(() => nextPronoDiapo(), ms);
   }
 
   function renderPronoDiapo() {
@@ -417,8 +466,7 @@
       }).join('');
     }
     renderPronoStories();
-    stopPronoDiapoTimer();
-    state.diapoTimer = setTimeout(() => nextPronoDiapo(), 6000);
+    armPronoDiapoTimer(DIAPO_MS);
   }
 
   function sharePronoStatus(item) {
@@ -461,8 +509,64 @@
 
   function closePronoDiapo() {
     stopPronoDiapoTimer();
+    state.diapoPaused = false;
+    state.diapoHold = false;
+    state.diapoSuppressClick = false;
+    setPronoDiapoBarPaused(false);
     $('#pronoDiapo')?.classList.remove('show');
     renderPronoStories();
+  }
+
+  function installPronoDiapoHold() {
+    const frame = document.querySelector('#pronoDiapo .prono-diapo-frame');
+    if (!frame || frame.dataset.holdBound === '1') return;
+    frame.dataset.holdBound = '1';
+
+    const isUi = (target) => {
+      const el = target?.closest?.('button, a, .btn, input, textarea, select');
+      if (!el) return false;
+      // Zones gauche/droite : appui long = pause (pas un tap suivant/précédent)
+      if (el.id === 'pronoDiapoPrev' || el.id === 'pronoDiapoNext') return false;
+      return true;
+    };
+
+    const endHold = (event) => {
+      if (!state.diapoHold) return;
+      const heldFor = Date.now() - (state.diapoHoldAt || 0);
+      state.diapoHold = false;
+      if (state.diapoHoldTimer) {
+        clearTimeout(state.diapoHoldTimer);
+        state.diapoHoldTimer = null;
+      }
+      try {
+        if (event?.pointerId != null) frame.releasePointerCapture(event.pointerId);
+      } catch (_) {}
+      if (state.diapoPaused) {
+        resumePronoDiapo();
+        if (heldFor >= DIAPO_HOLD_MS) state.diapoSuppressClick = true;
+      }
+    };
+
+    frame.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (isUi(event.target)) return;
+      if (!$('#pronoDiapo')?.classList.contains('show')) return;
+      state.diapoHold = true;
+      state.diapoHoldAt = Date.now();
+      try { frame.setPointerCapture(event.pointerId); } catch (_) {}
+      if (state.diapoHoldTimer) clearTimeout(state.diapoHoldTimer);
+      state.diapoHoldTimer = setTimeout(() => {
+        if (state.diapoHold) pausePronoDiapo();
+      }, DIAPO_HOLD_MS);
+    });
+    frame.addEventListener('pointerup', endHold);
+    frame.addEventListener('pointercancel', endHold);
+    frame.addEventListener('click', (event) => {
+      if (!state.diapoSuppressClick) return;
+      state.diapoSuppressClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
   }
 
   function nextPronoDiapo() {
@@ -630,6 +734,7 @@
     $('#pronoDiapoClose')?.addEventListener('click', closePronoDiapo);
     $('#pronoDiapoLike')?.addEventListener('click', likeCurrentPronoDiapo);
     $('#pronoDiapoShare')?.addEventListener('click', () => sharePronoStatus(state.pronoStatuses[state.diapoIndex]));
+    installPronoDiapoHold();
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         if ($('#pronoDiapo')?.classList.contains('show')) closePronoDiapo();

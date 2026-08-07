@@ -1,8 +1,10 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-PRONO-SHARE-V1.6';
+  const CONTRACT = 'PASS50-PRONO-SHARE-V1.7';
   if (window.PASS50_PRONO_SHARE) return;
+
+  const PRONO_PATH = '/pronostics.html';
 
   const W = 1080;
   const H = 1350;
@@ -430,8 +432,8 @@
     ctx.font = '800 26px Inter, Arial';
     ctx.fillText(payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel', bodyX + 32, ticketY + ticketH - 40);
 
-    // Foot buttons
-    const by = fy + fh - 120;
+    // Foot buttons + lien app (WhatsApp ignore souvent le texte avec une image)
+    const by = fy + fh - 168;
     const bw = (fw - 80 - 32) / 3;
     const labels = [['♡ Like', false], ['Partager', false], ['Jouer', true]];
     labels.forEach(([label, primary], i) => {
@@ -448,9 +450,32 @@
       ctx.fillText(label, bx + bw / 2, by + 54);
       ctx.textAlign = 'left';
     });
+    ctx.fillStyle = '#b7ff00';
+    ctx.font = '800 26px Inter, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(pronoAppUrl(payload.url).replace(/^https?:\/\//i, ''), fx + fw / 2, fy + fh - 36);
+    ctx.textAlign = 'left';
 
     ctx.restore();
     return canvas;
+  }
+
+  /** Lien app toujours cliquable (WhatsApp lie mieux avec https://). */
+  function pronoAppUrl(inputUrl = '') {
+    const raw = String(inputUrl || '').trim();
+    if (/^https?:\/\/pass50\.store\/pronostics\.html/i.test(raw)) return raw.split(/[?#]/)[0];
+    try {
+      const host = (location.hostname || '').toLowerCase();
+      if (host === 'pass50.store' || host.endsWith('.pass50.store')) {
+        return `${location.origin}${PRONO_PATH}`;
+      }
+    } catch (_) {}
+    if (/^https?:\/\//i.test(raw) && /pronostics\.html/i.test(raw)) return raw.split(/[?#]/)[0];
+    try {
+      return new URL(PRONO_PATH, location.origin).href;
+    } catch (_) {
+      return `https://pass50.store${PRONO_PATH}`;
+    }
   }
 
   function buildPayload(input = {}) {
@@ -466,17 +491,19 @@
       profileId: String(input.profileId || '').trim(),
       coverPhoto: absUrl(input.coverPhoto || input.coverUrl || input.image || ''),
       durationHours: Number(input.durationHours) || 24,
-      url: String(input.url || `${location.origin}${location.pathname.replace(/[^/]*$/, '')}pronostics.html`),
+      url: pronoAppUrl(input.url),
     };
   }
 
   function shareText(payload) {
     const odd = fmtOdd(payload.odd);
+    const appUrl = pronoAppUrl(payload.url);
     const who = payload.mode === 'status' && payload.author ? `${payload.author} · ` : '';
     const line = payload.mode === 'status'
       ? `Statut prono PASS50 — ${who}${payload.title} → ${payload.choice}${odd !== '—' ? ` x ${odd}` : ''}`
       : `Mon prono PASS50 : ${payload.title} → ${payload.choice}${odd !== '—' ? ` x ${odd}` : ''}`;
-    return `${line}\nSans argent réel · ${payload.url.replace(/^https?:\/\//, '')}`;
+    // URL seule sur sa ligne + https:// : WhatsApp la détecte ; avec une image le texte est souvent ignoré.
+    return `${line}\nSans argent réel\n\nJoue aussi sur PASS50 👇\n${appUrl}`;
   }
 
   async function imageFile(payload) {
@@ -594,7 +621,7 @@
     ctx.fill();
     ctx.fillStyle = '#050705';
     ctx.font = '1000 30px Arial';
-    ctx.fillText('Pronostique aussi sur pass50.store', 100, H - 86);
+    ctx.fillText('Pronostique aussi sur pass50.store/pronostics.html', 100, H - 86);
 
     const blob = await new Promise((resolve, reject) => {
       canvas.toBlob((b) => (b && b.size ? resolve(b) : reject(new Error('Image impossible'))), 'image/png', 0.95);
@@ -637,7 +664,7 @@
           <button type="button" data-prono-share-whatsapp>WhatsApp</button>
           <button type="button" data-prono-share-download>Télécharger</button>
         </div>
-        <div class="p50-prono-share-note">Même carte que le statut publié</div>
+        <div class="p50-prono-share-note">WhatsApp : le bouton envoie le lien. L’image contient aussi pass50.store</div>
       </div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click', (event) => {
