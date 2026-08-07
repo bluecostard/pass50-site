@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V89';
+  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V90';
   const DUEL_SHARE_HOTFIX='PASS50-DUEL-AUDIO-SHARE-HOTFIX-V1';
   const INTERNAL_TEXT='Lien original à valider dans Administration → Actualité';
   const PUBLIC_TEXT='Source en cours de validation';
@@ -105,7 +105,7 @@
   function loadContextShareV2(){
     if(window.PASS50_CONTEXT_SHARE_V2||document.querySelector('script[data-pass50-context-share-v2]'))return;
     const script=document.createElement('script');
-    script.src='./context-share-v2.js?v=2.5';
+    script.src='./context-share-v2.js?v=2.6';
     script.async=false;
     script.dataset.pass50ContextShare='2.1';
     script.dataset.pass50ContextShareV2='2.1';
@@ -116,6 +116,7 @@
     installDuelAudioShareHotfix();
     runPublicFixes();
     disableServiceWorkers();
+    loadScript('script[data-pass50-duel-audio-share-intercept]','./duel-audio-share-intercept-v1.js?v=1.0','pass50DuelAudioShareIntercept','1.0',false);
     loadContextShareV2();
     setTimeout(runPublicFixes,250);
     setTimeout(runPublicFixes,1200);
