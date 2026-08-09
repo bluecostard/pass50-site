@@ -1,10 +1,10 @@
 name: Metrics Public Baseline P1
-# Contract history: PUBLIC-BASELINE-P1-V1.1 -> PUBLIC-BASELINE-P1-V1.2
-# Audit manuel couverture publique P1 — 2026-08-05T13:05+02:00
+# Contract history: PUBLIC-BASELINE-P1-V1.1 -> V1.2 -> V1.3
+# V1.3: priorité Top 40 public, cible fraîcheur <=45 min, file distincte.
 
 on:
   schedule:
-    - cron: '2 */2 * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
   push:
     branches:
@@ -28,7 +28,7 @@ concurrency:
 jobs:
   supplement:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
@@ -55,13 +55,13 @@ jobs:
               -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
               --data "$body" "$BASELINE_URL")"; curl_status=$?
             set -e
-            if [ "$curl_status" -eq 0 ] && [ "$code" = "200" ] && jq -e '.contract == "PUBLIC-BASELINE-P1-V1.2" and .readOnly == true and .publicStateWrites == 0' baseline-probe.json >/dev/null 2>&1; then deployed=true; break; fi
-            echo "Contrat PUBLIC-BASELINE-P1-V1.2 en attente, tentative $attempt/30 (HTTP ${code:-000})."
+            if [ "$curl_status" -eq 0 ] && [ "$code" = "200" ] && jq -e '.contract == "PUBLIC-BASELINE-P1-V1.3" and .readOnly == true and .publicStateWrites == 0' baseline-probe.json >/dev/null 2>&1; then deployed=true; break; fi
+            echo "Contrat PUBLIC-BASELINE-P1-V1.3 en attente, tentative $attempt/30 (HTTP ${code:-000})."
             sleep 20
           done
-          if [ "$deployed" != "true" ]; then echo "::error::Contrat de couverture P1 non déployé."; cat baseline-probe.json 2>/dev/null || true; exit 1; fi
+          if [ "$deployed" != "true" ]; then echo "::error::Contrat de couverture P1 V1.3 non déployé."; cat baseline-probe.json 2>/dev/null || true; exit 1; fi
 
-      - name: Supplement P1 with current public ranking
+      - name: Supplement P1 with fresh current public ranking
         id: baseline
         shell: bash
         run: |
@@ -73,36 +73,53 @@ jobs:
           esac
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-public-baseline"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"dispatch",dispatchId:$dispatchId}')"
-          timestamp="$(date +%s)"
-          signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
-          curl --fail-with-body --silent --show-error --max-time 55 \
-            -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
-            --data "$body" "$BASELINE_URL" > public-baseline-result.json
-          jq -e '.ok == true and .version == "PUBLIC-BASELINE-P1-V1.2" and .publicStateWrites == 0' public-baseline-result.json >/dev/null
+          http_code=000
+          for attempt in $(seq 1 12); do
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            set +e
+            http_code="$(curl --silent --show-error --max-time 55 --output public-baseline-result.json --write-out '%{http_code}' \
+              -H "Content-Type: application/json" -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" \
+              --data "$body" "$BASELINE_URL")"; curl_status=$?
+            set -e
+            if [ "$curl_status" -eq 0 ] && [ "$http_code" = "200" ] && jq -e '.ok == true and .version == "PUBLIC-BASELINE-P1-V1.3" and .publicStateWrites == 0' public-baseline-result.json >/dev/null 2>&1; then break; fi
+            if [ "$attempt" -eq 12 ]; then
+              echo "::error::Couverture publique V1.3 indisponible ou réponse invalide (HTTP $http_code)."
+              cat public-baseline-result.json 2>/dev/null || true
+              exit 1
+            fi
+            echo "Couverture publique en attente, tentative $attempt/12 (HTTP $http_code)."
+            sleep 15
+          done
           public_profiles="$(jq -r '.summary.publicProfiles // 0' public-baseline-result.json)"
           eligible_profiles="$(jq -r '.summary.eligibleProfiles // 0' public-baseline-result.json)"
           missing_sources="$(jq -r '.summary.publicProfilesWithoutVerifiedSources | length' public-baseline-result.json)"
           jobs_created="$(jq -r '.summary.jobsCreated // 0' public-baseline-result.json)"
           duplicates="$(jq -r '.summary.duplicateJobs // 0' public-baseline-result.json)"
+          already_fresh="$(jq -r '.summary.profilesAlreadyFresh // 0' public-baseline-result.json)"
+          needs_refresh="$(jq -r '.summary.profilesNeedingRefresh // 0' public-baseline-result.json)"
+          freshness_target="$(jq -r '.summary.freshnessTargetMinutes // 45' public-baseline-result.json)"
           remaining="$(jq -r '.remaining // 0' public-baseline-result.json)"
           eligible_by_platform="$(jq -c '.summary.eligibleLinksByPlatform' public-baseline-result.json)"
           configured_missing_by_platform="$(jq -c '.summary.skippedConfigurationByPlatform' public-baseline-result.json)"
           selected_by_platform="$(jq -c '.summary.selectedByPlatform' public-baseline-result.json)"
           {
-            printf '### Couverture P1 du classement public\n'
+            printf '### Couverture fraîche du classement public\n'
             printf -- '- Profils publics détectés : %s\n' "$public_profiles"
             printf -- '- Profils avec source vérifiée / sans source vérifiée : %s / %s\n' "$eligible_profiles" "$missing_sources"
+            printf -- '- Cible de fraîcheur : <= %s min\n' "$freshness_target"
+            printf -- '- Déjà frais / à rafraîchir : %s / %s\n' "$already_fresh" "$needs_refresh"
             printf -- '- Liens vérifiés par plateforme : `%s`\n' "$eligible_by_platform"
             printf -- '- Liens non configurés par plateforme : `%s`\n' "$configured_missing_by_platform"
             printf -- '- Sources retenues dans ce cycle : `%s`\n' "$selected_by_platform"
             printf -- '- Tâches créées / déjà présentes : %s / %s\n' "$jobs_created" "$duplicates"
-            printf -- '- File P1 après complément : %s\n' "$remaining"
+            printf -- '- File métrique prioritaire après complément : %s\n' "$remaining"
             printf -- '- Écriture app_state : `0`\n'
           } >> "$GITHUB_STEP_SUMMARY"
-          printf 'jobs_created=%s\nremaining=%s\n' "$jobs_created" "$remaining" >> "$GITHUB_OUTPUT"
+          printf 'jobs_created=%s\nremaining=%s\nneeds_refresh=%s\nalready_fresh=%s\n' "$jobs_created" "$remaining" "$needs_refresh" "$already_fresh" >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch P1 immediately outside schedule
-        if: ${{ github.event_name != 'schedule' }}
+      - name: Dispatch P1 immediately when public profiles need refresh
+        if: ${{ steps.baseline.outcome == 'success' && steps.baseline.outputs.needs_refresh != '0' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -121,10 +138,12 @@ jobs:
           STEP_OUTCOME: ${{ steps.baseline.outcome }}
           JOBS_CREATED: ${{ steps.baseline.outputs.jobs_created }}
           REMAINING: ${{ steps.baseline.outputs.remaining }}
+          NEEDS_REFRESH: ${{ steps.baseline.outputs.needs_refresh }}
+          ALREADY_FRESH: ${{ steps.baseline.outputs.already_fresh }}
         run: |
           set -euo pipefail
-          state="success"; description="Couverture publique P1 · ${JOBS_CREATED:-0} tâches · file ${REMAINING:-0} · app_state 0"
-          if [ "$STEP_OUTCOME" != "success" ]; then state="failure"; description="Couverture publique P1 interrompue · app_state inchangé"; fi
+          state="success"; description="Couverture publique <=45m · ${ALREADY_FRESH:-0} frais · ${NEEDS_REFRESH:-0} à rafraîchir · ${JOBS_CREATED:-0} tâches"
+          if [ "$STEP_OUTCOME" != "success" ]; then state="failure"; description="Couverture publique fraîche interrompue · app_state inchangé"; fi
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           payload="$(jq -nc --arg state "$state" --arg target_url "$target_url" --arg description "$description" --arg context "pass50/metrics-public-baseline-p1" '{state:$state,target_url:$target_url,description:$description,context:$context}')"
           curl --fail-with-body --silent --show-error -X POST -H "Accept: application/vnd.github+json" \
