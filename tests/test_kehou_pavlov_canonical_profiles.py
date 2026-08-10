@@ -45,15 +45,15 @@ class KehouPavlovCanonicalProfileTests(unittest.TestCase):
         self.assertEqual(len(variants), 1)
 
     def test_browser_loads_census_revision_96_v27(self):
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.10", self.v9)
-        self.assertIn("CENSUS_VERSION='96-v27'", self.v9)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.11", self.v9)
+        self.assertIn("CENSUS_VERSION='97-v28'", self.v9)
         index_version = re.search(r"v9-tools\.js\?v=([0-9.]+)", self.index)
         worker_version = re.search(r"v9-tools\.js\?v=([0-9.]+)", self.sw)
         self.assertIsNotNone(index_version)
         self.assertIsNotNone(worker_version)
-        self.assertEqual(index_version.group(1), "15.8")
-        self.assertEqual(worker_version.group(1), "15.8")
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.10", self.sw)
+        self.assertEqual(index_version.group(1), "15.9")
+        self.assertEqual(worker_version.group(1), "15.9")
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.11", self.sw)
 
 
 if __name__ == "__main__":

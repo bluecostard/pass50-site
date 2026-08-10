@@ -486,8 +486,8 @@ render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.10';
-  const CENSUS_VERSION='96-v27';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.11';
+  const CENSUS_VERSION='97-v28';
   let importing=false;
 
   function p50CensusNormalize(value=''){
