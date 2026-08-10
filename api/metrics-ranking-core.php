@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
 
-const P50_MR_ALGORITHM_VERSION='MR-V1.2';
+const P50_MR_ALGORITHM_VERSION='MR-V1.3';
 const P50_MR_LOCK='pass50_metrics_ranking_experimental_v1';
 
 function p50_mr_periods(): array {
