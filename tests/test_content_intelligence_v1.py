@@ -166,10 +166,12 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("p50RefreshAllNews", CLIENT)
         self.assertIn("news-refresh-progress", CLIENT)
         self.assertIn("startRefreshProgress", CLIENT)
+        self.assertIn("collect_work", CLIENT)
+        self.assertIn("adminFreshnessFetch", CLIENT)
         self.assertIn("visibilitychange", CLIENT)
         self.assertIn("cache:'no-store'", CLIENT)
-        self.assertIn("content-intelligence.js?v=1.4", CONFIG)
-        self.assertIn("content-intelligence.js?v=1.4", SW)
+        self.assertIn("content-intelligence.js?v=1.5", CONFIG)
+        self.assertIn("content-intelligence.js?v=1.5", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
     def test_admin_discovery_uses_verified_handles(self):

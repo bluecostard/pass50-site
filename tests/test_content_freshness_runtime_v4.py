@@ -50,6 +50,10 @@ class ContentFreshnessRuntimeV4Tests(unittest.TestCase):
         self.assertIn("require_role($user,'owner','admin')", ADMIN)
         self.assertIn("mode==='all'", CORE)
         self.assertIn("collect_all", ADMIN)
+        self.assertIn("collect_work", ADMIN)
+        self.assertIn("timeBudgetMs", ADMIN)
+        self.assertIn("timeBudgetMs", CORE)
+        self.assertIn("'mode'=>'work'", ADMIN)
         self.assertIn("contentLimit'=>6", CORE)
 
     def test_official_news_window_is_forty_eight_hours(self):

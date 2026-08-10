@@ -20,30 +20,51 @@ require_role($user,'owner','admin');
 $raw=file_get_contents('php://input');
 $input=is_array(json_decode($raw?:'',true))?json_decode($raw,true):[];
 $mode=trim((string)($input['mode']??'collect_all'));
-if(!in_array($mode,['sync_only','collect_all'],true))json_response(['error'=>'Mode invalide.'],422);
+if(!in_array($mode,['sync_only','collect_all','collect_work'],true))json_response(['error'=>'Mode invalide.'],422);
 
 $pdo=db();
 p50_metrics_ensure_schema($pdo);
 
 if($mode==='sync_only'){
     $refresh=p50_ci_refresh($pdo);
-    json_response(['ok'=>true,'mode'=>'sync_only','contentIntelligence'=>$refresh,'publicStateWrites'=>0]);
+    json_response(['ok'=>true,'mode'=>'sync_only','contentIntelligence'=>$refresh,'publicStateWrites'=>0,'continue'=>false,'remaining'=>0]);
 }
 
 if(!defined('P50_FACEBOOK_COLLECTOR_VERSION')||P50_FACEBOOK_COLLECTOR_VERSION!==P50_CONTENT_FRESHNESS_V4_FACEBOOK_COLLECTOR){
     json_response(['error'=>'Collecteur Facebook V2 non chargé.'],503);
 }
 
-set_time_limit(900);
-$dispatchId='admin-'.preg_replace('/[^A-Za-z0-9._-]/','',(string)($user['id']??'user')).'-'.time();
-$result=p50_cf4_execute($pdo,$dispatchId,[
-    'mode'=>'all',
-    'rankedLimit'=>70,
-    'jobLimit'=>140,
-    'maxIterations'=>120,
-    'forceTopN'=>P50_CONTENT_FRESHNESS_V4_TOP_RANK_FORCE,
-    'enqueueReason'=>'content_freshness_admin_all',
-]);
+// Lots courts : les proxies IONOS coupent souvent les POST > 30–60 s.
+set_time_limit(90);
+$timeBudgetMs=max(8000,min(25000,(int)($input['timeBudgetMs']??20000)));
+$maxIterations=max(8,min(60,(int)($input['maxIterations']??36)));
+$dispatchId=trim((string)($input['dispatchId']??''));
+if($dispatchId===''||!preg_match('/^[A-Za-z0-9._-]{8,80}$/',$dispatchId)){
+    $dispatchId='admin-'.preg_replace('/[^A-Za-z0-9._-]/','',(string)($user['id']??'user')).'-'.time();
+}
+
+if($mode==='collect_work'){
+    $result=p50_cf4_execute($pdo,$dispatchId,[
+        'mode'=>'work',
+        'maxIterations'=>$maxIterations,
+        'timeBudgetMs'=>$timeBudgetMs,
+        'forceRefresh'=>!empty($input['forceRefresh']),
+        'enqueueReason'=>'content_freshness_admin_work',
+    ]);
+}else{
+    $result=p50_cf4_execute($pdo,$dispatchId,[
+        'mode'=>'all',
+        'rankedLimit'=>70,
+        'jobLimit'=>140,
+        'maxIterations'=>$maxIterations,
+        'timeBudgetMs'=>$timeBudgetMs,
+        'forceTopN'=>P50_CONTENT_FRESHNESS_V4_TOP_RANK_FORCE,
+        'forceRefresh'=>false,
+        'enqueueReason'=>'content_freshness_admin_all',
+    ]);
+}
+
 if(empty($result['ok']))json_response($result,500);
-$result['mode']='collect_all';
+$result['mode']=$mode;
+$result['continue']=!empty($result['continue'])||(int)($result['remaining']??0)>0;
 json_response($result);

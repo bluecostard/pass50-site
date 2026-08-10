@@ -234,42 +234,52 @@ function p50_cf4_execute(PDO $pdo,string $dispatchId,array $options=[]): array {
     $profileLimit=max(1,min(150,(int)($options['profileLimit']??P50_CONTENT_FRESHNESS_V4_PROFILE_LIMIT)));
     $jobLimit=max(1,min(200,(int)($options['jobLimit']??P50_CONTENT_FRESHNESS_V4_JOB_LIMIT)));
     $maxIterations=max(1,min(200,(int)($options['maxIterations']??P50_CONTENT_FRESHNESS_V4_WORK_ITERATIONS)));
+    $timeBudgetMs=max(0,min(120000,(int)($options['timeBudgetMs']??0)));
     $mode=(string)($options['mode']??'cycle');
     $enqueueReason=(string)($options['enqueueReason']??'content_freshness_v4');
     $forceTopN=max(0,min(10,(int)($options['forceTopN']??P50_CONTENT_FRESHNESS_V4_TOP_RANK_FORCE)));
+    $workOnly=$mode==='work';
     try{
         p50_metrics_ensure_schema($pdo);p50_metrics_recover_stale_jobs($pdo);$xPolicy=p50_cf4_x_policy();
-        $stage='selection';
-        $ranked=p50_cf4_ranked_profiles($pdo,$rankedLimit);
-        $topRankedByPeriod=[];
-        if($forceTopN>0){
-            $topPeriodMeta=p50_cf4_top_profiles_all_periods($pdo,$forceTopN);
-            if($topPeriodMeta['count']>0){
-                $ranked=p50_cf4_merge_ranked_lists($topPeriodMeta['rows'],$ranked);
-                $topRankedCount=(int)$topPeriodMeta['count'];
-                $topRankedByPeriod=$topPeriodMeta['periods'];
-            }else{
-                $topPriority=p50_cf4_prioritize_top_ranked($ranked,$forceTopN);
-                $ranked=$topPriority['rows'];
-                $topRankedCount=(int)$topPriority['topCount'];
+        $ranked=[];$selection=['profiles'=>[],'jobs'=>[],'platforms'=>[]];$access=['summary'=>['verified'=>0,'authorized'=>0],'byPlatform'=>[]];$priority=['count'=>0,'rows'=>[]];$topRankedByPeriod=[];$topRankedCount=0;$enqueued=0;$duplicates=0;$enqueueByPlatform=[];
+        if(!$workOnly){
+            $stage='selection';
+            $ranked=p50_cf4_ranked_profiles($pdo,$rankedLimit);
+            if($forceTopN>0){
+                $topPeriodMeta=p50_cf4_top_profiles_all_periods($pdo,$forceTopN);
+                if($topPeriodMeta['count']>0){
+                    $ranked=p50_cf4_merge_ranked_lists($topPeriodMeta['rows'],$ranked);
+                    $topRankedCount=(int)$topPeriodMeta['count'];
+                    $topRankedByPeriod=$topPeriodMeta['periods'];
+                }else{
+                    $topPriority=p50_cf4_prioritize_top_ranked($ranked,$forceTopN);
+                    $ranked=$topPriority['rows'];
+                    $topRankedCount=(int)$topPriority['topCount'];
+                }
             }
-        }else{$topRankedCount=0;}
-        $priority=p50_cf4_prioritize_tiktok_oauth($pdo,$ranked);$ranked=$priority['rows'];
-        $access=p50_cf4_authorized_rows($pdo,$ranked,$xPolicy);
-        $selection=$mode==='all'?p50_cf4_select_all($ranked,$access['rows'],$jobLimit):p50_cf4_select($ranked,$access['rows'],$profileLimit,$jobLimit);
-        $stage='enqueue';$enqueued=0;$duplicates=0;$enqueueByPlatform=[];$now=time();
-        foreach($selection['jobs'] as $row){$job=p50_cf4_enqueue($pdo,$row,$dispatchId,$now,$enqueueReason);$platform=(string)$row['platform'];if(!empty($job['created'])){$enqueued++;p50_cf4_platform_counter($enqueueByPlatform,$platform,'enqueued');}else{$duplicates++;p50_cf4_platform_counter($enqueueByPlatform,$platform,'duplicates');}}
-        $stage='work';$processed=0;$completed=0;$partial=0;$failed=0;$retried=0;$skipped=0;$processedByPlatform=[];
+            $priority=p50_cf4_prioritize_tiktok_oauth($pdo,$ranked);$ranked=$priority['rows'];
+            $access=p50_cf4_authorized_rows($pdo,$ranked,$xPolicy);
+            $selection=$mode==='all'?p50_cf4_select_all($ranked,$access['rows'],$jobLimit):p50_cf4_select($ranked,$access['rows'],$profileLimit,$jobLimit);
+            $stage='enqueue';$now=time();
+            foreach($selection['jobs'] as $row){$job=p50_cf4_enqueue($pdo,$row,$dispatchId,$now,$enqueueReason);$platform=(string)$row['platform'];if(!empty($job['created'])){$enqueued++;p50_cf4_platform_counter($enqueueByPlatform,$platform,'enqueued');}else{$duplicates++;p50_cf4_platform_counter($enqueueByPlatform,$platform,'duplicates');}}
+        }
+        $stage='work';$processed=0;$completed=0;$partial=0;$failed=0;$retried=0;$skipped=0;$processedByPlatform=[];$budgetHit=false;
         for($iteration=1;$iteration<=$maxIterations;$iteration++){
+            if($timeBudgetMs>0&&((microtime(true)-$started)*1000)>=$timeBudgetMs){$budgetHit=true;break;}
             $remaining=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=5 AND status IN ('pending','running','retry_wait')");if($remaining===0)break;
             $work=p50_metrics_process_next_job($pdo);if(empty($work['processed']))break;
             $processed+=(int)($work['processed']??0);$completed+=(int)($work['completed']??0);$partial+=(int)($work['partial']??0);$failed+=(int)($work['failed']??0);$retried+=(int)($work['retried']??0);$skipped+=(int)($work['skipped']??0);
             $jobStmt=$pdo->prepare("SELECT platform,priority FROM p50_metric_jobs WHERE job_uuid=? LIMIT 1");$jobStmt->execute([(string)$work['jobUuid']]);$jobRow=$jobStmt->fetch()?:[];
             if((int)($jobRow['priority']??-1)===5){$platform=p50_mc_platform((string)($jobRow['platform']??'Unknown'));p50_cf4_platform_counter($processedByPlatform,$platform,'processed');p50_cf4_platform_counter($processedByPlatform,$platform,(string)($work['status']??'unknown'));}
         }
-        $stage='content_intelligence';$refresh=p50_ci_refresh($pdo);$remaining=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=5 AND status IN ('pending','running','retry_wait')");
+        $remaining=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=5 AND status IN ('pending','running','retry_wait')");
+        $refresh=null;
+        if($remaining===0||!empty($options['forceRefresh'])){
+            $stage='content_intelligence';$refresh=p50_ci_refresh($pdo);
+        }
         ksort($enqueueByPlatform,SORT_NATURAL|SORT_FLAG_CASE);ksort($processedByPlatform,SORT_NATURAL|SORT_FLAG_CASE);
-        return ['ok'=>true,'action'=>$mode==='all'?'refresh_all':'refresh','version'=>P50_CONTENT_FRESHNESS_V4_VERSION,'dispatchId'=>$dispatchId,'bucketSeconds'=>P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS,'facebookCollectorVersion'=>defined('P50_FACEBOOK_COLLECTOR_VERSION')?P50_FACEBOOK_COLLECTOR_VERSION:null,'xFastCycle'=>$xPolicy,'profilesScanned'=>count($ranked),'profilesSelected'=>count($selection['profiles']),'topRankedPrioritized'=>$topRankedCount??0,'topRankedByPeriod'=>$topRankedByPeriod,'tiktokOauthProfilesPrioritized'=>(int)$priority['count'],'candidateLinks'=>(int)$access['summary']['verified'],'authorizedLinks'=>(int)$access['summary']['authorized'],'accessSummary'=>$access['summary'],'accessByPlatform'=>$access['byPlatform'],'selectedByPlatform'=>$selection['platforms'],'enqueueByPlatform'=>$enqueueByPlatform,'processedByPlatform'=>$processedByPlatform,'enqueued'=>$enqueued,'duplicates'=>$duplicates,'processed'=>$processed,'completed'=>$completed,'partial'=>$partial,'retried'=>$retried,'failed'=>$failed,'skipped'=>$skipped,'remaining'=>$remaining,'contentIntelligence'=>$refresh,'stage'=>'complete','durationMs'=>(int)round((microtime(true)-$started)*1000),'publicStateWrites'=>0];
+        $action=$workOnly?'refresh_work':($mode==='all'?'refresh_all':'refresh');
+        return ['ok'=>true,'action'=>$action,'version'=>P50_CONTENT_FRESHNESS_V4_VERSION,'dispatchId'=>$dispatchId,'bucketSeconds'=>P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS,'facebookCollectorVersion'=>defined('P50_FACEBOOK_COLLECTOR_VERSION')?P50_FACEBOOK_COLLECTOR_VERSION:null,'xFastCycle'=>$xPolicy,'profilesScanned'=>count($ranked),'profilesSelected'=>count($selection['profiles']),'topRankedPrioritized'=>$topRankedCount,'topRankedByPeriod'=>$topRankedByPeriod,'tiktokOauthProfilesPrioritized'=>(int)$priority['count'],'candidateLinks'=>(int)$access['summary']['verified'],'authorizedLinks'=>(int)$access['summary']['authorized'],'accessSummary'=>$access['summary'],'accessByPlatform'=>$access['byPlatform'],'selectedByPlatform'=>$selection['platforms'],'enqueueByPlatform'=>$enqueueByPlatform,'processedByPlatform'=>$processedByPlatform,'enqueued'=>$enqueued,'duplicates'=>$duplicates,'processed'=>$processed,'completed'=>$completed,'partial'=>$partial,'retried'=>$retried,'failed'=>$failed,'skipped'=>$skipped,'remaining'=>$remaining,'continue'=>$remaining>0,'budgetHit'=>$budgetHit,'contentIntelligence'=>$refresh,'stage'=>$remaining>0?'work':'complete','durationMs'=>(int)round((microtime(true)-$started)*1000),'publicStateWrites'=>0];
     }catch(Throwable $error){
         $detail=p50_metrics_safe_error($error->getMessage());error_log('PASS50 content freshness ['.$stage.']: '.$detail);
         return ['ok'=>false,'error'=>'Rafraîchissement rapide des contenus interrompu.','errorCode'=>'content_freshness_'.$stage,'detail'=>$detail,'stage'=>$stage,'dispatchId'=>$dispatchId,'version'=>P50_CONTENT_FRESHNESS_V4_VERSION,'facebookCollectorVersion'=>defined('P50_FACEBOOK_COLLECTOR_VERSION')?P50_FACEBOOK_COLLECTOR_VERSION:null,'publicStateWrites'=>0,'durationMs'=>(int)round((microtime(true)-$started)*1000)];

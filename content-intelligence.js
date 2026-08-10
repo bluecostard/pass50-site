@@ -149,44 +149,38 @@
   function stopRefreshProgress(panel){
     if(!panel)return;
     if(panel._timer){clearInterval(panel._timer);panel._timer=null;}
-    if(panel._phaseTimer){clearInterval(panel._phaseTimer);panel._phaseTimer=null;}
+  }
+
+  function updateRefreshProgress(panel,{pct=0,label='',detail='',meta=''}={}){
+    if(!panel)return;
+    const fill=panel.querySelector('[data-fill]');
+    const labelEl=panel.querySelector('[data-label]');
+    const detailEl=panel.querySelector('[data-detail]');
+    const metaEl=panel.querySelector('[data-meta]');
+    const safePct=Math.max(0,Math.min(100,Number(pct)||0));
+    panel.classList.add('is-active');
+    panel.classList.remove('is-done','is-error');
+    if(fill){fill.style.width=`${safePct}%`;fill.style.removeProperty('background');}
+    if(labelEl&&label)labelEl.textContent=label;
+    if(detailEl&&detail)detailEl.textContent=detail;
+    if(metaEl)metaEl.textContent=meta||`${Math.round(safePct)} %`;
   }
 
   function startRefreshProgress(panel){
     if(!panel)return;
     stopRefreshProgress(panel);
-    const label=panel.querySelector('[data-label]');
-    const meta=panel.querySelector('[data-meta]');
-    const fill=panel.querySelector('[data-fill]');
-    const detail=panel.querySelector('[data-detail]');
-    const phases=[
-      'Sélection du Top 3 de chaque période…',
-      'Mise en file des collectes réseaux…',
-      'Récolte Facebook / TikTok / YouTube…',
-      'Synchronisation des actualités FI…',
-      'Recalcul du Top 5 tendance…',
-    ];
-    let pct=4;
-    let phase=0;
     const started=Date.now();
-    panel.classList.add('is-active');
-    panel.classList.remove('is-done','is-error');
-    if(fill){fill.style.width=`${pct}%`;fill.style.removeProperty('background');}
-    if(label)label.textContent=phases[0];
-    if(detail)detail.textContent='Collecte réelle en cours sur le serveur — ne ferme pas cet onglet.';
-    const tick=()=>{
+    panel._startedAt=started;
+    updateRefreshProgress(panel,{pct:3,label:'Mise en file des collectes…',detail:'Connexion au serveur — première vague en cours.',meta:'3 % · 0s'});
+    panel._timer=setInterval(()=>{
       const elapsed=Math.floor((Date.now()-started)/1000);
-      // Asymptote vers ~92 % tant que la requête n’est pas finie.
-      pct=Math.min(92, pct + (pct<35?2.4:pct<70?1.2:0.45));
-      if(fill)fill.style.width=`${pct.toFixed(1)}%`;
-      if(meta)meta.textContent=`${Math.round(pct)} % · ${elapsed}s`;
-    };
-    tick();
-    panel._timer=setInterval(tick,450);
-    panel._phaseTimer=setInterval(()=>{
-      phase=(phase+1)%phases.length;
-      if(label)label.textContent=phases[phase];
-    },4200);
+      const metaEl=panel.querySelector('[data-meta]');
+      if(!metaEl||panel.classList.contains('is-done')||panel.classList.contains('is-error'))return;
+      const current=metaEl.textContent||'';
+      const pctMatch=current.match(/(\d+)\s*%/);
+      const pct=pctMatch?pctMatch[1]:'…';
+      metaEl.textContent=`${pct} % · ${elapsed}s`;
+    },1000);
   }
 
   function finishRefreshProgress(panel,{ok=true,message=''}={}){
@@ -196,29 +190,96 @@
     const meta=panel.querySelector('[data-meta]');
     const fill=panel.querySelector('[data-fill]');
     const detail=panel.querySelector('[data-detail]');
+    const elapsed=panel._startedAt?Math.floor((Date.now()-panel._startedAt)/1000):null;
     panel.classList.add('is-active');
     panel.classList.toggle('is-done',ok);
     panel.classList.toggle('is-error',!ok);
-    if(fill)fill.style.width=ok?'100%':'100%';
-    if(fill)fill.style.background=ok?undefined:'linear-gradient(90deg,#7a2020,#ff6e5a)';
+    if(fill){fill.style.width='100%';if(!ok)fill.style.background='linear-gradient(90deg,#7a2020,#ff6e5a)';else fill.style.removeProperty('background');}
     if(label)label.textContent=ok?'Collecte terminée':'Collecte interrompue';
-    if(meta)meta.textContent=ok?'100 %':'Échec';
+    if(meta)meta.textContent=ok?`100 %${elapsed!=null?` · ${elapsed}s`:''}`:'Échec';
     if(detail)detail.textContent=message||(ok?'Actualité rafraîchie.':'Réessaie dans un instant.');
   }
 
+  async function adminFreshnessFetch(body){
+    const headers={Accept:'application/json','Content-Type':'application/json'};
+    if(typeof CLOUD!=='undefined'&&CLOUD.token)headers.Authorization='Bearer '+CLOUD.token;
+    const base=(typeof CLOUD!=='undefined'&&CLOUD.baseUrl)?CLOUD.baseUrl:'./api';
+    let res;
+    try{
+      res=await fetch(`${base}/content-freshness-admin-refresh.php`,{method:'POST',headers,body:JSON.stringify(body),cache:'no-store'});
+    }catch(error){
+      throw new Error('Réseau interrompu pendant la collecte. Réessaie sans quitter la page.');
+    }
+    let data={};
+    try{data=await res.json();}catch{}
+    if(!res.ok){
+      const detail=data.detail?` (${data.detail})`:'';
+      throw new Error((data.error||`Erreur serveur HTTP ${res.status}`)+detail);
+    }
+    if(data&&data.ok===false)throw new Error((data.error||'Collecte interrompue')+(data.detail?` (${data.detail})`:''));
+    return data;
+  }
+
   async function refreshAllProfileNews(btn){
-    if(typeof apiFetch!=='function')return;
     if(P50CI.refreshAllRunning)return;
     P50CI.refreshAllRunning=true;
     const label=btn?.textContent||'';
     const panel=ensureRefreshProgressUi(btn);
     if(btn){btn.disabled=true;btn.textContent='Collecte en cours…';}
     startRefreshProgress(panel);
+    const totals={profilesSelected:0,enqueued:0,processed:0,completed:0,failed:0,newsCreated:0,newsUpdated:0};
+    let remaining=0;let waves=0;let dispatchId='';
     try{
-      const data=await apiFetch('content-freshness-admin-refresh.php',{method:'POST',body:{mode:'collect_all'}});
+      updateRefreshProgress(panel,{pct:8,label:'File d’attente des FI…',detail:'Sélection Top 3 par période + mise en file des collectes.'});
+      let data=await adminFreshnessFetch({mode:'collect_all',timeBudgetMs:20000,maxIterations:36});
+      waves=1;
+      dispatchId=String(data.dispatchId||'');
+      totals.profilesSelected=Number(data.profilesSelected||0);
+      totals.enqueued=Number(data.enqueued||0)+Number(data.duplicates||0);
+      totals.processed+=Number(data.processed||0);
+      totals.completed+=Number(data.completed||0);
+      totals.failed+=Number(data.failed||0);
+      remaining=Number(data.remaining||0);
+      const totalJobs=Math.max(totals.enqueued,totals.processed+remaining,1);
+      let pct=Math.min(92,12+Math.round(((totalJobs-remaining)/totalJobs)*80));
+      updateRefreshProgress(panel,{
+        pct,
+        label:remaining>0?`Récolte en cours (vague ${waves})…`:'Synchronisation des actualités…',
+        detail:`${totals.profilesSelected} FI · ${totals.processed} collectes traitées · ${remaining} restantes`,
+      });
+
+      while(remaining>0&&waves<40){
+        updateRefreshProgress(panel,{
+          pct:Math.min(92,pct),
+          label:`Récolte en cours (vague ${waves+1})…`,
+          detail:`${totals.processed} traitées · ${remaining} restantes — ne ferme pas cet onglet.`,
+        });
+        data=await adminFreshnessFetch({mode:'collect_work',dispatchId,timeBudgetMs:20000,maxIterations:36,forceRefresh:false});
+        waves+=1;
+        const waveProcessed=Number(data.processed||0);
+        totals.processed+=waveProcessed;
+        totals.completed+=Number(data.completed||0);
+        totals.failed+=Number(data.failed||0);
+        remaining=Number(data.remaining||0);
+        pct=Math.min(92,12+Math.round(((totalJobs-remaining)/totalJobs)*80));
+        updateRefreshProgress(panel,{
+          pct,
+          label:remaining>0?`Récolte en cours (vague ${waves})…`:'Fin de file — recalcul…',
+          detail:`${totals.processed} traitées · ${remaining} restantes`,
+        });
+        if(waveProcessed===0&&remaining>0){
+          // Jobs en attente/retry non exécutables tout de suite : on synchronise ce qui est déjà là.
+          break;
+        }
+      }
+
+      updateRefreshProgress(panel,{pct:96,label:'Recalcul du Top 5…',detail:'Mise à jour du flux Actualité / Tendance.'});
+      const sync=await adminFreshnessFetch({mode:'sync_only'});
+      const news=sync.contentIntelligence?.news||data.contentIntelligence?.news||{};
+      totals.newsCreated=Number(news.created||0);
+      totals.newsUpdated=Number(news.updated||0);
       clearNewsCaches();await refreshTrends(true);
-      const news=data.contentIntelligence?.news||{};
-      const msg=`${data.profilesSelected||0} FI parcourues · ${data.enqueued||0} collectes · ${data.processed||0} traitées · ${news.created||0} nouvelles actus · ${news.updated||0} mises à jour · ${Math.round((data.durationMs||0)/1000)}s`;
+      const msg=`${totals.profilesSelected} FI · ${totals.enqueued} collectes · ${totals.processed} traitées · ${totals.newsCreated} nouvelles actus · ${totals.newsUpdated} mises à jour · ${waves} vague${waves>1?'s':''}`;
       finishRefreshProgress(panel,{ok:true,message:msg});
       if(typeof toast==='function')toast(msg);
     }catch(error){
