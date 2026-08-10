@@ -141,12 +141,12 @@ function p50_mo_select(PDO $pdo,string $cadenceKey,array $options=[]): array {
       WHERE r.alive=1 AND r.profile_id IN ($placeholders) AND s.status='verified' AND s.confidence>=?
       AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat') ORDER BY r.profile_id,s.platform LIMIT 3000");
     $stmt->execute([...$ids,$threshold]);$rows=p50_mo_unique_candidate_rows(array_merge($stmt->fetchAll(),p50_mo_oauth_youtube_rows($pdo,$ids),p50_mo_oauth_meta_rows($pdo,$ids)));$summary['eligibleProfiles']=count(array_unique(array_column($rows,'profile_id')));$summary['eligibleLinks']=count($rows);$candidates=[];$liveSet=array_fill_keys($live['profileIds'],true);
-    $selectionTime=strtotime((string)($options['now']??'now'));if($selectionTime===false)$selectionTime=time();
+    $selectionTime=strtotime((string)($options['now']??'now'));if($selectionTime===false)$selectionTime=time();$ignoreFresh=!empty($options['ignoreFresh']);
     foreach($rows as $row){$profileId=(string)$row['profile_id'];$platform=(string)$row['platform'];$access=p50_mc_public_access($platform,$profileId);
         if(!$access['configured']){$summary['skippedConfiguration']++;continue;}if(!$access['authorized']){$summary['skippedAuthRequired']++;continue;}
         if(($access['mode']??'')==='unsupported_account_type'){$summary['skippedUnsupported']++;continue;}
         $fresh=$pdo->prepare("SELECT MAX(captured_at) FROM p50_metric_captures WHERE profile_id=? AND platform=? AND quality_status='usable'");$fresh->execute([$profileId,$platform]);$last=$fresh->fetchColumn();
-        $liveConfirmed=$cadence['key']==='p0'&&isset($liveSet[$profileId]);if(!$liveConfirmed&&$last&&strtotime((string)$last)>=$selectionTime-$cfg['fresh'][$cadence['key']]*60){$summary['skippedFresh']++;continue;}
+        $liveConfirmed=$cadence['key']==='p0'&&isset($liveSet[$profileId]);if(!$ignoreFresh&&!$liveConfirmed&&$last&&strtotime((string)$last)>=$selectionTime-$cfg['fresh'][$cadence['key']]*60){$summary['skippedFresh']++;continue;}
         if($cadence['priority']>10){$higher=$pdo->prepare("SELECT COUNT(*) FROM p50_metric_jobs WHERE scope_type='profile' AND scope_id=? AND platform=? AND priority<? AND status IN ('pending','running','retry_wait')");$higher->execute([$profileId,$platform,$cadence['priority']]);if((int)$higher->fetchColumn()>0){$summary['skippedFresh']++;continue;}}
         $idempotency=hash('sha256',implode('|',[P50_METRICS_ORCHESTRATOR_VERSION,$cadence['key'],$bucket['key'],$profileId,$platform]));
         $candidates[]=['profileId'=>$profileId,'platform'=>$platform,'contentLimit'=>$cadence['contentLimit'],'observedAt'=>$bucket['observedAt'],'liveConfirmed'=>$liveConfirmed,'idempotencyKey'=>$idempotency];
