@@ -274,7 +274,10 @@ function p50_cf4_execute(PDO $pdo,string $dispatchId,array $options=[]): array {
         }
         $remaining=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=5 AND status IN ('pending','running','retry_wait')");
         $refresh=null;
-        if($remaining===0||!empty($options['forceRefresh'])){
+        // En mode budgeté (lots admin), le client appelle sync_only une seule fois à la fin.
+        // Sinon un 2e p50_ci_refresh transforme les « created » en « updated ».
+        $shouldRefresh=!empty($options['forceRefresh'])||($remaining===0&&$timeBudgetMs===0);
+        if($shouldRefresh){
             $stage='content_intelligence';$refresh=p50_ci_refresh($pdo);
         }
         ksort($enqueueByPlatform,SORT_NATURAL|SORT_FLAG_CASE);ksort($processedByPlatform,SORT_NATURAL|SORT_FLAG_CASE);

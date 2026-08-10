@@ -53,6 +53,7 @@ class ContentFreshnessRuntimeV4Tests(unittest.TestCase):
         self.assertIn("collect_work", ADMIN)
         self.assertIn("timeBudgetMs", ADMIN)
         self.assertIn("timeBudgetMs", CORE)
+        self.assertIn("$timeBudgetMs===0", CORE)
         self.assertIn("'mode'=>'work'", ADMIN)
         self.assertIn("contentLimit'=>6", CORE)
 

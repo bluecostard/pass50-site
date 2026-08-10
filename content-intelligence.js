@@ -275,11 +275,15 @@
 
       updateRefreshProgress(panel,{pct:96,label:'Recalcul du Top 5…',detail:'Mise à jour du flux Actualité / Tendance.'});
       const sync=await adminFreshnessFetch({mode:'sync_only'});
-      const news=sync.contentIntelligence?.news||data.contentIntelligence?.news||{};
+      const news=sync.contentIntelligence?.news||{};
       totals.newsCreated=Number(news.created||0);
       totals.newsUpdated=Number(news.updated||0);
+      totals.newsConsidered=Number(news.considered||0);
       clearNewsCaches();await refreshTrends(true);
-      const msg=`${totals.profilesSelected} FI · ${totals.enqueued} collectes · ${totals.processed} traitées · ${totals.newsCreated} nouvelles actus · ${totals.newsUpdated} mises à jour · ${waves} vague${waves>1?'s':''}`;
+      const freshBit=totals.newsCreated>0
+        ? `${totals.newsCreated} nouvelle${totals.newsCreated>1?'s':''} actu${totals.newsCreated>1?'s':''}`
+        : 'aucune nouvelle URL (déjà en base)';
+      const msg=`${totals.profilesSelected} FI · ${totals.processed} collectes · ${freshBit} · ${totals.newsUpdated} actus rafraîchies · ${waves} vague${waves>1?'s':''}`;
       finishRefreshProgress(panel,{ok:true,message:msg});
       if(typeof toast==='function')toast(msg);
     }catch(error){
