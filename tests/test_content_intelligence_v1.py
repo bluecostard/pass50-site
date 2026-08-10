@@ -57,6 +57,9 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("INTERVAL 24 HOUR", FEED)
         self.assertIn("INTERVAL 7 DAY", FEED)
         self.assertIn("officialNewsMaxAgeHours'=>24", FEED)
+        self.assertIn("officialNewsFallbackMaxAgeHours'=>48", FEED)
+        self.assertIn("officialNewsHoursApplied", FEED)
+        self.assertIn("hasOfficial24h", FEED)
         self.assertIn("maxTrendRunAgeMinutes'=>30", FEED)
         self.assertIn("trendAgeMinutes>30", FEED)
 
@@ -170,10 +173,11 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("adminFreshnessFetch", CLIENT)
         self.assertIn("visibilitychange", CLIENT)
         self.assertIn("cache:'no-store'", CLIENT)
-        self.assertIn("content-intelligence.js?v=1.7", CONFIG)
-        self.assertIn("content-intelligence.js?v=1.7", SW)
+        self.assertIn("content-intelligence.js?v=1.8", CONFIG)
+        self.assertIn("content-intelligence.js?v=1.8", SW)
         self.assertIn("déjà en base", CLIENT)
-        self.assertIn("24 dernières heures", CLIENT)
+        self.assertIn("officialNewsHoursApplied", CLIENT)
+        self.assertIn("Aucune actu en 24 h", CLIENT)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
     def test_admin_discovery_uses_verified_handles(self):

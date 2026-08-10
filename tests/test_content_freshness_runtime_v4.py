@@ -60,6 +60,8 @@ class ContentFreshnessRuntimeV4Tests(unittest.TestCase):
     def test_official_news_window_is_twenty_four_hours(self):
         self.assertIn("INTERVAL 24 HOUR", FEED)
         self.assertIn("'officialNewsMaxAgeHours'=>24", FEED)
+        self.assertIn("'officialNewsFallbackMaxAgeHours'=>48", FEED)
+        self.assertIn("hasOfficial24h", FEED)
 
     def test_x_payment_required_is_paused_before_enqueue(self):
         self.assertIn("P50_CONTENT_FRESHNESS_V4_X_PAUSE_REASON='payment_required'", CORE)
