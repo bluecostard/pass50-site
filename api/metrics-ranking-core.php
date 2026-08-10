@@ -353,12 +353,12 @@ function p50_mr_calculate(PDO $pdo,array $periods,string $triggerType,array $met
         $stmt=$pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,trigger_type,status,periods_json,metadata_json,started_at) VALUES(?,?,?,'running',?,?,?)");
         $stmt->execute([$runUuid,P50_MR_ALGORITHM_VERSION,mb_substr($triggerType,0,32),p50_mr_json(array_keys($selected)),p50_mr_json($runMetadata),$now->format('Y-m-d H:i:s')]);$runCreated=true;
         $pdo->beginTransaction();
-        $loaded=p50_mr_load($pdo,$now);$allRows=[];$classableCount=0;$scoresWritten=0;
+        $loaded=p50_mr_load($pdo,$now);$allRows=[];$periodSummaries=[];$classableCount=0;$scoresWritten=0;
         foreach($selected as $periodKey=>$hours){
             $stmt=$pdo->prepare("SELECT profile_id,rank_position FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key=? AND rank_position IS NOT NULL");
             $stmt->execute([P50_MR_ALGORITHM_VERSION,$periodKey]);$previous=[];foreach($stmt->fetchAll() as $row)$previous[$row['profile_id']]=(int)$row['rank_position'];
             $rows=p50_mr_period_rows($loaded,$periodKey,$hours,$now,$previous);$allRows[$periodKey]=$rows;
-            $periodSummary=p50_mr_period_summary($rows);
+            $periodSummary=p50_mr_period_summary($rows);$periodSummaries[$periodKey]=$periodSummary;
             $pdo->prepare("DELETE FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key=?")->execute([P50_MR_ALGORITHM_VERSION,$periodKey]);
             $insert=$pdo->prepare("INSERT INTO p50_metric_ranking_current(algorithm_version,period_key,profile_id,run_uuid,rank_position,score,base_score,confidence,coverage,classable,editorial_eligible,platform_count,content_count,capture_count,latest_capture_at,components_json,raw_features_json,exclusion_reasons_json,previous_rank,rank_delta,calculated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $snapshot=$pdo->prepare("INSERT INTO p50_metric_ranking_snapshots(run_uuid,algorithm_version,period_key,profile_id,rank_position,score,confidence,coverage,previous_rank,rank_delta,captured_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)");
@@ -387,7 +387,7 @@ function p50_mr_calculate(PDO $pdo,array $periods,string $triggerType,array $met
         }
         $stmt=$pdo->prepare("UPDATE p50_metric_ranking_runs SET status='success',profiles_considered=?,classable_count=?,scores_written=?,metadata_json=?,finished_at=? WHERE run_uuid=?");
         $stmt->execute([count($loaded['profiles']),$classableCount,$scoresWritten,p50_mr_json($runMetadata),$now->format('Y-m-d H:i:s'),$runUuid]);
-        $pdo->commit();return ['ok'=>true,'runUuid'=>$runUuid,'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'periods'=>array_keys($selected),'profilesConsidered'=>count($loaded['profiles']),'classableCount'=>$classableCount,'scoresWritten'=>$scoresWritten];
+        $pdo->commit();return ['ok'=>true,'runUuid'=>$runUuid,'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'periods'=>array_keys($selected),'profilesConsidered'=>count($loaded['profiles']),'classableCount'=>$classableCount,'scoresWritten'=>$scoresWritten,'periodSummaries'=>$periodSummaries];
     }catch(Throwable $error){
         if($pdo->inTransaction())$pdo->rollBack();
         if($runCreated)$pdo->prepare("UPDATE p50_metric_ranking_runs SET status='failed',error_message=?,finished_at=UTC_TIMESTAMP() WHERE run_uuid=?")->execute([p50_mr_safe_error($error),$runUuid]);
