@@ -148,7 +148,9 @@ function p50_mo_select(PDO $pdo,string $cadenceKey,array $options=[]): array {
         $fresh=$pdo->prepare("SELECT MAX(captured_at) FROM p50_metric_captures WHERE profile_id=? AND platform=? AND quality_status='usable'");$fresh->execute([$profileId,$platform]);$last=$fresh->fetchColumn();
         $liveConfirmed=$cadence['key']==='p0'&&isset($liveSet[$profileId]);if(!$ignoreFresh&&!$liveConfirmed&&$last&&strtotime((string)$last)>=$selectionTime-$cfg['fresh'][$cadence['key']]*60){$summary['skippedFresh']++;continue;}
         if($cadence['priority']>10){$higher=$pdo->prepare("SELECT COUNT(*) FROM p50_metric_jobs WHERE scope_type='profile' AND scope_id=? AND platform=? AND priority<? AND status IN ('pending','running','retry_wait')");$higher->execute([$profileId,$platform,$cadence['priority']]);if((int)$higher->fetchColumn()>0){$summary['skippedFresh']++;continue;}}
-        $idempotency=hash('sha256',implode('|',[P50_METRICS_ORCHESTRATOR_VERSION,$cadence['key'],$bucket['key'],$profileId,$platform]));
+        $idempotencyParts=[P50_METRICS_ORCHESTRATOR_VERSION,$cadence['key'],$bucket['key'],$profileId,$platform];
+        if($ignoreFresh)$idempotencyParts[]='operator:'.substr((string)($options['dispatchId']??'manual'),0,120);
+        $idempotency=hash('sha256',implode('|',$idempotencyParts));
         $candidates[]=['profileId'=>$profileId,'platform'=>$platform,'contentLimit'=>$cadence['contentLimit'],'observedAt'=>$bucket['observedAt'],'liveConfirmed'=>$liveConfirmed,'idempotencyKey'=>$idempotency];
     }
     return compact('cadence','bucket','live','summary','candidates');
@@ -180,7 +182,7 @@ function p50_mo_cancel_disabled_platform_jobs(PDO $pdo): int {
 function p50_mo_dispatch(PDO $pdo,string $cadenceKey,string $dispatchId,array $options=[]): array {
     $preview=!empty($options['preview']);if(!$preview)p50_metrics_recover_stale_jobs($pdo);$cfg=p50_mo_config();if(!$preview&&!$cfg['enabled'])throw new RuntimeException('Orchestrateur métrique désactivé.');
     $source=in_array(($options['source']??''),['cron_hmac','admin'],true)?(string)$options['source']:'server';
-    $started=microtime(true);$selection=p50_mo_select($pdo,$cadenceKey,$options);$summary=$selection['summary'];$run=null;
+    $started=microtime(true);$selection=p50_mo_select($pdo,$cadenceKey,$options+['dispatchId'=>$dispatchId]);$summary=$selection['summary'];$run=null;
     if(!$preview)$run=p50_metrics_start_run($pdo,['collector'=>P50_METRICS_ORCHESTRATOR_COLLECTOR,'triggerType'=>$selection['cadence']['dispatchTrigger'],'metadata'=>['cadence'=>$cadenceKey,'bucket'=>$selection['bucket']['key'],'dispatchId'=>substr($dispatchId,0,120),'source'=>$source]]);
     try{foreach($selection['candidates'] as $candidate){
         if($preview)continue;$payload=$candidate+['cadence'=>$cadenceKey,'bucket'=>$selection['bucket']['key'],'dispatchId'=>substr($dispatchId,0,120)];
