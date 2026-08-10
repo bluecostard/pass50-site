@@ -37,6 +37,8 @@ jobs:
             */metrics-cron.php) AUDIT_URL="${CRON_URL%/metrics-cron.php}/content-freshness-platform-audit-cron-v2.php" ;;
             *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
           esac
+          # www.pass50.store renvoie 301 vers apex : normaliser avant HMAC POST.
+          AUDIT_URL="${AUDIT_URL/https:\/\/www.pass50.store/https:\/\/pass50.store}"
           [ -n "${CRON_SECRET:-}" ] || { echo '::error::Secret métrique absent'; exit 1; }
           ready=false
           for attempt in $(seq 1 30); do
@@ -63,6 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           AUDIT_URL="${CRON_URL%/metrics-cron.php}/content-freshness-platform-audit-cron-v2.php"
+          AUDIT_URL="${AUDIT_URL/https:\/\/www.pass50.store/https:\/\/pass50.store}"
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-platform-probe-v21"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
           timestamp="$(date +%s)"
@@ -76,6 +79,7 @@ jobs:
         run: |
           set -euo pipefail
           AUDIT_URL="${CRON_URL%/metrics-cron.php}/content-freshness-platform-audit-cron-v2.php"
+          AUDIT_URL="${AUDIT_URL/https:\/\/www.pass50.store/https:\/\/pass50.store}"
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-platform-audit-v21"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"audit",dispatchId:$dispatchId}')"
           response_file='content-platform-audit.json'; success=false
