@@ -1,5 +1,5 @@
 name: Metrics Ranking Experimental
-# Relance opérateur après plafonnement audience 2H — 2026-08-10 16:20 UTC.
+# Relance P1 et classement 2H après correction de fenêtre — 2026-08-10T18:12+02:00.
 
 on:
   schedule:
