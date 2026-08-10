@@ -511,8 +511,22 @@
   async function deAutoEnrich(btn){
     if(DE.autoRunning)return;DE.autoRunning=true;DE.stopRequested=false;DE.autoSeen=new Set();DE.autoTarget=Number(DE.hub?.kpis?.profiles||0);DE.autoMessage='Démarrage du moteur…';deSetAutoUi();deAutoProgress();
     try{
+      let consecutiveFailures=0;
       while(!DE.stopRequested&&DE.autoSeen.size<DE.autoTarget){
-        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,excludeIds:[...DE.autoSeen]}});
+        let data;
+        try{
+          // Une collecte profonde ouvre plusieurs sources externes. Un profil par
+          // requête évite qu'un lot complet dépasse la limite HTTP de l'hébergeur.
+          data=await apiFetch('data-collect.php',{method:'POST',body:{limit:1,deep:true,excludeIds:[...DE.autoSeen]}});
+          consecutiveFailures=0;
+        }catch(error){
+          consecutiveFailures++;
+          if(consecutiveFailures>=3)throw new Error(`Le serveur ne répond plus après 3 tentatives (${DE.autoSeen.size}/${DE.autoTarget}). Réessaie dans quelques minutes.`);
+          DE.autoMessage=`Réponse serveur interrompue. Nouvelle tentative automatique ${consecutiveFailures}/3 dans 5 secondes…`;
+          deAutoProgress();
+          await new Promise(resolve=>setTimeout(resolve,5000));
+          continue;
+        }
         const ids=(data.processedIds||[]).map(String);if(!ids.length){
           DE.autoMessage=DE.autoSeen.size>=DE.autoTarget?'Tous les profils ont été parcourus.':'Aucun autre profil disponible dans le registre actif.';
           break;
@@ -521,7 +535,8 @@
         DE.hub=data.hub;DE.autoMessage=`Dernier lot : ${data.processed} profil(s), ${data.found} donnée(s) trouvée(s), ${data.verified} vérifiée(s).`;deDrawHub();
         await loadCloudState();render();
         if(DE.autoSeen.size===before)break;
-        await new Promise(resolve=>setTimeout(resolve,250));
+        // Laisse l'hébergement relâcher ses connexions avant le profil suivant.
+        await new Promise(resolve=>setTimeout(resolve,1000));
       }
       const complete=DE.autoSeen.size>=DE.autoTarget;
       DE.autoMessage=DE.stopRequested?'Enrichissement arrêté après le lot en cours.':complete?'Tour complet terminé. Les données fiables ont été publiées.':`Parcours interrompu à ${DE.autoSeen.size}/${DE.autoTarget}. Relance le moteur pour reprendre.`;
