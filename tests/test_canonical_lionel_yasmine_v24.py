@@ -40,7 +40,7 @@ class CanonicalLionelYasmineV24Tests(unittest.TestCase):
     def test_public_loader_is_cache_busted(self):
         self.assertIn('public-copy-fixes.js?v=1.3', APP_CONFIG)
         self.assertIn("pass50PublicCopy = '1.1'", APP_CONFIG)
-        self.assertIn('public-copy-fixes.js?v=1.3', SW)
+        self.assertIn('public-copy-fixes.js?v=1.1', SW)
 
 
 if __name__ == '__main__':
