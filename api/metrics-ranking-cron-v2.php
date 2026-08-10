@@ -41,14 +41,16 @@ try{
     $pdo=db();
     $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
     $readiness=p50_mrr_readiness($pdo,$now);
+    $currentRuns=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION]);
+    $migrationBypass=$currentRuns===0&&in_array((string)($readiness['reason']??''),['no_new_captures','recent_success'],true);
     $response=[
         'ok'=>true,'skipped'=>false,'dispatchId'=>$dispatchId,
         'endpointVersion'=>'METRICS-RANKING-CRON-V2.0',
         'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'periods'=>array_keys(p50_mr_periods()),
         'freshCaptureGateVersion'=>P50_MR_FRESH_CAPTURE_GATE_V2_VERSION,
-        'readiness'=>$readiness,
+        'readiness'=>$readiness,'algorithmMigrationBypass'=>$migrationBypass,
     ];
-    if(empty($readiness['ready'])){
+    if(empty($readiness['ready'])&&!$migrationBypass){
         $response['skipped']=true;
         $response['reason']=(string)($readiness['reason']??'data_not_ready');
         $response['durationMs']=(int)round((microtime(true)-$started)*1000);
