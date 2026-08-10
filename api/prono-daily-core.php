@@ -49,7 +49,7 @@ function p50_prono_daily_news_with_cover(PDO $pdo, int $limit = 24): array {
           WHERE n.validation_status='published'
             AND n.thumbnail_url<>'' AND n.thumbnail_url IS NOT NULL
             AND (n.expires_at IS NULL OR n.expires_at>UTC_TIMESTAMP())
-            AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 48 HOUR)
+            AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR)
           ORDER BY COALESCE(n.source_published_at,n.pass50_published_at) DESC,n.id DESC
           LIMIT ".$limit);
     } catch (Throwable) {

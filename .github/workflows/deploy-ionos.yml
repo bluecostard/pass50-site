@@ -173,7 +173,7 @@ jobs:
           source=''
 
           if [ "$count" -eq 0 ]; then
-            echo '::warning::Aucune publication Facebook récente Apoutchou dans la fenêtre 48 h — validation contrat lecteur seule.'
+            echo '::warning::Aucune publication Facebook récente Apoutchou dans la fenêtre 24 h — validation contrat lecteur seule.'
             viewer="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' \
               "https://www.pass50.store/facebook-video-player-v1.js?sha=$GITHUB_SHA&soft=1" || true)"
             grep -q 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.2' <<<"$viewer" \
@@ -208,7 +208,7 @@ jobs:
             printf -- '- Publications génériques malgré un type photo/post : %s\n' "$generic_count"
             printf -- '- Premier type observé : `%s`\n' "$item_type"
             if [ "$count" -eq 0 ]; then
-              echo '- Soft-pass : fenêtre 48 h vide, contrat lecteur Facebook V1.2 vérifié'
+              echo '- Soft-pass : fenêtre 24 h vide, contrat lecteur Facebook V1.2 vérifié'
             else
               echo '- Le plugin `post.php` accepte la publication réelle d’Apoutchou'
               echo '- Le lecteur V1.2 ajoutera `Voir dans Pass50` même si Facebook la classe en photo'
