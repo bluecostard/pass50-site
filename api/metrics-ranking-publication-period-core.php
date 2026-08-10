@@ -42,7 +42,11 @@ function p50_mrpa_2h_capture_diagnostics(PDO $pdo): array {
         GROUP BY account_id,content_id HAVING COUNT(*)>=2
       ) series";
     $row=$pdo->query($sql)->fetch()?:[];
-    return ['comparableSeries'=>(int)($row['comparable_series']??0),'growingViewSeries'=>(int)($row['growing_view_series']??0),'growingInteractionSeries'=>(int)($row['growing_interaction_series']??0)];
+    $bounds=$pdo->query("SELECT COUNT(*) content_captures,COUNT(DISTINCT content_id) distinct_contents,MIN(observed_at) first_observed_at,MAX(observed_at) last_observed_at
+      FROM p50_metric_captures WHERE content_id IS NOT NULL AND quality_status='usable' AND confidence>=70
+      AND observed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 3 HOUR) AND observed_at<=UTC_TIMESTAMP()")->fetch()?:[];
+    return ['comparableSeries'=>(int)($row['comparable_series']??0),'growingViewSeries'=>(int)($row['growing_view_series']??0),'growingInteractionSeries'=>(int)($row['growing_interaction_series']??0),
+      'contentCaptures'=>(int)($bounds['content_captures']??0),'distinctContents'=>(int)($bounds['distinct_contents']??0),'firstObservedAt'=>$bounds['first_observed_at']??null,'lastObservedAt'=>$bounds['last_observed_at']??null];
 }
 
 function p50_mrpa_period_availability(PDO $pdo,?string $runUuid=null): array {
