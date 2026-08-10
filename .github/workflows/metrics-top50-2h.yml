@@ -1,5 +1,5 @@
 name: Metrics Top 50 P1
-# Audit manuel du bloc métrique 1 — 2026-08-05T12:50+02:00
+# Collecte P1 opérateur forcée pour second point 2H — 2026-08-10T19:10+02:00.
 
 on:
   schedule:
@@ -74,7 +74,9 @@ jobs:
             fi
           fi
 
-          response="$(call_cron "$(jq -nc --arg id "$dispatch_id" '{action:"dispatch",cadence:"p1",dispatchId:$id}')")"
+          force_dispatch=false
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then force_dispatch=true; fi
+          response="$(call_cron "$(jq -nc --arg id "$dispatch_id" --argjson force "$force_dispatch" '{action:"dispatch",cadence:"p1",dispatchId:$id,force:$force}')")"
           p1_remaining="$(jq -r '.queue.p1Remaining // .remaining // 0' <<<"$response")"
           global_remaining="$(jq -r '.queue.remaining // .remaining // 0' <<<"$response")"
           processed=0; completed=0; partial=0; retried=0; skipped=0; failed=0; iteration=0
