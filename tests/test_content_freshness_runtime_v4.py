@@ -57,7 +57,7 @@ class ContentFreshnessRuntimeV4Tests(unittest.TestCase):
         self.assertIn("'mode'=>'work'", ADMIN)
         self.assertIn("contentLimit'=>6", CORE)
 
-    def test_official_news_window_is_forty_eight_hours(self):
+    def test_official_news_window_is_twenty_four_hours(self):
         self.assertIn("INTERVAL 24 HOUR", FEED)
         self.assertIn("'officialNewsMaxAgeHours'=>24", FEED)
 
