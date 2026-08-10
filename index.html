@@ -1133,7 +1133,7 @@ $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)close(m.i
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const visible=[...document.querySelectorAll('.modal.show')].pop();if(visible)close(visible.id)});
 window.addEventListener('storage',()=>{db=load();render()});
 normalizeLiveStreams();refreshLiveStatus();setInterval(refreshLiveStatus,60000);setInterval(()=>{normalizeLiveStreams();renderLiveHeader();if($('#liveModal')?.classList.contains('show'))openLives();},30000);
-if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=86').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=87').catch(()=>{});
 
 // --- Adaptateur IONOS + MySQL + Brevo ---
 const apiConfig=window.PASS50_API||{};

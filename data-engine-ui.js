@@ -533,7 +533,12 @@
         }
         const before=DE.autoSeen.size;ids.forEach(id=>DE.autoSeen.add(id));
         DE.hub=data.hub;DE.autoMessage=`Dernier lot : ${data.processed} profil(s), ${data.found} donnée(s) trouvée(s), ${data.verified} vérifiée(s).`;deDrawHub();
-        await loadCloudState();render();
+        // L'état public n'est qu'un rafraîchissement d'affichage. Une panne de cet
+        // appel secondaire ne doit jamais arrêter le parcours d'enrichissement.
+        if(DE.autoSeen.size%10===0||DE.autoSeen.size>=DE.autoTarget){
+          try{await loadCloudState();render();}
+          catch(refreshError){console.warn('Rafraîchissement public différé',refreshError);}
+        }
         if(DE.autoSeen.size===before)break;
         // Laisse l'hébergement relâcher ses connexions avant le profil suivant.
         await new Promise(resolve=>setTimeout(resolve,1000));
