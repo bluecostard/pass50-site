@@ -26,13 +26,26 @@
   const isFacebook=item=>String(item?.platform||'').toLowerCase()==='facebook';
 
   function injectStyles(){
-    if(document.getElementById('p50ContentIntelligenceStyles'))return;
-    const style=document.createElement('style');style.id='p50ContentIntelligenceStyles';style.textContent=`
+    let style=document.getElementById('p50ContentIntelligenceStyles');
+    if(!style){style=document.createElement('style');style.id='p50ContentIntelligenceStyles';document.head.appendChild(style);}
+    style.textContent=`
       .p50ci-periods{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.p50ci-period{border:1px solid var(--line);background:#0a0d0a;color:#cfd7cc;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:950}.p50ci-period.active{background:var(--lime);border-color:var(--lime);color:#050705}
       .p50ci-card{padding:0!important;min-height:250px!important;color:#fff}.p50ci-card-cover{height:142px;position:relative;overflow:hidden;background:radial-gradient(circle at 30% 20%,rgba(183,255,0,.2),transparent 50%),#111611}.p50ci-card-cover img{width:100%;height:100%;object-fit:cover;display:block}.p50ci-card-cover:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,rgba(0,0,0,.86))}.p50ci-rank{position:absolute;left:10px;top:9px;z-index:2;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#050705;border:2px solid var(--lime);color:var(--lime);font-weight:1000;font-size:17px}.p50ci-badge{position:absolute;right:9px;top:9px;z-index:2;border-radius:999px;padding:6px 9px;font-size:10px;font-weight:1000;border:1px solid var(--orange);background:rgba(7,8,7,.86);color:#ffc065}.p50ci-badge.viral{border-color:var(--purple);color:#ddcaff}.p50ci-badge.new{border-color:var(--cyan);color:#9ff5ff}.p50ci-card-body{padding:12px;display:grid;gap:8px;position:relative;z-index:2}.p50ci-name{font-size:12px;color:var(--lime);font-weight:950}.p50ci-title{font-size:14px;line-height:1.35;font-weight:950;min-height:35px}.p50ci-metrics{display:flex;justify-content:space-between;gap:8px;color:#c6cec3;font-size:10px;font-weight:850}.p50ci-empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:16px;padding:28px;text-align:center;color:var(--muted)}.p50ci-card-action{display:flex;justify-content:flex-end}.p50ci-facebook-note{font-size:10px;line-height:1.35;color:#9ed7ff;border-left:2px solid #4ca7ff;padding-left:8px}
       .p50ci-news{margin-top:16px;padding:15px;border:1px solid var(--line);border-radius:18px;background:#0c100c}.p50ci-news-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.p50ci-news-title{font-size:18px;font-weight:1000}.p50ci-news-list{display:grid;gap:9px}.p50ci-news-card{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:11px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:14px;background:#101510}.p50ci-news-card.facebook{border-color:rgba(76,167,255,.35)}.p50ci-news-card.is-extra{display:none}.p50ci-news.expanded .p50ci-news-card.is-extra{display:grid}.p50ci-news-thumb{width:76px;height:62px;border-radius:11px;overflow:hidden;display:grid;place-items:center;background:#171d17;font-size:24px}.p50ci-news-thumb img{width:100%;height:100%;object-fit:cover}.p50ci-news-card h4{margin:0 0 4px;font-size:13px;line-height:1.35}.p50ci-news-meta{font-size:10px;color:var(--muted);font-weight:850}.p50ci-official{color:var(--lime)}
+      .news-refresh-progress{width:100%;margin:10px 0 0;padding:12px 14px;border:1px solid rgba(183,255,0,.28);border-radius:14px;background:linear-gradient(180deg,rgba(183,255,0,.08),rgba(10,13,10,.95));display:none}
+      .news-refresh-progress.is-active{display:block}
+      .news-refresh-progress.is-done{border-color:rgba(183,255,0,.55)}
+      .news-refresh-progress.is-error{border-color:rgba(255,110,90,.55);background:linear-gradient(180deg,rgba(255,80,60,.1),rgba(10,13,10,.95))}
+      .news-refresh-progress-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:8px}
+      .news-refresh-progress-label{font-size:12px;font-weight:900;color:#e8f0e2}
+      .news-refresh-progress-meta{font-size:11px;font-weight:800;color:#9da79b;white-space:nowrap}
+      .news-refresh-track{height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;position:relative}
+      .news-refresh-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#7db800,#b7ff00 55%,#e8ff8a);box-shadow:0 0 18px rgba(183,255,0,.35);transition:width .35s ease}
+      .news-refresh-progress.is-active:not(.is-done):not(.is-error) .news-refresh-fill{background-size:200% 100%;animation:p50ciProgressShine 1.2s linear infinite}
+      .news-refresh-progress-detail{margin-top:8px;font-size:11px;font-weight:750;color:#aeb7ab;line-height:1.4}
+      @keyframes p50ciProgressShine{from{filter:brightness(.95)}to{filter:brightness(1.15)}}
       @media(max-width:680px){.p50ci-periods{justify-content:flex-start}.p50ci-card-cover{height:150px}.p50ci-news-card{grid-template-columns:62px minmax(0,1fr)}.p50ci-news-thumb{width:62px;height:58px}.p50ci-news-card>a{grid-column:1/-1;width:100%;text-align:center}}
-    `;document.head.appendChild(style);
+    `;
   }
 
   async function fetchFeed(profileId=''){
@@ -117,19 +130,105 @@
     window.dispatchEvent(new CustomEvent('p50:news-refreshed'));
   }
 
+  function ensureRefreshProgressUi(btn){
+    const bar=btn?.closest('.news-refresh-bar')||document.querySelector('.news-refresh-bar');
+    if(!bar)return null;
+    let panel=bar.parentElement?.querySelector('#p50RefreshAllProgress');
+    if(!panel){
+      panel=document.createElement('div');
+      panel.id='p50RefreshAllProgress';
+      panel.className='news-refresh-progress';
+      panel.setAttribute('role','status');
+      panel.setAttribute('aria-live','polite');
+      panel.innerHTML=`<div class="news-refresh-progress-head"><span class="news-refresh-progress-label" data-label>Préparation…</span><span class="news-refresh-progress-meta" data-meta>0 %</span></div><div class="news-refresh-track"><div class="news-refresh-fill" data-fill></div></div><div class="news-refresh-progress-detail" data-detail>La collecte démarre.</div>`;
+      bar.insertAdjacentElement('afterend',panel);
+    }
+    return panel;
+  }
+
+  function stopRefreshProgress(panel){
+    if(!panel)return;
+    if(panel._timer){clearInterval(panel._timer);panel._timer=null;}
+    if(panel._phaseTimer){clearInterval(panel._phaseTimer);panel._phaseTimer=null;}
+  }
+
+  function startRefreshProgress(panel){
+    if(!panel)return;
+    stopRefreshProgress(panel);
+    const label=panel.querySelector('[data-label]');
+    const meta=panel.querySelector('[data-meta]');
+    const fill=panel.querySelector('[data-fill]');
+    const detail=panel.querySelector('[data-detail]');
+    const phases=[
+      'Sélection du Top 3 de chaque période…',
+      'Mise en file des collectes réseaux…',
+      'Récolte Facebook / TikTok / YouTube…',
+      'Synchronisation des actualités FI…',
+      'Recalcul du Top 5 tendance…',
+    ];
+    let pct=4;
+    let phase=0;
+    const started=Date.now();
+    panel.classList.add('is-active');
+    panel.classList.remove('is-done','is-error');
+    if(fill){fill.style.width=`${pct}%`;fill.style.removeProperty('background');}
+    if(label)label.textContent=phases[0];
+    if(detail)detail.textContent='Collecte réelle en cours sur le serveur — ne ferme pas cet onglet.';
+    const tick=()=>{
+      const elapsed=Math.floor((Date.now()-started)/1000);
+      // Asymptote vers ~92 % tant que la requête n’est pas finie.
+      pct=Math.min(92, pct + (pct<35?2.4:pct<70?1.2:0.45));
+      if(fill)fill.style.width=`${pct.toFixed(1)}%`;
+      if(meta)meta.textContent=`${Math.round(pct)} % · ${elapsed}s`;
+    };
+    tick();
+    panel._timer=setInterval(tick,450);
+    panel._phaseTimer=setInterval(()=>{
+      phase=(phase+1)%phases.length;
+      if(label)label.textContent=phases[phase];
+    },4200);
+  }
+
+  function finishRefreshProgress(panel,{ok=true,message=''}={}){
+    if(!panel)return;
+    stopRefreshProgress(panel);
+    const label=panel.querySelector('[data-label]');
+    const meta=panel.querySelector('[data-meta]');
+    const fill=panel.querySelector('[data-fill]');
+    const detail=panel.querySelector('[data-detail]');
+    panel.classList.add('is-active');
+    panel.classList.toggle('is-done',ok);
+    panel.classList.toggle('is-error',!ok);
+    if(fill)fill.style.width=ok?'100%':'100%';
+    if(fill)fill.style.background=ok?undefined:'linear-gradient(90deg,#7a2020,#ff6e5a)';
+    if(label)label.textContent=ok?'Collecte terminée':'Collecte interrompue';
+    if(meta)meta.textContent=ok?'100 %':'Échec';
+    if(detail)detail.textContent=message||(ok?'Actualité rafraîchie.':'Réessaie dans un instant.');
+  }
+
   async function refreshAllProfileNews(btn){
     if(typeof apiFetch!=='function')return;
+    if(P50CI.refreshAllRunning)return;
+    P50CI.refreshAllRunning=true;
     const label=btn?.textContent||'';
+    const panel=ensureRefreshProgressUi(btn);
     if(btn){btn.disabled=true;btn.textContent='Collecte en cours…';}
+    startRefreshProgress(panel);
     try{
       const data=await apiFetch('content-freshness-admin-refresh.php',{method:'POST',body:{mode:'collect_all'}});
       clearNewsCaches();await refreshTrends(true);
       const news=data.contentIntelligence?.news||{};
-      const msg=`${data.profilesSelected||0} FI parcourues · ${data.enqueued||0} collectes · ${news.created||0} nouvelles actus · ${news.updated||0} mises à jour`;
+      const msg=`${data.profilesSelected||0} FI parcourues · ${data.enqueued||0} collectes · ${data.processed||0} traitées · ${news.created||0} nouvelles actus · ${news.updated||0} mises à jour · ${Math.round((data.durationMs||0)/1000)}s`;
+      finishRefreshProgress(panel,{ok:true,message:msg});
       if(typeof toast==='function')toast(msg);
     }catch(error){
-      if(typeof toast==='function')toast(error.message||'Actualisation impossible');
-    }finally{if(btn){btn.disabled=false;btn.textContent=label||'Actualiser toutes les FI';}}
+      const err=error.message||'Actualisation impossible';
+      finishRefreshProgress(panel,{ok:false,message:err});
+      if(typeof toast==='function')toast(err);
+    }finally{
+      P50CI.refreshAllRunning=false;
+      if(btn){btn.disabled=false;btn.textContent=label||'Actualiser toutes les FI';}
+    }
   }
 
   function installAdminHooks(){
