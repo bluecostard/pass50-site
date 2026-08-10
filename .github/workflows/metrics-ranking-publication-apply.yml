@@ -58,6 +58,9 @@ jobs:
           case "$APPLY_URL" in
             http://*) APPLY_URL="https://${APPLY_URL#http://}" ;;
           esac
+          case "$APPLY_URL" in
+            https://www.pass50.store/*) APPLY_URL="https://pass50.store/${APPLY_URL#https://www.pass50.store/}" ;;
+          esac
 
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-publication-apply"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"apply",dispatchId:$dispatchId,confirm:true}')"
