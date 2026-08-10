@@ -3,9 +3,15 @@ name: Metrics Ranking Publication Apply
 # Ce workflow ne possède volontairement aucun cron autonome.
 # Il est déclenché :
 # - manuellement pour un passage public contrôlé ;
-# - par la simulation uniquement lorsque automaticPublicationEligible=true.
+# - par la simulation uniquement lorsque automaticPublicationEligible=true ;
+# - sur modification explicite de ce workflow pour permettre un déclenchement opérateur traçable.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/metrics-ranking-publication-apply.yml'
 
 permissions:
   contents: read
