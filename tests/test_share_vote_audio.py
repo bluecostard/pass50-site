@@ -181,10 +181,12 @@ class ShareVoteDuelHistoryTests(unittest.TestCase):
 class ShareVoteMessageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.message = re.search(r"function voteShareMessage\(card\)\{.*?\n}", INDEX, re.S).group(0)
-        cls.panel = re.search(r"function voteSharePanel\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.message = re.search(r"function voteShareMessage\(card.*?\n}", INDEX, re.S).group(0)
+        cls.caption = re.search(r"function voteShareMediaCaption\(card\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.media = re.search(r"async function shareVoteMediaFile\(.*?\n}", INDEX, re.S).group(0)
         cls.native = re.search(r"async function nativeVoteShare\(\)\{.*?\n}", INDEX, re.S).group(0)
         cls.whatsapp = re.search(r"async function shareVoteWhatsapp\(\)\{.*?\n}", INDEX, re.S).group(0)
+        cls.recording = re.search(r"async function startVoteShareRecording\(\)\{.*?\n}", INDEX, re.S).group(0)
 
     def test_whatsapp_message_contains_exact_question(self):
         self.assertIn("Qui est le plus coulé des 2 ? 🤔", self.message)
@@ -214,21 +216,32 @@ class ShareVoteMessageTests(unittest.TestCase):
         self.assertNotIn("qrUrl", INDEX)
         self.assertNotRegex(INDEX, r"(?i)QR code")
 
-    def test_campaign_link_is_present_once_in_message(self):
-        self.assertEqual(self.message.count("card.campaignUrl"), 1)
+    def test_campaign_link_is_optional_via_withUrl(self):
+        self.assertIn("withUrl", self.message)
         self.assertIn("👇 Et toi, tu aurais voté pour qui ?", self.message)
+        self.assertIn("card.campaignUrl", self.message)
 
     def test_duel_names_and_separator_are_present(self):
         self.assertIn("String(candidates[0]?.name||'')", self.message)
         self.assertIn("'🆚'", self.message)
         self.assertIn("String(candidates[1]?.name||'')", self.message)
 
-    def test_native_whatsapp_and_copy_use_identical_text(self):
-        self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.whatsapp)
-        self.assertIn("encodeURIComponent(shareText)", self.whatsapp)
+    def test_media_share_never_embeds_http_url(self):
+        self.assertIn("voteShareMediaCaption", self.media)
+        self.assertIn("navigator.share({files:[file]})", self.media)
+        self.assertNotIn("http", self.caption)
+        self.assertIn("function setVoteShareMedia", INDEX)
+        self.assertIn("getUserMedia", self.recording)
+        self.assertIn("generateVoteShareVideo", self.recording)
+
+    def test_whatsapp_and_native_share_one_file_without_link_fallback_when_audio(self):
+        self.assertIn("shareVoteMediaFile", self.whatsapp)
+        self.assertIn("shareVoteMediaFile", self.native)
+        self.assertIn("audioBlob", self.whatsapp)
+        # Pas de fallback texte si audio présent
+        audio_branch = self.whatsapp.split("// Sans audio")[0]
+        self.assertNotIn("api.whatsapp.com/send", audio_branch)
         self.assertIn("api.whatsapp.com/send?text=", self.whatsapp)
-        self.assertIn("const shareText=voteShareMessage(VOTE_SHARE.card)", self.native)
-        self.assertIn("text:shareText", self.native)
         self.assertIn("navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card))", INDEX)
 
 

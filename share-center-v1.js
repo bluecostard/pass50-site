@@ -3,7 +3,7 @@
 
 if(window.PASS50_SHARE_CENTER)return;
 
-const VERSION='1.2.0';
+const VERSION='1.4.0';
 const PAPER='#eef1ec';
 const INK='#0b0f0b';
 const MUTED='#5c665c';
@@ -310,8 +310,11 @@ function installCoulesBridge(){
   }
   if(typeof window.voteShareMessage==='function'&&!window.voteShareMessage.__p50Unified){
     const core=window.voteShareMessage;
-    const wrapped=function(card){
+    const wrapped=function(card, opts){
+      // Respecter withUrl:false — sinon WhatsApp coupe média + aperçu lien en 2 messages
+      const withUrl=!(opts&&opts.withUrl===false);
       let text=core.apply(this,arguments),audio=false;
+      if(!withUrl)return text;
       try{audio=Boolean(VOTE_SHARE?.audioBlob)}catch{}
       const target=audio?(card.campaignAudioUrl||card.campaignUrl):card.campaignUrl;
       if(target){

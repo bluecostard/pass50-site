@@ -16,6 +16,7 @@ $title = trim((string)($input['title'] ?? ''));
 $context = trim((string)($input['context'] ?? ''));
 $profileId = trim((string)($input['profileId'] ?? ''));
 $subjectKeyInput = trim((string)($input['subjectKey'] ?? ''));
+$coverImageUrl = trim((string)($input['coverImageUrl'] ?? ''));
 $options = p50_prono_options($input['options'] ?? []);
 $metricType = trim((string)($input['metricType'] ?? 'manual'));
 $status = trim((string)($input['status'] ?? 'draft'));
@@ -32,6 +33,12 @@ $pointsCorrect = max(1, (int)($input['pointsCorrect'] ?? P50_PRONO_POINTS_CORREC
 
 if ($title === '' || count($options) < 2) {
     json_response(['error' => 'Titre et au moins 2 options requis.'], 400);
+}
+
+try {
+    $coverImageUrl = p50_prono_assert_cover($coverImageUrl, $profileId, $title);
+} catch (InvalidArgumentException $e) {
+    json_response(['error' => $e->getMessage()], 400);
 }
 if (!in_array($status, ['draft', 'open', 'locked', 'archived'], true)) {
     json_response(['error' => 'Statut invalide.'], 400);
@@ -88,10 +95,11 @@ $metricConfig = isset($input['metricConfig']) && is_array($input['metricConfig']
 if ($id === '') {
     $id = p50_prono_uuid();
     $pdo->prepare('INSERT INTO p50_prono_questions
-      (id,title,context_text,profile_id,subject_key,options_json,metric_type,metric_config_json,opens_at,closes_at,measure_at,points_correct,status,created_by)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      (id,title,context_text,cover_image_url,profile_id,subject_key,options_json,metric_type,metric_config_json,opens_at,closes_at,measure_at,points_correct,status,created_by)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
         ->execute([
-            $id, mb_substr($title, 0, 220), mb_substr($context, 0, 500), mb_substr($profileId, 0, 100), $subjectKey,
+            $id, mb_substr($title, 0, 220), mb_substr($context, 0, 500), mb_substr($coverImageUrl, 0, 500),
+            mb_substr($profileId, 0, 100), $subjectKey,
             $optionsJson, $metricType, $metricConfig,
             $opens->format('Y-m-d H:i:s'), $closes->format('Y-m-d H:i:s'), $measure->format('Y-m-d H:i:s'),
             $pointsCorrect, $status, (string)$user['id'],
@@ -100,9 +108,10 @@ if ($id === '') {
     $exists = $pdo->prepare('SELECT id FROM p50_prono_questions WHERE id=? LIMIT 1');
     $exists->execute([$id]);
     if (!$exists->fetch()) json_response(['error' => 'Prono introuvable.'], 404);
-    $pdo->prepare('UPDATE p50_prono_questions SET title=?,context_text=?,profile_id=?,subject_key=?,options_json=?,metric_type=?,metric_config_json=?,opens_at=?,closes_at=?,measure_at=?,points_correct=?,status=? WHERE id=?')
+    $pdo->prepare('UPDATE p50_prono_questions SET title=?,context_text=?,cover_image_url=?,profile_id=?,subject_key=?,options_json=?,metric_type=?,metric_config_json=?,opens_at=?,closes_at=?,measure_at=?,points_correct=?,status=? WHERE id=?')
         ->execute([
-            mb_substr($title, 0, 220), mb_substr($context, 0, 500), mb_substr($profileId, 0, 100), $subjectKey,
+            mb_substr($title, 0, 220), mb_substr($context, 0, 500), mb_substr($coverImageUrl, 0, 500),
+            mb_substr($profileId, 0, 100), $subjectKey,
             $optionsJson, $metricType, $metricConfig,
             $opens->format('Y-m-d H:i:s'), $closes->format('Y-m-d H:i:s'), $measure->format('Y-m-d H:i:s'),
             $pointsCorrect, $status, $id,

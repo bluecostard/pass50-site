@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-const P50_PRONO_VERSION = 'PRONO-V1.3';
+const P50_PRONO_VERSION = 'PRONO-V1.4';
+const P50_PRONO_DAILY_COUNT = 12;
+const P50_PRONO_ODD_MARGIN = 0.08;
 const P50_PRONO_POINTS_CORRECT = 100; // mise nominale (gain = mise × cote)
 const P50_PRONO_STARTING_BALANCE = 1000;
 const P50_PRONO_BALANCE_FLOOR = 100; // jamais en dessous — on peut toujours jouer
@@ -106,6 +108,20 @@ function p50_prono_ensure_schema(): void {
     } catch (Throwable $e) {
         // ignore if table not ready
     }
+    p50_prono_ensure_column($pdo, 'p50_prono_questions', 'cover_image_url', 'VARCHAR(500) NOT NULL DEFAULT \'\' AFTER context_text');
+    p50_prono_ensure_column($pdo, 'p50_prono_questions', 'theme', 'VARCHAR(80) NOT NULL DEFAULT \'\' AFTER cover_image_url');
+    p50_prono_ensure_column($pdo, 'p50_prono_questions', 'batch_id', 'CHAR(36) CHARACTER SET ascii NOT NULL DEFAULT \'\' AFTER theme');
+    p50_prono_ensure_column($pdo, 'p50_prono_questions', 'batch_date', 'DATE NULL AFTER batch_id');
+    p50_prono_ensure_column($pdo, 'p50_prono_questions', 'source_type', 'VARCHAR(40) NOT NULL DEFAULT \'\' AFTER batch_date');
+    p50_prono_ensure_index($pdo, 'p50_prono_questions', 'idx_p50_prono_q_batch', 'batch_date,status');
+}
+
+function p50_prono_ensure_index(PDO $pdo, string $table, string $indexName, string $columns): void {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?');
+    $stmt->execute([$table, $indexName]);
+    if ((int)$stmt->fetchColumn() > 0) return;
+    $pdo->exec("ALTER TABLE `{$table}` ADD INDEX `{$indexName}` ({$columns})");
 }
 
 function p50_prono_ensure_column(PDO $pdo, string $table, string $column, string $definition): void {
@@ -141,8 +157,77 @@ function p50_prono_normalize_odd(mixed $value, ?float $fallback = null): float {
 }
 
 function p50_prono_default_odd(int $optionCount): float {
-    if ($optionCount <= 1) return 2.0;
-    return p50_prono_normalize_odd(round(max(1.2, min(8.0, $optionCount * 0.85)), 2));
+    $odds = p50_prono_compute_odds(max(2, $optionCount), 0.5);
+    return $odds[0] ?? 2.0;
+}
+
+/** Cote à partir d’une probabilité implicite (formule unique PASS50). */
+function p50_prono_odd_from_probability(float $probability, float $margin = P50_PRONO_ODD_MARGIN): float {
+    $p = max(0.05, min(0.95, $probability));
+    return p50_prono_normalize_odd((1 / $p) * (1 - $margin));
+}
+
+/**
+ * Formule unique — calcule les cotes pour 2 à 4 options.
+ * @param int $optionCount
+ * @param float $difficulty 0 (évident) → 1 (très incertain)
+ * @param int|null $favoredIndex option favorisée (0-based), null = équilibré
+ * @return list<float>
+ */
+function p50_prono_compute_odds(int $optionCount, float $difficulty = 0.5, ?int $favoredIndex = null): array {
+    $optionCount = max(2, min(4, $optionCount));
+    $difficulty = max(0.0, min(1.0, $difficulty));
+    $margin = P50_PRONO_ODD_MARGIN;
+
+    if ($optionCount === 2) {
+        $favProb = max(0.35, min(0.65, 0.58 - ($difficulty * 0.18)));
+        $otherProb = 1.0 - $favProb;
+        if ($favoredIndex === 1) {
+            return [
+                p50_prono_odd_from_probability($otherProb, $margin),
+                p50_prono_odd_from_probability($favProb, $margin),
+            ];
+        }
+        return [
+            p50_prono_odd_from_probability($favProb, $margin),
+            p50_prono_odd_from_probability($otherProb, $margin),
+        ];
+    }
+
+    if ($optionCount === 3) {
+        $spread = $difficulty * 0.12;
+        $probs = [
+            max(0.08, 0.42 - $spread),
+            0.33,
+            max(0.08, 0.25 + $spread),
+        ];
+        $sum = array_sum($probs);
+        $probs = array_map(static fn(float $p): float => $p / $sum, $probs);
+        if ($favoredIndex !== null && $favoredIndex >= 0 && $favoredIndex < 3) {
+            $maxIdx = (int)array_search(max($probs), $probs, true);
+            if ($favoredIndex !== $maxIdx) {
+                [$probs[$favoredIndex], $probs[$maxIdx]] = [$probs[$maxIdx], $probs[$favoredIndex]];
+            }
+        }
+        return array_map(static fn(float $p): float => p50_prono_odd_from_probability($p, $margin), $probs);
+    }
+
+    $spread = $difficulty * 0.10;
+    $probs = [
+        max(0.06, 0.32 - $spread),
+        0.28,
+        0.22,
+        max(0.06, 0.18 + $spread),
+    ];
+    $sum = array_sum($probs);
+    $probs = array_map(static fn(float $p): float => $p / $sum, $probs);
+    if ($favoredIndex !== null && $favoredIndex >= 0 && $favoredIndex < 4) {
+        $maxIdx = (int)array_search(max($probs), $probs, true);
+        if ($favoredIndex !== $maxIdx) {
+            [$probs[$favoredIndex], $probs[$maxIdx]] = [$probs[$maxIdx], $probs[$favoredIndex]];
+        }
+    }
+    return array_map(static fn(float $p): float => p50_prono_odd_from_probability($p, $margin), $probs);
 }
 
 function p50_prono_options(mixed $json): array {
@@ -161,9 +246,10 @@ function p50_prono_options(mixed $json): array {
         ];
     }
     $raw = array_slice($raw, 0, 4);
-    $fallback = p50_prono_default_odd(count($raw));
+    $computed = p50_prono_compute_odds(count($raw), 0.5);
     $out = [];
-    foreach ($raw as $row) {
+    foreach ($raw as $i => $row) {
+        $fallback = $computed[$i] ?? p50_prono_default_odd(count($raw));
         $out[] = [
             'key' => $row['key'],
             'label' => $row['label'],
@@ -171,6 +257,37 @@ function p50_prono_options(mixed $json): array {
         ];
     }
     return $out;
+}
+
+function p50_prono_is_valid_cover_url(string $url): bool {
+    $url = trim($url);
+    return $url !== '' && preg_match('#^https?://#i', $url) === 1;
+}
+
+/** Résout ou valide l’image d’un prono — obligatoire. */
+function p50_prono_resolve_question_cover(string $coverUrl, string $profileId = '', string $title = ''): string {
+    $cover = trim($coverUrl);
+    if (!p50_prono_is_valid_cover_url($cover) && $profileId !== '') {
+        $resolved = p50_prono_resolve_cover($profileId, $title);
+        $cover = $resolved['coverPhoto'];
+    }
+    return p50_prono_is_valid_cover_url($cover) ? $cover : '';
+}
+
+function p50_prono_assert_cover(string $coverUrl, string $profileId = '', string $title = ''): string {
+    $cover = p50_prono_resolve_question_cover($coverUrl, $profileId, $title);
+    if ($cover === '') {
+        throw new InvalidArgumentException('Image obligatoire — chaque prono doit avoir une image liée au contenu.');
+    }
+    return $cover;
+}
+
+function p50_prono_question_cover(array $row): string {
+    $stored = trim((string)($row['cover_image_url'] ?? ''));
+    if (p50_prono_is_valid_cover_url($stored)) {
+        return $stored;
+    }
+    return p50_prono_resolve_question_cover('', (string)($row['profile_id'] ?? ''), (string)($row['title'] ?? ''));
 }
 
 function p50_prono_option_odd(array $options, string $optionKey): float {
@@ -528,10 +645,16 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
         $opt['payout'] = p50_prono_payout($stake, (float)$opt['odd']);
     }
     unset($opt);
+    $coverPhoto = p50_prono_question_cover($row);
     $item = [
         'id' => (string)$row['id'],
         'title' => (string)$row['title'],
         'context' => (string)($row['context_text'] ?? ''),
+        'coverPhoto' => $coverPhoto,
+        'theme' => (string)($row['theme'] ?? ''),
+        'batchId' => (string)($row['batch_id'] ?? ''),
+        'batchDate' => !empty($row['batch_date']) ? (string)$row['batch_date'] : null,
+        'sourceType' => (string)($row['source_type'] ?? ''),
         'profileId' => (string)($row['profile_id'] ?? ''),
         'subjectKey' => (string)($row['subject_key'] ?? ''),
         'maxOpenPerSubject' => P50_PRONO_MAX_OPEN_PER_SUBJECT,

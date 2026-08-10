@@ -98,7 +98,7 @@ if($profileId!==''){
       WHERE BINARY n.profile_id=BINARY ? AND n.validation_status='published'
         AND (n.expires_at IS NULL OR n.expires_at>UTC_TIMESTAMP())
         AND (
-          (n.is_official=1 AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 72 HOUR))
+          (n.is_official=1 AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 48 HOUR))
           OR
           (n.is_official=0 AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY))
         )
@@ -134,7 +134,7 @@ json_response([
     'message'=>$trendDataStale?'Mise à jour des tendances en attente. Le dernier Top 5 valide reste affiché.':null,
     'rules'=>[
         'maxPerProfile'=>2,'topLimit'=>5,'officialContentAutomatic'=>true,'externalNewsHumanValidation'=>true,
-        'officialNewsMaxAgeHours'=>72,'externalNewsMaxAgeDays'=>7,'trendMaxAgeHours'=>$trendMaxAgeHours,'maxTrendRunAgeMinutes'=>30,
+        'officialNewsMaxAgeHours'=>48,'externalNewsMaxAgeDays'=>7,'trendMaxAgeHours'=>$trendMaxAgeHours,'maxTrendRunAgeMinutes'=>30,
         'staleTrendsRemainVisible'=>true,
         'facebookPreviewInPass50'=>true,'facebookVideoPlaybackInPass50'=>true,'facebookEmbedRouting'=>true,
     ],

@@ -33,7 +33,7 @@
     pane.innerHTML=`<div class="de-admin-home"><div class="section-head"><div><div class="section-title">ACCUEIL DE L’ADMINISTRATION</div><div class="muted">Pilotez les données, les fiches, les métriques et la publication de PASS50.</div></div></div><div class="de-admin-home-grid">${ADMIN_ITEMS.filter(([id])=>id!=='adminhome').map(([id,label])=>`<button class="de-admin-home-card" data-admin-tab="${id}"><strong>${deEsc(label)}</strong><span>${deEsc(ADMIN_DESCRIPTIONS[id])}</span><i aria-hidden="true">Ouvrir →</i></button>`).join('')}</div></div>`;
   }
   function deRenderPronosticsAdmin(pane){
-    pane.innerHTML=`<div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button><div class="section-title" style="margin-top:10px">PRONOSTICS</div><div class="muted">Créer les questions, fixer les cotes (key|label|cote), publier, puis résoudre à la date de mesure.</div></div></div>
+    pane.innerHTML=`<div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button><div class="section-title" style="margin-top:10px">PRONOSTICS</div><div class="muted">12 pronos/jour · image obligatoire · cotes auto · vérification puis publication groupée.</div></div></div>
       <div class="pref" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <p class="muted" style="margin:0;max-width:42rem;line-height:1.45">L’atelier éditorial est une page dédiée. Reste connecté en propriétaire / admin : ton token est réutilisé automatiquement.</p>
         <a class="btn primary" href="./admin-pronostics.html">Ouvrir l’atelier Pronostics →</a>

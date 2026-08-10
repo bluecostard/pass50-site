@@ -7,7 +7,7 @@ window.PASS50_API = {
 (function () {
   if (document.querySelector('script[data-pass50-share-center]')) return;
   var script = document.createElement('script');
-  script.src = './share-center-v1.js?v=1.3';
+  script.src = './share-center-v1.js?v=1.4';
   script.async = false;
   script.dataset.pass50ShareCenter = '1.0';
   document.head.appendChild(script);
@@ -17,7 +17,7 @@ window.PASS50_API = {
 (function () {
   if (document.querySelector('script[data-pass50-coules-share-simple]')) return;
   var script = document.createElement('script');
-  script.src = './coules-share-simple-v1.js?v=1.2';
+  script.src = './coules-share-simple-v1.js?v=1.3';
   script.async = false;
   script.dataset.pass50CoulesShareSimple = '1.0';
   document.head.appendChild(script);
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function loadContentIntelligence() {
     if (document.querySelector('script[data-pass50-content-intelligence]')) return;
     var script = document.createElement('script');
-    script.src = './content-intelligence.js?v=1.2';
+    script.src = './content-intelligence.js?v=1.3';
     script.dataset.pass50ContentIntelligence = '1.2';
     document.body.appendChild(script);
   }

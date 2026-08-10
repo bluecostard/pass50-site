@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'api/content-freshness-cron-v4.php'
+      - 'api/content-freshness-core.php'
+      - 'api/content-freshness-admin-refresh.php'
+      - 'api/content-feed.php'
       - 'api/metrics-collector-facebook.php'
       - '.github/workflows/content-freshness-5m.yml'
       - 'tests/test_content_freshness_runtime_v4.py'
@@ -14,6 +17,9 @@ on:
     branches: [main]
     paths:
       - 'api/content-freshness-cron-v4.php'
+      - 'api/content-freshness-core.php'
+      - 'api/content-freshness-admin-refresh.php'
+      - 'api/content-feed.php'
       - 'api/metrics-collector-facebook.php'
       - '.github/workflows/content-freshness-5m.yml'
       - 'tests/test_content_freshness_runtime_v4.py'
@@ -50,6 +56,8 @@ jobs:
       - name: PHP lint
         run: |
           php -l api/content-freshness-cron-v4.php
+          php -l api/content-freshness-core.php
+          php -l api/content-freshness-admin-refresh.php
           php -l api/metrics-collector-facebook.php
           php -l tests/content_freshness_v3_selection_mariadb.php
       - name: Runtime and content contracts
@@ -60,14 +68,16 @@ jobs:
         run: php tests/content_freshness_v3_selection_mariadb.php
       - name: Workflow markers
         run: |
-          grep -q 'CONTENT-FRESHNESS-V4.0' api/content-freshness-cron-v4.php
+          grep -q 'CONTENT-FRESHNESS-V4.0' api/content-freshness-core.php
           grep -q 'FACEBOOK-COLLECTOR-V2.0' api/metrics-collector-facebook.php
           grep -q 'opcache_invalidate' api/content-freshness-cron-v4.php
-          grep -q 'paymentRequiredPaused' api/content-freshness-cron-v4.php
-          grep -q 'p50tm_authorized_profile_ids' api/content-freshness-cron-v4.php
-          grep -q 'tiktokOauthProfilesPrioritized' api/content-freshness-cron-v4.php
+          grep -q 'paymentRequiredPaused' api/content-freshness-core.php
+          grep -q 'p50tm_authorized_profile_ids' api/content-freshness-core.php
+          grep -q 'tiktokOauthProfilesPrioritized' api/content-freshness-core.php
+          grep -q 'p50_cf4_prioritize_top_ranked' api/content-freshness-core.php
+          grep -q 'p50_cf4_top_profiles_all_periods' api/content-freshness-core.php
           ! grep -q 'Facebook post insights unavailable' api/metrics-collector-facebook.php
           grep -q "cron: '\*/5 \* \* \* \*'" .github/workflows/content-freshness-5m.yml
-          ! grep -q 'UPDATE app_state' api/content-freshness-cron-v4.php
+          ! grep -q 'UPDATE app_state' api/content-freshness-core.php
       - name: Diff safety
         run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD

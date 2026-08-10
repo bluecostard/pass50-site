@@ -3,7 +3,7 @@
 (() => {
   const P50CI={period:'24h',data:null,loading:false,news:new Map(),lastRefresh:0,profileHookInstalled:false};
   const PERIODS={"2h":"2 H","24h":"24 H","48h":"48 H","7d":"7 J","15d":"15 J"};
-  const NEWS_TTL=60*1000;
+  const NEWS_TTL=30*1000;
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const attr=value=>esc(value).replace(/`/g,'&#96;');
   const num=value=>{
@@ -89,7 +89,7 @@
       if(cached&&Date.now()-cached.fetchedAt<NEWS_TTL)data=cached.data;
       else{data=await fetchFeed(profileId);P50CI.news.set(key,{data,fetchedAt:Date.now()});}
       if(!document.body.contains(shell))return;const items=data.news||[];
-      shell.innerHTML=`<div class="p50ci-news-head"><div><div class="p50ci-news-title">📰 Actualité récente</div><div class="muted" style="font-size:11px">Publications officielles des 72 dernières heures · informations externes validées</div></div>${items.length>3?'<button class="btn small" data-p50ci-expand>Voir toute l’actualité</button>':''}</div><div class="p50ci-news-list">${items.length?items.map(newsCard).join(''):'<div class="p50ci-empty">Aucune actualité récente de moins de 72 heures pour cette fiche.</div>'}</div>`;
+      shell.innerHTML=`<div class="p50ci-news-head"><div><div class="p50ci-news-title">📰 Actualité récente</div><div class="muted" style="font-size:11px">Publications officielles des 48 dernières heures · informations externes validées</div></div>${items.length>3?'<button class="btn small" data-p50ci-expand>Voir toute l’actualité</button>':''}</div><div class="p50ci-news-list">${items.length?items.map(newsCard).join(''):'<div class="p50ci-empty">Aucune actualité récente de moins de 48 heures pour cette fiche.</div>'}</div>`;
     }catch(error){shell.innerHTML='<div class="p50ci-news-head"><div class="p50ci-news-title">📰 Actualité récente</div></div><div class="p50ci-empty">Actualité momentanément indisponible.</div>';}
   }
 
@@ -112,6 +112,26 @@
     wrapped.__p50ci=true;window.renderContent=wrapped;
   }
 
+  function clearNewsCaches(){
+    P50CI.news.clear();P50CI.data=null;P50CI.lastRefresh=0;
+    window.dispatchEvent(new CustomEvent('p50:news-refreshed'));
+  }
+
+  async function refreshAllProfileNews(btn){
+    if(typeof apiFetch!=='function')return;
+    const label=btn?.textContent||'';
+    if(btn){btn.disabled=true;btn.textContent='Collecte en cours…';}
+    try{
+      const data=await apiFetch('content-freshness-admin-refresh.php',{method:'POST',body:{mode:'collect_all'}});
+      clearNewsCaches();await refreshTrends(true);
+      const news=data.contentIntelligence?.news||{};
+      const msg=`${data.profilesSelected||0} FI parcourues · ${data.enqueued||0} collectes · ${news.created||0} nouvelles actus · ${news.updated||0} mises à jour`;
+      if(typeof toast==='function')toast(msg);
+    }catch(error){
+      if(typeof toast==='function')toast(error.message||'Actualisation impossible');
+    }finally{if(btn){btn.disabled=false;btn.textContent=label||'Actualiser toutes les FI';}}
+  }
+
   function installAdminHooks(){
     if(typeof window.p50v9SearchNews==='function')window.p50v9SearchNews=async function(){
       const id=document.querySelector('#newsProfile')?.value,p=profileFor(id),days=Number(document.querySelector('#newsDays')?.value||15),box=document.querySelector('#newsResults');
@@ -131,9 +151,12 @@
         if(typeof p50v20SyncTrendContent==='function')p50v20SyncTrendContent(id,ev||patch,item.platform||'Web');save();render();P50CI.news.delete(`${id}:${P50CI.period}`);toast('Actualité validée et publiée dans la fiche');
       }catch(error){toast(error.message||'Validation impossible');}
     };
-    if(typeof window.p50v9RenderNews==='function'&&!window.p50v9RenderNews.__p50ci){
-      const original=window.p50v9RenderNews;const wrapped=function(){const result=original.apply(this,arguments);const hint=document.querySelector('#adminPane .media-hint');if(hint)hint.innerHTML='<strong>Actualité hybride :</strong> les publications des comptes officiels sont ajoutées automatiquement. Les articles et reprises externes exigent toujours votre validation.';return result;};wrapped.__p50ci=true;window.p50v9RenderNews=wrapped;
+    if(typeof window.p50v9RenderNews==='function'&&!window.p50v9RenderNews.__p50ciRefresh){
+      const original=window.p50v9RenderNews;const wrapped=function(){const result=original.apply(this,arguments);const pane=document.querySelector('#adminPane .news-v2');if(pane&&!pane.querySelector('#p50RefreshAllNews')){const bar=document.createElement('div');bar.className='news-refresh-bar';bar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px';bar.innerHTML='<button class="btn primary" id="p50RefreshAllNews">Actualiser toutes les FI</button><span class="muted" style="align-self:center;font-size:11px">Collecte toutes les 5 min · Top 3 de chaque période prioritaire</span>';pane.prepend(bar);}return result;};wrapped.__p50ciRefresh=true;window.p50v9RenderNews=wrapped;
     }
+    document.addEventListener('click',event=>{
+      if(event.target.id==='p50RefreshAllNews'){event.preventDefault();refreshAllProfileNews(event.target);}
+    },true);
   }
 
   function bind(){
@@ -141,9 +164,9 @@
       const period=event.target.closest('[data-p50ci-period]');if(period){P50CI.period=period.dataset.p50ciPeriod;P50CI.data=null;P50CI.news.clear();ensurePeriodControls();refreshTrends(true);return;}
       const expand=event.target.closest('[data-p50ci-expand]');if(expand){const shell=expand.closest('.p50ci-news');shell?.classList.toggle('expanded');expand.textContent=shell?.classList.contains('expanded')?'Réduire':'Voir toute l’actualité';}
     });
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){P50CI.news.clear();refreshTrends(true);}});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){clearNewsCaches();refreshTrends(true);}});
   }
 
-  function init(){injectStyles();installRenderHook();installProfileHook();installAdminHooks();bind();ensurePeriodControls();refreshTrends(true);setInterval(()=>refreshTrends(true),60*1000);}
+  function init(){injectStyles();installRenderHook();installProfileHook();installAdminHooks();bind();ensurePeriodControls();refreshTrends(true);setInterval(()=>refreshTrends(true),30*1000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

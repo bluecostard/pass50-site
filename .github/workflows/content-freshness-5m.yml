@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - 'api/content-freshness-cron-v4.php'
+      - 'api/content-freshness-core.php'
+      - 'api/content-freshness-admin-refresh.php'
       - 'api/content-feed.php'
       - 'api/content-intelligence-core.php'
       - 'api/metrics-collector-facebook.php'

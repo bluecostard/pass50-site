@@ -455,7 +455,7 @@ function voteShareCleanup({keepCard=false}={}){
   if(!keepCard){VOTE_SHARE.shareId='';VOTE_SHARE.card=null;VOTE_SHARE.images.clear();}
 }
 function voteShareEscape(value){return safeAttr(String(value??''))}
-function voteShareMessage(card){
+function voteShareMessage(card, {withUrl=true}={}){
   const candidates=card.candidates.slice(0,2);
   const hasAudio=Boolean(VOTE_SHARE.audioBlob||String(VOTE_SHARE.mediaFile?.type||'').startsWith('video/')||String(VOTE_SHARE.mediaFile?.type||'').startsWith('audio/'));
   const link=String((hasAudio?(card.campaignAudioUrl||card.campaignUrl||card.shortUrl): (card.campaignUrl||card.shortUrl))||card.pass50Url||'https://pass50.store').trim();
@@ -467,8 +467,17 @@ function voteShareMessage(card){
   if(card.percentagesAvailable&&candidates.length===2&&candidates.every(candidate=>Number.isFinite(Number(candidate.percentage)))){
     lines[lines.length-1]+=` · ${Number(candidates[1].percentage)} %`;
   }
-  lines.push('','👇 Et toi, tu aurais voté pour qui ?','',link);
+  lines.push('','👇 Et toi, tu aurais voté pour qui ?');
+  // WhatsApp crée un 2ᵉ message (aperçu lien) dès qu’il y a une URL + un fichier.
+  if(withUrl) lines.push('',link);
+  else lines.push('','(Lien sur la carte PASS50)');
   return lines.join('\n');
+}
+function voteShareMediaCaption(card){
+  // Légende courte sans URL — le lien est déjà dessiné sur l’image/vidéo.
+  const pick=(card.candidates||[]).find(c=>c.profileId===card.selectedProfileId)||(card.candidates||[])[0];
+  const name=String(pick?.name||'PASS50').trim();
+  return `🔥 Mon vote PASS50 · Les Coulés\n${name}\nVOTE TOI AUSSI`;
 }
 function voteSharePanel(){
   const card=VOTE_SHARE.card;if(!card)return;
@@ -579,6 +588,53 @@ async function drawVoteShareCard(canvas,card,{vertical=false,progress=0,wave=0}=
   ctx.textAlign='left';
 }
 function canvasFile(canvas,name='mon-vote-pass50.png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob&&blob.size>0?resolve(new File([blob],name,{type:'image/png'})):reject(new Error('Génération image impossible')),'image/png',0.95))}
+function setVoteShareMedia(file){
+  if(VOTE_SHARE.mediaUrl)URL.revokeObjectURL(VOTE_SHARE.mediaUrl);
+  VOTE_SHARE.mediaFile=file;
+  VOTE_SHARE.mediaUrl=file?URL.createObjectURL(file):'';
+}
+async function startVoteShareRecording(){
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)return toast('Enregistrement audio indisponible sur ce navigateur');
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true},video:false});
+    const mime=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(type=>MediaRecorder.isTypeSupported(type))||'';
+    const chunks=[];
+    const recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+    voteShareCleanup({keepCard:true});
+    VOTE_SHARE.stream=stream;VOTE_SHARE.recorder=recorder;VOTE_SHARE.seconds=0;
+    recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+    recorder.onstop=()=>{
+      const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});
+      stream.getTracks().forEach(track=>track.stop());
+      clearInterval(VOTE_SHARE.timer);
+      VOTE_SHARE.recorder=null;VOTE_SHARE.stream=null;
+      if(blob.size>3*1024*1024){toast('Audio trop volumineux');voteShareCleanup({keepCard:true});voteSharePanel();return;}
+      VOTE_SHARE.audioBlob=blob;
+      VOTE_SHARE.audioUrl=URL.createObjectURL(blob);
+      // Backup audio file immédiat (si la vidéo échoue / n’est pas encore prête)
+      try{
+        const audioFile=voteShareAudioFile();
+        if(audioFile)setVoteShareMedia(audioFile);
+      }catch(_){ }
+      voteShareAnalytics('audio_recorded');
+      voteSharePanel();
+      // Préparer la vidéo hors geste pour que WhatsApp/Partager partagent 1 fichier tout de suite
+      generateVoteShareVideo().catch(()=>{});
+    };
+    recorder.start(250);
+    VOTE_SHARE.timer=setInterval(()=>{
+      VOTE_SHARE.seconds++;
+      if(VOTE_SHARE.seconds>=15)stopVoteShareRecording();
+      else voteSharePanel();
+    },1000);
+    voteSharePanel();
+  }catch(err){
+    toast(err?.name==='NotAllowedError'?'Autorisation microphone refusée':'Microphone indisponible');
+  }
+}
+function stopVoteShareRecording(){
+  if(VOTE_SHARE.recorder?.state==='recording')VOTE_SHARE.recorder.stop();
+}
 async function generateVoteShareImage(square=false){
   const canvas=$('#voteShareCanvas');
   // 4:5 = grande carte dans le fil WhatsApp (mieux qu’un 9:16 trop compressé)
@@ -668,38 +724,90 @@ async function prepareVoteShareFile({preferVideo=true}={}){
     if(isPlayableShareVideo(VOTE_SHARE.mediaFile))return VOTE_SHARE.mediaFile;
     const video=await generateVoteShareVideo();
     if(video)return video;
-    // Un seul fichier : audio jouable dans WhatsApp (pas image + audio séparés)
     return voteShareAudioFile();
   }
   if(VOTE_SHARE.mediaFile&&String(VOTE_SHARE.mediaFile.type||'').startsWith('image/'))return VOTE_SHARE.mediaFile;
   return await generateVoteShareImage(false);
 }
+async function shareVoteMediaFile(file, {whatsapp=false}={}){
+  if(!file){toast('Média indisponible');return false;}
+  // Jamais d’URL http dans text/url : WhatsApp coupe alors en 2 messages (média + aperçu lien).
+  // Légende courte sans lien — le lien est déjà sur la carte/vidéo.
+  const caption=voteShareMediaCaption(VOTE_SHARE.card);
+  if(!(navigator.share&&navigator.canShare?.({files:[file]}))){
+    const url=VOTE_SHARE.mediaUrl||URL.createObjectURL(file);
+    const a=document.createElement('a');a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+    if(!VOTE_SHARE.mediaUrl)setTimeout(()=>URL.revokeObjectURL(url),4000);
+    toast(whatsapp?'Fichier prêt : envoie-le dans WhatsApp':'Média téléchargé');
+    return false;
+  }
+  try{
+    // Essai 1 : fichier seul (1 bulle WhatsApp la plus fiable)
+    await navigator.share({files:[file]});
+    return true;
+  }catch(err){
+    if(err?.name==='AbortError')return false;
+    try{
+      // Essai 2 : fichier + légende SANS URL
+      await navigator.share({title:'Mon vote PASS50',text:caption,files:[file]});
+      return true;
+    }catch(err2){
+      if(err2?.name==='AbortError')return false;
+      toast('Partage impossible');
+      return false;
+    }
+  }
+}
 async function nativeVoteShare(){
   const statusEl=$('#voteShareStatus');
-  if(statusEl)statusEl.textContent=VOTE_SHARE.audioBlob?'Préparation du média unique…':'Préparation de la carte…';
   let file=null;
-  try{file=await prepareVoteShareFile({preferVideo:true})}catch(_){ }
-  if(!file){toast('Partage indisponible');return;}
-  const shareText=voteShareMessage(VOTE_SHARE.card);
-  voteShareAnalytics('native_share_triggered');
-  if(navigator.share&&navigator.canShare?.({files:[file]})){
-    try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return;}
-    catch(err){if(err?.name==='AbortError')return;}
+  // Préférer un média déjà prêt (geste utilisateur intact sur iOS)
+  if(isPlayableShareVideo(VOTE_SHARE.mediaFile))file=VOTE_SHARE.mediaFile;
+  else if(VOTE_SHARE.audioBlob&&String(VOTE_SHARE.mediaFile?.type||'').startsWith('audio/'))file=VOTE_SHARE.mediaFile;
+  else if(VOTE_SHARE.mediaFile&&!VOTE_SHARE.audioBlob)file=VOTE_SHARE.mediaFile;
+  if(!file){
+    if(statusEl)statusEl.textContent=VOTE_SHARE.audioBlob?'Préparation d’1 seul média…':'Préparation de la carte…';
+    try{file=await prepareVoteShareFile({preferVideo:true})}catch(_){ }
   }
-  downloadVoteShare();
+  if(!file){toast('Partage indisponible');return;}
+  if(statusEl)statusEl.textContent='Partage (1 fichier, sans lien séparé)…';
+  voteShareAnalytics('native_share_triggered');
+  await shareVoteMediaFile(file,{whatsapp:false});
 }
 async function shareVoteWhatsapp(){
   voteShareAnalytics('platform_selected','whatsapp');
   const statusEl=$('#voteShareStatus');
-  if(statusEl)statusEl.textContent=VOTE_SHARE.audioBlob?'1 seul média pour WhatsApp (vidéo ou audio)…':'Préparation de la carte…';
-  let file=null;
-  try{file=await prepareVoteShareFile({preferVideo:Boolean(VOTE_SHARE.audioBlob)})}catch(_){ }
-  const shareText=voteShareMessage(VOTE_SHARE.card);
-  // Un seul fichier : jamais image + m4a en deux messages
-  if(file&&navigator.share&&navigator.canShare?.({files:[file]})){
-    try{await navigator.share({title:'Mon vote PASS50',text:shareText,files:[file]});return;}
-    catch(err){if(err?.name==='AbortError')return;}
+  // Si audio : le fichier doit déjà être prêt (geste utilisateur). Sinon on prépare puis on demande de retaper.
+  if(VOTE_SHARE.audioBlob){
+    let file=isPlayableShareVideo(VOTE_SHARE.mediaFile)?VOTE_SHARE.mediaFile:null;
+    if(!file && String(VOTE_SHARE.mediaFile?.type||'').startsWith('audio/')) file=VOTE_SHARE.mediaFile;
+    if(!file){
+      if(statusEl)statusEl.textContent='Préparation du média… retape WhatsApp ensuite';
+      try{
+        file=await prepareVoteShareFile({preferVideo:true});
+      }catch(_){ }
+      if(file){
+        toast('Média prêt — retape WhatsApp pour l’envoyer');
+        if(statusEl)statusEl.textContent='Média prêt. Retape WhatsApp.';
+        return;
+      }
+      toast('Média impossible à préparer');
+      return;
+    }
+    if(statusEl)statusEl.textContent='Envoi WhatsApp (1 fichier, sans lien séparé)…';
+    await shareVoteMediaFile(file,{whatsapp:true});
+    return;
   }
+  // Sans audio : carte image seule, légende sans URL (lien déjà sur la carte)
+  if(statusEl)statusEl.textContent='Préparation de la carte…';
+  let file=null;
+  try{file=await prepareVoteShareFile({preferVideo:false})}catch(_){ }
+  if(file){
+    const ok=await shareVoteMediaFile(file,{whatsapp:true});
+    if(ok)return;
+  }
+  // Dernier recours sans audio uniquement
+  const shareText=voteShareMessage(VOTE_SHARE.card,{withUrl:true});
   const url=`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
   const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');
   if(mobile){location.href=url;return;}

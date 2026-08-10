@@ -197,6 +197,12 @@
     return Number.isFinite(n) ? n.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1') : '—';
   }
 
+  function questionCoverSrc(item) {
+    const direct = String(item.coverPhoto || '').trim();
+    if (direct && /^https?:\/\//i.test(direct)) return direct;
+    return statusCoverDataUri({ questionTitle: item.title || '', optionLabel: item.title || 'PRONO' }, 'feed');
+  }
+
   function card(item) {
     const selected = item.myVote?.optionKey || '';
     const voted = Boolean(selected);
@@ -223,7 +229,9 @@
     const publishBtn = statusPublished
       ? `<button type="button" class="btn" disabled>Statut publié</button>`
       : `<button type="button" class="btn primary" data-publish="${esc(item.id)}">Publier en statut</button>`;
+    const cover = esc(questionCoverSrc(item));
     return `<article class="card${voted ? ' is-voted' : ''}" data-qid="${esc(item.id)}">
+      <div class="card-media"><img src="${cover}" alt="" loading="lazy"></div>
       <p class="card-kicker">${esc(closesLabel(item.closesAt))}${item.totalVotes ? ` · ${esc(item.totalVotes)} joueurs` : ''}${voted ? ' · Pari validé' : ''}</p>
       <h2>${esc(item.title)}</h2>
       ${item.context ? `<div class="ctx">${esc(item.context)}</div>` : ''}

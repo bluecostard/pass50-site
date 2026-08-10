@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 foreach([
     'metrics-collector-facebook.php','metrics-social-collectors-core.php','metrics-collectors-core.php',
-    'metrics-orchestrator-core.php','metrics-queue-core.php',
+    'metrics-orchestrator-core.php','metrics-queue-core.php','content-freshness-core.php',
 ] as $runtimeFile){
     $runtimePath=__DIR__.'/'.$runtimeFile;
     clearstatcache(true,$runtimePath);
@@ -11,16 +11,7 @@ foreach([
 }
 
 require __DIR__.'/bootstrap.php';
-require __DIR__.'/metrics-queue-core.php';
-require __DIR__.'/content-intelligence-core.php';
-
-const P50_CONTENT_FRESHNESS_V4_VERSION='CONTENT-FRESHNESS-V4.0';
-const P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS=300;
-const P50_CONTENT_FRESHNESS_V4_PROFILE_LIMIT=8;
-const P50_CONTENT_FRESHNESS_V4_JOB_LIMIT=16;
-const P50_CONTENT_FRESHNESS_V4_TIKTOK_OAUTH_LIMIT=4;
-const P50_CONTENT_FRESHNESS_V4_FACEBOOK_COLLECTOR='FACEBOOK-COLLECTOR-V2.0';
-const P50_CONTENT_FRESHNESS_V4_X_PAUSE_REASON='payment_required';
+require __DIR__.'/content-freshness-core.php';
 
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
@@ -42,138 +33,20 @@ $action=$input['action']??null;if(!is_string($action)||!in_array($action,['probe
 $dispatchId=trim((string)($input['dispatchId']??''));
 if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))json_response(['error'=>'dispatchId invalide.'],422);
 
-function p50_cf4_x_fast_cycle_enabled(): bool {
-    global $config;
-    $value=$config['metrics']['x_fast_cycle_enabled']??getenv('PASS50_X_FAST_CYCLE_ENABLED');
-    if($value===false||$value===null||trim((string)$value)==='')return false;
-    return filter_var($value,FILTER_VALIDATE_BOOLEAN);
-}
-function p50_cf4_x_policy(): array {
-    $enabled=p50_cf4_x_fast_cycle_enabled();
-    return ['enabled'=>$enabled,'reason'=>$enabled?null:P50_CONTENT_FRESHNESS_V4_X_PAUSE_REASON,'confirmedHttpStatus'=>$enabled?null:402];
-}
 if($action==='probe')json_response([
     'ok'=>true,'action'=>'probe','dispatchId'=>$dispatchId,'version'=>P50_CONTENT_FRESHNESS_V4_VERSION,
     'bucketSeconds'=>P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS,'facebookCollectorVersion'=>P50_FACEBOOK_COLLECTOR_VERSION,
     'xFastCycle'=>p50_cf4_x_policy(),'publicStateWrites'=>0,
 ]);
 
-function p50_cf4_ranked_profiles(PDO $pdo,int $limit=70): array {
-    $limit=max(8,min(150,$limit));
-    if(p50_metrics_table_exists($pdo,'p50_ranking_snapshots')){
-        $sql="SELECT ordered.profile_id,ordered.rank_position,ordered.latest_content
-          FROM (
-            SELECT ranked.profile_id,ranked.rank_position,MAX(c.last_seen_at) AS latest_content
-            FROM (
-              SELECT r.profile_id,MIN(s.rank_position) AS rank_position
-              FROM p50_profile_registry r
-              JOIN p50_ranking_snapshots s ON BINARY s.profile_id=BINARY r.profile_id
-              JOIN (SELECT profile_id,MAX(captured_at) AS captured_at FROM p50_ranking_snapshots GROUP BY profile_id) latest
-                ON BINARY latest.profile_id=BINARY s.profile_id AND latest.captured_at=s.captured_at
-              WHERE r.alive=1 AND s.rank_position BETWEEN 1 AND 70
-              GROUP BY r.profile_id
-            ) ranked
-            LEFT JOIN p50_metric_contents c ON BINARY c.profile_id=BINARY ranked.profile_id AND c.status='active'
-            GROUP BY ranked.profile_id,ranked.rank_position
-          ) ordered
-          ORDER BY CASE WHEN ordered.latest_content IS NULL THEN 0 ELSE 1 END ASC,
-            ordered.latest_content ASC,ordered.rank_position ASC
-          LIMIT ".$limit;
-        return $pdo->query($sql)->fetchAll();
-    }
-    if(p50_metrics_column_exists($pdo,'p50_profile_registry','rank_position')){
-        $sql="SELECT ordered.profile_id,ordered.rank_position,ordered.latest_content
-          FROM (
-            SELECT r.profile_id,r.rank_position,MAX(c.last_seen_at) AS latest_content
-            FROM p50_profile_registry r
-            LEFT JOIN p50_metric_contents c ON BINARY c.profile_id=BINARY r.profile_id AND c.status='active'
-            WHERE r.alive=1 AND r.rank_position BETWEEN 1 AND 70
-            GROUP BY r.profile_id,r.rank_position
-          ) ordered
-          ORDER BY CASE WHEN ordered.latest_content IS NULL THEN 0 ELSE 1 END ASC,
-            ordered.latest_content ASC,ordered.rank_position ASC
-          LIMIT ".$limit;
-        return $pdo->query($sql)->fetchAll();
-    }
-    $stmt=$pdo->prepare("SELECT profile_id,9999 rank_position,NULL latest_content FROM p50_profile_registry WHERE alive=1 ORDER BY profile_id LIMIT ?");
-    $stmt->bindValue(1,$limit,PDO::PARAM_INT);$stmt->execute();return $stmt->fetchAll();
-}
-function p50_cf4_prioritize_tiktok_oauth(PDO $pdo,array $ranked,int $limit=P50_CONTENT_FRESHNESS_V4_TIKTOK_OAUTH_LIMIT): array {
-    if(!function_exists('p50tm_authorized_profile_ids'))return ['rows'=>$ranked,'count'=>0];
-    $authorized=array_slice(array_values(array_unique(array_filter(array_map('strval',p50tm_authorized_profile_ids($pdo))))),0,max(0,$limit));
-    if(!$authorized)return ['rows'=>$ranked,'count'=>0];
-    $byId=[];foreach($ranked as $row){$id=trim((string)($row['profile_id']??''));if($id!=='')$byId[$id]=$row;}
-    $priority=[];foreach($authorized as $id){$priority[]=$byId[$id]??['profile_id'=>$id,'rank_position'=>0,'latest_content'=>null];unset($byId[$id]);}
-    $remaining=[];foreach($ranked as $row){$id=trim((string)($row['profile_id']??''));if($id!==''&&isset($byId[$id])){$remaining[]=$row;unset($byId[$id]);}}
-    return ['rows'=>array_merge($priority,$remaining),'count'=>count($priority)];
-}
-function p50_cf4_platform_counter(array &$counter,string $platform,string $key,int $increment=1): void {
-    if(!isset($counter[$platform]))$counter[$platform]=[];
-    $counter[$platform][$key]=(int)($counter[$platform][$key]??0)+$increment;
-}
-function p50_cf4_authorized_rows(PDO $pdo,array $ranked,array $xPolicy): array {
-    $ids=array_values(array_filter(array_map(static fn($row)=>trim((string)($row['profile_id']??'')),$ranked)));
-    $summary=['verified'=>0,'enabled'=>0,'authorized'=>0,'disabled'=>0,'configurationMissing'=>0,'authorizationRequired'=>0,'unsupported'=>0,'paymentRequiredPaused'=>0];$byPlatform=[];
-    if(!$ids)return ['rows'=>[],'summary'=>$summary,'byPlatform'=>$byPlatform];
-    $placeholders=implode(',',array_fill(0,count($ids),'?'));$threshold=p50_mc_threshold();
-    $stmt=$pdo->prepare("SELECT r.profile_id,s.platform FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id WHERE r.alive=1 AND r.profile_id IN ($placeholders) AND s.status='verified' AND s.confidence>=? AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')");
-    $stmt->execute([...$ids,$threshold]);
-    $rows=p50_mo_unique_candidate_rows(array_merge($stmt->fetchAll(),p50_mo_oauth_youtube_rows($pdo,$ids),p50_mo_oauth_meta_rows($pdo,$ids)));$summary['verified']=count($rows);
-    $seenStmt=$pdo->prepare("SELECT profile_id,platform,MAX(last_seen_at) last_seen_at FROM p50_metric_contents WHERE status='active' AND profile_id IN ($placeholders) GROUP BY profile_id,platform");
-    $seenStmt->execute($ids);$seen=[];foreach($seenStmt->fetchAll() as $row)$seen[(string)$row['profile_id'].'|'.(string)$row['platform']]=$row['last_seen_at']?:null;
-    $authorized=[];
-    foreach($rows as $row){
-        $profileId=(string)$row['profile_id'];$platform=p50_mc_platform((string)$row['platform']);p50_cf4_platform_counter($byPlatform,$platform,'verified');
-        if(!p50_mc_platform_enabled($platform)){$summary['disabled']++;p50_cf4_platform_counter($byPlatform,$platform,'disabled');continue;}
-        $summary['enabled']++;p50_cf4_platform_counter($byPlatform,$platform,'enabled');
-        if($platform==='X'&&empty($xPolicy['enabled'])){$summary['paymentRequiredPaused']++;p50_cf4_platform_counter($byPlatform,$platform,'paymentRequiredPaused');continue;}
-        $access=p50_mc_public_access($platform,$profileId);$mode=(string)($access['mode']??'');
-        if($mode==='unsupported_account_type'){$summary['unsupported']++;p50_cf4_platform_counter($byPlatform,$platform,'unsupported');continue;}
-        if(empty($access['configured'])){$summary['configurationMissing']++;p50_cf4_platform_counter($byPlatform,$platform,'configurationMissing');continue;}
-        if(empty($access['authorized'])){$summary['authorizationRequired']++;p50_cf4_platform_counter($byPlatform,$platform,'authorizationRequired');continue;}
-        $summary['authorized']++;p50_cf4_platform_counter($byPlatform,$platform,'authorized');$authorized[]=['profileId'=>$profileId,'platform'=>$platform,'lastContentAt'=>$seen[$profileId.'|'.$platform]??null];
-    }
-    ksort($byPlatform,SORT_NATURAL|SORT_FLAG_CASE);return ['rows'=>$authorized,'summary'=>$summary,'byPlatform'=>$byPlatform];
-}
-function p50_cf4_select(array $ranked,array $authorized,int $profileLimit=P50_CONTENT_FRESHNESS_V4_PROFILE_LIMIT,int $jobLimit=P50_CONTENT_FRESHNESS_V4_JOB_LIMIT): array {
-    $byProfile=[];foreach($authorized as $row)$byProfile[(string)$row['profileId']][]=$row;
-    $selectedProfiles=[];$selectedJobs=[];$secondaries=[];$loads=[];
-    foreach($ranked as $rankRow){
-        if(count($selectedProfiles)>=$profileLimit)break;$profileId=(string)($rankRow['profile_id']??'');$options=$byProfile[$profileId]??[];if(!$options)continue;
-        usort($options,static function($a,$b) use(&$loads){$at=trim((string)($a['lastContentAt']??''));$bt=trim((string)($b['lastContentAt']??''));if(($at==='')!==($bt===''))return $at===''?-1:1;if($at!==$bt)return strcmp($at,$bt);$load=(int)($loads[$a['platform']]??0)<=>(int)($loads[$b['platform']]??0);return $load!==0?$load:strcmp((string)$a['platform'],(string)$b['platform']);});
-        $primary=array_shift($options);$primary['rankPosition']=(int)($rankRow['rank_position']??0);$primary['role']='primary';$selectedJobs[]=$primary;$selectedProfiles[$profileId]=true;$loads[$primary['platform']]=(int)($loads[$primary['platform']]??0)+1;
-        foreach($options as $option){$option['rankPosition']=(int)($rankRow['rank_position']??0);$option['role']='secondary';$secondaries[]=$option;}
-    }
-    usort($secondaries,static function($a,$b) use(&$loads){$load=(int)($loads[$a['platform']]??0)<=>(int)($loads[$b['platform']]??0);if($load!==0)return $load;$at=trim((string)($a['lastContentAt']??''));$bt=trim((string)($b['lastContentAt']??''));if(($at==='')!==($bt===''))return $at===''?-1:1;if($at!==$bt)return strcmp($at,$bt);return (int)$a['rankPosition']<=>(int)$b['rankPosition'];});
-    foreach($secondaries as $row){if(count($selectedJobs)>=$jobLimit)break;$selectedJobs[]=$row;$loads[$row['platform']]=(int)($loads[$row['platform']]??0)+1;}
-    $platforms=[];foreach($selectedJobs as $row)p50_cf4_platform_counter($platforms,(string)$row['platform'],'selected');ksort($platforms,SORT_NATURAL|SORT_FLAG_CASE);
-    return ['profiles'=>array_keys($selectedProfiles),'jobs'=>$selectedJobs,'platforms'=>$platforms];
-}
-function p50_cf4_enqueue(PDO $pdo,array $row,string $dispatchId,int $now): array {
-    $profileId=(string)$row['profileId'];$platform=(string)$row['platform'];$start=(int)(floor($now/P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS)*P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS);$bucket=gmdate('YmdHis',$start);$observedAt=gmdate('Y-m-d H:i:s',$now);
-    $idempotency=hash('sha256',implode('|',[P50_CONTENT_FRESHNESS_V4_VERSION,$bucket,$profileId,$platform]));
-    $payload=['profileId'=>$profileId,'platform'=>$platform,'contentLimit'=>4,'observedAt'=>$observedAt,'liveConfirmed'=>false,'cadence'=>'p0','bucket'=>$bucket,'dispatchId'=>$dispatchId,'reason'=>'content_freshness_v4'];
-    return p50_metrics_enqueue_job($pdo,['idempotencyKey'=>$idempotency,'collector'=>strtolower($platform).'_v1','platform'=>$platform,'scopeType'=>'profile','scopeId'=>$profileId,'priority'=>5,'maxAttempts'=>3,'payload'=>$payload])+['platform'=>$platform,'bucket'=>$bucket];
-}
-
-set_time_limit(280);$started=microtime(true);$stage='bootstrap';
-try{
-    $pdo=db();p50_metrics_ensure_schema($pdo);p50_metrics_recover_stale_jobs($pdo);$xPolicy=p50_cf4_x_policy();
-    $stage='selection';$priority=p50_cf4_prioritize_tiktok_oauth($pdo,p50_cf4_ranked_profiles($pdo,70));$ranked=$priority['rows'];$access=p50_cf4_authorized_rows($pdo,$ranked,$xPolicy);$selection=p50_cf4_select($ranked,$access['rows']);
-    $stage='enqueue';$enqueued=0;$duplicates=0;$enqueueByPlatform=[];$now=time();
-    foreach($selection['jobs'] as $row){$job=p50_cf4_enqueue($pdo,$row,$dispatchId,$now);$platform=(string)$row['platform'];if(!empty($job['created'])){$enqueued++;p50_cf4_platform_counter($enqueueByPlatform,$platform,'enqueued');}else{$duplicates++;p50_cf4_platform_counter($enqueueByPlatform,$platform,'duplicates');}}
-    $stage='work';$processed=0;$completed=0;$partial=0;$failed=0;$retried=0;$skipped=0;$processedByPlatform=[];
-    for($iteration=1;$iteration<=24;$iteration++){
-        $remaining=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=5 AND status IN ('pending','running','retry_wait')");if($remaining===0)break;
-        $work=p50_metrics_process_next_job($pdo);if(empty($work['processed']))break;
-        $processed+=(int)($work['processed']??0);$completed+=(int)($work['completed']??0);$partial+=(int)($work['partial']??0);$failed+=(int)($work['failed']??0);$retried+=(int)($work['retried']??0);$skipped+=(int)($work['skipped']??0);
-        $jobStmt=$pdo->prepare("SELECT platform,priority FROM p50_metric_jobs WHERE job_uuid=? LIMIT 1");$jobStmt->execute([(string)$work['jobUuid']]);$jobRow=$jobStmt->fetch()?:[];
-        if((int)($jobRow['priority']??-1)===5){$platform=p50_mc_platform((string)($jobRow['platform']??'Unknown'));p50_cf4_platform_counter($processedByPlatform,$platform,'processed');p50_cf4_platform_counter($processedByPlatform,$platform,(string)($work['status']??'unknown'));}
-    }
-    $stage='content_intelligence';$refresh=p50_ci_refresh($pdo);$remaining=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=5 AND status IN ('pending','running','retry_wait')");
-    ksort($enqueueByPlatform,SORT_NATURAL|SORT_FLAG_CASE);ksort($processedByPlatform,SORT_NATURAL|SORT_FLAG_CASE);
-    json_response(['ok'=>true,'action'=>'refresh','version'=>P50_CONTENT_FRESHNESS_V4_VERSION,'dispatchId'=>$dispatchId,'bucketSeconds'=>P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS,'facebookCollectorVersion'=>P50_FACEBOOK_COLLECTOR_VERSION,'xFastCycle'=>$xPolicy,'profilesScanned'=>count($ranked),'profilesSelected'=>count($selection['profiles']),'tiktokOauthProfilesPrioritized'=>(int)$priority['count'],'candidateLinks'=>(int)$access['summary']['verified'],'authorizedLinks'=>(int)$access['summary']['authorized'],'accessSummary'=>$access['summary'],'accessByPlatform'=>$access['byPlatform'],'selectedByPlatform'=>$selection['platforms'],'enqueueByPlatform'=>$enqueueByPlatform,'processedByPlatform'=>$processedByPlatform,'enqueued'=>$enqueued,'duplicates'=>$duplicates,'processed'=>$processed,'completed'=>$completed,'partial'=>$partial,'retried'=>$retried,'failed'=>$failed,'skipped'=>$skipped,'remaining'=>$remaining,'contentIntelligence'=>$refresh,'stage'=>'complete','durationMs'=>(int)round((microtime(true)-$started)*1000),'publicStateWrites'=>0]);
-}catch(Throwable $error){
-    $detail=p50_metrics_safe_error($error->getMessage());error_log('PASS50 content freshness V4 ['.$stage.']: '.$detail);
-    json_response(['error'=>'Rafraîchissement rapide des contenus interrompu.','errorCode'=>'content_freshness_'.$stage,'detail'=>$detail,'stage'=>$stage,'dispatchId'=>$dispatchId,'version'=>P50_CONTENT_FRESHNESS_V4_VERSION,'facebookCollectorVersion'=>defined('P50_FACEBOOK_COLLECTOR_VERSION')?P50_FACEBOOK_COLLECTOR_VERSION:null,'publicStateWrites'=>0,'durationMs'=>(int)round((microtime(true)-$started)*1000)],500);
-}
+set_time_limit(280);
+$result=p50_cf4_execute(db(),$dispatchId,[
+    'mode'=>'cycle',
+    'profileLimit'=>P50_CONTENT_FRESHNESS_V4_PROFILE_LIMIT,
+    'jobLimit'=>P50_CONTENT_FRESHNESS_V4_JOB_LIMIT,
+    'maxIterations'=>P50_CONTENT_FRESHNESS_V4_WORK_ITERATIONS,
+    'forceTopN'=>P50_CONTENT_FRESHNESS_V4_TOP_RANK_FORCE,
+]);
+if(empty($result['ok']))json_response($result,500);
+$result['action']='refresh';
+json_response($result);

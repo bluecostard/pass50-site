@@ -21,12 +21,18 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 .q .actions{display:flex;gap:8px;flex-wrap:wrap}
 .q .actions button{width:auto;margin:0;padding:8px 12px;font-size:13px}
 .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid #3a453a;color:#b7ff00}
+.batch-cover{width:100%;max-width:320px;border-radius:12px;margin:8px 0 0;aspect-ratio:16/10;object-fit:cover;border:1px solid #293129}
+.batch-row{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:start}
+.batch-thumb{width:96px;height:60px;border-radius:10px;object-fit:cover;border:1px solid #293129;background:#0a0d0a}
+.batch-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.batch-actions button{width:auto;margin:0}
+.required::after{content:" *";color:#b7ff00}
 </style>
 </head>
 <body>
 <div class="shell">
   <h1>Admin · Pronostics</h1>
-  <p class="muted">Créer / publier. Jusqu’à <strong>6 pronos</strong> actifs par FI ou actu. Cotes · vote 6/12/24 h · date de mesure. Sans argent réel.</p>
+  <p class="muted">Créer / publier. Jusqu’à <strong>6 pronos</strong> actifs par FI ou actu. Cotes · vote 6/12/24 h · date de mesure. <strong>Image obligatoire</strong> sur chaque prono.</p>
   <div class="card" id="authGate" style="display:none;border-color:#664;background:#1a1208">
     <strong>Connexion requise (owner / admin)</strong>
     <p class="muted" style="margin:8px 0 0">Connecte-toi d’abord sur la page d’accueil PASS50 avec ton compte propriétaire, puis reviens ici. Le token reste dans le navigateur.</p>
@@ -34,10 +40,25 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
   </div>
 
   <div class="card">
-    <label>Question</label>
+    <h2 style="margin-top:0">Batch du jour · 12 pronos</h2>
+    <p class="muted" style="margin:0 0 12px">Génère 12 brouillons (influenceurs → artistes → actus) avec image liée au contenu. Vérifie, puis publie tout en une fois.</p>
+    <div class="batch-actions">
+      <button type="button" id="genDailyBtn">Générer les 12 du jour</button>
+      <button type="button" class="ghost" id="refreshDailyBtn">Rafraîchir le batch</button>
+      <button type="button" id="publishDailyBtn">Publier les 12</button>
+    </div>
+    <div class="toast" id="dailyMsg"></div>
+    <div id="dailyList" class="muted" style="margin-top:12px">Aucun batch chargé.</div>
+  </div>
+
+  <div class="card">
+    <label class="required">Question</label>
     <input id="title" placeholder="Ex. Lo Père finit sa 2ᵉ maison dans 6 mois ?">
     <label>Contexte</label>
     <textarea id="context" rows="2" placeholder="Actu / précision"></textarea>
+    <label class="required">Image (URL HTTPS — obligatoire)</label>
+    <input id="coverImageUrl" placeholder="https://… photo FI, miniature actu ou couverture événement">
+    <img id="coverPreview" class="batch-cover" alt="" hidden>
     <label>Profile ID FI (optionnel si clé actu)</label>
     <input id="profileId" placeholder="himra">
     <label>Clé sujet actu (si pas de FI — ex. himra-perte-tiktok)</label>
@@ -46,7 +67,7 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <label>Options (2 à 4, une par ligne : key|label|cote)</label>
     <textarea id="options" rows="4">y|Oui|1.70
 n|Non|2.20</textarea>
-    <p class="muted" style="margin:6px 0 0;font-size:12px">Gain si correct = mise × cote (ex. 100 × 1.70 = 170 pts). Sans argent réel.</p>
+    <p class="muted" style="margin:6px 0 0;font-size:12px">Cotes auto si omises (formule unique PASS50). Gain si correct = mise × cote. Sans argent réel.</p>
     <div class="row">
       <div>
         <label>Mise (points)</label>
@@ -127,9 +148,12 @@ function renderList(items){
   box.innerHTML=items.map(item=>{
     const opts=(item.options||[]).map(o=>`${o.key} ${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
     const canResolve=item.status==='open'||item.status==='locked';
+    const cover=item.coverPhoto?`<img src="${item.coverPhoto.replace(/"/g,'&quot;')}" alt="" class="batch-cover" loading="lazy">`:'';
     return `<div class="q" data-id="${item.id}">
+      ${cover}
       <strong>${item.title||'—'}</strong>
       <span class="badge">${item.status}</span>
+      ${item.theme?`<span class="badge">${item.theme}</span>`:''}
       <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
       <div class="meta">${opts}</div>
       <div class="actions">
@@ -138,6 +162,34 @@ function renderList(items){
       </div>
     </div>`;
   }).join('');
+}
+function renderDailyList(items){
+  const box=document.getElementById('dailyList');
+  if(!items.length){box.innerHTML='Aucun prono pour ce batch.';return;}
+  box.innerHTML=items.map((item,i)=>{
+    const cover=item.coverPhoto||'';
+    const thumb=cover?`<img src="${cover.replace(/"/g,'&quot;')}" alt="" class="batch-thumb" loading="lazy">`:'<div class="batch-thumb"></div>';
+    const opts=(item.options||[]).map(o=>`${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
+    return `<div class="q batch-row">
+      ${thumb}
+      <div>
+        <strong>${i+1}. ${item.title||'—'}</strong>
+        <span class="badge">${item.status||'draft'}</span>
+        ${item.theme?`<span class="badge">${item.theme}</span>`:''}
+        <div class="meta">${opts}</div>
+        ${!cover?'<div class="meta" style="color:#f88">⚠ Image manquante — publication bloquée</div>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+async function loadDaily(){
+  const box=document.getElementById('dailyList');
+  try{
+    const data=await api('prono-daily.php');
+    renderDailyList(data.items||[]);
+    const msg=document.getElementById('dailyMsg');
+    if(msg&&data.count)msg.textContent=`Batch ${data.batchDate||''} · ${data.count} prono(s) · ${data.draftCount||0} brouillon(s)`;
+  }catch(e){box.textContent=e.message;}
 }
 async function loadList(){
   const box=document.getElementById('qList');
@@ -170,6 +222,33 @@ document.getElementById('qList').onclick=(e)=>{
   }
 };
 document.getElementById('refreshList').onclick=loadList;
+document.getElementById('refreshDailyBtn').onclick=loadDaily;
+document.getElementById('genDailyBtn').onclick=async()=>{
+  const msg=document.getElementById('dailyMsg');
+  try{
+    const data=await api('prono-daily.php',{action:'generate'});
+    msg.textContent=data.message||`OK · ${data.count} générés`;
+    renderDailyList(data.items||[]);
+    loadList();
+  }catch(e){msg.textContent=e.message;}
+};
+document.getElementById('publishDailyBtn').onclick=async()=>{
+  const msg=document.getElementById('dailyMsg');
+  if(!confirm('Publier tous les brouillons du batch du jour ?'))return;
+  try{
+    const data=await api('prono-daily.php',{action:'publish'});
+    msg.textContent=`OK · ${data.published} publié(s)`;
+    loadDaily();
+    loadList();
+  }catch(e){msg.textContent=e.message;}
+};
+document.getElementById('coverImageUrl').addEventListener('input',()=>{
+  const url=document.getElementById('coverImageUrl').value.trim();
+  const img=document.getElementById('coverPreview');
+  if(!url||!/^https?:\/\//i.test(url)){img.hidden=true;img.removeAttribute('src');return;}
+  img.hidden=false;img.src=url;
+  img.onerror=()=>{img.hidden=true;};
+});
 document.getElementById('saveBtn').onclick=async()=>{
   const msg=document.getElementById('saveMsg');
   try{
@@ -185,6 +264,7 @@ document.getElementById('saveBtn').onclick=async()=>{
     const payload={
       title:document.getElementById('title').value.trim(),
       context:document.getElementById('context').value.trim(),
+      coverImageUrl:document.getElementById('coverImageUrl').value.trim(),
       profileId:document.getElementById('profileId').value.trim(),
       subjectKey:document.getElementById('subjectKey').value.trim(),
       options,
@@ -215,6 +295,7 @@ document.getElementById('resolveBtn').onclick=async()=>{
   el.value=d.toISOString().slice(0,10);
 })();
 loadList();
+loadDaily();
 </script>
 </body>
 </html>
