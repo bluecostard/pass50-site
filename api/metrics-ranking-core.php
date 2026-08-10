@@ -305,9 +305,16 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
     }
     $platformsByProfile=[];
     foreach($raw as $item){
-        $available=$item['percentiles']??[];$weightSum=0.0;$weighted=0.0;
-        foreach($available as $feature=>$percentile){$weightSum+=$weights[$feature];$weighted+=$percentile*$weights[$feature];}
-        if($weightSum<=0)continue;$base=$weighted/$weightSum;$coverage=$weightSum*100;$quality=max(0,min(100,$item['raw']['quality']));
+        $available=$item['percentiles']??[];$weightSum=0.0;$dynamicWeightSum=0.0;$dynamicWeighted=0.0;
+        foreach($available as $feature=>$percentile){
+            $weightSum+=$weights[$feature];
+            if($feature==='audience')continue;
+            $dynamicWeightSum+=$weights[$feature];$dynamicWeighted+=$percentile*$weights[$feature];
+        }
+        if($dynamicWeightSum<=0)continue;
+        $dynamicBase=$dynamicWeighted/$dynamicWeightSum;$audiencePercentile=$available['audience']??null;
+        $base=$dynamicBase*(1-$weights['audience'])+($audiencePercentile===null?0.0:$audiencePercentile*$weights['audience']);
+        $coverage=$weightSum*100;$quality=max(0,min(100,$item['raw']['quality']));
         $latest=$item['raw']['latestCaptureAt'];$age=$latest?max(0,($now->getTimestamp()-(new DateTimeImmutable($latest,new DateTimeZone('UTC')))->getTimestamp())/3600):INF;
         $freshness=is_finite($age)?max(0,min(100,100*(1-$age/$freshLimit))):0;
         $confidence=0.45*$coverage+0.35*$quality+0.20*$freshness;$score=max(0,min(100,$base*(0.72+0.28*$confidence/100)));

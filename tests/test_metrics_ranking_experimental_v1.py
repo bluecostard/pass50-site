@@ -97,6 +97,15 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$periodKey==='2H'&&!$recentActivity", period)
         self.assertNotIn("$shortFallback", period)
 
+    def test_audience_never_expands_beyond_seven_percent(self):
+        period = self._function("p50_mr_period_rows")
+        self.assertIn("if($feature==='audience')continue", period)
+        self.assertIn("$dynamicWeighted/$dynamicWeightSum", period)
+        self.assertIn("$dynamicBase*(1-$weights['audience'])", period)
+        self.assertIn("$audiencePercentile*$weights['audience']", period)
+        self.assertIn("if($dynamicWeightSum<=0)continue", period)
+        self.assertNotIn("$weighted/$weightSum", period)
+
     def test_transaction_lock_and_experimental_tables(self):
         self.assertIn("pass50_metrics_ranking_experimental_v1", CORE)
         for table in (
