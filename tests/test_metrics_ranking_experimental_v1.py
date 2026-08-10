@@ -14,7 +14,7 @@ WORKFLOW = (ROOT / ".github/workflows/validate-metrics-ranking-experimental-v1.y
 
 class MetricsRankingExperimentalV1Tests(unittest.TestCase):
     def test_algorithm_periods_and_exact_weights(self):
-        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.2'", CORE)
+        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.3'", CORE)
         for key, hours in (("2H", 2), ("24H", 24), ("48H", 48), ("7J", 168), ("15J", 360)):
             self.assertIn(f"'{key}'=>{hours}", CORE)
         weights = [0.07, 0.28, 0.18, 0.16, 0.16, 0.12, 0.03]
