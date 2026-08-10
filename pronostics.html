@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <meta name="theme-color" content="#050705">
   <title>Pronostics — PASS50</title>
-  <meta name="description" content="Ta grille du jour PASS50. Points · streak · sans argent réel.">
+  <meta name="description" content="Ta grille du jour PASS50. People influenceurs · Artiste/sportif · Actualité.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
@@ -78,15 +78,6 @@
     }
     .pick.on .check{display:grid}
     .pick span.name{font-size:10px;font-weight:800;text-align:center;line-height:1.15;max-width:72px}
-    .side{
-      margin-left:auto;display:flex;align-items:center;gap:8px;
-      color:var(--lime);font-weight:900;font-size:13px;
-    }
-    .live-badge{
-      margin-left:auto;background:rgba(255,75,75,.18);color:#ff8d8d;
-      border:1px solid rgba(255,75,75,.45);border-radius:8px;padding:6px 8px;
-      font-size:11px;font-weight:900;
-    }
     .cta{
       margin-top:18px;width:100%;border:0;border-radius:16px;padding:16px 18px;
       background:var(--lime);color:#050705;font-weight:1000;font-size:14px;
@@ -100,6 +91,10 @@
       display:grid;place-items:center;font-size:14px;
     }
     .note{margin-top:10px;text-align:center;color:var(--muted);font-size:11px;font-weight:700}
+    .empty{
+      margin-top:18px;border:1px dashed var(--line);border-radius:18px;padding:22px 16px;
+      text-align:center;color:var(--muted);font-size:14px;font-weight:700;line-height:1.45;
+    }
     .toast{
       position:fixed;left:50%;bottom:calc(118px + env(safe-area-inset-bottom));
       transform:translateX(-50%) translateY(8px);opacity:0;pointer-events:none;z-index:150;
@@ -120,50 +115,26 @@
       <h1>Ta grille du jour</h1>
     </div>
 
-    <article class="card">
-      <h2>1. TOP 3</h2>
-      <p>Choisis les 3 artistes qui vont dominer le classement</p>
-      <div class="row" id="top3"></div>
-    </article>
+    <div id="grilleRoot"><div class="empty">Chargement de la grille…</div></div>
 
-    <article class="card">
-      <h2>2. CLIMBER</h2>
-      <p>L’artiste qui va gagner le plus de places</p>
-      <div class="row">
-        <div id="climber" class="row" style="margin:0;flex:1"></div>
-        <div class="side">↑ places</div>
-      </div>
-    </article>
-
-    <article class="card">
-      <h2>3. PROCHAIN LIVE</h2>
-      <p>L’artiste dont tu penses qu’il sera le prochain à passer en live</p>
-      <div class="row">
-        <div id="live" class="row" style="margin:0;flex:1"></div>
-        <div class="live-badge">((•)) LIVE</div>
-      </div>
-    </article>
-
-    <button class="cta" id="validate" type="button" disabled>
+    <button class="cta" id="validate" type="button" disabled hidden>
       Valider ma grille <span class="arrow">→</span>
     </button>
-    <p class="note">Points · Streak · Carte WhatsApp — sans argent réel</p>
+    <p class="note" id="noteLine" hidden>Points · Streak · Carte WhatsApp — sans argent réel</p>
   </div>
 
   <div class="toast" id="toast" role="status"></div>
   <script src="./mobile-bottom-nav-v1.js?v=1.6"></script>
   <script>
   (function () {
-    const ARTISTS = [
-      { id: 'census-himra', name: 'Himra', photo: '' },
-      { id: 'african-ryou', name: 'African Ryou', photo: '' },
-      { id: 'dbz', name: 'DBZ', photo: '' },
-      { id: 'melanie-tms', name: 'Mélanie TMS', photo: '' },
-      { id: 'census-no-limit', name: 'No Limit', photo: '' },
-      { id: 'census-roseline-layo', name: 'Roseline Layo', photo: '' }
-    ];
-    const state = { top3: [], climber: null, live: null };
+    const picks = {};
+    let themes = [];
+    let closesAt = null;
+    let grilleId = null;
     const toastEl = document.getElementById('toast');
+    const root = document.getElementById('grilleRoot');
+    const validateBtn = document.getElementById('validate');
+    const noteLine = document.getElementById('noteLine');
 
     function toast(msg) {
       toastEl.textContent = msg;
@@ -176,63 +147,73 @@
       return String(name || '?').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
     }
 
-    function absPhoto(url) {
-      if (!url) return '';
-      if (/^https?:\/\//i.test(url)) return url;
-      return './' + String(url).replace(/^\.\//, '');
-    }
-
-    function avatarBtn(a, on, large) {
-      const img = a.photo
-        ? `<img src="${a.photo}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
+    function avatarBtn(person, on, large) {
+      const img = person.photoUrl
+        ? `<img src="${person.photoUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
         : '';
-      return `<button type="button" class="pick ${on ? 'on' : ''}" data-id="${a.id}">
-        <div class="avatar ${large ? 'lg' : ''}">${img}${initials(a.name)}</div>
+      const label = person.initials || initials(person.name);
+      return `<button type="button" class="pick ${on ? 'on' : ''}" data-id="${person.profileId}">
+        <div class="avatar ${large ? 'lg' : ''}">${img}${label}</div>
         <span class="check">✓</span>
-        <span class="name">${a.name}</span>
+        <span class="name">${person.name}</span>
       </button>`;
     }
 
-    function render() {
-      document.getElementById('top3').innerHTML = ARTISTS.map((a) =>
-        avatarBtn(a, state.top3.includes(a.id), true)
-      ).join('');
-      document.getElementById('climber').innerHTML = ARTISTS.map((a) =>
-        avatarBtn(a, state.climber === a.id, false)
-      ).join('');
-      document.getElementById('live').innerHTML = ARTISTS.map((a) =>
-        avatarBtn(a, state.live === a.id, false)
-      ).join('');
-      document.getElementById('validate').disabled = !(
-        state.top3.length === 3 && state.climber && state.live
-      );
+    function themeComplete(theme) {
+      const selected = picks[theme.key] || [];
+      return selected.length === Number(theme.pickCount || 1);
+    }
 
-      document.querySelectorAll('#top3 .pick').forEach((btn) => {
-        btn.onclick = () => {
-          const id = btn.dataset.id;
-          if (state.top3.includes(id)) state.top3 = state.top3.filter((x) => x !== id);
-          else if (state.top3.length < 3) state.top3 = [...state.top3, id];
-          render();
-        };
-      });
-      document.querySelectorAll('#climber .pick').forEach((btn) => {
-        btn.onclick = () => {
-          state.climber = btn.dataset.id;
-          render();
-        };
-      });
-      document.querySelectorAll('#live .pick').forEach((btn) => {
-        btn.onclick = () => {
-          state.live = btn.dataset.id;
-          render();
-        };
+    function allComplete() {
+      return themes.length > 0 && themes.every(themeComplete);
+    }
+
+    function render() {
+      if (!themes.length) return;
+      root.innerHTML = themes.map((theme, index) => {
+        const selected = picks[theme.key] || [];
+        const need = Number(theme.pickCount || 1);
+        const people = theme.people || [];
+        const large = need >= 2;
+        return `<article class="card" data-theme="${theme.key}">
+          <h2>${index + 1}. ${theme.label}</h2>
+          <p>${theme.hint || ''} · choisis ${need}</p>
+          <div class="row" data-row="${theme.key}">
+            ${people.map((p) => avatarBtn(p, selected.includes(p.profileId), large)).join('') || '<span style="color:var(--muted);font-size:12px">Liste à venir</span>'}
+          </div>
+        </article>`;
+      }).join('');
+
+      validateBtn.hidden = false;
+      noteLine.hidden = false;
+      validateBtn.disabled = !allComplete();
+
+      root.querySelectorAll('[data-row]').forEach((row) => {
+        const key = row.getAttribute('data-row');
+        const theme = themes.find((t) => t.key === key);
+        if (!theme) return;
+        const need = Number(theme.pickCount || 1);
+        row.querySelectorAll('.pick').forEach((btn) => {
+          btn.onclick = () => {
+            const id = btn.dataset.id;
+            let selected = picks[key] ? [...picks[key]] : [];
+            if (selected.includes(id)) selected = selected.filter((x) => x !== id);
+            else if (need === 1) selected = [id];
+            else if (selected.length < need) selected.push(id);
+            picks[key] = selected;
+            render();
+          };
+        });
       });
     }
 
     function tick() {
-      const end = new Date();
-      end.setHours(23, 59, 59, 999);
-      let s = Math.max(0, Math.floor((end - Date.now()) / 1000));
+      const end = closesAt ? new Date(closesAt) : (() => {
+        const d = new Date();
+        d.setHours(23, 59, 59, 999);
+        return d;
+      })();
+      let s = Math.max(0, Math.floor((end.getTime() - Date.now()) / 1000));
       const h = String(Math.floor(s / 3600)).padStart(2, '0');
       s %= 3600;
       const m = String(Math.floor(s / 60)).padStart(2, '0');
@@ -240,15 +221,14 @@
       document.getElementById('countdown').textContent = `${h}:${m}:${sec}`;
     }
 
-    document.getElementById('validate').onclick = () => {
+    validateBtn.onclick = () => {
       try {
         localStorage.setItem(
           'p50_grille_du_jour',
           JSON.stringify({
+            grilleId,
             date: new Date().toISOString().slice(0, 10),
-            top3: state.top3,
-            climber: state.climber,
-            live: state.live,
+            picks,
             at: Date.now()
           })
         );
@@ -256,33 +236,28 @@
       toast('Grille validée — sans argent réel');
     };
 
-    fetch('./api/state.php')
+    fetch('./api/prono-grille.php')
       .then((r) => r.json())
-      .then((d) => {
-        const profiles = (d && d.data && d.data.profiles) || [];
-        const byId = {};
-        const byName = {};
-        profiles.forEach((p) => {
-          if (p && p.id) byId[String(p.id).toLowerCase()] = p;
-          if (p && p.name) byName[String(p.name).toLowerCase()] = p;
-        });
-        ARTISTS.forEach((a) => {
-          const hit =
-            byId[a.id.toLowerCase()] ||
-            byName[a.name.toLowerCase()] ||
-            profiles.find((p) =>
-              String(p.name || '')
-                .toLowerCase()
-                .includes(a.name.toLowerCase().split(' ')[0])
-            );
-          if (hit && hit.photoUrl) a.photo = absPhoto(hit.photoUrl);
-          if (hit && hit.id) a.id = hit.id;
-        });
+      .then((data) => {
+        if (!data.ok || !data.ready || !data.grille) {
+          root.innerHTML = `<div class="empty">${data.message || 'Aucune grille publiée pour aujourd’hui.'}<br><span style="display:block;margin-top:8px;font-size:12px">L’admin publie la grille depuis l’atelier Pronostics.</span></div>`;
+          return;
+        }
+        grilleId = data.grille.id || null;
+        closesAt = data.grille.closesAt || null;
+        themes = (data.grille.themes || []).filter((t) => (t.people || []).length);
+        if (!themes.length) {
+          root.innerHTML = '<div class="empty">Grille publiée mais encore vide. Ajoute des personnes dans l’admin.</div>';
+          return;
+        }
+        themes.forEach((t) => { picks[t.key] = []; });
         render();
+        tick();
       })
-      .catch(() => render());
+      .catch(() => {
+        root.innerHTML = '<div class="empty">Impossible de charger la grille pour le moment.</div>';
+      });
 
-    render();
     tick();
     setInterval(tick, 1000);
   })();

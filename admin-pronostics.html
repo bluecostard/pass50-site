@@ -27,6 +27,15 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 .batch-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .batch-actions button{width:auto;margin:0}
 .required::after{content:" *";color:#b7ff00}
+.theme-box{border:1px solid #293129;border-radius:14px;padding:12px;margin-top:12px;background:#0a0d0a}
+.theme-box h3{margin:0 0 4px;font-size:15px;color:#b7ff00}
+.people-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;min-height:36px}
+.person-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid #3a453a;border-radius:999px;padding:5px 8px 5px 5px;background:#101510;font-size:12px;font-weight:800}
+.person-chip img,.person-chip .ph{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#1a211a;display:grid;place-items:center;font-size:10px;color:#b7ff00}
+.person-chip button{width:auto;margin:0;padding:4px 8px;background:#1a211a;color:#f88;border-color:#522;font-size:11px}
+.suggest{margin-top:6px;border:1px solid #293129;border-radius:12px;background:#0d110d;max-height:180px;overflow:auto;display:none}
+.suggest button{width:100%;margin:0;border:0;border-bottom:1px solid #1c241c;border-radius:0;background:transparent;color:#f6f8f4;text-align:left;font-weight:700;font-size:13px}
+.suggest button:hover{background:#151b15}
 </style>
 </head>
 <body>
@@ -37,6 +46,28 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <strong>Connexion requise (owner / admin)</strong>
     <p class="muted" style="margin:8px 0 0">Connecte-toi d’abord sur la page d’accueil PASS50 avec ton compte propriétaire, puis reviens ici. Le token reste dans le navigateur.</p>
     <p style="margin:12px 0 0"><a href="./" style="color:#b7ff00">→ Se connecter sur pass50.store</a></p>
+  </div>
+
+  <div class="card" id="grilleCard">
+    <h2 style="margin-top:0">Ta grille du jour</h2>
+    <p class="muted" style="margin:0 0 12px">Compose les 3 thèmes People, puis publie. Visible sur <a href="./pronostics.html" style="color:#b7ff00">pronostics.html</a>.</p>
+    <div class="row">
+      <div>
+        <label>Date</label>
+        <input id="grilleDate" type="date">
+      </div>
+      <div>
+        <label>Statut actuel</label>
+        <input id="grilleStatus" readonly value="—">
+      </div>
+    </div>
+    <div id="grilleThemes" style="margin-top:8px"></div>
+    <div class="batch-actions">
+      <button type="button" class="ghost" id="grilleReloadBtn">Recharger</button>
+      <button type="button" class="ghost" id="grilleDraftBtn">Enregistrer brouillon</button>
+      <button type="button" id="grillePublishBtn">Publier la grille</button>
+    </div>
+    <div class="toast" id="grilleMsg"></div>
   </div>
 
   <div class="card">
@@ -307,6 +338,160 @@ document.getElementById('resolveBtn').onclick=async()=>{
   d.setUTCDate(d.getUTCDate()+7);
   el.value=d.toISOString().slice(0,10);
 })();
+
+/* —— Grille du jour (3 thèmes People) —— */
+let GRILLE={date:'',status:'draft',themes:[]};
+let PROFILE_INDEX=[];
+
+function todayUTC(){return new Date().toISOString().slice(0,10);}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+function initials(name){return String(name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+
+async function loadProfiles(){
+  try{
+    const res=await fetch('./api/state.php',{headers:{Accept:'application/json'}});
+    const data=await res.json();
+    PROFILE_INDEX=(data?.data?.profiles||[]).filter(p=>p&&p.id&&p.name).map(p=>({
+      profileId:String(p.id),
+      name:String(p.name),
+      photoUrl:String(p.photoUrl||''),
+      initials:String(p.initials||''),
+      category:String(p.category||'')
+    }));
+  }catch(_){PROFILE_INDEX=[];}
+}
+
+function renderGrilleThemes(){
+  const box=document.getElementById('grilleThemes');
+  if(!box)return;
+  box.innerHTML=(GRILLE.themes||[]).map((theme,ti)=>{
+    const people=(theme.people||[]).map((p,pi)=>`
+      <span class="person-chip" data-t="${ti}" data-p="${pi}">
+        ${p.photoUrl?`<img src="${esc(p.photoUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:`<span class="ph">${esc(initials(p.name))}</span>`}
+        ${esc(p.name)}
+        <button type="button" data-remove-t="${ti}" data-remove-p="${pi}">×</button>
+      </span>`).join('');
+    return `<div class="theme-box" data-theme="${esc(theme.key)}">
+      <h3>${ti+1}. ${esc(theme.label)}</h3>
+      <p class="muted" style="margin:0;font-size:12px">${esc(theme.hint)} · le joueur choisit <strong>${theme.pickCount}</strong></p>
+      <div class="row" style="margin-top:10px">
+        <div>
+          <label>Ajouter une personne</label>
+          <input class="grille-search" data-ti="${ti}" placeholder="Nom ou ID FI…" autocomplete="off">
+          <div class="suggest" data-suggest="${ti}"></div>
+        </div>
+        <div>
+          <label>Choix joueur (nombre)</label>
+          <input type="number" min="1" max="6" value="${Number(theme.pickCount)||1}" data-pick="${ti}">
+        </div>
+      </div>
+      <div class="people-list">${people||'<span class="muted" style="font-size:12px">Aucune personne pour l’instant</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function addPerson(ti, person){
+  const theme=GRILLE.themes[ti];
+  if(!theme)return;
+  if(!theme.people)theme.people=[];
+  if(theme.people.some(p=>p.profileId===person.profileId))return;
+  theme.people.push(person);
+  renderGrilleThemes();
+}
+
+async function loadGrille(){
+  const msg=document.getElementById('grilleMsg');
+  const dateEl=document.getElementById('grilleDate');
+  if(dateEl&&!dateEl.value)dateEl.value=todayUTC();
+  const date=dateEl?.value||todayUTC();
+  try{
+    const data=await api('prono-grille-admin.php?date='+encodeURIComponent(date));
+    GRILLE=data.grille||{date,status:'draft',themes:data.themeCatalog||[]};
+    if(!GRILLE.themes?.length&&data.themeCatalog){
+      GRILLE.themes=data.themeCatalog.map(t=>({...t,people:[]}));
+    }
+    document.getElementById('grilleStatus').value=(GRILLE.status||'draft')+(GRILLE.id?' · '+GRILLE.id.slice(0,8):'');
+    renderGrilleThemes();
+    if(msg)msg.textContent=`Grille ${GRILLE.date||date} chargée`;
+  }catch(e){
+    if(msg)msg.textContent=e.message;
+    const gate=document.getElementById('authGate');
+    if(gate&&(/auth|connect|rôle|role|droit|owner|admin|403|401/i.test(String(e.message||''))))gate.style.display='block';
+  }
+}
+
+async function saveGrille(status){
+  const msg=document.getElementById('grilleMsg');
+  const date=document.getElementById('grilleDate').value||todayUTC();
+  try{
+    const payload={
+      date,
+      status,
+      themes:(GRILLE.themes||[]).map(t=>({
+        key:t.key,
+        label:t.label,
+        hint:t.hint,
+        pickCount:Number(t.pickCount)||1,
+        people:t.people||[]
+      }))
+    };
+    const data=await api('prono-grille-admin.php',payload);
+    GRILLE=data.grille||GRILLE;
+    document.getElementById('grilleStatus').value=(GRILLE.status||status)+(GRILLE.id?' · '+GRILLE.id.slice(0,8):'');
+    renderGrilleThemes();
+    msg.textContent=status==='published'?'Grille publiée ✓':'Brouillon enregistré ✓';
+  }catch(e){msg.textContent=e.message;}
+}
+
+document.getElementById('grilleThemes').addEventListener('click',(e)=>{
+  const rm=e.target.closest('[data-remove-t]');
+  if(!rm)return;
+  const ti=Number(rm.getAttribute('data-remove-t'));
+  const pi=Number(rm.getAttribute('data-remove-p'));
+  if(GRILLE.themes[ti]?.people)GRILLE.themes[ti].people.splice(pi,1);
+  renderGrilleThemes();
+});
+document.getElementById('grilleThemes').addEventListener('input',(e)=>{
+  const pick=e.target.closest('[data-pick]');
+  if(pick){
+    const ti=Number(pick.getAttribute('data-pick'));
+    if(GRILLE.themes[ti])GRILLE.themes[ti].pickCount=Math.max(1,Math.min(6,Number(pick.value)||1));
+    return;
+  }
+  const search=e.target.closest('.grille-search');
+  if(!search)return;
+  const ti=Number(search.getAttribute('data-ti'));
+  const q=search.value.trim().toLowerCase();
+  const box=document.querySelector(`[data-suggest="${ti}"]`);
+  if(!box)return;
+  if(q.length<1){box.style.display='none';box.innerHTML='';return;}
+  const hits=PROFILE_INDEX.filter(p=>p.name.toLowerCase().includes(q)||p.profileId.toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q)).slice(0,12);
+  box.style.display=hits.length?'block':'none';
+  box.innerHTML=hits.map(p=>`<button type="button" data-add-ti="${ti}" data-id="${esc(p.profileId)}">${esc(p.name)} <span class="muted">${esc(p.category||p.profileId)}</span></button>`).join('');
+});
+document.getElementById('grilleThemes').addEventListener('click',(e)=>{
+  const add=e.target.closest('[data-add-ti]');
+  if(!add)return;
+  const ti=Number(add.getAttribute('data-add-ti'));
+  const id=add.getAttribute('data-id');
+  const person=PROFILE_INDEX.find(p=>p.profileId===id);
+  if(person){
+    addPerson(ti,person);
+    const input=document.querySelector(`.grille-search[data-ti="${ti}"]`);
+    const box=document.querySelector(`[data-suggest="${ti}"]`);
+    if(input)input.value='';
+    if(box){box.style.display='none';box.innerHTML='';}
+  }
+});
+document.getElementById('grilleReloadBtn').onclick=loadGrille;
+document.getElementById('grilleDraftBtn').onclick=()=>saveGrille('draft');
+document.getElementById('grillePublishBtn').onclick=()=>{
+  if(!confirm('Publier cette grille du jour ?'))return;
+  saveGrille('published');
+};
+document.getElementById('grilleDate').onchange=loadGrille;
+
+loadProfiles().then(loadGrille);
 loadList();
 loadDaily();
 </script>
