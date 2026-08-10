@@ -25,7 +25,9 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
     def test_delta_preserves_absent_zero_and_publication_fallback(self):
         delta = self._function("p50_mr_metric_delta")
         self.assertIn("'available'=>false,'value'=>null", delta)
-        self.assertIn("elseif($item['at']<=$end)$last=$item", delta)
+        self.assertIn("elseif($item['at']<=$end){if($firstInside===null)$firstInside=$item;$last=$item;}", delta)
+        self.assertIn("$firstInside['id']!==$last['id']", delta)
+        self.assertIn("elseif($firstInside!==null", delta)
         self.assertIn("if($last===null)return", delta)
         self.assertIn("$item['at']<=$start", delta)
         self.assertIn("$reference['id']===$last['id']", delta)

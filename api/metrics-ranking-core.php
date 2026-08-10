@@ -196,15 +196,16 @@ function p50_mr_metric_delta(array $captures,string $metric,DateTimeImmutable $s
     }
     usort($usable,fn($a,$b)=>$a['at']<=>$b['at']);
     if(!$usable)return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>false];
-    $reference=null;$last=null;
+    $reference=null;$firstInside=null;$last=null;
     foreach($usable as $item){
         if($item['at']<=$start)$reference=$item;
-        elseif($item['at']<=$end)$last=$item;
+        elseif($item['at']<=$end){if($firstInside===null)$firstInside=$item;$last=$item;}
     }
     if($last===null)return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>false];
     $fallback=false;
     if($reference===null){
         if($publishedAt!==null&&$publishedAt>=$start&&$publishedAt<=$end&&$last['at']>$publishedAt){$fallback=true;}
+        elseif($firstInside!==null&&$firstInside['id']!==$last['id'])$reference=$firstInside;
         else return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>false];
     }
     if(!$fallback&&$reference['id']===$last['id'])return ['available'=>false,'value'=>null,'publishedInsideWindowFallback'=>false];
