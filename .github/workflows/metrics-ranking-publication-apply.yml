@@ -5,6 +5,7 @@ name: Metrics Ranking Publication Apply
 # - manuellement pour un passage public contrôlé ;
 # - par la simulation uniquement lorsque automaticPublicationEligible=true ;
 # - sur modification explicite de ce workflow pour permettre un déclenchement opérateur traçable.
+# - relance opérateur après assouplissement des barrières de mouvement PUBSIM-V1.1.
 on:
   workflow_dispatch:
   push:
