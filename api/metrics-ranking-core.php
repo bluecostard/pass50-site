@@ -32,6 +32,17 @@ function p50_mr_profile_coverage(array $platforms,?float $weightedCoverage): flo
     return max(0.0,min(100.0,max((float)($weightedCoverage??0),$best)));
 }
 
+function p50_mr_has_recent_activity(array $platforms): bool {
+    foreach($platforms as $platform){
+        $raw=(array)($platform['raw']??[]);$features=(array)($raw['features']??[]);
+        if((float)($raw['reachRaw']??0)>0)return true;
+        if((float)($features['engagementVolume']??0)>0)return true;
+        if((float)($features['live']??0)>0)return true;
+        if(!empty($raw['publishedInsideWindowFallback']))return true;
+    }
+    return false;
+}
+
 function p50_mr_schema_sql(): array {
     return [
         "CREATE TABLE IF NOT EXISTS p50_metric_ranking_runs (
@@ -311,8 +322,8 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
         $contentCount=array_sum(array_column(array_column($platforms,'raw'),'contentCount'));$captureCount=array_sum(array_column(array_column($platforms,'raw'),'captureCount'));
         $latest=null;$reachRaw=0.0;foreach($platforms as $platform){$candidate=$platform['raw']['latestCaptureAt'];if($candidate&&($latest===null||$candidate>$latest))$latest=$candidate;$reachRaw+=(float)($platform['raw']['reachRaw']??0);}
         $official=count(array_filter($accountsByProfile[$profileId]??[],fn($account)=>p50_mr_is_official_account($account)))>0;
-        $shortFallback=$periodKey==='2H'&&$captureCount>=1&&$score!==null;
-        $reasons=[];if(!(bool)$profile['editorial_eligible']||!(bool)$profile['alive'])$reasons[]='editorial_not_eligible';if(!$official)$reasons[]='no_official_metric_account';if($contentCount<1&&!$shortFallback)$reasons[]='no_measurable_content';if($coverage<$thresholds['coverage'])$reasons[]=$periodKey==='2H'?'coverage_below_5':'coverage_below_45';if($confidence<$thresholds['confidence'])$reasons[]=$periodKey==='2H'?'confidence_below_35':'confidence_below_55';
+        $recentActivity=p50_mr_has_recent_activity($platforms);
+        $reasons=[];if(!(bool)$profile['editorial_eligible']||!(bool)$profile['alive'])$reasons[]='editorial_not_eligible';if(!$official)$reasons[]='no_official_metric_account';if($periodKey==='2H'&&!$recentActivity)$reasons[]='no_recent_activity';elseif($contentCount<1)$reasons[]='no_measurable_content';if($coverage<$thresholds['coverage'])$reasons[]=$periodKey==='2H'?'coverage_below_5':'coverage_below_45';if($confidence<$thresholds['confidence'])$reasons[]=$periodKey==='2H'?'confidence_below_35':'confidence_below_55';
         $age=$latest?($now->getTimestamp()-(new DateTimeImmutable($latest,new DateTimeZone('UTC')))->getTimestamp())/3600:INF;if($age>$freshLimit)$reasons[]='stale_captures';
         $classable=$score!==null&&count($reasons)===0;
         $rows[]=['profile'=>$profile,'profileId'=>$profileId,'score'=>$score,'baseScore'=>$base,'confidence'=>$confidence,'coverage'=>$coverage,'classable'=>$classable,'editorialEligible'=>(bool)$profile['editorial_eligible'],'platformCount'=>count($platforms),'contentCount'=>$contentCount,'captureCount'=>$captureCount,'latestCaptureAt'=>$latest,'components'=>$platforms,'rawFeatures'=>array_map(fn($p)=>['platform'=>$p['platform'],'features'=>$p['raw']['features'],'availability'=>$p['raw']['availability'],'reachRaw'=>$p['raw']['reachRaw'],'publishedInsideWindowFallback'=>$p['raw']['publishedInsideWindowFallback']],$platforms),'exclusionReasons'=>array_values(array_unique($reasons)),'reachRaw'=>$reachRaw,'previousRank'=>$previousRanks[$profileId]??null,'rank'=>null,'rankDelta'=>null];

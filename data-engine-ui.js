@@ -63,7 +63,7 @@
     const item=values[status]||['Inconnu','empty'];
     return `<span class="de-status ${item[1]}">${item[0]}</span>`;
   }
-  const DE_RANKING_REASON_LABELS={editorial_not_eligible:'Non éligible éditorialement',no_official_metric_account:'Aucun compte métrique officiel',no_measurable_content:'Aucun contenu mesurable',coverage_below_45:'Couverture inférieure à 45 %',confidence_below_55:'Confiance inférieure à 55 %',stale_captures:'Captures trop anciennes'};
+  const DE_RANKING_REASON_LABELS={editorial_not_eligible:'Non éligible éditorialement',no_official_metric_account:'Aucun compte métrique officiel',no_recent_activity:'Aucune activité récente mesurée',no_measurable_content:'Aucun contenu mesurable',coverage_below_45:'Couverture inférieure à 45 %',confidence_below_55:'Confiance inférieure à 55 %',stale_captures:'Captures trop anciennes'};
   async function deLoadRankingLab(force=false){
     if(DE.rankingLabLoading||(!force&&DE.rankingLab?.selectedPeriod===DE.rankingLabPeriod))return;
     DE.rankingLabLoading=true;

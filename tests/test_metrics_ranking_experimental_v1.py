@@ -14,7 +14,7 @@ WORKFLOW = (ROOT / ".github/workflows/validate-metrics-ranking-experimental-v1.y
 
 class MetricsRankingExperimentalV1Tests(unittest.TestCase):
     def test_algorithm_periods_and_exact_weights(self):
-        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.0'", CORE)
+        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.1'", CORE)
         for key, hours in (("2H", 2), ("24H", 24), ("48H", 48), ("7J", 168), ("15J", 360)):
             self.assertIn(f"'{key}'=>{hours}", CORE)
         weights = [0.07, 0.28, 0.18, 0.16, 0.16, 0.12, 0.03]
@@ -75,15 +75,27 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
             "editorial_not_eligible",
             "no_official_metric_account",
             "no_measurable_content",
+            "no_recent_activity",
             "coverage_below_45",
             "confidence_below_55",
             "stale_captures",
         ):
             self.assertIn(code, period)
-        self.assertIn("$coverage<45", period)
-        self.assertIn("$confidence<55", period)
+        self.assertIn("$coverage<$thresholds[\'coverage\']", period)
+        self.assertIn("$confidence<$thresholds[\'confidence\']", period)
         self.assertIn("$row['previousRank']-$row['rank']", period)
         self.assertIn("[0.70,0.20,0.10]", CORE)
+
+    def test_2h_requires_dynamic_activity_not_audience_only(self):
+        helper = self._function("p50_mr_has_recent_activity")
+        self.assertIn("reachRaw", helper)
+        self.assertIn("engagementVolume", helper)
+        self.assertIn("features['live']", helper)
+        self.assertIn("publishedInsideWindowFallback", helper)
+        self.assertNotIn("audience", helper)
+        period = self._function("p50_mr_period_rows")
+        self.assertIn("$periodKey==='2H'&&!$recentActivity", period)
+        self.assertNotIn("$shortFallback", period)
 
     def test_transaction_lock_and_experimental_tables(self):
         self.assertIn("pass50_metrics_ranking_experimental_v1", CORE)
