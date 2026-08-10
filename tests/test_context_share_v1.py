@@ -74,7 +74,7 @@ class ContextShareV1Tests(unittest.TestCase):
 
     def test_v1_is_kept_only_as_a_legacy_asset_not_loaded_by_runtime(self):
         self.assertIn("LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0'", self.loader)
-        self.assertIn("context-share-v2.js?v=2.4", self.loader)
+        self.assertIn("context-share-v2.js?v=2.6", self.loader)
         self.assertIn("dataset.pass50ContextShareV2", self.loader)
         self.assertNotIn("loadScript('script[data-pass50-context-share]','./context-share-v1.js", self.loader)
         self.assertIn("context-share-v1.js?v=1.0", self.nav)

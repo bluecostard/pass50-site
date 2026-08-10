@@ -71,11 +71,24 @@ jobs:
           put -O "$REMOTE_DIR" .deploy/v9-tools.js
           put -O "$REMOTE_DIR" .deploy/v9-tools.css
           put -O "$REMOTE_DIR" .deploy/facebook-video-player-v1.js
+          put -O "$REMOTE_DIR" .deploy/content-intelligence.js
+          put -O "$REMOTE_DIR" .deploy/coules-share-simple-v1.js
+          put -O "$REMOTE_DIR" .deploy/share-center-v1.js
+          put -O "$REMOTE_DIR" .deploy/admin-pronostics.html
+          put -O "$REMOTE_DIR" .deploy/pronostics.html
+          put -O "$REMOTE_DIR" .deploy/pronostics.js
           put -O "$REMOTE_DIR" .deploy/deployment-version.json
           put -O "$REMOTE_DIR/api" .deploy/api/content-feed.php
           put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-platform-audit-cron-v2.php
           put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-cron-v4.php
+          put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-core.php
+          put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-admin-refresh.php
           put -O "$REMOTE_DIR/api" .deploy/api/metrics-collector-facebook.php
+          put -O "$REMOTE_DIR/api" .deploy/api/prono-core.php
+          put -O "$REMOTE_DIR/api" .deploy/api/prono-admin-save.php
+          put -O "$REMOTE_DIR/api" .deploy/api/prono-daily.php
+          put -O "$REMOTE_DIR/api" .deploy/api/prono-daily-core.php
+          put -O "$REMOTE_DIR/api" .deploy/api/prono-history.php
           mirror --reverse --verbose --only-newer --parallel=2 .deploy/ "$REMOTE_DIR"
           bye
           LFTP
@@ -94,26 +107,33 @@ jobs:
               share="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/context-share-v2.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
               facebook_viewer="$(curl --location --silent --show-error --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/facebook-video-player-v1.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
               page="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/?health=$GITHUB_SHA&attempt=$attempt" || true)"
-              if jq -e --arg sha "$GITHUB_SHA" '.commit == $sha and .frontend == "v82-share-v2-only"' >/dev/null 2>&1 <<<"$marker" \
-                && grep -q "pass50-v81-service-worker-disabled" <<<"$worker" \
-                && grep -q "PASS50-PUBLIC-RUNTIME-V82" <<<"$runtime" \
-                && grep -q "context-share-v2.js?v=2.3" <<<"$runtime" \
-                && grep -q "facebook-video-player-v1.js?v=1.2" <<<"$runtime" \
-                && ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" <<<"$runtime" \
-                && grep -q "PASS50-CONTEXT-SHARE-V2.0" <<<"$share" \
-                && grep -q "PASS50-FACEBOOK-VIDEO-PLAYER-V1.2" <<<"$facebook_viewer" \
-                && grep -q "Voir dans Pass50" <<<"$facebook_viewer" \
-                && grep -q "plugins/\${plugin}.php" <<<"$facebook_viewer" \
-                && grep -q "PASS50" <<<"$page"; then
+              ok=true
+              jq -e --arg sha "$GITHUB_SHA" '.commit == $sha and .frontend == "v82-share-v2-only"' >/dev/null 2>&1 <<<"$marker" || ok=false
+              grep -q "pass50-v81-service-worker-disabled" <<<"$worker" || ok=false
+              grep -q "PASS50-PUBLIC-RUNTIME-V91" <<<"$runtime" || ok=false
+              grep -q "context-share-v2.js?v=2.6" <<<"$runtime" || ok=false
+              grep -q "facebook-video-player-v1.js?v=1.2" <<<"$runtime" || ok=false
+              ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" <<<"$runtime" || ok=false
+              grep -q "PASS50-CONTEXT-SHARE-V2.0" <<<"$share" || ok=false
+              grep -q "PASS50-FACEBOOK-VIDEO-PLAYER-V1.2" <<<"$facebook_viewer" || ok=false
+              grep -q "Voir dans Pass50" <<<"$facebook_viewer" || ok=false
+              grep -q "plugins/\${plugin}.php" <<<"$facebook_viewer" || ok=false
+              grep -q "PASS50" <<<"$page" || ok=false
+              if [ "$ok" = true ]; then
                 ready=true
-                echo "$site sert bien l’interface V82, le partage V2 et le lecteur Facebook V1.2."
+                echo "$site sert bien l’interface V82, le runtime V91, le partage V2.6 et le lecteur Facebook V1.2."
                 break
               fi
               echo "Propagation V82 en attente pour $site ($attempt/30)."
               sleep 5
             done
             if [ "$ready" != true ]; then
-              echo "::error::$site ne sert pas le lecteur Facebook V1.2 après deux minutes trente."
+              echo "::error::$site : vérification V82/share/Facebook échouée après propagation."
+              echo "marker=$marker"
+              echo "sw_has_disabled=$(grep -c 'pass50-v81-service-worker-disabled' <<<"$worker" || true)"
+              echo "runtime_v91=$(grep -c 'PASS50-PUBLIC-RUNTIME-V91' <<<"$runtime" || true)"
+              echo "runtime_share_v26=$(grep -c 'context-share-v2.js?v=2.6' <<<"$runtime" || true)"
+              echo "facebook_v12=$(grep -c 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.2' <<<"$facebook_viewer" || true)"
               exit 1
             fi
           done
@@ -121,11 +141,13 @@ jobs:
             echo '### Déploiement PASS50 V82'
             echo "- Commit vérifié : \`$GITHUB_SHA\`"
             echo '- Interface : `V82 share-v2-only`'
+            echo '- Runtime public : `PASS50-PUBLIC-RUNTIME-V91`'
+            echo '- Partage contexte : `context-share-v2.js?v=2.6`'
             echo '- Lecteur Facebook : `V1.2`, toutes les publications consultables dans Pass50'
             echo '- Vidéos reconnues : bouton `Lire la vidéo`'
             echo '- Publications photo/post : bouton `Voir dans Pass50`'
-            echo '- Runtimes actualité V4 : déploiement prioritaire forcé'
-            echo '- Service worker : désactivé temporairement (`V81`)'
+            echo '- Runtimes actualité V4 + pronos daily : déploiement prioritaire forcé'
+            echo '- Service worker : désactivé (`pass50-v81-service-worker-disabled`)'
             echo '- Cache HTTP HTML/JS/CSS : désactivé temporairement'
           } >> "$GITHUB_STEP_SUMMARY"
 
