@@ -2578,5 +2578,82 @@
       "\"BebeNicaOfficiel\" vidéos récentes vues abonnés",
       "\"nicapol21\" compte officiel actuel"
     ]
+  },
+  {
+    "id": "census-awao-officiel",
+    "name": "Awao",
+    "known_alias": "Awao_officiel / @awao_officiel / @influamenta1",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Actrice / Web-humour / Influence / Lifestyle / Divertissement",
+    "census_status": "Recensé confirmé — profil fourni par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "Facebook": "https://www.facebook.com/awao_officiel",
+      "Instagram": "https://www.instagram.com/awao_officiel",
+      "TikTok": "https://www.tiktok.com/@influamenta1"
+    },
+    "source": {
+      "publisher": "Capture du profil Facebook vérifié fournie par le propriétaire PASS50",
+      "date": "2026-08-10",
+      "url": "https://www.facebook.com/awao_officiel"
+    },
+    "source_secondary": {
+      "publisher": "Hafi — Top TikTok Côte d’Ivoire",
+      "date": "2026-07-20",
+      "url": "https://hafi.pro/top/most-followed-tiktok/ivory-coast"
+    },
+    "source_tertiary": {
+      "publisher": "TikTok Awards Côte d’Ivoire — liste publique de candidats",
+      "url": "https://it.scribd.com/document/862368430/TIKTOK-AWARDS-CO-TE-D-IVOIRE"
+    },
+    "notes": "Ajout approuvé PASS50 le 10 août 2026. La capture fournie montre une page Facebook vérifiée Awao_officiel, 897 k abonnés, la catégorie Acteur(ice), la localisation Abidjan et l’identifiant Instagram awao_officiel. Hafi rattache le compte TikTok @influamenta1 au nom Awao_officiel et à la Côte d’Ivoire. Profil non classable jusqu’à validation des métriques par le pipeline PASS50.",
+    "curated_social_sources": {
+      "Facebook": {
+        "url": "https://www.facebook.com/awao_officiel",
+        "source_name": "Capture du profil Facebook vérifié fournie par le propriétaire PASS50",
+        "source_url": "https://www.facebook.com/awao_officiel",
+        "confidence": 100
+      },
+      "Instagram": {
+        "url": "https://www.instagram.com/awao_officiel",
+        "source_name": "Identifiant Instagram affiché sur le profil Facebook fourni",
+        "source_url": "https://www.facebook.com/awao_officiel",
+        "confidence": 98
+      },
+      "TikTok": {
+        "url": "https://www.tiktok.com/@influamenta1",
+        "source_name": "Hafi — Top TikTok Côte d’Ivoire",
+        "source_url": "https://hafi.pro/top/most-followed-tiktok/ivory-coast",
+        "confidence": 96
+      }
+    },
+    "curated_facts": {
+      "facebook_snapshot": {
+        "value": "897 k abonnés, page vérifiée, 1,1 k publications, catégorie Acteur(ice), localisation Abidjan.",
+        "source_name": "Capture du profil fournie par le propriétaire PASS50",
+        "source_url": "https://www.facebook.com/awao_officiel",
+        "confidence": 100
+      },
+      "tiktok_snapshot": {
+        "value": "Environ 2,8 M abonnés TikTok sur @influamenta1 au relevé Hafi du 20 juillet 2026.",
+        "source_name": "Hafi",
+        "source_url": "https://hafi.pro/top/most-followed-tiktok/ivory-coast",
+        "confidence": 94
+      },
+      "web_humour_signal": {
+        "value": "Awao_officiel apparaît dans une liste publique TikTok Awards Côte d’Ivoire en catégorie web-humoriste.",
+        "source_name": "TikTok Awards Côte d’Ivoire — liste publique de candidats",
+        "source_url": "https://it.scribd.com/document/862368430/TIKTOK-AWARDS-CO-TE-D-IVOIRE",
+        "confidence": 82
+      }
+    },
+    "research_queries": [
+      "\"awao_officiel\" Facebook Instagram Côte d’Ivoire",
+      "\"influamenta1\" Awao officiel TikTok",
+      "\"Awao_officiel\" vidéos récentes vues abonnés"
+    ]
   }
 ]
