@@ -24,6 +24,27 @@ function p50_mrpa_latest_successful_run(PDO $pdo): ?array {
     return ['runUuid'=>(string)$row['run_uuid'],'periods'=>$periods,'finishedAt'=>(string)$row['finished_at']];
 }
 
+function p50_mrpa_2h_capture_diagnostics(PDO $pdo): array {
+    if(!p50_metrics_table_exists($pdo,'p50_metric_captures'))return ['comparableSeries'=>0,'growingViewSeries'=>0,'growingInteractionSeries'=>0];
+    $sql="SELECT COUNT(*) comparable_series,
+      COALESCE(SUM(max_views>min_views),0) growing_view_series,
+      COALESCE(SUM(max_likes>min_likes OR max_comments>min_comments OR max_shares>min_shares OR max_saves>min_saves),0) growing_interaction_series
+      FROM (
+        SELECT account_id,content_id,COUNT(*) captures,
+          MIN(COALESCE(views,0)) min_views,MAX(COALESCE(views,0)) max_views,
+          MIN(COALESCE(likes,0)) min_likes,MAX(COALESCE(likes,0)) max_likes,
+          MIN(COALESCE(comments,0)) min_comments,MAX(COALESCE(comments,0)) max_comments,
+          MIN(COALESCE(shares,0)) min_shares,MAX(COALESCE(shares,0)) max_shares,
+          MIN(COALESCE(saves,0)) min_saves,MAX(COALESCE(saves,0)) max_saves
+        FROM p50_metric_captures
+        WHERE content_id IS NOT NULL AND quality_status='usable' AND confidence>=70
+          AND observed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 3 HOUR) AND observed_at<=UTC_TIMESTAMP()
+        GROUP BY account_id,content_id HAVING COUNT(*)>=2
+      ) series";
+    $row=$pdo->query($sql)->fetch()?:[];
+    return ['comparableSeries'=>(int)($row['comparable_series']??0),'growingViewSeries'=>(int)($row['growing_view_series']??0),'growingInteractionSeries'=>(int)($row['growing_interaction_series']??0)];
+}
+
 function p50_mrpa_period_availability(PDO $pdo,?string $runUuid=null): array {
     $latest=p50_mrpa_latest_successful_run($pdo);$runUuid=trim((string)($runUuid??($latest['runUuid']??'')));$availability=[];
     foreach(p50_mrpa_period_priority() as $period)$availability[$period]=['period'=>$period,'runUuid'=>$runUuid?:null,'totalRows'=>0,'classableRows'=>0,'candidateRows'=>0,'distinctRuns'=>0,'available'=>false,'exclusionSummary'=>[],'averageCoverage'=>0.0,'averageConfidence'=>0.0];
@@ -41,6 +62,7 @@ function p50_mrpa_period_availability(PDO $pdo,?string $runUuid=null): array {
         $summary->execute([P50_MR_ALGORITHM_VERSION,$runUuid]);
         foreach($summary->fetchAll() as $row){$period=(string)$row['period_key'];if(!isset($availability[$period]))continue;$availability[$period]['averageCoverage']=(float)$row['average_coverage'];$availability[$period]['averageConfidence']=(float)$row['average_confidence'];$availability[$period]['exclusionSummary']=json_decode((string)$row['exclusion_summary_json'],true)?:[];}
     }
+    $availability['2H']['captureDiagnostics']=p50_mrpa_2h_capture_diagnostics($pdo);
     return $availability;
 }
 
