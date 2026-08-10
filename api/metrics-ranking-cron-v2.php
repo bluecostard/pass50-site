@@ -1,4 +1,5 @@
 <?php
+// Recalcul de migration : activer le repli officiel frais du classement 2H.
 declare(strict_types=1);
 
 // Déclencheur opérationnel MR V2 — 2026-08-06, sans changement fonctionnel.
