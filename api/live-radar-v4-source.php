@@ -77,8 +77,12 @@ function p50_live_v4_identity(string $platform,string $url): array {
     $parts=parse_url(trim($url));$path=(string)($parts['path']??'');
     if($platform==='TikTok'&&preg_match('#/@([A-Za-z0-9._-]+)#',$path,$m)){
         $handle=$m[1];
-        // Comptes TikTok morts / remplacés connus (ex. Camille Makosso).
-        $aliases=['generalmakossocamille1'=>'generalcamillemakosso'];
+        // Comptes TikTok morts / remplacés connus.
+        $aliases=[
+            'generalmakossocamille1'=>'generalcamillemakosso',
+            'apoutchou.225'=>'apoutchou_national1',
+            'apoutchounational'=>'apoutchou_national1',
+        ];
         $handle=$aliases[strtolower($handle)]??$handle;
         $profile='https://www.tiktok.com/@'.$handle;
         return ['handle'=>$handle,'profileUrl'=>$profile,'liveUrl'=>$profile.'/live'];
@@ -134,6 +138,15 @@ function p50_live_v4_manual_priority_ids(array $state): array {
     return $ids;
 }
 
+function p50_live_v4_official_url_override(string $profileId,string $platform,string $url): string {
+    $key=strtolower(trim($profileId)).'|'.strtolower(trim($platform));
+    $overrides=[
+        'apoutchou|tiktok'=>'https://www.tiktok.com/@apoutchou_national1',
+        'general-camille-makosso|tiktok'=>'https://www.tiktok.com/@generalcamillemakosso',
+    ];
+    return $overrides[$key]??$url;
+}
+
 function p50_live_v4_sources(array $state): array {
     $threshold=p50_de_threshold();$seen=[];$out=[];
     try{
@@ -142,7 +155,9 @@ function p50_live_v4_sources(array $state): array {
             WHERE r.alive=1 AND s.platform IN ('TikTok','YouTube','Instagram','Facebook') AND s.status='verified' AND s.confidence>=?");
         $stmt->execute([$threshold]);
         foreach($stmt->fetchAll() as $row){
-            $platform=(string)$row['platform'];$id=(string)$row['profile_id'];$url=trim((string)$row['url']);$key=$platform.'|'.$id;
+            $platform=(string)$row['platform'];$id=(string)$row['profile_id'];
+            $row['url']=p50_live_v4_official_url_override($id,$platform,trim((string)$row['url']));
+            $url=trim((string)$row['url']);$key=$platform.'|'.$id;
             if(isset($seen[$key])||!p50_live_v4_direct_url($platform,$url))continue;
             $seen[$key]=true;$out[]=$row;
         }
@@ -152,6 +167,7 @@ function p50_live_v4_sources(array $state): array {
         foreach(P50_LIVE_V4_PLATFORMS as $platform){
             $id=(string)$profile['id'];$key=$platform.'|'.$id;if(isset($seen[$key]))continue;
             $url=trim((string)(($profile['links']??[])[$platform]??''));
+            $url=p50_live_v4_official_url_override($id,$platform,$url);
             $status=(string)(($profile['linkChecks']??[])[$platform]['status']??'');
             if(!in_array($status,P50_LIVE_V4_OFFICIAL_STATUSES,true)||!p50_live_v4_direct_url($platform,$url))continue;
             $seen[$key]=true;$out[]=[

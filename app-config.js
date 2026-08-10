@@ -154,6 +154,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Apoutchou National.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-apoutchou]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-apoutchou.js?v=1.0';
+  script.dataset.pass50ProfileApoutchou = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Général Camille Makosso.
 (function () {
   if (document.querySelector('script[data-pass50-profile-general-camille-makosso]')) return;

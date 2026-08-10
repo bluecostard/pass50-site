@@ -30,7 +30,7 @@ const ASSETS=[
   './profile-ennemi-des-djandjou.js?v=1.0','./profile-kawaii-nanami.js?v=1.0',
   './profile-melanie-tms.js?v=1.0','./profile-ivorian-kid.js?v=1.0',
   './profile-obre-marie-pascale.js?v=1.0','./profile-oustaz-diane.js?v=1.0',
-  './profile-ismael-aka.js?v=1.0','./profile-general-camille-makosso.js?v=1.1',
+  './profile-ismael-aka.js?v=1.0','./profile-apoutchou.js?v=1.0','./profile-general-camille-makosso.js?v=1.1',
   './profile-lolo-beaute.js?v=1.0','./profile-kim-makosso.js?v=1.0',
   './profile-dez-cocrane225.js?v=1.0','./profile-atoule.js?v=1.0',
   './profile-lionel-pcs.js?v=1.0','./profile-yasmine-fofana.js?v=1.0',
