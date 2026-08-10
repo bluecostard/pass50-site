@@ -169,19 +169,31 @@ jobs:
           count="$(jq 'length' apoutchou-facebook.json)"
           video_count="$(jq '[.[] | select(.playableInPass50==true)] | length' apoutchou-facebook.json)"
           generic_count="$(jq '[.[] | select(.playableInPass50!=true)] | length' apoutchou-facebook.json)"
-          [ "$count" -gt 0 ] || { echo '::error::Aucune publication Facebook récente sur la fiche Apoutchou'; exit 1; }
+          item_type='none'
+          source=''
 
-          source="$(jq -r '.[0].url // ""' apoutchou-facebook.json)"
-          item_type="$(jq -r '.[0].itemType // "unknown"' apoutchou-facebook.json)"
-          [ -n "$source" ] || { echo '::error::URL Facebook d’Apoutchou absente'; exit 1; }
-          encoded="$(jq -rn --arg u "$source" '$u|@uri')"
-          post_body='apoutchou-facebook-post.html'
-          post_code="$(curl --location --silent --show-error --max-time 40 --output "$post_body" --write-out '%{http_code}' -H 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.8' \
-            "https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=820" || true)"
-          post_unavailable=false
-          if grep -Eqi "ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible" "$post_body" 2>/dev/null; then post_unavailable=true; fi
-          [ "$post_code" = 200 ] || { echo "::error::Plugin de publication Facebook HTTP $post_code"; exit 1; }
-          [ "$post_unavailable" = false ] || { echo '::error::La publication Apoutchou reste indisponible dans post.php'; exit 1; }
+          if [ "$count" -eq 0 ]; then
+            echo '::warning::Aucune publication Facebook récente Apoutchou dans la fenêtre 48 h — validation contrat lecteur seule.'
+            viewer="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' \
+              "https://www.pass50.store/facebook-video-player-v1.js?sha=$GITHUB_SHA&soft=1" || true)"
+            grep -q 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.2' <<<"$viewer" \
+              && grep -q 'Voir dans Pass50' <<<"$viewer" \
+              && grep -q 'plugins/\${plugin}.php' <<<"$viewer" \
+              || { echo '::error::Lecteur Facebook V1.2 absent alors que le flux Apoutchou est vide'; exit 1; }
+            item_type='soft-pass-no-recent-facebook'
+          else
+            source="$(jq -r '.[0].url // ""' apoutchou-facebook.json)"
+            item_type="$(jq -r '.[0].itemType // "unknown"' apoutchou-facebook.json)"
+            [ -n "$source" ] || { echo '::error::URL Facebook d’Apoutchou absente'; exit 1; }
+            encoded="$(jq -rn --arg u "$source" '$u|@uri')"
+            post_body='apoutchou-facebook-post.html'
+            post_code="$(curl --location --silent --show-error --max-time 40 --output "$post_body" --write-out '%{http_code}' -H 'Accept-Language: fr-FR,fr;q=0.9,en;q=0.8' \
+              "https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=820" || true)"
+            post_unavailable=false
+            if grep -Eqi "ce contenu n.est pas disponible|contenu indisponible|this content isn.t available|content not available|publication indisponible" "$post_body" 2>/dev/null; then post_unavailable=true; fi
+            [ "$post_code" = 200 ] || { echo "::error::Plugin de publication Facebook HTTP $post_code"; exit 1; }
+            [ "$post_unavailable" = false ] || { echo '::error::La publication Apoutchou reste indisponible dans post.php'; exit 1; }
+          fi
 
           {
             printf 'count=%s\n' "$count"
@@ -195,8 +207,12 @@ jobs:
             printf -- '- Vidéos reconnues : %s\n' "$video_count"
             printf -- '- Publications génériques malgré un type photo/post : %s\n' "$generic_count"
             printf -- '- Premier type observé : `%s`\n' "$item_type"
-            echo '- Le plugin `post.php` accepte la publication réelle d’Apoutchou'
-            echo '- Le lecteur V1.2 ajoutera `Voir dans Pass50` même si Facebook la classe en photo'
+            if [ "$count" -eq 0 ]; then
+              echo '- Soft-pass : fenêtre 48 h vide, contrat lecteur Facebook V1.2 vérifié'
+            else
+              echo '- Le plugin `post.php` accepte la publication réelle d’Apoutchou'
+              echo '- Le lecteur V1.2 ajoutera `Voir dans Pass50` même si Facebook la classe en photo'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publier le statut du lecteur Apoutchou
