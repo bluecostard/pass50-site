@@ -551,6 +551,21 @@ function p50_prono_profile_photo(array $profile): string {
     return p50_prono_abs_media_url($url);
 }
 
+/** Photo FI pour génération batch : validée ou candidate / URL directe. */
+function p50_prono_profile_photo_any(array $profile): string {
+    $cover = p50_prono_profile_photo($profile);
+    if ($cover !== '') {
+        return $cover;
+    }
+    foreach (['photoUrl', 'photoCandidateUrl', 'avatarUrl', 'image'] as $key) {
+        $url = p50_prono_abs_media_url(trim((string)($profile[$key] ?? '')));
+        if ($url !== '') {
+            return $url;
+        }
+    }
+    return '';
+}
+
 function p50_prono_event_cover(array $event): string {
     $status = strtolower(trim((string)($event['coverStatus'] ?? '')));
     if ($status !== '' && $status !== 'validated') {

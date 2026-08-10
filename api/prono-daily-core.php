@@ -14,17 +14,24 @@ function p50_prono_ranked_profiles(string $period = '24h'): array {
     $rows = [];
     foreach ($profiles as $profile) {
         if (!is_array($profile)) continue;
-        if (empty($profile['alive']) || empty($profile['eligible'])) continue;
-        $score = $profile['scores'][$period] ?? null;
+        if (isset($profile['alive']) && !$profile['alive']) continue;
+        $score = $profile['scores'][$period] ?? ($profile['scores']['24h'] ?? null);
+        if (!is_numeric($score)) {
+            $score = $profile['scores']['7d'] ?? ($profile['scores']['2h'] ?? 0);
+        }
         if (!is_numeric($score)) continue;
-        $cover = p50_prono_resolve_cover((string)($profile['id'] ?? ''), (string)($profile['name'] ?? ''));
-        if ($cover['coverPhoto'] === '') continue;
+        $cover = p50_prono_profile_photo_any($profile);
+        if ($cover === '') {
+            $resolved = p50_prono_resolve_cover((string)($profile['id'] ?? ''), (string)($profile['name'] ?? ''));
+            $cover = $resolved['coverPhoto'];
+        }
+        if ($cover === '') continue;
         $rows[] = [
             'profile' => $profile,
             'profileId' => (string)($profile['id'] ?? ''),
             'name' => (string)($profile['name'] ?? ''),
             'score' => (float)$score,
-            'coverPhoto' => $cover['coverPhoto'],
+            'coverPhoto' => $cover,
             'isArtist' => p50_prono_is_artist_profile($profile),
         ];
     }
@@ -336,24 +343,36 @@ function p50_prono_daily_templates(
         ];
     }
 
-    // Compléter avec influenceurs restants (image obligatoire déjà filtrée)
-    foreach ($influencers as $fi) {
+    // Compléter jusqu’à 12 avec des sujets uniques (même FI OK, clé différente)
+    $pool = array_values(array_merge($influencers, $artists));
+    $variants = [
+        ['theme' => 'daily_rank', 'title' => '%s reste-t-il dans le Top 20 PASS50 24H demain ?', 'metric' => 'rank_position', 'days' => 1, 'hours' => 12, 'diff' => 0.45],
+        ['theme' => 'daily_buzz', 'title' => '%s crée-t-il un buzz viral sous 48 h ?', 'metric' => 'manual', 'days' => 2, 'hours' => 12, 'diff' => 0.55],
+        ['theme' => 'daily_live', 'title' => '%s passe-t-il en live cette semaine ?', 'metric' => 'live_appeared', 'days' => 7, 'hours' => 24, 'diff' => 0.6],
+        ['theme' => 'daily_climb', 'title' => '%s gagne-t-il des places au classement 24H sous 3 jours ?', 'metric' => 'rank_delta', 'days' => 3, 'hours' => 24, 'diff' => 0.5],
+        ['theme' => 'daily_followers', 'title' => '%s gagne-t-il plus d’abonnés que la moyenne cette semaine ?', 'metric' => 'followers_delta', 'days' => 7, 'hours' => 24, 'diff' => 0.52],
+    ];
+    $variantIdx = 0;
+    foreach ($pool as $fi) {
         if (count($templates) >= P50_PRONO_DAILY_COUNT) break;
-        $sk = 'fi:'.$fi['profileId'];
+        if (($fi['profileId'] ?? '') === '' || ($fi['coverPhoto'] ?? '') === '') continue;
+        $variant = $variants[$variantIdx % count($variants)];
+        $variantIdx++;
+        $sk = 'daily:'.$variant['theme'].':'.$fi['profileId'];
         if (isset($usedSubjects[$sk])) continue;
         $usedSubjects[$sk] = true;
         $templates[] = [
-            'theme' => 'influencer_extra',
-            'sourceType' => 'influencer',
+            'theme' => $variant['theme'],
+            'sourceType' => !empty($fi['isArtist']) ? 'artist_influencer' : 'influencer',
             'profileId' => $fi['profileId'],
             'subjectKey' => $sk,
             'coverPhoto' => $fi['coverPhoto'],
-            'title' => $fi['name'].' progresse-t-il au classement 24H cette semaine ?',
-            'context' => 'Trend Score actuel · '.number_format($fi['score'], 1, ',', ' ').'.',
-            'options' => p50_prono_daily_build_options(['Oui', 'Non'], 0.5),
-            'metricType' => 'rank_delta',
-            'measureDays' => 7,
-            'voteHours' => 12,
+            'title' => sprintf($variant['title'], $fi['name']),
+            'context' => 'Batch quotidien PASS50 · Trend Score '.number_format((float)$fi['score'], 1, ',', ' ').'.',
+            'options' => p50_prono_daily_build_options(['Oui', 'Non'], (float)$variant['diff']),
+            'metricType' => $variant['metric'],
+            'measureDays' => (int)$variant['days'],
+            'voteHours' => (int)$variant['hours'],
         ];
     }
 
@@ -380,14 +399,18 @@ function p50_prono_daily_generate(PDO $pdo, string $createdBy, ?string $batchDat
     $templates = p50_prono_daily_templates($influencers, $artists, $news, $events);
     $templates = array_slice($templates, 0, P50_PRONO_DAILY_COUNT);
 
-    if (count($templates) < P50_PRONO_DAILY_COUNT) {
+    if ($templates === []) {
         return [
             'batchId' => $batchId,
             'batchDate' => $batchDate,
             'items' => [],
             'skipped' => 0,
-            'message' => 'Pas assez de sujets avec image ('.count($templates).'/'.P50_PRONO_DAILY_COUNT.'). Vérifie les photos FI et actus.',
+            'message' => 'Aucun sujet avec image disponible. Vérifie les photos FI / actus.',
         ];
+    }
+    if (count($templates) < P50_PRONO_DAILY_COUNT) {
+        // On génère quand même le maximum possible (≥1) plutôt que d’échouer à vide.
+        // Le message indiquera le déficit.
     }
 
     $now = p50_prono_now();
@@ -439,7 +462,9 @@ function p50_prono_daily_generate(PDO $pdo, string $createdBy, ?string $batchDat
         'batchDate' => $batchDate,
         'items' => $items,
         'skipped' => 0,
-        'message' => count($items).' pronos générés (brouillon) · image obligatoire validée.',
+        'message' => count($items) >= P50_PRONO_DAILY_COUNT
+            ? count($items).' pronos générés (brouillon) · image obligatoire validée.'
+            : count($items).' pronos générés (brouillon) · objectif '.P50_PRONO_DAILY_COUNT.' (photos FI limitées).',
     ];
 }
 

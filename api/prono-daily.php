@@ -63,6 +63,7 @@ if ($action === 'generate') {
     if (($result['items'] ?? []) === []) {
         json_response([
             'ok' => false,
+            'error' => $result['message'],
             'message' => $result['message'],
             'batchDate' => $result['batchDate'],
         ], 422);

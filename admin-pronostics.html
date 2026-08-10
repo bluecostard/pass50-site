@@ -46,6 +46,7 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
       <button type="button" id="genDailyBtn">Générer les 12 du jour</button>
       <button type="button" class="ghost" id="refreshDailyBtn">Rafraîchir le batch</button>
       <button type="button" id="publishDailyBtn">Publier les 12</button>
+      <button type="button" id="genPublishDailyBtn">Générer + publier</button>
     </div>
     <div class="toast" id="dailyMsg"></div>
     <div id="dailyList" class="muted" style="margin-top:12px">Aucun batch chargé.</div>
@@ -134,7 +135,7 @@ async function api(path, body){
   if(body!==undefined){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
   const res=await fetch('./api/'+path,opts);
   const data=await res.json().catch(()=>({}));
-  if(!res.ok)throw new Error(data.error||'Erreur');
+  if(!res.ok)throw new Error(data.error||data.message||('Erreur HTTP '+res.status));
   return data;
 }
 function fmt(iso){
@@ -238,6 +239,18 @@ document.getElementById('publishDailyBtn').onclick=async()=>{
   try{
     const data=await api('prono-daily.php',{action:'publish'});
     msg.textContent=`OK · ${data.published} publié(s)`;
+    loadDaily();
+    loadList();
+  }catch(e){msg.textContent=e.message;}
+};
+document.getElementById('genPublishDailyBtn').onclick=async()=>{
+  const msg=document.getElementById('dailyMsg');
+  if(!confirm('Générer puis publier immédiatement le batch du jour ?'))return;
+  try{
+    const generated=await api('prono-daily.php',{action:'generate'});
+    renderDailyList(generated.items||[]);
+    const published=await api('prono-daily.php',{action:'publish'});
+    msg.textContent=`OK · ${generated.count||0} générés · ${published.published||0} publiés`;
     loadDaily();
     loadList();
   }catch(e){msg.textContent=e.message;}
