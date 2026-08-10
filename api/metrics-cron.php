@@ -13,8 +13,8 @@ $timestamp=trim((string)($_SERVER['HTTP_X_P50_TIMESTAMP']??''));$signature=strto
 if(!preg_match('/^\d{10}$/',$timestamp)||abs(time()-(int)$timestamp)>300)json_response(['error'=>'Horodatage refusé.'],401);
 if(!p50_mo_verify_cron_signature($secret,$timestamp,$raw,$signature))json_response(['error'=>'Signature refusée.'],401);
 $input=json_decode($raw,true);if(!is_array($input))json_response(['error'=>'JSON invalide.'],422);
-if(array_diff(array_keys($input),['action','cadence','dispatchId','iteration']))json_response(['error'=>'Paramètre interdit.'],422);
-$action=(string)($input['action']??'');$cadence=(string)($input['cadence']??'');$dispatchId=substr(trim((string)($input['dispatchId']??'')),0,120);
+if(array_diff(array_keys($input),['action','cadence','dispatchId','iteration','force']))json_response(['error'=>'Paramètre interdit.'],422);
+$action=(string)($input['action']??'');$cadence=(string)($input['cadence']??'');$dispatchId=substr(trim((string)($input['dispatchId']??'')),0,120);$force=($input['force']??false)===true;
 if(!in_array($action,['dispatch','work','queue'],true))json_response(['error'=>'Action inconnue.'],422);
 $iteration=$input['iteration']??null;if($action==='work'&&(!is_int($iteration)||$iteration<1||$iteration>500))json_response(['error'=>'Itération invalide.'],422);
 try{$cadenceConfig=p50_mo_cadence($cadence);}catch(Throwable){json_response(['error'=>'Cadence inconnue.'],422);}
@@ -23,7 +23,7 @@ $started=microtime(true);
 try{
     $pdo=db();
     if($action==='dispatch'){
-        $run=p50_mo_dispatch($pdo,$cadence,$dispatchId,['source'=>'cron_hmac']);
+        $run=p50_mo_dispatch($pdo,$cadence,$dispatchId,['source'=>'cron_hmac','ignoreFresh'=>$force]);
         $response=['ok'=>true,'cadence'=>$cadence,'dispatchId'=>$dispatchId,'enqueued'=>$run['enqueued'],'processed'=>0,'completed'=>0,'partial'=>0,'retried'=>0,'skipped'=>0,'failed'=>0,'diagnostic'=>null];
     }elseif($action==='work'){
         $work=p50_metrics_process_next_job($pdo);
