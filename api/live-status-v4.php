@@ -138,6 +138,7 @@ $officialKeys=[];foreach($sources as $source)$officialKeys[strtolower((string)$s
 $automatic=array_values(array_filter(p50_live_v4_active_rows(),static function(array $stream) use($officialKeys): bool {
     $profileId=trim((string)($stream['profileId']??''));
     if($profileId==='')return false;
+    if(p50_live_v4_known_false_positive($stream))return false;
     if((string)($stream['source']??'')==='meta_authorized')return true;
     $key=strtolower((string)($stream['platform']??'')).'|'.$profileId;
     return isset($officialKeys[$key]);

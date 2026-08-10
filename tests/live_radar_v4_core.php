@@ -94,6 +94,9 @@ must($ytLive['state']==='live','YouTube isLiveNow=true doit être LIVE.');
 must(($ytLive['live']['metadata']['videoId']??'')==='abcDEF123','ID vidéo YouTube conservé.');
 
 $ytReplay=p50_live_v4_parse_youtube($ytSource,['live'=>response('<title>Replay du jour - YouTube</title><link rel="canonical" href="https://www.youtube.com/watch?v=abcDEF123"><script>{"isLiveNow":false,"isLiveContent":true,"endTimestamp":"2026-07-29T01:00:00Z","videoId":"abcDEF123"}</script>',200,'https://www.youtube.com/watch?v=abcDEF123')]);
+must(p50_live_v4_known_false_positive(['platform'=>'YouTube','url'=>'https://www.youtube.com/watch?v=TOa6dTjz7V0']),'La vidéo Kévine Obin signalée doit être reconnue comme faux positif.');
+$ytFalsePositive=p50_live_v4_parse_youtube($ytSource,['live'=>response('<title>Je suis désolé. - YouTube</title><link rel="canonical" href="https://www.youtube.com/watch?v=TOa6dTjz7V0"><script>{"isLiveNow":true,"videoId":"TOa6dTjz7V0"}</script>',200,'https://www.youtube.com/watch?v=TOa6dTjz7V0')]);
+must(($ytFalsePositive['state']??'')==='replay'&&($ytFalsePositive['error']??'')==='known_false_positive','Le faux live précis doit être retiré même si YouTube renvoie isLiveNow.');
 must($ytReplay['state']==='replay','Une fin YouTube explicite doit devenir replay et non LIVE.');
 
 $instagram=p50_live_v4_parse_instagram(['profile_id'=>'ig','public_name'=>'IG','platform'=>'Instagram','url'=>'https://www.instagram.com/test/'],['profile'=>response('{"is_live_broadcast":true}')]);

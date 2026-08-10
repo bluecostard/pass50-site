@@ -3,6 +3,14 @@ declare(strict_types=1);
 
 const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-PUBLISH-UTC-2026-08-03-1';
 const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800;
+const P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS = ['TOa6dTjz7V0'];
+
+function p50_live_v4_known_false_positive(array $live): bool {
+    if(strcasecmp((string)($live['platform']??''),'YouTube')!==0)return false;
+    $videoId=trim((string)($live['videoId']??($live['metadata']['videoId']??'')));
+    if($videoId==='')$videoId=p50_live_v4_video_id((string)($live['url']??''));
+    return in_array($videoId,P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS,true);
+}
 
 function p50_live_v4_unescape(string $value): string {
     return html_entity_decode(str_replace(['\\u0026','\\u003d','\\/'],['&','=','/'],$value),ENT_QUOTES|ENT_HTML5,'UTF-8');
@@ -52,6 +60,7 @@ function p50_live_v4_parse_youtube(array $source,array $responses): array {
     $r=$responses['live']??[];$html=(string)($r['body']??'');$maxMs=(int)($r['timeMs']??0);
     if(empty($r['ok'])||$html==='')return ['state'=>'unknown','error'=>(string)($r['error']??('http_'.($r['status']??0))),'confidence'=>0,'responseMs'=>$maxMs];
     $base=(string)($r['finalUrl']??$source['url']);$meta=p50_page_metadata($html,$base);$videoId=p50_live_v4_video_id((string)($meta['canonical']?:$base),$html);
+    if(in_array($videoId,P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS,true))return ['state'=>'replay','error'=>'known_false_positive','confidence'=>100,'responseMs'=>$maxMs,'replay'=>['url'=>'https://www.youtube.com/watch?v='.$videoId,'videoId'=>$videoId,'title'=>trim((string)($meta['title']??''))]];
     $ended=(bool)preg_match('/"(?:endTimestamp|actualEndTime)"\s*:\s*"[^"]+"/i',$html)||(bool)preg_match('/itemprop=["\']endDate["\']/i',$html);
     $isLive=(bool)preg_match('/"isLiveNow"\s*:\s*true/i',$html)||(bool)preg_match('/itemprop=["\']isLiveBroadcast["\'][^>]+content=["\']True["\']/i',$html)||((bool)preg_match('/"isLiveContent"\s*:\s*true/i',$html)&&(bool)preg_match('/"playabilityStatus"\s*:\s*\{[^}]*"status"\s*:\s*"OK"/is',$html));
     $url=$videoId!==''?'https://www.youtube.com/watch?v='.$videoId:(string)($meta['canonical']?:$base);

@@ -32,6 +32,13 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertNotIn("live-status-v3.php", FILES['client'])
         self.assertIn("live-status-v4.php", FILES['client'])
 
+    def test_reported_youtube_false_positive_is_scoped_to_one_video(self):
+        parser = FILES['parsers']
+        self.assertIn("P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS = ['TOa6dTjz7V0']", parser)
+        self.assertIn("'error'=>'known_false_positive'", parser)
+        self.assertIn('p50_live_v4_known_false_positive($stream)', FILES['endpoint'])
+        self.assertNotIn("profileId']==='kevine'", parser)
+
     def test_unknown_block_hides_public_live(self):
         self.assertIn("'continuityPreserved'=>false", FILES['endpoint'])
         self.assertIn("tiktok_blocked_or_challenged", FILES['parsers'])
