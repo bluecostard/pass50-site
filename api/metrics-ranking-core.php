@@ -228,16 +228,16 @@ function p50_mr_load(PDO $pdo,DateTimeImmutable $now): array {
     $accounts=$pdo->query("SELECT id,profile_id,platform,status,confidence,source_type FROM p50_metric_accounts WHERE status='active' AND profile_id<>'' ORDER BY id")->fetchAll();
     $contents=$pdo->query("SELECT id,account_id,profile_id,platform,published_at,status,confidence FROM p50_metric_contents WHERE status='active' AND profile_id<>'' ORDER BY id")->fetchAll();
     $cutoff=$now->modify('-360 hours')->format('Y-m-d H:i:s');
-    $stmt=$pdo->prepare("SELECT id,account_id,content_id,profile_id,platform,observed_at,followers,views,likes,comments,shares,saves,live_viewers,confidence
-      FROM p50_metric_captures WHERE quality_status='usable' AND confidence>=70 AND profile_id<>'' AND observed_at<=? AND observed_at>=? ORDER BY observed_at,id");
+    $stmt=$pdo->prepare("SELECT id,account_id,content_id,profile_id,platform,captured_at observed_at,followers,views,likes,comments,shares,saves,live_viewers,confidence
+      FROM p50_metric_captures WHERE quality_status='usable' AND confidence>=70 AND profile_id<>'' AND captured_at<=? AND captured_at>=? ORDER BY captured_at,id");
     $stmt->execute([$now->format('Y-m-d H:i:s'),$cutoff]);$captures=$stmt->fetchAll();
-    $stmt=$pdo->prepare("SELECT c.id,c.account_id,c.content_id,c.profile_id,c.platform,c.observed_at,c.followers,c.views,c.likes,c.comments,c.shares,c.saves,c.live_viewers,c.confidence
+    $stmt=$pdo->prepare("SELECT c.id,c.account_id,c.content_id,c.profile_id,c.platform,c.captured_at observed_at,c.followers,c.views,c.likes,c.comments,c.shares,c.saves,c.live_viewers,c.confidence
       FROM p50_metric_captures c JOIN (
-        SELECT account_id,COALESCE(content_id,0) series_content,MAX(observed_at) observed_at
-        FROM p50_metric_captures WHERE quality_status='usable' AND confidence>=70 AND profile_id<>'' AND observed_at<?
+        SELECT account_id,COALESCE(content_id,0) series_content,MAX(captured_at) captured_at
+        FROM p50_metric_captures WHERE quality_status='usable' AND confidence>=70 AND profile_id<>'' AND captured_at<?
         GROUP BY account_id,COALESCE(content_id,0)
-      ) r ON r.account_id=c.account_id AND r.series_content=COALESCE(c.content_id,0) AND r.observed_at=c.observed_at
-      WHERE c.quality_status='usable' AND c.confidence>=70 ORDER BY c.observed_at,c.id");
+      ) r ON r.account_id=c.account_id AND r.series_content=COALESCE(c.content_id,0) AND r.captured_at=c.captured_at
+      WHERE c.quality_status='usable' AND c.confidence>=70 ORDER BY c.captured_at,c.id");
     $stmt->execute([$cutoff]);foreach($stmt->fetchAll() as $capture)$captures[]=$capture;
     return compact('profiles','accounts','contents','captures');
 }
