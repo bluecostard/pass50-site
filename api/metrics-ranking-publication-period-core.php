@@ -26,7 +26,7 @@ function p50_mrpa_latest_successful_run(PDO $pdo): ?array {
 
 function p50_mrpa_period_availability(PDO $pdo,?string $runUuid=null): array {
     $latest=p50_mrpa_latest_successful_run($pdo);$runUuid=trim((string)($runUuid??($latest['runUuid']??'')));$availability=[];
-    foreach(p50_mrpa_period_priority() as $period)$availability[$period]=['period'=>$period,'runUuid'=>$runUuid?:null,'totalRows'=>0,'classableRows'=>0,'candidateRows'=>0,'distinctRuns'=>0,'available'=>false];
+    foreach(p50_mrpa_period_priority() as $period)$availability[$period]=['period'=>$period,'runUuid'=>$runUuid?:null,'totalRows'=>0,'classableRows'=>0,'candidateRows'=>0,'distinctRuns'=>0,'available'=>false,'exclusionSummary'=>[],'averageCoverage'=>0.0,'averageConfidence'=>0.0];
     if($runUuid===''||!p50_metrics_table_exists($pdo,'p50_metric_ranking_current'))return $availability;
     $stmt=$pdo->prepare("SELECT period_key,COUNT(*) total_rows,
         SUM(CASE WHEN classable=1 THEN 1 ELSE 0 END) classable_rows,
@@ -35,7 +35,12 @@ function p50_mrpa_period_availability(PDO $pdo,?string $runUuid=null): array {
       FROM p50_metric_ranking_current WHERE algorithm_version=? AND run_uuid=? GROUP BY period_key");
     $stmt->execute([P50_MR_ALGORITHM_VERSION,$runUuid]);
     foreach($stmt->fetchAll() as $row){$period=(string)$row['period_key'];if(!array_key_exists($period,$availability))continue;$candidateRows=(int)$row['candidate_rows'];
-        $availability[$period]=['period'=>$period,'runUuid'=>$runUuid,'totalRows'=>(int)$row['total_rows'],'classableRows'=>(int)$row['classable_rows'],'candidateRows'=>$candidateRows,'distinctRuns'=>(int)$row['distinct_runs'],'available'=>$candidateRows>0];}
+        $availability[$period]=['period'=>$period,'runUuid'=>$runUuid,'totalRows'=>(int)$row['total_rows'],'classableRows'=>(int)$row['classable_rows'],'candidateRows'=>$candidateRows,'distinctRuns'=>(int)$row['distinct_runs'],'available'=>$candidateRows>0,'exclusionSummary'=>[],'averageCoverage'=>0.0,'averageConfidence'=>0.0];}
+    if(p50_metrics_table_exists($pdo,'p50_metric_ranking_period_runs')){
+        $summary=$pdo->prepare("SELECT period_key,average_coverage,average_confidence,exclusion_summary_json FROM p50_metric_ranking_period_runs WHERE algorithm_version=? AND run_uuid=?");
+        $summary->execute([P50_MR_ALGORITHM_VERSION,$runUuid]);
+        foreach($summary->fetchAll() as $row){$period=(string)$row['period_key'];if(!isset($availability[$period]))continue;$availability[$period]['averageCoverage']=(float)$row['average_coverage'];$availability[$period]['averageConfidence']=(float)$row['average_confidence'];$availability[$period]['exclusionSummary']=json_decode((string)$row['exclusion_summary_json'],true)?:[];}
+    }
     return $availability;
 }
 
