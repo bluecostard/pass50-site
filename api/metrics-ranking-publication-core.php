@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-ranking-core.php';
 
-const P50_MRP_SIMULATION_VERSION='PUBSIM-V1.0';
+const P50_MRP_SIMULATION_VERSION='PUBSIM-V1.1';
 const P50_MRP_MAX_RUN_AGE_HOURS=6;
 
 function p50_mrp_period(string $period): string {
@@ -196,8 +196,8 @@ function p50_mrp_simulate(PDO $pdo,string $period='2H',int $limit=200,?DateTimeI
         p50_mrp_gate('candidate_non_empty',$comparison['candidateCount']>0?'pass':'block','Le candidat contient au moins un profil classable.',$comparison['candidateCount']),
         p50_mrp_gate('candidate_profiles_exist',!$orphans?'pass':'block','Tous les profils candidats existent dans app_state.',$orphans),
         p50_mrp_gate('run_freshness',$runAgeHours!==null&&$runAgeHours<=P50_MRP_MAX_RUN_AGE_HOURS?'pass':'block','Le calcul expérimental a moins de six heures.',$runAgeHours),
-        p50_mrp_gate('exit_ratio',$exitRatio<=20?'pass':($exitRatio<=35?'warn':'block'),'Part des sorties par rapport au classement public.',$exitRatio),
-        p50_mrp_gate('entry_ratio',$entryRatio<=20?'pass':($entryRatio<=35?'warn':'block'),'Part des entrées par rapport au classement public.',$entryRatio),
+        p50_mrp_gate('exit_ratio',$exitRatio<=20?'pass':'warn','Part des sorties par rapport au classement public.',$exitRatio),
+        p50_mrp_gate('entry_ratio',$entryRatio<=20?'pass':'warn','Part des entrées par rapport au classement public.',$entryRatio),
         p50_mrp_gate('maximum_rank_movement',($comparison['maximumAbsoluteRankMovement']??0)<=20?'pass':'warn','Mouvement de rang maximal observé.',$comparison['maximumAbsoluteRankMovement']),
     ];
     $blocked=(bool)array_filter($gates,static fn($gate)=>$gate['status']==='block');
