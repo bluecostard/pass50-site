@@ -1,4 +1,5 @@
 <?php
+// Relance diagnostic agrégé 2H — 2026-08-10T18:52+02:00.
 // Recalcul de migration : activer le repli officiel frais du classement 2H.
 declare(strict_types=1);
 
