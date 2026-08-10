@@ -174,7 +174,7 @@ render();
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=18.8';
+    js.src='./data-engine-ui.js?v=18.9';
     js.dataset.pass50DataEngine='1';
     document.body.appendChild(js);
   }
