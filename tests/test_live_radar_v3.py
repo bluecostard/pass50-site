@@ -44,10 +44,10 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("if($endedLabels)return ['state'=>'offline'", parser)
         self.assertIn('p50_live_v4_tiktok_owner_match', PARSERS)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', PARSERS)
-        self.assertIn("!$currentApiActive", parser)
+        self.assertIn("!$strictApiActive", parser)
         self.assertIn('Le LIVE est terminé', CORE_TESTS)
         self.assertIn('ancienne trace HTML de fin', CORE_TESTS)
-        self.assertIn('Trust Gate', CORE_TESTS)
+        self.assertIn('Strict Publish', CORE_TESTS)
         self.assertIn("['state']==='live'", CORE_TESTS)
 
     def test_unknown_block_hides_public_live(self):
@@ -97,7 +97,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertNotIn("$stateValue==='probable'&&!empty($result['live'])){\n                p50_live_v4_store_live", ENDPOINT)
 
     def test_quick_scan_reserves_discovery_capacity(self):
-        self.assertIn('$discoveryFloor=min(6,max(4,(int)floor($batch/2)))', ENDPOINT)
+        self.assertIn('$discoveryFloor=min(8,max(5,(int)floor(($batch*2)/3)))', ENDPOINT)
         self.assertIn('$reconfirmCap=max(0,$batch-$discoveryFloor)', ENDPOINT)
         self.assertIn('$reconfirm', ENDPOINT)
         self.assertIn("'discoveryQuota'=>$discoveryQuota", ENDPOINT)
@@ -105,10 +105,10 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("$_GET['batch']??14", ENDPOINT)
 
     def test_client_is_compatibly_loaded_but_uses_v4(self):
-        self.assertIn("live-radar-v3.js?v=1.7", CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.8", CONFIG)
         self.assertIn("const ENDPOINT='./api/live-status-v4.php'", CLIENT)
         self.assertIn('RADAR LIVE V4', CLIENT)
-        self.assertIn('TikTok:720', CLIENT)
+        self.assertIn('TikTok:480', CLIENT)
         self.assertIn('PASS50_LIVE_EXPERIENCE_VERSION', EXPERIENCE)
         self.assertIn('live-trust-gate-v1.js?v=1.2', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
         self.assertIn('live-experience-v4-1.js?v=1.7', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))

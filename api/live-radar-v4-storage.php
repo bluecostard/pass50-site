@@ -30,12 +30,31 @@ function p50_live_v4_stream_key(array $live): string {
 }
 function p50_live_v4_is_dismissed(string $key): bool {
     p50_live_v4_ensure_dismissals();
-    // TTL 24h : un dismiss admin ne doit pas bloquer définitivement un vrai futur direct.
-    $stmt=db()->prepare('SELECT 1 FROM p50_live_dismissals WHERE stream_key=? AND dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR) LIMIT 1');
+    // TTL 7j : un dismiss admin ne doit pas bloquer définitivement, mais assez long pour casser les boucles FP.
+    $stmt=db()->prepare('SELECT 1 FROM p50_live_dismissals WHERE stream_key=? AND dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) LIMIT 1');
     $stmt->execute([$key]);
     return (bool)$stmt->fetchColumn();
 }
+
+/** Preuve minimale avant écriture status=live (défense en profondeur vs parsers). */
+function p50_live_v4_is_publishable_proof(array $live): bool {
+    $platform=strcasecmp((string)($live['platform']??''),'')===0?'':(string)$live['platform'];
+    $meta=is_array($live['metadata']??null)?$live['metadata']:[];
+    if(strcasecmp($platform,'TikTok')===0){
+        $strict=is_array($meta['strictApiLabels']??null)?$meta['strictApiLabels']:[];
+        return $strict!==[]&&trim((string)($meta['roomId']??''))!=='';
+    }
+    if(strcasecmp($platform,'YouTube')===0){
+        return ($meta['liveSignal']??'')==='isLiveNow'&&trim((string)($meta['videoId']??$live['videoId']??''))!=='';
+    }
+    return true;
+}
+
 function p50_live_v4_store_live(array $live): bool {
+    if(!p50_live_v4_is_publishable_proof($live)){
+        p50_live_v4_store_candidate($live,'insufficient_publish_proof');
+        return false;
+    }
     $key=p50_live_v4_stream_key($live);$profileId=(string)$live['profileId'];$platform=(string)$live['platform'];
     if(p50_live_v4_is_dismissed($key)){$stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()),metadata=JSON_SET(COALESCE(metadata,'{}'),'$.endReason','manually_dismissed') WHERE stream_key=?");$stmt->execute([$key]);return false;}
     $end=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed') AND stream_key<>?");$end->execute([$profileId,$platform,$key]);
@@ -82,7 +101,7 @@ function p50_live_v4_active_rows(): array {
         $params[]=$platform;
     }
     $conditions[]="(s.source='meta_authorized' AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE))";
-    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform LEFT JOIN p50_live_dismissals d ON d.stream_key=s.stream_key AND d.dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR) WHERE d.stream_key IS NULL AND s.source IN ('automatic','meta_authorized') AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY (s.source='meta_authorized') DESC,s.last_seen_at DESC");
+    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform LEFT JOIN p50_live_dismissals d ON d.stream_key=s.stream_key AND d.dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) WHERE d.stream_key IS NULL AND s.source IN ('automatic','meta_authorized') AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY (s.source='meta_authorized') DESC,s.last_seen_at DESC");
     $stmt->execute($params);$out=[];
     foreach($stmt->fetchAll() as $row){
         $source=(string)$row['source'];

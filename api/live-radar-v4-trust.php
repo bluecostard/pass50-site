@@ -2,12 +2,12 @@
 declare(strict_types=1);
 
 /**
- * PASS50 Live Trust Gate (balanced)
- * - Public : confirmation live positive encore dans une fenêtre réaliste (> intervalle de balayage)
- * - Anti-fantômes : unknown / offline / replay ne maintiennent PAS la liste publique
- * - Détection : ne pas exiger une reconfirmation toutes les 90s (sinon liste vide)
+ * PASS50 Live Trust Gate (strict publish)
+ * - Public : uniquement des directs à preuve forte encore frais
+ * - TikTok : API propriétaire (status 2 + room + owner)
+ * - YouTube : isLiveNow uniquement
  */
-const P50_LIVE_V4_TRUST_REVISION = 'LIVE-PUBLISH-UTC-2026-08-03-1';
+const P50_LIVE_V4_TRUST_REVISION = 'LIVE-STRICT-PUBLISH-2026-08-11-1';
 
 /** Parse une datetime MySQL/ISO en timestamp Unix (UTC). */
 function p50_live_v4_parse_utc(?string $value): ?int {
@@ -30,21 +30,21 @@ function p50_live_v4_parse_utc(?string $value): ?int {
 
 /**
  * Âge max depuis la dernière confirmation live positive pour rester visible.
- * Doit rester > intervalle quick/full sweep, sinon la liste se vide en permanence.
+ * Doit rester > intervalle quick sweep (~30s), sans laisser traîner les fantômes.
  */
 const P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS = [
-    'TikTok' => 720,      // 12 min
-    'YouTube' => 1200,    // 20 min
-    'Instagram' => 900,   // 15 min
-    'Facebook' => 900,    // 15 min
+    'TikTok' => 480,      // 8 min
+    'YouTube' => 720,     // 12 min
+    'Instagram' => 600,   // 10 min
+    'Facebook' => 600,    // 10 min
 ];
 
 /** Grâce serveur pour retester un direct sans le clôturer trop tôt ( ≥ fenêtre publique ). */
 const P50_LIVE_V4_RECONFIRM_GRACE_MINUTES = [
-    'TikTok' => 18,
-    'YouTube' => 25,
-    'Instagram' => 20,
-    'Facebook' => 20,
+    'TikTok' => 12,
+    'YouTube' => 18,
+    'Instagram' => 15,
+    'Facebook' => 15,
 ];
 
 function p50_live_v4_public_max_age(string $platform): int {

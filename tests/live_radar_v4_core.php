@@ -17,10 +17,10 @@ function response(string $body,int $status=200,string $url='https://example.test
 function room_id_for(int $timestamp,int $suffix=123456): string {return (string)(($timestamp*4294967296)+$suffix);}
 
 must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
-must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-PUBLISH-UTC-2026-08-03-1','La révision Publish UTC doit être active.');
-must(P50_LIVE_V4_TRUST_REVISION==='LIVE-PUBLISH-UTC-2026-08-03-1','Le module Trust Gate doit être chargé.');
-must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===10800,'La fenêtre TikTok Trust Gate est de trois heures.');
-must(p50_live_v4_public_max_age('TikTok')===720,'TikTok public max age = 12 min.');
+must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-STRICT-PUBLISH-2026-08-11-1','La révision Strict Publish doit être active.');
+must(P50_LIVE_V4_TRUST_REVISION==='LIVE-STRICT-PUBLISH-2026-08-11-1','Le module Trust Gate Strict Publish doit être chargé.');
+must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===3600,'La fenêtre TikTok candidat est d’une heure.');
+must(p50_live_v4_public_max_age('TikTok')===480,'TikTok public max age = 8 min.');
 $utcNow=gmdate('Y-m-d H:i:s');
 must(p50_live_v4_parse_utc($utcNow)!==null&&abs(time()-(int)p50_live_v4_parse_utc($utcNow))<=2,'Les datetimes MySQL UTC doivent être lues en UTC.');
 must(p50_live_v4_is_publicly_fresh(['status'=>'live','platform'=>'TikTok','source'=>'automatic','last_state'=>'live','last_seen_at'=>$utcNow]),'Un LIVE confirmé à l’instant doit rester public.');
@@ -30,13 +30,20 @@ $api=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"7
 must($api['state']==='live','Une API TikTok structurée, active et rattachée au bon compte doit publier le LIVE.');
 must(($api['live']['metadata']['roomId']??'')==='741234567890','RoomId TikTok conservé pour confirmation.');
 must(($api['live']['metadata']['strictApiLabels'][0]??'')==='api','La preuve API stricte doit être conservée.');
+must(p50_live_v4_is_publishable_proof($api['live']),'Une preuve TikTok stricte doit être publiable.');
 
 $freshRoom=room_id_for(time()-300);
+// Régression : streamData avec \/ imbriqués cassait json_decode après unescape (cas Dez Cocrane).
+$nestedEscaped='{"data":{"user":{"uniqueId":"coachtest","roomId":"'.$freshRoom.'","status":2},"liveRoom":{"status":2,"startTime":'.(time()-120).',"streamData":"{\\\"pull\\\":\\\"https:\\\\/\\\\/example.com\\\\/live\\\"}"}},"statusCode":0}';
+$apiNested=p50_live_v4_parse_tiktok($source,['api'=>response($nestedEscaped)]);
+must($apiNested['state']==='live','Un JSON API TikTok avec streamData échappé doit rester décodable et confirmer le LIVE.');
+must(($apiNested['live']['metadata']['strictApiLabels'][0]??'')==='api','La preuve stricte doit survivre aux échappements streamData.');
+
 $apiFreshStatus=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"'.$freshRoom.'"}')]);
-must($apiFreshStatus['state']==='live','Une salle API fraîche active doit confirmer le LIVE (Trust Gate équilibré).');
+must($apiFreshStatus['state']==='probable','Sans propriétaire, une salle API fraîche reste probable (Strict Publish).');
 
 $apiFreshStructure=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$freshRoom.'"},"webcastRoomId":"'.$freshRoom.'"}')]);
-must($apiFreshStructure['state']==='live','Une structure LiveRoom fraîche peut confirmer ; le Trust Gate public coupe ensuite les fantômes.');
+must($apiFreshStructure['state']==='probable','Une structure LiveRoom seule ne publie plus.');
 
 $staleRoom=room_id_for(time()-P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS-3600);
 $apiStale=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$staleRoom.'"},"webcastRoomId":"'.$staleRoom.'"}')]);
@@ -48,15 +55,21 @@ must($multi['state']==='probable','Deux pages HTML sur une salle non datable res
 
 $freshHtml='<!doctype html><title>Coach Test LIVE | TikTok</title><script>{"LiveRoom":{"id":"'.$freshRoom.'"},"isLive":true,"roomId":"'.$freshRoom.'"}</script>';
 $multiFresh=p50_live_v4_parse_tiktok($source,['live'=>response($freshHtml,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($freshHtml,200,'https://www.tiktok.com/embed/live/@coachtest')]);
-must($multiFresh['state']==='live','Deux pages HTML sur la même salle fraîche confirment le LIVE.');
+must($multiFresh['state']==='probable','Deux pages HTML, même fraîches, ne publient plus sans API propriétaire.');
 
 $cross=p50_live_v4_parse_tiktok($source,[
     'api'=>response('{"status":2,"room_id":"741234567891","uniqueId":"coachtest"}'),
     'live'=>response($html,200,'https://www.tiktok.com/@coachtest/live'),
 ]);
-must($cross['state']==='live','Une API et une page LIVE cohérentes doivent confirmer le direct.');
+must($cross['state']==='live','Une API stricte + HTML confirme toujours le direct.');
 must(($cross['live']['metadata']['proofFamilies']['api'][0]??'')==='api','La famille API est conservée.');
 must(($cross['live']['metadata']['proofFamilies']['html'][0]??'')==='live','La famille HTML est conservée.');
+
+$crossWeak=p50_live_v4_parse_tiktok($source,[
+    'api'=>response('{"LiveRoom":{"id":"'.$freshRoom.'"},"webcastRoomId":"'.$freshRoom.'"}'),
+    'live'=>response($freshHtml,200,'https://www.tiktok.com/@coachtest/live'),
+]);
+must($crossWeak['state']==='probable','Un croisement API faible + HTML reste probable.');
 
 $single=p50_live_v4_parse_tiktok($source,['live'=>response($html,200,'https://www.tiktok.com/@coachtest/live')]);
 must($single['state']==='probable','Une seule preuve HTML positive doit rester à confirmer.');
@@ -92,6 +105,11 @@ $ytSource=['profile_id'=>'coach-hamond','public_name'=>'Coach Hamond Chic','plat
 $ytLive=p50_live_v4_parse_youtube($ytSource,['live'=>response('<title>Direct du jour - YouTube</title><link rel="canonical" href="https://www.youtube.com/watch?v=abcDEF123"><script>{"isLiveNow":true,"startTimestamp":"2026-07-29T00:10:00Z","videoId":"abcDEF123"}</script>',200,'https://www.youtube.com/watch?v=abcDEF123')]);
 must($ytLive['state']==='live','YouTube isLiveNow=true doit être LIVE.');
 must(($ytLive['live']['metadata']['videoId']??'')==='abcDEF123','ID vidéo YouTube conservé.');
+must(($ytLive['live']['metadata']['liveSignal']??'')==='isLiveNow','Le signal YouTube publiable doit être isLiveNow.');
+must(p50_live_v4_is_publishable_proof($ytLive['live']),'Une preuve YouTube isLiveNow doit être publiable.');
+
+$ytVod=p50_live_v4_parse_youtube($ytSource,['live'=>response('<title>Ancien live - YouTube</title><link rel="canonical" href="https://www.youtube.com/watch?v=abcDEF123"><script>{"isLiveNow":false,"isLiveContent":true,"playabilityStatus":{"status":"OK"},"videoId":"abcDEF123"}</script>',200,'https://www.youtube.com/watch?v=abcDEF123')]);
+must($ytVod['state']==='replay','isLiveContent+OK sans isLiveNow doit être traité comme VOD, pas LIVE.');
 
 $ytReplay=p50_live_v4_parse_youtube($ytSource,['live'=>response('<title>Replay du jour - YouTube</title><link rel="canonical" href="https://www.youtube.com/watch?v=abcDEF123"><script>{"isLiveNow":false,"isLiveContent":true,"endTimestamp":"2026-07-29T01:00:00Z","videoId":"abcDEF123"}</script>',200,'https://www.youtube.com/watch?v=abcDEF123')]);
 must(p50_live_v4_known_false_positive(['platform'=>'YouTube','url'=>'https://www.youtube.com/watch?v=TOa6dTjz7V0']),'La vidéo Kévine Obin signalée doit être reconnue comme faux positif.');
@@ -105,4 +123,4 @@ must($instagram['state']==='live','Signal Instagram actif explicite.');
 $facebook=p50_live_v4_parse_facebook(['profile_id'=>'fb','public_name'=>'FB','platform'=>'Facebook','url'=>'https://www.facebook.com/test'],['live'=>response('{"is_live_streaming":true,"video_id":"123456789"} https://www.facebook.com/test/videos/123456789')]);
 must($facebook['state']==='live','Signal Facebook actif et vidéo spécifique.');
 
-echo json_encode(['ok'=>true,'cases'=>20],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>24],JSON_UNESCAPED_SLASHES).PHP_EOL;

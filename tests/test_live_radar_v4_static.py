@@ -49,22 +49,25 @@ class LiveRadarV41StaticTests(unittest.TestCase):
 
     def test_tiktok_trust_gate_allows_fresh_api_confirmation(self):
         parser = FILES['parsers']
-        self.assertIn('LIVE-PUBLISH-UTC-2026-08-03-1', parser)
+        self.assertIn('LIVE-STRICT-PUBLISH-2026-08-11-1', parser)
         self.assertIn('p50_live_v4_parse_utc', (ROOT / 'api' / 'live-radar-v4-trust.php').read_text(encoding='utf-8'))
-        self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800', parser)
+        self.assertIn('P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 3600', parser)
         self.assertIn('p50_live_v4_tiktok_room_timestamp', parser)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', parser)
         self.assertIn('$apiLiveStructure', parser)
         self.assertIn('$freshApiActive', parser)
         self.assertIn('$currentApiActive', parser)
-        self.assertIn("!$currentApiActive", parser)
+        self.assertIn('!$strictApiActive', parser)
         self.assertIn("'apiLiveStructureLabels'", parser)
-        self.assertIn('$candidateConfirmed=$strictCount>0||$cross||$freshCount>0||$htmlFresh', parser)
+        self.assertIn('$candidateConfirmed=$strictCount>0', parser)
+        self.assertIn('p50_live_v4_is_publishable_proof', FILES['storage'])
         self.assertIn('p50_live_v4_platform_referer', FILES['source'])
         self.assertIn('Chrome/126', FILES['source'])
         self.assertIn("status='live'", FILES['source'])
         self.assertIn("return ['state'=>'offline','error'=>'instagram_no_public_live_signal'", parser)
         self.assertIn("return ['state'=>'offline','error'=>'tiktok_no_live_signal'", parser)
+        self.assertIn("liveSignal'=>'isLiveNow'", parser)
+        self.assertIn('youtube_vod_not_live_now', parser)
 
     def test_each_live_event_has_its_own_stream_key(self):
         storage = FILES['storage']
@@ -100,7 +103,7 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("h.last_state='live'", storage)
         self.assertIn('INTERVAL {$seconds} SECOND', storage)
         self.assertIn("confirmation_grace_expired", storage)
-        self.assertIn("'TikTok'=>18", source)
+        self.assertIn("'TikTok'=>12", source)
         self.assertNotIn("$platform==='TikTok'?2", storage)
         self.assertIn("latest_probe_offline", storage)
 

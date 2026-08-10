@@ -2,7 +2,7 @@
 'use strict';
 
 const PROFILE_ID='general-camille-makosso';
-const TIKTOK_URL='https://www.tiktok.com/@generalmakossocamille1';
+const TIKTOK_URL='https://www.tiktok.com/@generalcamillemakosso';
 const INSTAGRAM_URL='https://www.instagram.com/generalcamillemakosso/';
 const FACEBOOK_URL='https://www.facebook.com/Generalcamillemakosso/';
 const FACEBOOK_SOURCE=FACEBOOK_URL;
@@ -18,7 +18,7 @@ function baseProfile(){
   return {
     id:PROFILE_ID,
     name:'Général Camille Makosso',
-    handle:'@generalmakossocamille1',
+    handle:'@generalcamillemakosso',
     initials:'CM',
     region:'CI',
     category:'Religion / Société / Divertissement / Débats',
@@ -69,7 +69,7 @@ function applyProfile(){
   let profile=db.profiles.find(item=>{
     const name=String(item&&item.name||'').toLowerCase();
     const handle=String(item&&item.handle||'').toLowerCase();
-    return item&&(item.id===PROFILE_ID||name==='général camille makosso'||name==='general camille makosso'||name==='camille makosso'||name==='makosso camille'||handle==='@generalmakossocamille1'||handle==='@generalcamillemakosso');
+    return item&&(item.id===PROFILE_ID||name==='général camille makosso'||name==='general camille makosso'||name==='camille makosso'||name==='makosso camille'||handle==='@generalcamillemakosso'||handle==='@generalmakossocamille1'||handle==='generalcamillemakosso');
   });
   let changed=false;
   if(!profile){profile=patch;db.profiles.push(profile);changed=true;}
@@ -82,7 +82,12 @@ function applyProfile(){
     profile.platforms=Array.isArray(profile.platforms)?profile.platforms:[];
     patch.platforms.forEach(platform=>{if(!profile.platforms.includes(platform)){profile.platforms.push(platform);changed=true;}});
     profile.links=profile.links||{};
-    Object.entries(patch.links).forEach(([platform,url])=>{if(!profile.links[platform]){profile.links[platform]=url;changed=true;}});
+    Object.entries(patch.links).forEach(([platform,url])=>{
+      const current=String(profile.links[platform]||'');
+      const deadTikTok=/generalmakossocamille1/i.test(current);
+      if(!current||deadTikTok){profile.links[platform]=url;changed=true;}
+    });
+    if(String(profile.handle||'').toLowerCase()==='@generalmakossocamille1'){profile.handle=patch.handle;changed=true;}
     profile.linkChecks=profile.linkChecks||{};
     Object.entries(patch.linkChecks).forEach(([platform,check])=>{if(!profile.linkChecks[platform]){profile.linkChecks[platform]=check;changed=true;}});
     profile.scores=profile.scores||patch.scores;

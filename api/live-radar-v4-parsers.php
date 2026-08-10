@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-PUBLISH-UTC-2026-08-03-1';
-const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 10800;
+const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-STRICT-PUBLISH-2026-08-11-1';
+/** Fenêtre pour classer un candidat (probable) — ne publie plus à elle seule. */
+const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 3600;
 const P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS = ['TOa6dTjz7V0'];
 
 function p50_live_v4_known_false_positive(array $live): bool {
@@ -47,6 +48,48 @@ function p50_live_v4_tiktok_room_is_fresh(string $roomId,int $maxAge=P50_LIVE_V4
     return $timestamp!==null&&time()-$timestamp>=-600&&time()-$timestamp<=max(900,$maxAge);
 }
 
+/** Decode API JSON on the raw body: unescape() breaks nested \/ sequences in streamData. */
+function p50_live_v4_tiktok_api_json(string $raw): ?array {
+    if($raw==='')return null;
+    $json=json_decode($raw,true);
+    if(is_array($json))return $json;
+    if(defined('JSON_INVALID_UTF8_IGNORE')){
+        $json=json_decode($raw,true,512,JSON_INVALID_UTF8_IGNORE);
+        if(is_array($json))return $json;
+    }
+    return null;
+}
+
+function p50_live_v4_tiktok_json_room_id(?array $json): string {
+    if(!is_array($json))return '';
+    $data=is_array($json['data']??null)?$json['data']:$json;
+    foreach(['user','liveRoom','room'] as $bucket){
+        $node=is_array($data[$bucket]??null)?$data[$bucket]:null;
+        if(!$node)continue;
+        foreach(['roomId','room_id','id'] as $field){
+            $value=trim((string)($node[$field]??''));
+            if(preg_match('/^[1-9]\d{5,}$/',$value))return $value;
+        }
+    }
+    foreach(['roomId','room_id','webcastRoomId','liveRoomId'] as $field){
+        $value=trim((string)($data[$field]??$json[$field]??''));
+        if(preg_match('/^[1-9]\d{5,}$/',$value))return $value;
+    }
+    return '';
+}
+
+function p50_live_v4_tiktok_json_live_status(?array $json): ?int {
+    if(!is_array($json))return null;
+    $data=is_array($json['data']??null)?$json['data']:$json;
+    $liveRoom=is_array($data['liveRoom']??null)?$data['liveRoom']:(is_array($json['liveRoom']??null)?$json['liveRoom']:null);
+    if(is_array($liveRoom)&&isset($liveRoom['status'])&&is_numeric($liveRoom['status']))return (int)$liveRoom['status'];
+    foreach(['status','liveStatus','live_status'] as $field){
+        if(isset($data[$field])&&is_numeric($data[$field]))return (int)$data[$field];
+        if(isset($json[$field])&&is_numeric($json[$field]))return (int)$json[$field];
+    }
+    return null;
+}
+
 function p50_live_v4_viewers(string $body): ?int {
     foreach(['/"concurrentViewers"\s*:\s*"?(\d+)"?/i','/"user_count"\s*:\s*"?(\d+)"?/i','/"viewerCount"\s*:\s*"?(\d+)"?/i','/"liveRoomUserCount"\s*:\s*"?(\d+)"?/i','/"roomUserCount"\s*:\s*"?(\d+)"?/i'] as $pattern)if(preg_match($pattern,$body,$m))return (int)$m[1];
     return null;
@@ -62,15 +105,20 @@ function p50_live_v4_parse_youtube(array $source,array $responses): array {
     $base=(string)($r['finalUrl']??$source['url']);$meta=p50_page_metadata($html,$base);$videoId=p50_live_v4_video_id((string)($meta['canonical']?:$base),$html);
     if(in_array($videoId,P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS,true))return ['state'=>'replay','error'=>'known_false_positive','confidence'=>100,'responseMs'=>$maxMs,'replay'=>['url'=>'https://www.youtube.com/watch?v='.$videoId,'videoId'=>$videoId,'title'=>trim((string)($meta['title']??''))]];
     $ended=(bool)preg_match('/"(?:endTimestamp|actualEndTime)"\s*:\s*"[^"]+"/i',$html)||(bool)preg_match('/itemprop=["\']endDate["\']/i',$html);
-    $isLive=(bool)preg_match('/"isLiveNow"\s*:\s*true/i',$html)||(bool)preg_match('/itemprop=["\']isLiveBroadcast["\'][^>]+content=["\']True["\']/i',$html)||((bool)preg_match('/"isLiveContent"\s*:\s*true/i',$html)&&(bool)preg_match('/"playabilityStatus"\s*:\s*\{[^}]*"status"\s*:\s*"OK"/is',$html));
+    // Strict : uniquement isLiveNow / badge live. isLiveContent+OK = VOD fréquent, ne publie plus.
+    $isLiveNow=(bool)preg_match('/"isLiveNow"\s*:\s*true/i',$html)||(bool)preg_match('/itemprop=["\']isLiveBroadcast["\'][^>]+content=["\']True["\']/i',$html);
+    $vodSignal=(bool)preg_match('/"isLiveContent"\s*:\s*true/i',$html)&&(bool)preg_match('/"playabilityStatus"\s*:\s*\{[^}]*"status"\s*:\s*"OK"/is',$html);
     $url=$videoId!==''?'https://www.youtube.com/watch?v='.$videoId:(string)($meta['canonical']?:$base);
     $title=trim((string)($meta['title']??''));$title=preg_replace('/\s*-\s*YouTube\s*$/iu','',$title)??$title;
-    if($ended&&!$isLive)return ['state'=>'replay','error'=>'youtube_replay','confidence'=>99,'responseMs'=>$maxMs,'replay'=>['url'=>$url,'videoId'=>$videoId,'title'=>$title]];
-    if(!$isLive)return ['state'=>'offline','error'=>'youtube_not_live','confidence'=>96,'responseMs'=>$maxMs];
+    if($ended)return ['state'=>'replay','error'=>'youtube_replay','confidence'=>99,'responseMs'=>$maxMs,'replay'=>['url'=>$url,'videoId'=>$videoId,'title'=>$title]];
+    if(!$isLiveNow){
+        if($vodSignal)return ['state'=>'replay','error'=>'youtube_vod_not_live_now','confidence'=>94,'responseMs'=>$maxMs,'replay'=>['url'=>$url,'videoId'=>$videoId,'title'=>$title]];
+        return ['state'=>'offline','error'=>'youtube_not_live','confidence'=>96,'responseMs'=>$maxMs];
+    }
     if($title==='')$title='Direct YouTube en cours';$started=null;
     if(preg_match('/"startTimestamp"\s*:\s*"([^"]+)"/',$html,$m)){try{$started=(new DateTimeImmutable(p50_live_v4_unescape($m[1])))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');}catch(Throwable){}}
     $thumb=(string)($meta['image']??'');if($thumb===''&&$videoId!=='')$thumb='https://i.ytimg.com/vi/'.rawurlencode($videoId).'/hqdefault.jpg';
-    return ['state'=>'live','confidence'=>99,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'YouTube','title'=>$title,'url'=>$url,'thumbnail'=>$thumb,'confidence'=>99,'startedAt'=>$started,'viewers'=>p50_live_v4_viewers($html),'metadata'=>['channelUrl'=>(string)$source['url'],'videoId'=>$videoId,'probe'=>'channel_live']]];
+    return ['state'=>'live','confidence'=>99,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'YouTube','title'=>$title,'url'=>$url,'thumbnail'=>$thumb,'confidence'=>99,'startedAt'=>$started,'viewers'=>p50_live_v4_viewers($html),'metadata'=>['channelUrl'=>(string)$source['url'],'videoId'=>$videoId,'probe'=>'channel_live','liveSignal'=>'isLiveNow']]];
 }
 
 function p50_live_v4_tiktok_owner_mismatch(string $body,string $handle): bool {
@@ -100,43 +148,59 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
     foreach($responses as $label=>$r){
         $maxMs=max($maxMs,(int)($r['timeMs']??0));
         if(empty($r['ok'])){$errors[]=$label.':'.((string)($r['error']??'')?:('http_'.($r['status']??0)));continue;}
-        $body=p50_live_v4_unescape((string)($r['body']??''));
+        $raw=(string)($r['body']??'');
+        $isApi=in_array($label,['api','api_basic'],true);
+        // API: garder le JSON brut (unescape casse les \/ imbriqués de streamData).
+        $body=$isApi?$raw:p50_live_v4_unescape($raw);
         if($body===''||p50_live_v4_block_page($body)){$blocked++;continue;}
-        $bodies[$label]=$body;
+        $bodies[$label]=$isApi?p50_live_v4_unescape($raw):$body;
         if(p50_live_v4_tiktok_owner_mismatch($body,(string)$identity['handle']))continue;
-        $isApi=in_array($label,['api','api_basic'],true);$isLiveProbe=in_array($label,['api','api_basic','live','mobile_live','embed'],true);$json=$isApi?json_decode($body,true):null;
-        $roomId=p50_live_v4_tiktok_room_id($body);$apiStatusActive=$isApi&&$json!==null&&(bool)preg_match('/"status"\s*:\s*2(?:\D|$)/i',$body);
-        $apiLiveStructure=$isApi&&$json!==null&&$roomId!==''&&(bool)preg_match('/"LiveRoom"\s*:|"webcastRoomId"\s*:|"liveRoomId"\s*:/i',$body);
+        $isLiveProbe=in_array($label,['api','api_basic','live','mobile_live','embed'],true);
+        $json=$isApi?p50_live_v4_tiktok_api_json($raw):null;
+        $liveStatus=$isApi?p50_live_v4_tiktok_json_live_status($json):null;
+        $roomId=p50_live_v4_tiktok_json_room_id($json);
+        if($roomId==='')$roomId=p50_live_v4_tiktok_room_id($body);
+        $apiStatusActive=$isApi&&($liveStatus===2||($liveStatus===null&&(bool)preg_match('/"status"\s*:\s*2(?:\D|$)/i',$body)));
+        $apiLiveStructure=$isApi&&$roomId!==''&&($json!==null||(bool)preg_match('/"liveRoom"\s*:|"LiveRoom"\s*:|"webcastRoomId"\s*:|"liveRoomId"\s*:/i',$body));
         $strictApiActive=$apiStatusActive&&$roomId!==''&&p50_live_v4_tiktok_owner_match($body,(string)$identity['handle']);
-        $freshApiActive=$isApi&&$json!==null&&$roomId!==''&&p50_live_v4_tiktok_room_is_fresh($roomId)&&($apiStatusActive||$apiLiveStructure);
+        // freshApi = signal faible (candidat) ; seule strictApi publie.
+        $freshApiActive=$isApi&&!$strictApiActive&&$roomId!==''&&p50_live_v4_tiktok_room_is_fresh($roomId)&&($apiStatusActive||($liveStatus===null&&$apiLiveStructure));
         $currentApiActive=$strictApiActive||$freshApiActive;
-        $explicitEnded=$isLiveProbe&&!$currentApiActive&&(p50_live_v4_tiktok_ended_signal($body)||($isApi&&$json!==null&&(bool)preg_match('/"status"\s*:\s*4(?:\D|$)/i',$body)));
+        // liveRoom.status=4 = terminé : prioritaire sur un status utilisateur résiduel.
+        if($isApi&&$liveStatus===4){$endedLabels[]=$label;continue;}
+        $explicitEnded=$isLiveProbe&&!$strictApiActive&&(p50_live_v4_tiktok_ended_signal($body)||($isApi&&(bool)preg_match('/"status"\s*:\s*4(?:\D|$)/i',$body)));
         if($explicitEnded){$endedLabels[]=$label;continue;}
-        $active=$currentApiActive
-            ||(bool)preg_match('/"(?:liveStatus|live_status)"\s*:\s*2(?:\D|$)|"(?:isLive|is_live)"\s*:\s*true/i',$body)
-            ||$apiStatusActive
-            ||($roomId!==''&&(bool)preg_match('/"LiveRoom"\s*:|"webcastRoomId"\s*:|"liveRoomId"\s*:/i',$body));
+        // HTML : exige un signal live explicite — un blob LiveRoom résiduel ne suffit plus.
+        $htmlLiveExplicit=(bool)preg_match('/"(?:liveStatus|live_status)"\s*:\s*2(?:\D|$)|"(?:isLive|is_live)"\s*:\s*true/i',$body);
+        $active=$currentApiActive||$htmlLiveExplicit||$apiStatusActive;
         if($roomId!==''&&$active){
             $family=p50_live_v4_tiktok_probe_family((string)$label);$roomStartedAt=p50_live_v4_tiktok_room_timestamp($roomId);
+            if($roomStartedAt===null&&is_array($json)){
+                $data=is_array($json['data']??null)?$json['data']:$json;
+                $start=(int)(($data['liveRoom']['startTime']??0)?:($data['startTime']??0));
+                if($start>1577836800&&$start<=time()+600)$roomStartedAt=$start;
+            }
             $positive[$label]=['roomId'=>$roomId,'family'=>$family,'strictApi'=>$strictApiActive,'freshApi'=>$freshApiActive,'apiLiveStructure'=>$apiLiveStructure,'roomStartedAt'=>$roomStartedAt,'body'=>$body];
             $roomEvidence[$roomId]=$roomEvidence[$roomId]??['api'=>[],'html'=>[],'strictApi'=>[],'freshApi'=>[],'apiLiveStructure'=>[],'roomStartedAt'=>$roomStartedAt];$roomEvidence[$roomId][$family][]=(string)$label;
             if($strictApiActive)$roomEvidence[$roomId]['strictApi'][]=(string)$label;
             if($freshApiActive)$roomEvidence[$roomId]['freshApi'][]=(string)$label;
             if($apiLiveStructure)$roomEvidence[$roomId]['apiLiveStructure'][]=(string)$label;
+            if($roomStartedAt&&empty($roomEvidence[$roomId]['roomStartedAt']))$roomEvidence[$roomId]['roomStartedAt']=$roomStartedAt;
         }
     }
     if($positive){
         $roomId='';$confirmed=false;$strictApi=false;$freshApi=false;$crossFamily=false;$bestRank=-1;$bestTotal=-1;
         foreach($roomEvidence as $candidate=>$families){
             $apiCount=count($families['api']);$htmlCount=count($families['html']);$strictCount=count($families['strictApi']);$freshCount=count($families['freshApi']);$cross=$apiCount>0&&$htmlCount>0;
-            // Fresh API, croisement API+HTML, ou 2 pages HTML sur la même salle fraîche.
             $htmlFresh=$htmlCount>=2&&p50_live_v4_tiktok_room_is_fresh((string)$candidate);
-            $candidateConfirmed=$strictCount>0||$cross||$freshCount>0||$htmlFresh;$rank=$strictCount>0?3:($cross?2:(($freshCount>0||$htmlFresh)?1:0));$total=$apiCount+$htmlCount;
+            // Publication stricte : uniquement API status=2 + roomId + propriétaire.
+            // cross / freshApi / htmlFresh → probable (anti faux directs à l’échelle 140+ FI).
+            $candidateConfirmed=$strictCount>0;$rank=$strictCount>0?3:($cross?2:(($freshCount>0||$htmlFresh)?1:0));$total=$apiCount+$htmlCount;
             if($rank>$bestRank||($rank===$bestRank&&$candidateConfirmed&&!$confirmed)||($rank===$bestRank&&$candidateConfirmed===$confirmed&&$total>$bestTotal)){$roomId=(string)$candidate;$strictApi=$strictCount>0;$freshApi=$freshCount>0;$crossFamily=$cross;$confirmed=$candidateConfirmed;$bestRank=$rank;$bestTotal=$total;}
         }
         // Page « LIVE terminé » gagne sauf preuve API stricte propriétaire.
         if($endedLabels&&!$strictApi)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
-        $state=$confirmed?'live':'probable';$confidence=$strictApi?99:($crossFamily?98:($freshApi?76:72));
+        $state=$confirmed?'live':'probable';$confidence=$strictApi?99:($crossFamily?78:($freshApi?74:70));
         $best='';$bestUrl=$identity['liveUrl'];foreach(['live','mobile_live','embed','profile','api','api_basic'] as $label)if(!empty($bodies[$label])){$best=$bodies[$label];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}
         $meta=p50_page_metadata($best,$bestUrl);$title=trim((string)($meta['title']??''));$title=preg_replace('/\s*\|\s*TikTok\s*$/iu','',$title)??$title;
         if($title===''||preg_match('/^(TikTok|Make Your Day)$/iu',$title))$title=trim((string)($source['public_name']??''));
