@@ -1,5 +1,5 @@
 name: Metrics Ranking Experimental
-# Relance P1 et classement 2H après correction de fenêtre — 2026-08-10T18:12+02:00.
+# Deuxième point de mesure P1 pour MR-V1.2 2H — 2026-08-10T19:02+02:00.
 
 on:
   schedule:
