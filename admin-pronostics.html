@@ -507,6 +507,8 @@ document.getElementById('coverImageUrl').addEventListener('input',()=>{
 document.getElementById('saveBtn').onclick=async()=>{
   const msg=document.getElementById('saveMsg');
   msg.classList.remove('err');
+  msg.textContent='Clic saveBtn…';
+  msg.style.display='block';
   try{
     const options=parseOptions(document.getElementById('options').value);
     const measureRaw=document.getElementById('measureAt').value.trim();
