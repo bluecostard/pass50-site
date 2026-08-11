@@ -156,7 +156,9 @@ function p50_mrph_stability(PDO $pdo,string $period='2H',int $sampleSize=3,?Date
     $gates=[
         ['key'=>'minimum_reports','status'=>$enoughReports?'pass':'wait','message'=>'Nombre minimal de recalculs distincts récents.','value'=>count($rows)],
         ['key'=>'distinct_experimental_runs','status'=>$enoughRuns?'pass':'wait','message'=>'Au moins trois recalculs MR-V1.0 distincts.','value'=>count($runUuids)],
-        ['key'=>'public_baseline_stable','status'=>$publicStable?'pass':'wait','message'=>'Révision et empreinte publiques stables pendant l’observation.','value'=>['revisions'=>array_keys($revisions),'fingerprints'=>count($publicFingerprints)]],
+        // Warn only: after each successful public write the revision changes, so requiring
+        // a stable baseline across recent sims permanently blocks automatic publication.
+        ['key'=>'public_baseline_stable','status'=>$publicStable?'pass':'warn','message'=>'Révision/empreinte publiques observées (informatif en régime continu).','value'=>['revisions'=>array_keys($revisions),'fingerprints'=>count($publicFingerprints)]],
         ['key'=>'no_blocked_reports','status'=>$blockedReports===0?'pass':'block','message'=>'Aucun rapport bloqué dans l’échantillon distinct.','value'=>$blockedReports],
         ['key'=>'latest_report_fresh','status'=>$freshStatus,'message'=>'Dernier rapport âgé de moins de six heures.','value'=>$latestAgeHours],
         ['key'=>'read_only_history','status'=>$writeAnomalies===0?'pass':'block','message'=>'Aucune anomalie d’écriture publique dans l’historique.','value'=>$writeAnomalies],

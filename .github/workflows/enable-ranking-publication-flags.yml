@@ -176,6 +176,10 @@ jobs:
           case "$APPLY_URL" in
             https://www.pass50.store/*) APPLY_URL="https://pass50.store/${APPLY_URL#https://www.pass50.store/}" ;;
           esac
+          # Signature HMAC : ne jamais suivre de redirect. Forcer l’hôte canonique.
+          APPLY_PATH="${APPLY_URL#*://*/}"
+          APPLY_URL="https://pass50.store/${APPLY_PATH}"
+          echo "probe URL=$APPLY_URL"
           # Attendre propagation FS
           for i in 1 2 3 4 5 6; do
             dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-enable-probe-$i"

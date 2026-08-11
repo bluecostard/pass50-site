@@ -38,6 +38,9 @@ class MetricsRankingPublicationHistoryV1Tests(unittest.TestCase):
     def test_empty_history_is_collecting_not_failed(self):
         self.assertIn("$freshStatus=$latestAgeHours===null?'wait'", CORE)
         self.assertIn("$state=$blocked?'blocked':($waiting?'collecting'", CORE)
+        # Continuously publishing updates the public revision — baseline drift must not block auto.
+        self.assertIn("'key'=>'public_baseline_stable','status'=>$publicStable?'pass':'warn'", CORE)
+        self.assertNotIn("'key'=>'public_baseline_stable','status'=>$publicStable?'pass':'wait'", CORE)
 
     def test_cron_stores_then_evaluates_selected_period(self):
         self.assertIn("require __DIR__.'/metrics-ranking-publication-history-core.php'", CRON)
