@@ -4,10 +4,10 @@ name: Metrics Ranking Publication Apply
 # Ce workflow ne possède volontairement aucun cron autonome.
 # Il est déclenché :
 # - manuellement pour un passage public contrôlé ;
-# - en secours opérateur (la publication auto passe désormais par le cron apply
-#   appelé directement depuis metrics-ranking-publication-simulation.yml) ;
-# - sur modification explicite de ce workflow pour permettre un déclenchement opérateur traçable.
-# - relance opérateur après assouplissement des barrières de mouvement PUBSIM-V1.1.
+# - en secours opérateur / push de ce fichier ;
+# - la publication auto passe par le cron apply appelé depuis
+#   metrics-ranking-publication-simulation.yml, avec filet
+#   metrics-ranking-publication-watchdog.yml si rien n’a été écrit.
 on:
   workflow_dispatch:
   push:

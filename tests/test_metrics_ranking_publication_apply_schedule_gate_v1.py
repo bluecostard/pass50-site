@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APPLY = (ROOT / ".github" / "workflows" / "metrics-ranking-publication-apply.yml").read_text(encoding="utf-8")
 SIMULATION = (ROOT / ".github" / "workflows" / "metrics-ranking-publication-simulation.yml").read_text(encoding="utf-8")
+WATCHDOG = (ROOT / ".github" / "workflows" / "metrics-ranking-publication-watchdog.yml").read_text(encoding="utf-8")
 ENDPOINT = (ROOT / "api" / "metrics-ranking-publication-apply-cron.php").read_text(encoding="utf-8")
 
 
@@ -14,10 +15,23 @@ class MetricsRankingPublicationApplyScheduleGateV1Tests(unittest.TestCase):
         self.assertNotIn("cron:", APPLY)
         self.assertIn("aucun cron autonome", APPLY)
 
-    def test_simulation_is_the_only_automatic_dispatch_gate(self):
+    def test_simulation_publishes_via_direct_apply_cron(self):
         self.assertIn("automatic_eligible == 'true'", SIMULATION)
         self.assertIn("sim_status != 'blocked'", SIMULATION)
-        self.assertIn("metrics-ranking-publication-apply.yml/dispatches", SIMULATION)
+        self.assertIn("metrics-ranking-publication-apply-cron.php", SIMULATION)
+        self.assertIn("publication-apply-auto.json", SIMULATION)
+        self.assertNotIn("metrics-ranking-publication-apply.yml/dispatches", SIMULATION)
+        self.assertIn("Publication automatique refusée", SIMULATION)
+        self.assertIn("automatic_disabled", SIMULATION)
+
+    def test_watchdog_owns_stale_recovery_schedule(self):
+        self.assertIn("schedule:", WATCHDOG)
+        self.assertIn("cron:", WATCHDOG)
+        self.assertIn("metrics-ranking-publication-apply-cron.php", WATCHDOG)
+        self.assertIn("action:\"probe\"", WATCHDOG)
+        self.assertIn("action:\"preview\"", WATCHDOG)
+        self.assertIn("MAX_STALE_HOURS", WATCHDOG)
+        self.assertNotIn("metrics-ranking-publication-apply.yml/dispatches", WATCHDOG)
 
     def test_apply_transport_is_observable_and_long_enough(self):
         self.assertIn("--max-time 180", APPLY)

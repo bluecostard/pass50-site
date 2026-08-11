@@ -2,7 +2,7 @@ name: Metrics Ranking Publication Simulation
 
 on:
   schedule:
-    - cron: '12 1-23/2 * * *'
+    - cron: '15 */2 * * *'
   workflow_dispatch:
   push:
     branches:
@@ -245,8 +245,17 @@ jobs:
           scores="$(jq -r '.scoresWritten // 0' "$response_file")"
 
           if [ "$skipped" = "true" ]; then
+            if [ "$reason" = "automatic_disabled" ]; then
+              echo "::error::Flags publication auto désactivés sur le serveur. Relancer Enable Ranking Publication Flags."
+              exit 1
+            fi
             echo "::warning::Publication automatique non exécutée : $reason"
           else
+            if [ "$writes" = "0" ]; then
+              echo "::error::Publication signalée OK mais 0 écriture publique."
+              cat "$response_file" || true
+              exit 1
+            fi
             echo "::notice::Classement public mis à jour · révision $revision · $writes écriture(s) · $scores scores"
           fi
 
@@ -262,6 +271,16 @@ jobs:
 
           printf 'apply_skipped=%s\n' "$skipped" >> "$GITHUB_OUTPUT"
           printf 'apply_revision=%s\n' "$revision" >> "$GITHUB_OUTPUT"
+          printf 'apply_writes=%s\n' "$writes" >> "$GITHUB_OUTPUT"
+
+      - name: Archive automatic apply result
+        if: ${{ always() && steps.auto_apply.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-apply-auto-${{ github.run_id }}-${{ github.run_attempt }}
+          path: publication-apply-auto.json
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Publish sanitized simulation status
         if: ${{ always() }}

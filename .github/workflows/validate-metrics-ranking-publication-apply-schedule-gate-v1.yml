@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/metrics-ranking-publication-apply.yml'
       - '.github/workflows/metrics-ranking-publication-simulation.yml'
+      - '.github/workflows/metrics-ranking-publication-watchdog.yml'
       - 'api/metrics-ranking-publication-apply-cron.php'
       - 'tests/test_metrics_ranking_publication_apply_schedule_gate_v1.py'
       - '.github/workflows/validate-metrics-ranking-publication-apply-schedule-gate-v1.yml'
@@ -14,6 +15,7 @@ on:
     paths:
       - '.github/workflows/metrics-ranking-publication-apply.yml'
       - '.github/workflows/metrics-ranking-publication-simulation.yml'
+      - '.github/workflows/metrics-ranking-publication-watchdog.yml'
       - 'api/metrics-ranking-publication-apply-cron.php'
       - 'tests/test_metrics_ranking_publication_apply_schedule_gate_v1.py'
       - '.github/workflows/validate-metrics-ranking-publication-apply-schedule-gate-v1.yml'

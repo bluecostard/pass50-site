@@ -1,0 +1,251 @@
+name: Metrics Ranking Publication Watchdog
+
+# Garde-fou anti-silence : si le classement public n’a pas été écrit depuis trop longtemps
+# alors que les flags sont actifs et qu’un candidat éligible existe, on republie.
+# Échoue bruyamment si les flags sont éteints ou si la recovery échoue.
+
+on:
+  schedule:
+    - cron: '40 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: pass50-metrics-ranking-publication-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+      MAX_STALE_HOURS: '2.5'
+    steps:
+      - name: Probe flags, freshness, recover if stale
+        id: watchdog
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Secrets PASS50 metrics cron manquants."
+            exit 1
+          fi
+
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              APPLY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"
+              HISTORY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-history-cron-v1.php"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
+              exit 1
+              ;;
+          esac
+          case "$APPLY_URL" in
+            http://*) APPLY_URL="https://${APPLY_URL#http://}" ;;
+          esac
+          case "$APPLY_URL" in
+            https://www.pass50.store/*) APPLY_URL="https://pass50.store/${APPLY_URL#https://www.pass50.store/}" ;;
+          esac
+          case "$HISTORY_URL" in
+            http://*) HISTORY_URL="https://${HISTORY_URL#http://}" ;;
+          esac
+          case "$HISTORY_URL" in
+            https://www.pass50.store/*) HISTORY_URL="https://pass50.store/${HISTORY_URL#https://www.pass50.store/}" ;;
+          esac
+
+          signed_post() {
+            local url="$1"
+            local body="$2"
+            local out="$3"
+            local timestamp signature code
+            timestamp="$(date +%s)"
+            signature="$(
+              printf '%s\n%s' "$timestamp" "$body" |
+                openssl dgst -sha256 -hmac "$CRON_SECRET" -r |
+                awk '{print $1}'
+            )"
+            set +e
+            code="$(
+              curl --silent --show-error --max-time 180 \
+                --output "$out" \
+                --write-out '%{http_code}' \
+                -H "Content-Type: application/json" \
+                -H "X-P50-Timestamp: $timestamp" \
+                -H "X-P50-Signature: $signature" \
+                --data "$body" \
+                "$url"
+            )"
+            local st=$?
+            set -e
+            echo "$code"
+            return "$st"
+          }
+
+          dispatch_base="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-watchdog"
+
+          # 1) Flags
+          probe_body="$(jq -nc --arg dispatchId "${dispatch_base}-probe" '{action:"probe",dispatchId:$dispatchId}')"
+          probe_code="$(signed_post "$APPLY_URL" "$probe_body" watchdog-probe.json || true)"
+          if [ "$probe_code" != "200" ]; then
+            echo "::error::Probe flags HTTP $probe_code"
+            cat watchdog-probe.json || true
+            exit 1
+          fi
+          jq -e '.ok == true' watchdog-probe.json >/dev/null
+          pub="$(jq -r '.publicationEnabled // false' watchdog-probe.json)"
+          auto="$(jq -r '.automaticPublicationEnabled // false' watchdog-probe.json)"
+          if [ "$pub" != "true" ] || [ "$auto" != "true" ]; then
+            echo "::error::Flags publication éteints (publicationEnabled=$pub, automaticPublicationEnabled=$auto). Relancer Enable Ranking Publication Flags."
+            exit 1
+          fi
+
+          # 2) Dernière écriture publique
+          hist_body="$(jq -nc --arg dispatchId "${dispatch_base}-history" '{action:"history",dispatchId:$dispatchId}')"
+          hist_code="$(signed_post "$HISTORY_URL" "$hist_body" watchdog-history.json || true)"
+          if [ "$hist_code" != "200" ]; then
+            echo "::error::Historique apply HTTP $hist_code"
+            cat watchdog-history.json || true
+            exit 1
+          fi
+          jq -e '.ok == true' watchdog-history.json >/dev/null
+
+          latest_at="$(jq -r '.latestApplied.generatedAt // empty' watchdog-history.json)"
+          latest_rev="$(jq -r '.latestApplied.publicRevisionAfter // 0' watchdog-history.json)"
+
+          if [ -z "$latest_at" ] || [ "$latest_at" = "null" ]; then
+            echo "::error::Aucune publication apply réussie trouvée dans l’historique."
+            exit 1
+          fi
+
+          age_hours="$(python3 - <<PY
+from datetime import datetime, timezone
+raw = """$latest_at""".strip().replace(" ", "T")
+if raw.endswith("Z"):
+    raw = raw[:-1] + "+00:00"
+# MySQL UTC "YYYY-MM-DD HH:MM:SS" → assume UTC
+if "T" not in raw and len(raw) >= 19:
+    raw = raw[:19].replace(" ", "T") + "+00:00"
+elif "+" not in raw[10:] and "Z" not in raw:
+    raw = raw[:19] + "+00:00"
+dt = datetime.fromisoformat(raw)
+if dt.tzinfo is None:
+    dt = dt.replace(tzinfo=timezone.utc)
+age = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds() / 3600.0
+print(f"{age:.3f}")
+PY
+)"
+          echo "Dernière écriture : $latest_at (rév. $latest_rev) · âge ${age_hours}h"
+
+          # 3) Preview candidat
+          preview_body="$(jq -nc --arg dispatchId "${dispatch_base}-preview" '{action:"preview",dispatchId:$dispatchId}')"
+          preview_code="$(signed_post "$APPLY_URL" "$preview_body" watchdog-preview.json || true)"
+          if [ "$preview_code" != "200" ]; then
+            echo "::error::Preview HTTP $preview_code"
+            cat watchdog-preview.json || true
+            exit 1
+          fi
+          jq -e '.ok == true' watchdog-preview.json >/dev/null
+          eligible="$(jq -r '.publicationEligible // .automaticPublicationEligible // false' watchdog-preview.json)"
+          mutations="$(jq -r '.summary.mutations // .totalMutations // 0' watchdog-preview.json)"
+
+          {
+            printf '### Watchdog publication classement\n'
+            printf -- '- flags : publication=`%s` automatic=`%s`\n' "$pub" "$auto"
+            printf -- '- dernière écriture : `%s` (rév. `%s`)\n' "$latest_at" "$latest_rev"
+            printf -- '- âge : `%sh` (seuil `%s`)\n' "$age_hours" "$MAX_STALE_HOURS"
+            printf -- '- preview éligible : `%s` · mutations : `%s`\n' "$eligible" "$mutations"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          stale="$(python3 - <<PY
+print('true' if float("$age_hours") > float("$MAX_STALE_HOURS") else 'false')
+PY
+)"
+
+          if [ "$stale" != "true" ]; then
+            echo "::notice::Classement frais (${age_hours}h < ${MAX_STALE_HOURS}h). Rien à faire."
+            printf 'stale=false\nrecovered=false\nage_hours=%s\n' "$age_hours" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "::warning::Classement stale (${age_hours}h). Tentative de recovery."
+
+          if [ "$eligible" != "true" ]; then
+            echo "::error::Classement stale et candidat non éligible (mutations=$mutations). Intervention requise."
+            exit 1
+          fi
+
+          apply_body="$(jq -nc --arg dispatchId "${dispatch_base}-apply" '{action:"apply",dispatchId:$dispatchId,confirm:true}')"
+          apply_code="$(signed_post "$APPLY_URL" "$apply_body" watchdog-apply.json || true)"
+          if [ "$apply_code" != "200" ]; then
+            echo "::error::Recovery apply HTTP $apply_code"
+            cat watchdog-apply.json || true
+            exit 1
+          fi
+          jq -e '.ok == true' watchdog-apply.json >/dev/null
+          skipped="$(jq -r '.skipped // false' watchdog-apply.json)"
+          reason="$(jq -r '.reason // .error // "—"' watchdog-apply.json)"
+          writes="$(jq -r '.publicStateWrites // 0' watchdog-apply.json)"
+          revision="$(jq -r '.publicStateRevision // 0' watchdog-apply.json)"
+
+          if [ "$skipped" = "true" ] || [ "${reason}" = "automatic_disabled" ]; then
+            echo "::error::Recovery skippée : $reason"
+            exit 1
+          fi
+          if [ "$writes" = "0" ]; then
+            echo "::error::Recovery sans écriture publique (rév=$revision)."
+            cat watchdog-apply.json || true
+            exit 1
+          fi
+
+          echo "::notice::Recovery OK · révision $revision · writes=$writes"
+          {
+            printf -- '- recovery : `ok` · révision `%s` · writes `%s`\n' "$revision" "$writes"
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf 'stale=true\nrecovered=true\nage_hours=%s\nrevision=%s\n' "$age_hours" "$revision" >> "$GITHUB_OUTPUT"
+
+      - name: Archive watchdog evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-watchdog-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            watchdog-probe.json
+            watchdog-history.json
+            watchdog-preview.json
+            watchdog-apply.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Publish commit status
+        if: ${{ always() }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STEP_OUTCOME: ${{ steps.watchdog.outcome }}
+        run: |
+          set -euo pipefail
+          state="success"
+          description="watchdog classement OK"
+          if [ "$STEP_OUTCOME" != "success" ]; then
+            state="failure"
+            description="watchdog classement en échec · écriture publique à vérifier"
+          fi
+          payload="$(jq -nc \
+            --arg state "$state" \
+            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg description "$description" \
+            --arg context "pass50/publication-watchdog" \
+            '{state:$state,target_url:$target_url,description:$description,context:$context}')"
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
