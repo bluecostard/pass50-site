@@ -67,7 +67,13 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <div id="dailyList" class="muted" style="margin-top:12px">Aucun batch chargé.</div>
   </div>
 
-  <div class="card">
+  <details id="freeForm" open>
+  <summary style="font-weight:800;font-size:15px;padding:14px 0;cursor:pointer;list-style:none">
+    ▸ Formulaire libre <span style="font-weight:600;font-size:12px;color:var(--muted)">(créer ou modifier)</span>
+  </summary>
+  <div class="card" style="margin-top:8px">
+    <input type="hidden" id="editId">
+    <div id="editBanner" hidden style="background:rgba(183,255,0,.1);border:1px solid rgba(183,255,0,.3);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;color:#b7ff00;margin-bottom:12px"></div>
     <h2 style="margin-top:0">Formulaire libre</h2>
     <label>Thème</label>
     <select id="theme">
@@ -130,7 +136,9 @@ n|Non|2.20</textarea>
     </div>
     <button type="button" id="saveBtn">Enregistrer / publier</button>
     <div class="toast" id="saveMsg"></div>
+    <button type="button" class="ghost" style="margin-top:8px;font-size:12px;opacity:.6" onclick="document.getElementById('editId').value='';document.getElementById('editBanner').hidden=true;this.closest('form,div,details').querySelectorAll('input,textarea,select').forEach(el=>{if(el.id!=='status'&&el.id!=='voteHours'&&el.id!=='metricType'&&el.id!=='theme')el.value=''});document.getElementById('coverPreview').hidden=true">✕ Annuler modification</button>
   </div>
+  </details>
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
@@ -194,6 +202,7 @@ function qCard(item, compact){
   const opts=(item.options||[]).map(o=>`${o.key} ${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
   const canResolve=item.status==='open'||item.status==='locked';
   const cover=item.coverPhoto?`<img src="${esc(item.coverPhoto)}" alt="" class="batch-cover" loading="lazy" style="max-width:${compact?'160px':'320px'}">`:'';
+  const itemJson=esc(JSON.stringify(item));
   return `<div class="q" data-id="${esc(item.id)}">
     ${cover}
     <strong>${esc(item.title||'—')}</strong>
@@ -204,9 +213,49 @@ function qCard(item, compact){
     ${!item.coverPhoto?'<div class="meta" style="color:#f88">⚠ Image manquante</div>':''}
     <div class="actions">
       <button type="button" class="ghost" data-copy="${esc(item.id)}">Copier ID</button>
+      <button type="button" class="ghost" style="color:#b7ff00;border-color:rgba(183,255,0,.35)" data-edit="${itemJson}">✏ Modifier</button>
       ${canResolve?`<button type="button" data-fill="${esc(item.id)}" data-keys="${(item.options||[]).map(o=>esc(o.key)).join(',')}">Résoudre</button>`:''}
     </div>
   </div>`;
+}
+function prefillForm(item){
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v??''};
+  set('editId',item.id);
+  set('title',item.title||'');
+  set('context',item.context||'');
+  set('coverImageUrl',item.coverPhoto||'');
+  set('profileId',item.profileId||'');
+  set('subjectKey',item.subjectKey||'');
+  set('metricType',item.metricType||'manual');
+  set('status',item.status||'draft');
+  set('stake',item.pointsCorrect||item.stake||100);
+  // Options: rebuild key|label|cote format
+  const optsStr=(item.options||[]).map(o=>`${o.key}|${o.label}|${Number(o.odd||2).toFixed(2)}`).join('\n');
+  set('options',optsStr);
+  // voteDurationHours: derive from opens/closes
+  if(item.opensAt&&item.closesAt){
+    const diff=Math.round((new Date(item.closesAt)-new Date(item.opensAt))/3600000);
+    const sel=document.getElementById('voteHours');
+    if(sel){const opt=[...sel.options].find(o=>Number(o.value)===diff);if(opt)sel.value=opt.value;}
+  }
+  // measureAt: date only
+  if(item.measureAt){
+    set('measureAt',item.measureAt.slice(0,10));
+  }
+  // theme
+  const sel=document.getElementById('theme');
+  if(sel&&item.theme)sel.value=item.theme;
+  // cover preview
+  const img=document.getElementById('coverPreview');
+  if(img){if(item.coverPhoto){img.src=item.coverPhoto;img.hidden=false;}else{img.hidden=true;}}
+  // scroll to form + show edit banner
+  const form=document.getElementById('freeForm');
+  if(form){
+    form.open=true;
+    const banner=document.getElementById('editBanner');
+    if(banner){banner.textContent=`Mode édition · ID ${item.id.slice(0,8)}…`;banner.hidden=false;}
+    form.scrollIntoView({behavior:'smooth',block:'start'});
+  }
 }
 function renderList(items){
   const box=document.getElementById('qList');
@@ -335,6 +384,14 @@ function bindListClicks(root){
       const keys=(fill.getAttribute('data-keys')||'').split(',').filter(Boolean);
       if(keys[0])document.getElementById('winKey').value=keys[0];
       document.getElementById('resolveId').scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+    const edit=e.target.closest('[data-edit]');
+    if(edit){
+      try{
+        const item=JSON.parse(edit.getAttribute('data-edit').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#039;/g,"'"));
+        prefillForm(item);
+      }catch(ex){console.error('prefill',ex);}
     }
   });
 }
@@ -433,7 +490,9 @@ document.getElementById('saveBtn').onclick=async()=>{
     const options=parseOptions(document.getElementById('options').value);
     const measureRaw=document.getElementById('measureAt').value.trim();
     if(!measureRaw)throw new Error('Date de mesure requise');
+    const editId=document.getElementById('editId').value.trim();
     const payload={
+      ...(editId?{id:editId}:{}),
       theme:document.getElementById('theme').value,
       title:document.getElementById('title').value.trim(),
       context:document.getElementById('context').value.trim(),
@@ -448,7 +507,10 @@ document.getElementById('saveBtn').onclick=async()=>{
       pointsCorrect:Number(document.getElementById('stake').value)||100
     };
     const data=await api('prono-admin-save.php',payload);
-    msg.textContent='OK · id '+data.item.id;
+    msg.textContent=(editId?'Modifié':'Créé')+' · id '+data.item.id;
+    // reset edit mode
+    document.getElementById('editId').value='';
+    document.getElementById('editBanner').hidden=true;
     loadList();
   }catch(e){msg.classList.add('err');msg.textContent=e.message;}
 };
