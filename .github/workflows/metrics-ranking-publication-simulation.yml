@@ -41,6 +41,8 @@ jobs:
             echo "::error::Les deux secrets PASS50 metrics cron doivent être configurés."
             exit 1
           fi
+          CRON_URL="${CRON_URL//www.pass50.store/pass50.store}"
+          CRON_URL="${CRON_URL/#http:/https:}"
 
           case "$CRON_URL" in
             */metrics-cron.php)
@@ -185,6 +187,8 @@ jobs:
           CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
         run: |
           set -euo pipefail
+          CRON_URL="${CRON_URL//www.pass50.store/pass50.store}"
+          CRON_URL="${CRON_URL/#http:/https:}"
           case "$CRON_URL" in
             */metrics-cron.php)
               APPLY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"

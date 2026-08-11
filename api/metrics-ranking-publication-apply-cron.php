@@ -26,6 +26,8 @@ $keys=array_keys($input);sort($keys);
 
 if($action==='probe'){
     if($keys!==['action','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
+    $health=null;
+    try{$pdo=db();p50_mrp_apply_ensure_schema($pdo);$health=p50_mrp_apply_health($pdo);}catch(Throwable){$health=null;}
     json_response([
         'ok'=>true,'action'=>'probe','dispatchId'=>$dispatchId,
         'contract'=>P50_MRP_APPLY_VERSION,
@@ -33,6 +35,7 @@ if($action==='probe'){
         'automaticPublicationEnabled'=>$cfg['automaticPublicationEnabled'],
         'bootstrapAllowed'=>$cfg['bootstrapAllowed'],
         'forcedBootstrapEnabled'=>false,
+        'health'=>$health,
     ]);
 }
 

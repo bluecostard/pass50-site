@@ -41,6 +41,10 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("bootstrap_recovery_consumed", admin)
         self.assertIn("'bootstrap'=>false", admin)
         self.assertIn("forcedBootstrapEnabled", admin)
+        self.assertIn("p50_mrp_apply_health", admin)
+        self.assertIn("action=health", read("data-engine-ui.js"))
+        self.assertIn("?action=health", read("data-engine-ui.js"))
+        self.assertIn("'health'=>$health", cron)
 
     def test_one_time_bootstrap_workflow_is_retired(self):
         workflow = ROOT / ".github/workflows/metrics-ranking-publication-apply-bootstrap.yml"

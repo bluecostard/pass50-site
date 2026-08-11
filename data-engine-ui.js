@@ -76,9 +76,9 @@
     if(DE.rankingHealthLoading||(!force&&DE.rankingHealth))return;
     DE.rankingHealthLoading=true;
     try{
-      const preview=await apiFetch('metrics-ranking-publication-apply.php');
-      DE.rankingHealth=preview?.health||null;
-    }catch(error){DE.rankingHealth={status:'error',label:error.message||'Santé publication indisponible',ok:false};}
+      const payload=await apiFetch('metrics-ranking-publication-apply.php?action=health');
+      DE.rankingHealth=payload?.health||null;
+    }catch(error){DE.rankingHealth={status:'error',label:error.message||'Santé publication indisponible',ok:false,publicationEnabled:null,automaticPublicationEnabled:null};}
     finally{DE.rankingHealthLoading=false;if(ui.adminTab==='rankinglab')deDrawRankingLab($('#adminPane'));}
   }
   function deRankingHealthHtml(){
@@ -91,11 +91,14 @@
       :(!Number.isFinite(ageHours)?'—'
         :(ageHours<1?`${Math.max(1,Math.round(ageHours*60))} min`
           :`${ageHours.toFixed(1).replace(/\.0$/,'')} h`));
-    const flags=h.publicationEnabled&&h.automaticPublicationEnabled?'auto ON':'auto OFF';
-    const detail=last.generatedAt
-      ? `Dernière écriture il y a ${age} · rév. ${last.revision||'—'} · ${flags}`
-      : flags;
-    const tone=h.status==='fresh'?'ok':(h.status==='aging'?'warn':(h.status==='stale'||h.status==='flags_off'?'bad':'warn'));
+    const flagsKnown=typeof h.publicationEnabled==='boolean'&&typeof h.automaticPublicationEnabled==='boolean';
+    const flags=!flagsKnown?'flags ?':(h.publicationEnabled&&h.automaticPublicationEnabled?'auto ON':'auto OFF');
+    const detail=h.status==='error'
+      ? `${flags} · réessaie Actualiser`
+      :(last.generatedAt
+        ? `Dernière écriture il y a ${age} · rév. ${last.revision||'—'} · ${flags}`
+        : flags);
+    const tone=h.status==='fresh'?'ok':(h.status==='aging'?'warn':(h.status==='stale'||h.status==='flags_off'||h.status==='error'?'bad':'warn'));
     return `<div class="de-ranking-health ${tone}" role="status"><strong>${deEsc(h.label||'Publication')}</strong><span>${deEsc(detail)}</span></div>`;
   }
   async function deLoadRankingCalibration(force=false){

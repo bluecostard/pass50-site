@@ -10,6 +10,12 @@ require_role($user,'owner','admin');
 try{
     $pdo=db();
     if($_SERVER['REQUEST_METHOD']==='GET'){
+        $getAction=strtolower(trim((string)($_GET['action']??'')));
+        // Santé légère : ne dépend pas de la preview (lourde / parfois 500).
+        if($getAction==='health'){
+            p50_mrp_apply_ensure_schema($pdo);
+            json_response(['ok'=>true,'health'=>p50_mrp_apply_health($pdo)]);
+        }
         $preview=p50_mrp_apply_preview($pdo);
         $preview['forcedBootstrapEnabled']=false;
         json_response($preview);
@@ -22,6 +28,10 @@ try{
         'publicStateWrites'=>0,
     ],409);
     $action=trim((string)($in['action']??'preview'));
+    if($action==='health'){
+        p50_mrp_apply_ensure_schema($pdo);
+        json_response(['ok'=>true,'health'=>p50_mrp_apply_health($pdo)]);
+    }
     if($action==='preview'){
         $preview=p50_mrp_apply_preview($pdo);
         $preview['forcedBootstrapEnabled']=false;

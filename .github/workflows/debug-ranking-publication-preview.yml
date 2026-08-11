@@ -18,6 +18,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          CRON_URL="${CRON_URL//www.pass50.store/pass50.store}"
+          CRON_URL="${CRON_URL/#http:/https:}"
           APPLY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"
           RANK_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-cron.php"
           dispatch_id="${GITHUB_RUN_ID}-preview"

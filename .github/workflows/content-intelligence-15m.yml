@@ -44,6 +44,9 @@ jobs:
             echo '::error::Secrets cron métriques manquants.'
             exit 1
           fi
+          # www/http → 301 HTML ; les POST signés ne survivent pas à la redirection.
+          CRON_URL="${CRON_URL//www.pass50.store/pass50.store}"
+          CRON_URL="${CRON_URL/#http:/https:}"
           case "$CRON_URL" in
             */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/content-intelligence-cron.php" ;;
             *) echo '::error::PASS50_METRICS_CRON_URL invalide'; exit 1 ;;
