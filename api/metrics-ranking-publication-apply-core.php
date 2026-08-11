@@ -280,6 +280,7 @@ function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): 
         'publishedAt'=>gmdate('c'),
         'periods'=>array_keys($plans),
     ];
+    $state['publishedAt']=gmdate('c');
     return ['state'=>$state,'profilesUpdated'=>count($profilesUpdated),'scoresWritten'=>$scoresWritten];
 }
 

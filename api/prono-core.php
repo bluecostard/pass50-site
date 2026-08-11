@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const P50_PRONO_VERSION = 'PRONO-V1.4';
+const P50_PRONO_VERSION = 'PRONO-V1.5';
 const P50_PRONO_DAILY_COUNT = 12;
 const P50_PRONO_ODD_MARGIN = 0.08;
 const P50_PRONO_POINTS_CORRECT = 100; // mise nominale (gain = mise × cote)
@@ -17,6 +17,55 @@ const P50_PRONO_VOTE_HOURS = [6, 12, 24]; // fenêtre de vote courte → action
 const P50_PRONO_MAX_OPEN_PER_SUBJECT = 6; // plusieurs pronos / FI ou actu, plafond
 const P50_PRONO_ODD_MIN = 1.10;
 const P50_PRONO_ODD_MAX = 25.00;
+
+/** 3 blocs éditoriaux — questions + cotes (pas un people-picker). */
+const P50_PRONO_THEMES = [
+    'people_influenceurs' => [
+        'key' => 'people_influenceurs',
+        'label' => 'People influenceurs',
+        'hint' => 'Buzz, lives, classement, duels FI',
+    ],
+    'people_artiste_sportif' => [
+        'key' => 'people_artiste_sportif',
+        'label' => 'People Artiste/sportif',
+        'hint' => 'Sorties, matchs, perf, top charts',
+    ],
+    'people_actualite' => [
+        'key' => 'people_actualite',
+        'label' => 'People Actualité',
+        'hint' => 'Polémiques, annonces, faits du jour',
+    ],
+];
+
+function p50_prono_theme_catalog(): array {
+    return array_values(P50_PRONO_THEMES);
+}
+
+function p50_prono_normalize_theme(string $theme): string {
+    $theme = trim($theme);
+    return isset(P50_PRONO_THEMES[$theme]) ? $theme : '';
+}
+
+function p50_prono_theme_label(string $theme): string {
+    $key = p50_prono_normalize_theme($theme);
+    return $key !== '' ? (string)P50_PRONO_THEMES[$key]['label'] : '';
+}
+
+/** Mappe un thème batch / legacy vers l’un des 3 blocs produits. */
+function p50_prono_map_to_product_theme(string $theme, string $sourceType = ''): string {
+    $theme = trim($theme);
+    if (p50_prono_normalize_theme($theme) !== '') {
+        return $theme;
+    }
+    $hay = strtolower($theme.' '.$sourceType);
+    if (str_contains($hay, 'artist') || str_contains($hay, 'sport') || str_contains($hay, 'release')) {
+        return 'people_artiste_sportif';
+    }
+    if (str_contains($hay, 'news') || str_contains($hay, 'event') || str_contains($hay, 'actu') || str_contains($hay, 'diaspora')) {
+        return 'people_actualite';
+    }
+    return 'people_influenceurs';
+}
 
 function p50_prono_ensure_schema(): void {
     $pdo = db();
@@ -667,6 +716,7 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
         'context' => (string)($row['context_text'] ?? ''),
         'coverPhoto' => $coverPhoto,
         'theme' => (string)($row['theme'] ?? ''),
+        'themeLabel' => p50_prono_theme_label((string)($row['theme'] ?? '')),
         'batchId' => (string)($row['batch_id'] ?? ''),
         'batchDate' => !empty($row['batch_date']) ? (string)$row['batch_date'] : null,
         'sourceType' => (string)($row['source_type'] ?? ''),

@@ -421,6 +421,7 @@ function p50_prono_daily_generate(PDO $pdo, string $createdBy, ?string $batchDat
     $items = [];
     foreach ($templates as $tpl) {
         $cover = p50_prono_assert_cover((string)$tpl['coverPhoto'], (string)$tpl['profileId'], (string)$tpl['title']);
+        $theme = p50_prono_map_to_product_theme((string)($tpl['theme'] ?? ''), (string)($tpl['sourceType'] ?? ''));
         $voteHours = (int)($tpl['voteHours'] ?? 12);
         if (!in_array($voteHours, P50_PRONO_VOTE_HOURS, true)) $voteHours = 12;
         $opens = $now;
@@ -437,7 +438,7 @@ function p50_prono_daily_generate(PDO $pdo, string $createdBy, ?string $batchDat
             mb_substr((string)$tpl['title'], 0, 220),
             mb_substr((string)($tpl['context'] ?? ''), 0, 500),
             mb_substr($cover, 0, 500),
-            mb_substr((string)($tpl['theme'] ?? ''), 0, 80),
+            mb_substr($theme, 0, 80),
             $batchId,
             $batchDate,
             mb_substr((string)($tpl['sourceType'] ?? ''), 0, 40),
@@ -481,17 +482,13 @@ function p50_prono_daily_publish(PDO $pdo, string $batchDate): array {
     }
 
     $errors = [];
-    foreach ($rows as $row) {
-        if (p50_prono_question_cover($row) === '') {
-            $errors[] = 'Image manquante : '.(string)$row['title'];
-        }
-    }
-    if ($errors !== []) {
-        return ['published' => 0, 'items' => [], 'errors' => $errors];
-    }
-
     $published = [];
     foreach ($rows as $row) {
+        $title = (string)($row['title'] ?? '');
+        if (p50_prono_question_cover($row) === '') {
+            $errors[] = 'Image manquante : '.$title;
+            continue;
+        }
         $subjectKey = (string)($row['subject_key'] ?? '');
         if ($subjectKey !== '') {
             $openCount = p50_prono_count_open_for_subject($pdo, $subjectKey, (string)$row['id']);

@@ -2,265 +2,377 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#050705">
   <title>Pronostics — PASS50</title>
-  <meta name="description" content="Ta grille du jour PASS50. People influenceurs · Artiste/sportif · Actualité.">
+  <meta name="description" content="Pronostique sur l’actu PASS50 avec des cotes. Sans argent réel — gagne des points.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#050705;--ink:#f6f8f4;--muted:#9da79b;--line:#293129;
-      --lime:#b7ff00;--red:#ff4b4b;
+      --bg:#050705;--ink:#f4f7f0;--muted:#8f998c;--line:rgba(183,255,0,.16);
+      --lime:#b7ff00;--lime-dim:rgba(183,255,0,.12);--panel:#0c100c;--panel2:#101610;
+      --radius:20px;--ease:cubic-bezier(.22,.8,.24,1);
     }
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,ui-sans-serif,system-ui,sans-serif}
+    *{box-sizing:border-box}
+    html{background:var(--bg)}
     body{
-      min-height:100dvh;
+      margin:0;min-height:100vh;color:var(--ink);
+      font-family:Manrope,ui-sans-serif,system-ui,sans-serif;
       background:
-        radial-gradient(120% 70% at 78% -8%,rgba(183,255,0,.14),transparent 52%),
+        radial-gradient(ellipse 90% 55% at 50% -8%,rgba(183,255,0,.14),transparent 55%),
+        radial-gradient(circle at 100% 40%,rgba(183,255,0,.04),transparent 28%),
         var(--bg);
     }
-    .shell{
-      width:min(430px,100%);
-      margin:0 auto;
-      min-height:100dvh;
-      padding:18px 16px calc(118px + env(safe-area-inset-bottom));
+    a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}.hidden{display:none!important}
+    .shell{width:min(680px,100%);margin:auto;padding:0 18px calc(100px + env(safe-area-inset-bottom))}
+
+    .topbar{
+      position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+      gap:12px;padding:calc(12px + env(safe-area-inset-top)) 0 12px;
+      background:linear-gradient(180deg,rgba(5,7,5,.97),rgba(5,7,5,.82));
+      backdrop-filter:blur(16px);border-bottom:1px solid transparent;
     }
-    .brand{
-      font-family:"Archivo Black",Impact,sans-serif;
-      font-size:34px;letter-spacing:-.04em;line-height:1;text-align:center;
+    .brand-mark{display:flex;flex-direction:column;gap:2px;line-height:1}
+    .brand-mark .word{font-family:"Archivo Black",Impact,sans-serif;font-size:28px;letter-spacing:-.04em;color:var(--lime)}
+    .brand-mark .sub{font-size:10px;font-weight:800;letter-spacing:.18em;color:rgba(244,247,240,.55);text-transform:uppercase}
+    .top-actions{display:flex;gap:8px}
+    .btn{
+      border:1px solid rgba(255,255,255,.1);background:rgba(10,13,10,.85);color:var(--ink);
+      border-radius:14px;padding:10px 14px;font-weight:800;font-size:13px;
+      transition:transform .18s var(--ease),border-color .18s,background .18s;
     }
-    .brand .fifty{color:var(--lime)}
-    .kicker{
-      margin:8px 0 0;text-align:center;font-size:11px;font-weight:800;
-      letter-spacing:.2em;text-transform:uppercase;color:rgba(246,248,244,.7);
+    .btn:hover{border-color:rgba(183,255,0,.45)}
+    .btn.primary{background:var(--lime);border-color:var(--lime);color:#050705}
+    .btn.primary:hover{filter:brightness(1.05)}
+    .btn:active{transform:scale(.97)}
+    .btn:disabled{opacity:.4}
+
+    /* Hero: one composition — brand first */
+    .hero{
+      position:relative;margin:10px -18px 0;padding:28px 18px 26px;overflow:hidden;
+      isolation:isolate;
     }
-    .timer{
-      margin:16px auto 0;width:fit-content;display:inline-flex;align-items:center;gap:8px;
-      border:1px solid rgba(183,255,0,.35);border-radius:999px;padding:8px 14px;
-      background:rgba(183,255,0,.06);font-size:13px;font-weight:800;
+    .hero::before{
+      content:"";position:absolute;inset:0;z-index:0;
+      background:
+        linear-gradient(180deg,transparent 40%,var(--bg) 100%),
+        radial-gradient(circle at 70% 20%,rgba(183,255,0,.18),transparent 42%),
+        repeating-linear-gradient(-12deg,transparent 0 18px,rgba(183,255,0,.025) 18px 19px);
+      animation:heroWash 10s ease-in-out infinite alternate;
     }
-    .timer strong{color:var(--lime)}
-    .title-row{margin-top:22px;display:flex;align-items:center;gap:10px}
-    .title-row .ico{
-      width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
-      background:rgba(183,255,0,.12);color:var(--lime);font-size:14px;
+    @keyframes heroWash{from{opacity:.85;transform:scale(1)}to{opacity:1;transform:scale(1.03)}}
+    .hero-inner{position:relative;z-index:1;animation:rise .7s var(--ease) both}
+    @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+    .hero-brand{
+      font-family:"Archivo Black",Impact,sans-serif;font-size:clamp(56px,16vw,88px);
+      line-height:.86;letter-spacing:-.05em;color:var(--lime);margin:0;
+      text-shadow:0 0 60px rgba(183,255,0,.25);
     }
-    .title-row h1{
-      margin:0;font-family:"Archivo Black",Impact,sans-serif;
-      font-size:26px;letter-spacing:-.03em;
+    .hero-kicker{
+      margin:10px 0 0;font-size:12px;font-weight:800;letter-spacing:.22em;
+      text-transform:uppercase;color:rgba(244,247,240,.7);
     }
+    .hero-line{
+      margin:14px 0 0;max-width:28ch;font-size:16px;font-weight:600;line-height:1.45;
+      color:rgba(220,228,214,.88);
+    }
+    .hero-cta{margin-top:20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .hero-cta .btn.primary{padding:13px 18px;font-size:14px;letter-spacing:.02em}
+    .hero-note{font-size:12px;font-weight:700;color:var(--muted)}
+
+    .balance-strip{
+      display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+      margin:8px 0 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+      animation:rise .7s var(--ease) .12s both;
+    }
+    .balance-strip .pair{display:flex;flex-direction:column;gap:2px}
+    .balance-strip strong{
+      font-family:"Archivo Black",Impact,sans-serif;font-size:28px;letter-spacing:-.03em;color:var(--lime);
+    }
+    .balance-strip span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+    .section{margin-top:28px;animation:rise .65s var(--ease) .18s both}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .section-title{
+      font-family:"Archivo Black",Impact,sans-serif;font-size:22px;letter-spacing:-.03em;line-height:1;margin:0;
+    }
+    .section-note{font-size:12px;font-weight:700;color:var(--muted)}
+    .theme-block{margin-top:18px}
+    .theme-block:first-child{margin-top:0}
+    .theme-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 12px}
+    .theme-title{margin:0;font-size:14px;font-weight:900;letter-spacing:.04em;color:var(--lime);text-transform:uppercase}
+    .theme-count{font-size:11px;font-weight:800;color:var(--muted)}
+
+    .stories{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none}
+    .stories::-webkit-scrollbar{display:none}
+    .story-chip{
+      flex:0 0 auto;width:72px;border:0;background:transparent;color:var(--ink);
+      padding:0;display:grid;justify-items:center;gap:7px;
+    }
+    .story-ring{
+      width:62px;height:62px;border-radius:50%;padding:2px;
+      background:conic-gradient(from 200deg,var(--lime),#7dff4a,#b7ff00);
+      display:grid;place-items:center;transition:transform .2s var(--ease);
+    }
+    .story-chip:hover .story-ring{transform:scale(1.05)}
+    .story-ring.seen{background:#2a322a}
+    .story-avatar{
+      width:100%;height:100%;border-radius:50%;background:linear-gradient(160deg,#1a211a,#0a0d0a);
+      border:2px solid #050705;display:grid;place-items:center;overflow:hidden;
+      font-family:"Archivo Black",Impact,sans-serif;font-size:15px;letter-spacing:-.02em;
+    }
+    .story-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    .story-chip > span{font-size:10px;font-weight:700;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(244,247,240,.75)}
+
+    .list{display:grid;gap:14px}
     .card{
-      margin-top:14px;border:1px solid var(--line);border-radius:18px;
-      background:linear-gradient(180deg,#121812,#0a0d0a);padding:14px 14px 16px;
+      border:1px solid rgba(183,255,0,.14);
+      border-radius:var(--radius);
+      padding:18px 16px;
+      background:
+        linear-gradient(165deg,rgba(183,255,0,.05),transparent 42%),
+        linear-gradient(180deg,#121812,#0a0d0a);
+      transition:border-color .2s,transform .2s var(--ease);
     }
-    .card h2{margin:0;color:var(--lime);font-size:13px;font-weight:900;letter-spacing:.04em}
-    .card p{margin:6px 0 0;color:var(--muted);font-size:12px;font-weight:650;line-height:1.35}
-    .row{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
-    .pick{
-      position:relative;border:0;background:transparent;padding:0;color:inherit;cursor:pointer;
-      display:flex;flex-direction:column;align-items:center;gap:6px;width:72px;
+    .card:hover{border-color:rgba(183,255,0,.28)}
+    .card-media{margin:-18px -16px 14px;border-radius:calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;overflow:hidden;border-bottom:1px solid rgba(183,255,0,.12);aspect-ratio:16/9;background:#0a0d0a}
+    .card-media img{width:100%;height:100%;object-fit:cover;display:block}
+    .card-kicker{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--lime);margin:0 0 8px}
+    .card h2{
+      margin:0;font-family:"Archivo Black",Impact,sans-serif;font-size:clamp(18px,4.6vw,22px);
+      letter-spacing:-.03em;line-height:1.15;
     }
-    .avatar{
-      width:64px;height:64px;border-radius:50%;overflow:hidden;position:relative;
-      border:2px solid #3a453a;background:#1a211a;
-      display:grid;place-items:center;font-weight:900;color:var(--lime);font-size:14px;
+    .card .ctx{margin:8px 0 0;color:var(--muted);font-size:13px;font-weight:600;line-height:1.45}
+    .opts{display:grid;gap:8px;margin-top:16px}
+    .opt{
+      border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:13px 14px;
+      background:rgba(8,11,8,.9);color:var(--ink);text-align:left;
+      display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;
+      transition:border-color .18s,background .18s,transform .18s var(--ease);
     }
-    .avatar.lg{width:72px;height:72px}
-    .avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-    .pick.on .avatar{border-color:var(--lime);box-shadow:0 0 0 3px rgba(183,255,0,.18)}
-    .check{
-      position:absolute;right:2px;bottom:18px;width:20px;height:20px;border-radius:50%;
-      background:var(--lime);color:#050705;font-size:12px;font-weight:1000;
-      display:none;place-items:center;border:2px solid #050705;
+    .opt:hover{border-color:rgba(183,255,0,.35);transform:translateY(-1px)}
+    .opt.selected{
+      border-color:var(--lime);background:rgba(183,255,0,.1);
+      box-shadow:inset 0 0 0 1px rgba(183,255,0,.2);
     }
-    .pick.on .check{display:grid}
-    .pick span.name{font-size:10px;font-weight:800;text-align:center;line-height:1.15;max-width:72px}
-    .cta{
-      margin-top:18px;width:100%;border:0;border-radius:16px;padding:16px 18px;
-      background:var(--lime);color:#050705;font-weight:1000;font-size:14px;
-      letter-spacing:.04em;text-transform:uppercase;
-      display:flex;align-items:center;justify-content:center;gap:10px;
-      box-shadow:0 12px 28px rgba(183,255,0,.25);
+    .opt:disabled,.opt.locked{cursor:not-allowed;transform:none}
+    .opt:disabled:not(.selected),.opt.locked:not(.selected){opacity:.42;filter:grayscale(.35);pointer-events:none}
+    .opt:disabled.selected,.opt.selected:disabled{cursor:default;pointer-events:none}
+    .opt:disabled:hover,.opt.locked:hover{transform:none;border-color:rgba(255,255,255,.08)}
+    .opt.selected:disabled:hover,.opt.selected.locked:hover{border-color:var(--lime)}
+    .card.is-voted .opts{opacity:.98}
+    .opt .label{font-weight:800;font-size:14px;line-height:1.25}
+    .opt .pct{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-top:4px}
+    .opt.selected .pct{color:rgba(183,255,0,.8)}
+    .bar{height:3px;border-radius:99px;background:rgba(255,255,255,.06);margin-top:8px;overflow:hidden}
+    .bar i{display:block;height:100%;background:var(--lime);width:0;transition:width .45s var(--ease)}
+    .odd-block{text-align:right;min-width:4.2em}
+    .odd-block .cote{
+      font-family:"Archivo Black",Impact,sans-serif;font-size:22px;letter-spacing:-.03em;color:var(--lime);line-height:1;
     }
-    .cta:disabled{opacity:.38;box-shadow:none}
-    .cta .arrow{
-      width:28px;height:28px;border-radius:50%;background:#050705;color:#fff;
-      display:grid;place-items:center;font-size:14px;
+    .odd-block .gain{display:block;margin-top:3px;font-size:11px;font-weight:800;color:var(--muted)}
+    .opt.selected .odd-block .gain{color:rgba(183,255,0,.75)}
+    .meta{margin-top:12px;font-size:11px;font-weight:700;color:var(--muted);line-height:1.4}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+    .empty,.loading,.error{
+      border:1px dashed rgba(183,255,0,.2);border-radius:18px;padding:28px 18px;text-align:center;color:var(--muted);
+      background:rgba(12,16,12,.5);
     }
-    .note{margin-top:10px;text-align:center;color:var(--muted);font-size:11px;font-weight:700}
-    .empty{
-      margin-top:18px;border:1px dashed var(--line);border-radius:18px;padding:22px 16px;
-      text-align:center;color:var(--muted);font-size:14px;font-weight:700;line-height:1.45;
-    }
+    .empty strong,.error strong{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
+
     .toast{
-      position:fixed;left:50%;bottom:calc(118px + env(safe-area-inset-bottom));
-      transform:translateX(-50%) translateY(8px);opacity:0;pointer-events:none;z-index:150;
+      position:fixed;left:50%;bottom:calc(108px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);
+      opacity:0;pointer-events:none;z-index:150;
       background:#0d120d;border:1px solid rgba(183,255,0,.35);border-radius:999px;
-      padding:11px 16px;font-size:12px;font-weight:800;transition:.22s ease;
+      padding:11px 16px;font-size:12px;font-weight:800;transition:.22s var(--ease);
     }
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* Au-dessus de la nav mobile (z 120) et du FAB share (z 118) */
+    .modal{position:fixed;inset:0;z-index:140;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    .modal.show{display:flex}
+    .modal-box{
+      width:min(480px,100%);background:linear-gradient(180deg,#141a14,#0a0d0a);
+      border:1px solid var(--line);border-radius:22px 22px 0 0;
+      padding:20px 18px calc(22px + env(safe-area-inset-bottom));
+      max-height:min(88dvh,640px);overflow:auto;-webkit-overflow-scrolling:touch;
+    }
+    .modal-box strong{font-family:"Archivo Black",Impact,sans-serif;font-size:20px;letter-spacing:-.02em}
+    .durations{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+    .durations button{
+      border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px 10px;
+      background:#0a0d0a;color:var(--ink);font-weight:800;min-height:48px;
+    }
+    .durations button.active{border-color:var(--lime);background:var(--lime-dim);color:var(--lime)}
+    .modal-box .actions{margin-top:6px}
+    .modal-box .actions .btn{flex:1;min-height:48px;justify-content:center}
+    body.p50-status-open .p50-bottom-nav,
+    body.p50-status-open .p50-ranking-share-fab{visibility:hidden!important;pointer-events:none!important}
+    .diapo{position:fixed;inset:0;z-index:145;display:none;background:#050705;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))}
+    .diapo.show{display:grid;grid-template-rows:auto 1fr;gap:10px}
+    .diapo-bars{display:flex;gap:4px}
+    .diapo-bars i{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
+    .diapo-bars i b{display:block;height:100%;width:0;background:var(--lime)}
+    .diapo-bars i.done b{width:100%}.diapo-bars i.active b{width:100%;animation:diapoFill 6s linear forwards}
+    .diapo-bars i.active.paused b{animation-play-state:paused!important}
+    @keyframes diapoFill{from{width:0}to{width:100%}}
+    .diapo-frame{
+      position:relative;border:1px solid rgba(183,255,0,.22);border-radius:24px;overflow:hidden;min-height:0;
+      background:#0a0d0a;display:grid;grid-template-rows:minmax(210px,42%) minmax(0,1fr);
+      -webkit-user-select:none;user-select:none;touch-action:manipulation;
+    }
+    .diapo.is-paused .diapo-frame{cursor:grabbing}
+    .diapo-media{position:relative;min-height:210px;background:#101610;overflow:hidden}
+    .diapo-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+    .diapo-media-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,5,.2),rgba(5,7,5,.94) 90%)}
+    .diapo-brand{position:absolute;left:14px;top:14px;z-index:2;font-size:10px;font-weight:1000;letter-spacing:.12em;color:rgba(246,248,244,.7)}
+    .diapo-body{position:relative;z-index:2;padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px;min-height:0}
+    .diapo-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .diapo-author{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;font-weight:800}
+    .diapo-author .story-avatar{width:44px;height:44px;border-width:0}
+    .diapo-author small{display:block;color:var(--muted);font-weight:700;margin-top:2px;font-size:11px}
+    .diapo-close{width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:#0a0d0a;color:#fff;font-size:22px}
+    .diapo-q{font-family:"Archivo Black",Impact,sans-serif;font-size:clamp(20px,5.5vw,26px);letter-spacing:-.03em;line-height:1.15;margin:0}
+    .diapo-ticket{
+      margin-top:auto;padding:14px;border-radius:16px;
+      background:#0a0d0a;
+      border:1px solid var(--line);
+    }
+    .diapo-ticket .lbl{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+    .diapo-ticket .pick{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-top:8px}
+    .diapo-ticket .pick strong{font-size:18px;line-height:1.2}
+    .diapo-ticket .pick em{font-style:normal;font-family:"Archivo Black",Impact,sans-serif;font-size:26px;color:var(--lime);letter-spacing:-.03em}
+    .diapo-ticket .ret{margin-top:8px;font-size:12px;font-weight:800;color:#c9d2c4}
+    .diapo-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .diapo-foot .btn{flex:1;min-width:96px;text-align:center}
+    .diapo-nav{position:absolute;inset:0;z-index:1;display:grid;grid-template-columns:1fr 1fr;pointer-events:none}
+    .diapo-nav button{border:0;background:transparent;cursor:pointer;pointer-events:auto}
+
+    @media(prefers-reduced-motion:reduce){
+      .hero::before,.hero-inner,.balance-strip,.section,.story-ring,.opt,.toast{animation:none!important;transition:none!important}
+    }
+    @media(min-width:720px){
+      .modal{align-items:center}
+      .modal-box{border-radius:22px}
+      .shell{padding-bottom:48px}
+      .hero{margin-inline:0;border-radius:28px;border:1px solid var(--line)}
+    }
   </style>
 </head>
 <body data-pass50-page="prono">
   <div class="shell">
-    <div class="brand">PASS<span class="fifty">50</span></div>
-    <div class="kicker">Pronostics 24H</div>
-    <div class="timer">⏱ Clôture dans <strong id="countdown">--:--:--</strong></div>
+    <header class="topbar">
+      <a class="brand-mark" href="./" aria-label="PASS50 — Accueil">
+        <span class="word">PASS50</span>
+        <span class="sub">Pronostics</span>
+      </a>
+      <div class="top-actions">
+        <a class="btn primary" href="./?open=account">Compte</a>
+      </div>
+    </header>
 
-    <div class="title-row">
-      <div class="ico" aria-hidden="true">📅</div>
-      <h1>Ta grille du jour</h1>
+    <section class="hero" aria-label="Pronostics PASS50">
+      <div class="hero-inner">
+        <h1 class="hero-brand">PASS50</h1>
+        <p class="hero-kicker">Pronostics</p>
+        <p class="hero-line">Cotes sur l’actu. Mise engagée si tu perds — plancher 100 pts pour toujours pouvoir jouer. Sans argent réel.</p>
+        <div class="hero-cta">
+          <a class="btn primary" href="#questions">Voir les cotes</a>
+          <span class="hero-note">Départ 1000 pts · 100 000 → rencontre FI</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="balance-strip" aria-label="Ton solde">
+      <div class="pair"><strong id="balPoints">—</strong><span>Points</span></div>
+      <div class="pair" style="text-align:right"><strong id="balStreak">—</strong><span>Streak</span></div>
     </div>
 
-    <div id="grilleRoot"><div class="empty">Chargement de la grille…</div></div>
+    <section class="section" id="storiesWrap">
+      <div class="section-head">
+        <h2 class="section-title">Statut prono</h2>
+        <div class="section-note">Sans s’abonner</div>
+      </div>
+      <div class="stories" id="storiesStrip"><div class="loading" style="min-width:100%;padding:16px">Chargement…</div></div>
+    </section>
 
-    <button class="cta" id="validate" type="button" disabled hidden>
-      Valider ma grille <span class="arrow">→</span>
-    </button>
-    <p class="note" id="noteLine" hidden>Points · Streak · Carte WhatsApp — sans argent réel</p>
+    <div id="authGate" class="empty hidden" style="margin-top:22px">
+      <strong>Connexion requise</strong>
+      <div>Connecte-toi pour poser tes cotes.</div>
+      <p style="margin-top:14px"><a class="btn primary" href="./?open=account">Ouvrir mon espace</a></p>
+    </div>
+
+    <section class="section" id="questions">
+      <div class="section-head">
+        <h2 class="section-title">Qui fait quoi</h2>
+        <div class="section-note">3 thèmes · Mise × cote</div>
+      </div>
+      <div id="pronoList" class="list"><div class="loading">Chargement des pronos…</div></div>
+    </section>
+
+    <section class="section" id="results">
+      <div class="section-head">
+        <h2 class="section-title">Résultats</h2>
+        <div class="section-note">Après mesure</div>
+      </div>
+      <div id="resultsList" class="list"><div class="loading">—</div></div>
+    </section>
   </div>
 
-  <div class="toast" id="toast" role="status"></div>
+  <div class="modal" id="statusModal">
+    <div class="modal-box">
+      <strong>Publier en statut</strong>
+      <p style="color:var(--muted);font-size:13px;margin:8px 0 0;font-weight:600">Durée dans Mon fil et les statuts prono. Chaque like = +0,25 pt.</p>
+      <div class="durations" id="durationChoices">
+        <button type="button" data-h="12">12 h</button>
+        <button type="button" data-h="24" class="active">24 h</button>
+        <button type="button" data-h="48">48 h</button>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="confirmStatus" type="button">Publier</button>
+        <button class="btn" id="skipStatus" type="button">Plus tard</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="diapo" id="diapo" aria-label="Statuts prono">
+    <div class="diapo-bars" id="diapoBars"></div>
+    <div class="diapo-frame" id="diapoFrame">
+      <div class="diapo-nav" aria-hidden="true">
+        <button type="button" id="diapoPrev" aria-label="Précédent"></button>
+        <button type="button" id="diapoNext" aria-label="Suivant"></button>
+      </div>
+      <div class="diapo-media" id="diapoMedia">
+        <img id="diapoCover" alt="" loading="lazy" referrerpolicy="no-referrer">
+        <div class="diapo-media-shade"></div>
+        <div class="diapo-brand">PARIS EN COURS</div>
+      </div>
+      <div class="diapo-body">
+        <div class="diapo-top">
+          <div class="diapo-author" id="diapoAuthor">—<small>Prono</small></div>
+          <button class="diapo-close" id="diapoClose" type="button" aria-label="Fermer">×</button>
+        </div>
+        <h2 class="diapo-q" id="diapoQuestion">—</h2>
+        <div class="diapo-ticket">
+          <div class="lbl">Son choix</div>
+          <div class="pick"><strong id="diapoChoice">—</strong><em id="diapoOddInline">x —</em></div>
+          <div class="ret" id="diapoReturn">Sans argent réel</div>
+        </div>
+        <div class="diapo-foot">
+          <button class="btn" id="diapoLike" type="button">♡ Like</button>
+          <button class="btn" id="diapoShare" type="button">Partager</button>
+          <a class="btn primary" id="diapoPlay" href="#questions">Jouer</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
   <script src="./mobile-bottom-nav-v1.js?v=1.6"></script>
-  <script>
-  (function () {
-    const picks = {};
-    let themes = [];
-    let closesAt = null;
-    let grilleId = null;
-    const toastEl = document.getElementById('toast');
-    const root = document.getElementById('grilleRoot');
-    const validateBtn = document.getElementById('validate');
-    const noteLine = document.getElementById('noteLine');
-
-    function toast(msg) {
-      toastEl.textContent = msg;
-      toastEl.classList.add('show');
-      clearTimeout(toast._t);
-      toast._t = setTimeout(() => toastEl.classList.remove('show'), 2400);
-    }
-
-    function initials(name) {
-      return String(name || '?').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-    }
-
-    function avatarBtn(person, on, large) {
-      const img = person.photoUrl
-        ? `<img src="${person.photoUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
-        : '';
-      const label = person.initials || initials(person.name);
-      return `<button type="button" class="pick ${on ? 'on' : ''}" data-id="${person.profileId}">
-        <div class="avatar ${large ? 'lg' : ''}">${img}${label}</div>
-        <span class="check">✓</span>
-        <span class="name">${person.name}</span>
-      </button>`;
-    }
-
-    function themeComplete(theme) {
-      const selected = picks[theme.key] || [];
-      return selected.length === Number(theme.pickCount || 1);
-    }
-
-    function allComplete() {
-      return themes.length > 0 && themes.every(themeComplete);
-    }
-
-    function render() {
-      if (!themes.length) return;
-      root.innerHTML = themes.map((theme, index) => {
-        const selected = picks[theme.key] || [];
-        const need = Number(theme.pickCount || 1);
-        const people = theme.people || [];
-        const large = need >= 2;
-        return `<article class="card" data-theme="${theme.key}">
-          <h2>${index + 1}. ${theme.label}</h2>
-          <p>${theme.hint || ''} · choisis ${need}</p>
-          <div class="row" data-row="${theme.key}">
-            ${people.map((p) => avatarBtn(p, selected.includes(p.profileId), large)).join('') || '<span style="color:var(--muted);font-size:12px">Liste à venir</span>'}
-          </div>
-        </article>`;
-      }).join('');
-
-      validateBtn.hidden = false;
-      noteLine.hidden = false;
-      validateBtn.disabled = !allComplete();
-
-      root.querySelectorAll('[data-row]').forEach((row) => {
-        const key = row.getAttribute('data-row');
-        const theme = themes.find((t) => t.key === key);
-        if (!theme) return;
-        const need = Number(theme.pickCount || 1);
-        row.querySelectorAll('.pick').forEach((btn) => {
-          btn.onclick = () => {
-            const id = btn.dataset.id;
-            let selected = picks[key] ? [...picks[key]] : [];
-            if (selected.includes(id)) selected = selected.filter((x) => x !== id);
-            else if (need === 1) selected = [id];
-            else if (selected.length < need) selected.push(id);
-            picks[key] = selected;
-            render();
-          };
-        });
-      });
-    }
-
-    function tick() {
-      const end = closesAt ? new Date(closesAt) : (() => {
-        const d = new Date();
-        d.setHours(23, 59, 59, 999);
-        return d;
-      })();
-      let s = Math.max(0, Math.floor((end.getTime() - Date.now()) / 1000));
-      const h = String(Math.floor(s / 3600)).padStart(2, '0');
-      s %= 3600;
-      const m = String(Math.floor(s / 60)).padStart(2, '0');
-      const sec = String(s % 60).padStart(2, '0');
-      document.getElementById('countdown').textContent = `${h}:${m}:${sec}`;
-    }
-
-    validateBtn.onclick = () => {
-      try {
-        localStorage.setItem(
-          'p50_grille_du_jour',
-          JSON.stringify({
-            grilleId,
-            date: new Date().toISOString().slice(0, 10),
-            picks,
-            at: Date.now()
-          })
-        );
-      } catch (_) {}
-      toast('Grille validée — sans argent réel');
-    };
-
-    fetch('./api/prono-grille.php')
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.ok || !data.ready || !data.grille) {
-          root.innerHTML = `<div class="empty">${data.message || 'Aucune grille publiée pour aujourd’hui.'}<br><span style="display:block;margin-top:8px;font-size:12px">L’admin publie la grille depuis l’atelier Pronostics.</span></div>`;
-          return;
-        }
-        grilleId = data.grille.id || null;
-        closesAt = data.grille.closesAt || null;
-        themes = (data.grille.themes || []).filter((t) => (t.people || []).length);
-        if (!themes.length) {
-          root.innerHTML = '<div class="empty">Grille publiée mais encore vide. Ajoute des personnes dans l’admin.</div>';
-          return;
-        }
-        themes.forEach((t) => { picks[t.key] = []; });
-        render();
-        tick();
-      })
-      .catch(() => {
-        root.innerHTML = '<div class="empty">Impossible de charger la grille pour le moment.</div>';
-      });
-
-    tick();
-    setInterval(tick, 1000);
-  })();
-  </script>
+  <script src="./prono-share-v1.js?v=1.7"></script>
+  <script src="./pronostics.js?v=2.12"></script>
 </body>
 </html>

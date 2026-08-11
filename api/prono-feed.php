@@ -64,6 +64,7 @@ json_response([
     'stakeDefault' => P50_PRONO_POINTS_CORRECT,
     'startingBalance' => P50_PRONO_STARTING_BALANCE,
     'balanceFloor' => P50_PRONO_BALANCE_FLOOR,
+    'themes' => p50_prono_theme_catalog(),
     'items' => $items,
     'auth' => $user !== null,
 ]);

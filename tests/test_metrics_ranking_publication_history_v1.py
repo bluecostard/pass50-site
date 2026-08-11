@@ -32,8 +32,8 @@ class MetricsRankingPublicationHistoryV1Tests(unittest.TestCase):
         self.assertIn("'rawObservedReports'=>count($history)", CORE)
         self.assertIn("'distinct_experimental_runs'", CORE)
         self.assertIn("'state'=>$state", CORE)
-        self.assertIn("'controlledPublicationEligible'=>$state==='ready'", CORE)
-        self.assertIn("'automaticPublicationEligible'=>$state==='ready'&&$publicationEnabled&&$automaticEnabled", CORE)
+        self.assertIn("'controlledPublicationEligible'=>$publishable", CORE)
+        self.assertIn("'automaticPublicationEligible'=>$publishable&&$publicationEnabled&&$automaticEnabled", CORE)
 
     def test_empty_history_is_collecting_not_failed(self):
         self.assertIn("$freshStatus=$latestAgeHours===null?'wait'", CORE)

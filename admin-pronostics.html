@@ -6,7 +6,7 @@
 <title>Admin Pronostics — PASS50</title>
 <style>
 body{margin:0;background:#050705;color:#f6f8f4;font:15px/1.4 Inter,system-ui,sans-serif}
-.shell{max-width:720px;margin:auto;padding:20px}
+.shell{max-width:760px;margin:auto;padding:20px}
 h1{font-size:28px;letter-spacing:-1px}.muted{color:#9da79b}
 label{display:block;margin:12px 0 4px;font-weight:800;font-size:12px;color:#9da79b}
 input,textarea,select,button{width:100%;box-sizing:border-box;border:1px solid #293129;border-radius:12px;background:#0a0d0a;color:#fff;padding:12px;font:inherit}
@@ -15,6 +15,7 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 .card{border:1px solid #293129;border-radius:16px;padding:16px;margin-top:16px;background:#0d110d}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .toast{margin-top:12px;color:#b7ff00;font-weight:900}
+.toast.err{color:#f88}
 .q{border:1px solid #293129;border-radius:12px;padding:12px;margin-top:10px;background:#0a0d0a}
 .q strong{display:block;margin-bottom:4px}
 .q .meta{font-size:12px;color:#9da79b;margin:6px 0}
@@ -27,56 +28,39 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 .batch-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .batch-actions button{width:auto;margin:0}
 .required::after{content:" *";color:#b7ff00}
-.theme-box{border:1px solid #293129;border-radius:14px;padding:12px;margin-top:12px;background:#0a0d0a}
+.theme-box{border:1px solid #293129;border-radius:14px;padding:14px;margin-top:14px;background:#0a0d0a}
 .theme-box h3{margin:0 0 4px;font-size:15px;color:#b7ff00}
-.people-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;min-height:36px}
-.person-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid #3a453a;border-radius:999px;padding:5px 8px 5px 5px;background:#101510;font-size:12px;font-weight:800}
-.person-chip img,.person-chip .ph{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#1a211a;display:grid;place-items:center;font-size:10px;color:#b7ff00}
-.person-chip button{width:auto;margin:0;padding:4px 8px;background:#1a211a;color:#f88;border-color:#522;font-size:11px}
-.suggest{margin-top:6px;border:1px solid #293129;border-radius:12px;background:#0d110d;max-height:180px;overflow:auto;display:none}
-.suggest button{width:100%;margin:0;border:0;border-bottom:1px solid #1c241c;border-radius:0;background:transparent;color:#f6f8f4;text-align:left;font-weight:700;font-size:13px}
-.suggest button:hover{background:#151b15}
+.theme-box .qlist{margin-top:10px}
+.theme-box .q{margin-top:8px}
+.theme-form{margin-top:12px;padding-top:12px;border-top:1px dashed #293129}
+.theme-form details summary{cursor:pointer;font-weight:900;color:#b7ff00;list-style:none}
+.theme-form details summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body>
 <div class="shell">
   <h1>Admin · Pronostics</h1>
-  <p class="muted">Créer / publier. Jusqu’à <strong>6 pronos</strong> actifs par FI ou actu. Cotes · vote 6/12/24 h · date de mesure. <strong>Image obligatoire</strong> sur chaque prono.</p>
+  <p class="muted">Crée <strong>toi-même</strong> les questions avec cotes dans les 3 thèmes. Image obligatoire (URL ou photo FI via Profile ID). Vote 6/12/24 h.</p>
   <div class="card" id="authGate" style="display:none;border-color:#664;background:#1a1208">
     <strong>Connexion requise (owner / admin)</strong>
-    <p class="muted" style="margin:8px 0 0">Connecte-toi d’abord sur la page d’accueil PASS50 avec ton compte propriétaire, puis reviens ici. Le token reste dans le navigateur.</p>
+    <p class="muted" style="margin:8px 0 0">Connecte-toi d’abord sur la page d’accueil PASS50 avec ton compte propriétaire, puis reviens ici.</p>
     <p style="margin:12px 0 0"><a href="./" style="color:#b7ff00">→ Se connecter sur pass50.store</a></p>
   </div>
 
-  <div class="card" id="grilleCard">
-    <h2 style="margin-top:0">Ta grille du jour</h2>
-    <p class="muted" style="margin:0 0 12px">Compose les 3 thèmes People, puis publie. Visible sur <a href="./pronostics.html" style="color:#b7ff00">pronostics.html</a>.</p>
-    <div class="row">
-      <div>
-        <label>Date</label>
-        <input id="grilleDate" type="date">
-      </div>
-      <div>
-        <label>Statut actuel</label>
-        <input id="grilleStatus" readonly value="—">
-      </div>
-    </div>
-    <div id="grilleThemes" style="margin-top:8px"></div>
-    <div class="batch-actions">
-      <button type="button" class="ghost" id="grilleReloadBtn">Recharger</button>
-      <button type="button" class="ghost" id="grilleDraftBtn">Enregistrer brouillon</button>
-      <button type="button" id="grillePublishBtn">Publier la grille</button>
-    </div>
-    <div class="toast" id="grilleMsg"></div>
+  <div class="card" id="themesCard">
+    <h2 style="margin-top:0">Les 3 thèmes · questions + cotes</h2>
+    <p class="muted" style="margin:0 0 8px">Ajoute des questions dans chaque bloc, puis publie (open). Visible sur <a href="./pronostics.html" style="color:#b7ff00">pronostics.html</a>.</p>
+    <div id="themeBlocks"></div>
+    <div class="toast" id="themeMsg"></div>
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0">Batch du jour · 12 pronos</h2>
-    <p class="muted" style="margin:0 0 12px">Génère 12 brouillons (influenceurs → artistes → actus) avec image liée au contenu. Vérifie, puis publie tout en une fois.</p>
+    <h2 style="margin-top:0">Batch auto · 12 pronos <span class="muted" style="font-weight:700;font-size:13px">(optionnel)</span></h2>
+    <p class="muted" style="margin:0 0 12px">Génère des brouillons à partir des FI/actus. Si une image manque, les autres peuvent quand même être publiés — les erreurs s’affichent clairement.</p>
     <div class="batch-actions">
       <button type="button" id="genDailyBtn">Générer les 12 du jour</button>
       <button type="button" class="ghost" id="refreshDailyBtn">Rafraîchir le batch</button>
-      <button type="button" id="publishDailyBtn">Publier les 12</button>
+      <button type="button" id="publishDailyBtn">Publier les brouillons</button>
       <button type="button" id="genPublishDailyBtn">Générer + publier</button>
     </div>
     <div class="toast" id="dailyMsg"></div>
@@ -84,17 +68,24 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
   </div>
 
   <div class="card">
+    <h2 style="margin-top:0">Formulaire libre</h2>
+    <label>Thème</label>
+    <select id="theme">
+      <option value="people_influenceurs">People influenceurs</option>
+      <option value="people_artiste_sportif">People Artiste/sportif</option>
+      <option value="people_actualite">People Actualité</option>
+    </select>
     <label class="required">Question</label>
     <input id="title" placeholder="Ex. Lo Père finit sa 2ᵉ maison dans 6 mois ?">
     <label>Contexte</label>
     <textarea id="context" rows="2" placeholder="Actu / précision"></textarea>
-    <label class="required">Image (URL HTTPS — obligatoire)</label>
+    <label class="required">Image (URL HTTPS — ou laisse vide si Profile ID a une photo)</label>
     <input id="coverImageUrl" placeholder="https://… photo FI, miniature actu ou couverture événement">
     <img id="coverPreview" class="batch-cover" alt="" hidden>
-    <label>Profile ID FI (optionnel si clé actu)</label>
+    <label>Profile ID FI (optionnel — remplit l’image si possible)</label>
     <input id="profileId" placeholder="himra">
     <label>Clé sujet actu (si pas de FI — ex. himra-perte-tiktok)</label>
-    <input id="subjectKey" placeholder="Auto = fi:{profileId}">
+    <input id="subjectKey" placeholder="Auto = thème + titre">
     <p class="muted" style="margin:6px 0 0;font-size:12px">Plusieurs questions OK sur le même sujet · plafond 6 actifs (open/draft/locked).</p>
     <label>Options (2 à 4, une par ligne : key|label|cote)</label>
     <textarea id="options" rows="4">y|Oui|1.70
@@ -123,7 +114,7 @@ n|Non|2.20</textarea>
         <select id="status"><option value="open">open</option><option value="draft">draft</option></select>
       </div>
     </div>
-    <p class="muted" style="margin:8px 0 0;font-size:12px">Votes clos après 6/12/24 h. Résolution / points à la date de mesure (peut être plus tard).</p>
+    <p class="muted" style="margin:8px 0 0;font-size:12px">Votes clos après 6/12/24 h. Résolution / points à la date de mesure.</p>
     <div class="row">
       <div><label>Métrique</label>
         <select id="metricType">
@@ -160,13 +151,23 @@ n|Non|2.20</textarea>
   <p class="muted" style="margin-top:18px"><a href="./pronostics.html" style="color:#b7ff00">← Voir Pronostics</a></p>
 </div>
 <script>
+const THEMES=[
+  {key:'people_influenceurs',label:'People influenceurs',hint:'Buzz, lives, classement, duels FI'},
+  {key:'people_artiste_sportif',label:'People Artiste/sportif',hint:'Sorties, matchs, perf, top charts'},
+  {key:'people_actualite',label:'People Actualité',hint:'Polémiques, annonces, faits du jour'}
+];
+let ALL_ITEMS=[];
+
 async function api(path, body){
   const token=localStorage.getItem('pass50_api_token')||'';
   const opts={method:body===undefined?'GET':'POST',headers:{Accept:'application/json',...(token?{Authorization:'Bearer '+token}:{})}};
   if(body!==undefined){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
   const res=await fetch('./api/'+path,opts);
   const data=await res.json().catch(()=>({}));
-  if(!res.ok)throw new Error(data.error||data.message||('Erreur HTTP '+res.status));
+  if(!res.ok){
+    const errs=Array.isArray(data.errors)?data.errors.filter(Boolean).join(' · '):'';
+    throw new Error(errs||data.error||data.message||('Erreur HTTP '+res.status));
+  }
   return data;
 }
 function fmt(iso){
@@ -174,42 +175,122 @@ function fmt(iso){
   const d=new Date(iso);
   return Number.isFinite(d.getTime())?d.toLocaleString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):iso;
 }
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+function parseOptions(raw){
+  return String(raw||'').split(/\n+/).map(line=>{
+    const parts=line.split('|').map(s=>s.trim());
+    const key=parts[0]||'';
+    const label=parts[1]||key;
+    const odd=parts[2]!==undefined&&parts[2]!==''?Number(parts[2]):undefined;
+    return {key,label,odd};
+  }).filter(o=>o.key&&o.label);
+}
+function defaultMeasure(){
+  const d=new Date();
+  d.setUTCDate(d.getUTCDate()+7);
+  return d.toISOString().slice(0,10);
+}
+function qCard(item, compact){
+  const opts=(item.options||[]).map(o=>`${o.key} ${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
+  const canResolve=item.status==='open'||item.status==='locked';
+  const cover=item.coverPhoto?`<img src="${esc(item.coverPhoto)}" alt="" class="batch-cover" loading="lazy" style="max-width:${compact?'160px':'320px'}">`:'';
+  return `<div class="q" data-id="${esc(item.id)}">
+    ${cover}
+    <strong>${esc(item.title||'—')}</strong>
+    <span class="badge">${esc(item.status)}</span>
+    ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
+    <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
+    <div class="meta">${esc(opts)}</div>
+    ${!item.coverPhoto?'<div class="meta" style="color:#f88">⚠ Image manquante</div>':''}
+    <div class="actions">
+      <button type="button" class="ghost" data-copy="${esc(item.id)}">Copier ID</button>
+      ${canResolve?`<button type="button" data-fill="${esc(item.id)}" data-keys="${(item.options||[]).map(o=>esc(o.key)).join(',')}">Résoudre</button>`:''}
+    </div>
+  </div>`;
+}
 function renderList(items){
   const box=document.getElementById('qList');
   if(!items.length){box.innerHTML='Aucune question.';return;}
-  box.innerHTML=items.map(item=>{
-    const opts=(item.options||[]).map(o=>`${o.key} ${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
-    const canResolve=item.status==='open'||item.status==='locked';
-    const cover=item.coverPhoto?`<img src="${item.coverPhoto.replace(/"/g,'&quot;')}" alt="" class="batch-cover" loading="lazy">`:'';
-    return `<div class="q" data-id="${item.id}">
-      ${cover}
-      <strong>${item.title||'—'}</strong>
-      <span class="badge">${item.status}</span>
-      ${item.theme?`<span class="badge">${item.theme}</span>`:''}
-      <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
-      <div class="meta">${opts}</div>
-      <div class="actions">
-        <button type="button" class="ghost" data-copy="${item.id}">Copier ID</button>
-        ${canResolve?`<button type="button" data-fill="${item.id}" data-keys="${(item.options||[]).map(o=>o.key).join(',')}">Résoudre</button>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  box.innerHTML=items.map(item=>qCard(item,false)).join('');
 }
 function renderDailyList(items){
   const box=document.getElementById('dailyList');
   if(!items.length){box.innerHTML='Aucun prono pour ce batch.';return;}
   box.innerHTML=items.map((item,i)=>{
     const cover=item.coverPhoto||'';
-    const thumb=cover?`<img src="${cover.replace(/"/g,'&quot;')}" alt="" class="batch-thumb" loading="lazy">`:'<div class="batch-thumb"></div>';
+    const thumb=cover?`<img src="${esc(cover)}" alt="" class="batch-thumb" loading="lazy">`:'<div class="batch-thumb"></div>';
     const opts=(item.options||[]).map(o=>`${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
     return `<div class="q batch-row">
       ${thumb}
       <div>
-        <strong>${i+1}. ${item.title||'—'}</strong>
-        <span class="badge">${item.status||'draft'}</span>
-        ${item.theme?`<span class="badge">${item.theme}</span>`:''}
-        <div class="meta">${opts}</div>
-        ${!cover?'<div class="meta" style="color:#f88">⚠ Image manquante — publication bloquée</div>':''}
+        <strong>${i+1}. ${esc(item.title||'—')}</strong>
+        <span class="badge">${esc(item.status||'draft')}</span>
+        ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
+        <div class="meta">${esc(opts)}</div>
+        ${!cover?'<div class="meta" style="color:#f88">⚠ Image manquante — ce prono ne sera pas publié</div>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderThemeBlocks(){
+  const box=document.getElementById('themeBlocks');
+  if(!box)return;
+  box.innerHTML=THEMES.map((theme,ti)=>{
+    const items=ALL_ITEMS.filter(i=>i.theme===theme.key).slice(0,12);
+    const list=items.length?items.map(i=>qCard(i,true)).join(''):'<p class="muted" style="margin:8px 0 0;font-size:12px">Aucune question dans ce thème pour l’instant.</p>';
+    return `<div class="theme-box" data-theme="${esc(theme.key)}">
+      <h3>${ti+1}. ${esc(theme.label)}</h3>
+      <p class="muted" style="margin:0;font-size:12px">${esc(theme.hint)}</p>
+      <div class="qlist">${list}</div>
+      <div class="theme-form">
+        <details ${items.length?'' :'open'}>
+          <summary>+ Ajouter une question</summary>
+          <label class="required">Question</label>
+          <input data-tf="title" data-ti="${ti}" placeholder="Ta question…">
+          <label>Contexte</label>
+          <textarea data-tf="context" data-ti="${ti}" rows="2" placeholder="Précision optionnelle"></textarea>
+          <label>Options (key|label|cote)</label>
+          <textarea data-tf="options" data-ti="${ti}" rows="3">y|Oui|1.70
+n|Non|2.20</textarea>
+          <div class="row">
+            <div>
+              <label>Image URL</label>
+              <input data-tf="cover" data-ti="${ti}" placeholder="https://…">
+            </div>
+            <div>
+              <label>Profile ID FI</label>
+              <input data-tf="profile" data-ti="${ti}" placeholder="himra">
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Vote</label>
+              <select data-tf="vote" data-ti="${ti}">
+                <option value="6">6 h</option>
+                <option value="12" selected>12 h</option>
+                <option value="24">24 h</option>
+              </select>
+            </div>
+            <div>
+              <label>Mesure</label>
+              <input data-tf="measure" data-ti="${ti}" type="date" value="${defaultMeasure()}">
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Statut</label>
+              <select data-tf="status" data-ti="${ti}">
+                <option value="open">Publier (open)</option>
+                <option value="draft">Brouillon</option>
+              </select>
+            </div>
+            <div>
+              <label>Mise</label>
+              <input data-tf="stake" data-ti="${ti}" type="number" min="1" max="5000" value="100">
+            </div>
+          </div>
+          <button type="button" data-theme-save="${ti}">Enregistrer dans ce thème</button>
+        </details>
       </div>
     </div>`;
   }).join('');
@@ -227,9 +308,11 @@ async function loadList(){
   const box=document.getElementById('qList');
   const gate=document.getElementById('authGate');
   try{
-    const data=await api('prono-admin-list.php');
+    const data=await api('prono-admin-list.php?limit=80');
     if(gate)gate.style.display='none';
-    renderList(data.items||[]);
+    ALL_ITEMS=data.items||[];
+    renderList(ALL_ITEMS);
+    renderThemeBlocks();
   }catch(e){
     const msg=String(e.message||'Erreur');
     box.textContent=msg;
@@ -238,53 +321,103 @@ async function loadList(){
     }
   }
 }
-document.getElementById('qList').onclick=(e)=>{
-  const copy=e.target.closest('[data-copy]');
-  if(copy){
-    navigator.clipboard?.writeText(copy.getAttribute('data-copy'));
-    document.getElementById('resolveId').value=copy.getAttribute('data-copy');
-    return;
+function bindListClicks(root){
+  root?.addEventListener('click',(e)=>{
+    const copy=e.target.closest('[data-copy]');
+    if(copy){
+      navigator.clipboard?.writeText(copy.getAttribute('data-copy'));
+      document.getElementById('resolveId').value=copy.getAttribute('data-copy');
+      return;
+    }
+    const fill=e.target.closest('[data-fill]');
+    if(fill){
+      document.getElementById('resolveId').value=fill.getAttribute('data-fill');
+      const keys=(fill.getAttribute('data-keys')||'').split(',').filter(Boolean);
+      if(keys[0])document.getElementById('winKey').value=keys[0];
+      document.getElementById('resolveId').scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  });
+}
+bindListClicks(document.getElementById('qList'));
+bindListClicks(document.getElementById('themeBlocks'));
+
+document.getElementById('themeBlocks').addEventListener('click',async(e)=>{
+  const btn=e.target.closest('[data-theme-save]');
+  if(!btn)return;
+  const ti=Number(btn.getAttribute('data-theme-save'));
+  const theme=THEMES[ti];
+  const msg=document.getElementById('themeMsg');
+  const root=btn.closest('.theme-box');
+  const val=(name)=>root.querySelector(`[data-tf="${name}"][data-ti="${ti}"]`)?.value?.trim()||'';
+  try{
+    const measureRaw=val('measure');
+    if(!measureRaw)throw new Error('Date de mesure requise');
+    const title=val('title');
+    if(!title)throw new Error('Question requise');
+    const options=parseOptions(val('options'));
+    if(options.length<2)throw new Error('Au moins 2 options (key|label|cote)');
+    const payload={
+      theme:theme.key,
+      title,
+      context:val('context'),
+      coverImageUrl:val('cover'),
+      profileId:val('profile'),
+      options,
+      metricType:'manual',
+      status:val('status')||'open',
+      voteDurationHours:Number(val('vote')||12),
+      measureAt:measureRaw+'T23:59:59Z',
+      pointsCorrect:Number(val('stake')||100)
+    };
+    const data=await api('prono-admin-save.php',payload);
+    msg.classList.remove('err');
+    msg.textContent=`OK · ${theme.label} · id ${data.item.id}`;
+    await loadList();
+  }catch(err){
+    msg.classList.add('err');
+    msg.textContent=err.message;
   }
-  const fill=e.target.closest('[data-fill]');
-  if(fill){
-    document.getElementById('resolveId').value=fill.getAttribute('data-fill');
-    const keys=(fill.getAttribute('data-keys')||'').split(',').filter(Boolean);
-    if(keys[0])document.getElementById('winKey').value=keys[0];
-    document.getElementById('resolveId').scrollIntoView({behavior:'smooth',block:'center'});
-  }
-};
+});
+
 document.getElementById('refreshList').onclick=loadList;
 document.getElementById('refreshDailyBtn').onclick=loadDaily;
 document.getElementById('genDailyBtn').onclick=async()=>{
   const msg=document.getElementById('dailyMsg');
+  msg.classList.remove('err');
   try{
     const data=await api('prono-daily.php',{action:'generate'});
     msg.textContent=data.message||`OK · ${data.count} générés`;
     renderDailyList(data.items||[]);
     loadList();
-  }catch(e){msg.textContent=e.message;}
+  }catch(e){msg.classList.add('err');msg.textContent=e.message;}
 };
 document.getElementById('publishDailyBtn').onclick=async()=>{
   const msg=document.getElementById('dailyMsg');
-  if(!confirm('Publier tous les brouillons du batch du jour ?'))return;
+  msg.classList.remove('err');
+  if(!confirm('Publier les brouillons du batch du jour (ceux avec image) ?'))return;
   try{
     const data=await api('prono-daily.php',{action:'publish'});
-    msg.textContent=`OK · ${data.published} publié(s)`;
+    const skipped=Array.isArray(data.errors)&&data.errors.length?` · ignorés : ${data.errors.join(' · ')}`:'';
+    msg.classList.toggle('err',!(data.published>0));
+    msg.textContent=`${data.published||0} publié(s)${skipped}`;
     loadDaily();
     loadList();
-  }catch(e){msg.textContent=e.message;}
+  }catch(e){msg.classList.add('err');msg.textContent=e.message;}
 };
 document.getElementById('genPublishDailyBtn').onclick=async()=>{
   const msg=document.getElementById('dailyMsg');
-  if(!confirm('Générer puis publier immédiatement le batch du jour ?'))return;
+  msg.classList.remove('err');
+  if(!confirm('Générer puis publier le batch du jour ?'))return;
   try{
     const generated=await api('prono-daily.php',{action:'generate'});
     renderDailyList(generated.items||[]);
     const published=await api('prono-daily.php',{action:'publish'});
-    msg.textContent=`OK · ${generated.count||0} générés · ${published.published||0} publiés`;
+    const skipped=Array.isArray(published.errors)&&published.errors.length?` · ignorés : ${published.errors.join(' · ')}`:'';
+    msg.classList.toggle('err',!(published.published>0));
+    msg.textContent=`${generated.count||0} générés · ${published.published||0} publiés${skipped}`;
     loadDaily();
     loadList();
-  }catch(e){msg.textContent=e.message;}
+  }catch(e){msg.classList.add('err');msg.textContent=e.message;}
 };
 document.getElementById('coverImageUrl').addEventListener('input',()=>{
   const url=document.getElementById('coverImageUrl').value.trim();
@@ -295,17 +428,13 @@ document.getElementById('coverImageUrl').addEventListener('input',()=>{
 });
 document.getElementById('saveBtn').onclick=async()=>{
   const msg=document.getElementById('saveMsg');
+  msg.classList.remove('err');
   try{
-    const options=document.getElementById('options').value.split(/\n+/).map(line=>{
-      const parts=line.split('|').map(s=>s.trim());
-      const key=parts[0]||'';
-      const label=parts[1]||key;
-      const odd=parts[2]!==undefined&&parts[2]!==''?Number(parts[2]):undefined;
-      return {key,label,odd};
-    }).filter(o=>o.key&&o.label);
+    const options=parseOptions(document.getElementById('options').value);
     const measureRaw=document.getElementById('measureAt').value.trim();
     if(!measureRaw)throw new Error('Date de mesure requise');
     const payload={
+      theme:document.getElementById('theme').value,
       title:document.getElementById('title').value.trim(),
       context:document.getElementById('context').value.trim(),
       coverImageUrl:document.getElementById('coverImageUrl').value.trim(),
@@ -321,177 +450,23 @@ document.getElementById('saveBtn').onclick=async()=>{
     const data=await api('prono-admin-save.php',payload);
     msg.textContent='OK · id '+data.item.id;
     loadList();
-  }catch(e){msg.textContent=e.message;}
+  }catch(e){msg.classList.add('err');msg.textContent=e.message;}
 };
 document.getElementById('resolveBtn').onclick=async()=>{
   const msg=document.getElementById('resolveMsg');
+  msg.classList.remove('err');
   try{
     const data=await api('prono-admin-resolve.php',{questionId:document.getElementById('resolveId').value.trim(),winningOptionKey:document.getElementById('winKey').value.trim(),evidenceNote:document.getElementById('evidence').value.trim()});
     msg.textContent=`OK · ${data.winnersPaid} gagnant(s) × ${data.pointsEach} pts`;
     loadList();
-  }catch(e){msg.textContent=e.message;}
+  }catch(e){msg.classList.add('err');msg.textContent=e.message;}
 };
 (()=>{
   const el=document.getElementById('measureAt');
   if(!el||el.value)return;
-  const d=new Date();
-  d.setUTCDate(d.getUTCDate()+7);
-  el.value=d.toISOString().slice(0,10);
+  el.value=defaultMeasure();
 })();
-
-/* —— Grille du jour (3 thèmes People) —— */
-let GRILLE={date:'',status:'draft',themes:[]};
-let PROFILE_INDEX=[];
-
-function todayUTC(){return new Date().toISOString().slice(0,10);}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
-function initials(name){return String(name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
-
-async function loadProfiles(){
-  try{
-    const res=await fetch('./api/state.php',{headers:{Accept:'application/json'}});
-    const data=await res.json();
-    PROFILE_INDEX=(data?.data?.profiles||[]).filter(p=>p&&p.id&&p.name).map(p=>({
-      profileId:String(p.id),
-      name:String(p.name),
-      photoUrl:String(p.photoUrl||''),
-      initials:String(p.initials||''),
-      category:String(p.category||'')
-    }));
-  }catch(_){PROFILE_INDEX=[];}
-}
-
-function renderGrilleThemes(){
-  const box=document.getElementById('grilleThemes');
-  if(!box)return;
-  box.innerHTML=(GRILLE.themes||[]).map((theme,ti)=>{
-    const people=(theme.people||[]).map((p,pi)=>`
-      <span class="person-chip" data-t="${ti}" data-p="${pi}">
-        ${p.photoUrl?`<img src="${esc(p.photoUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:`<span class="ph">${esc(initials(p.name))}</span>`}
-        ${esc(p.name)}
-        <button type="button" data-remove-t="${ti}" data-remove-p="${pi}">×</button>
-      </span>`).join('');
-    return `<div class="theme-box" data-theme="${esc(theme.key)}">
-      <h3>${ti+1}. ${esc(theme.label)}</h3>
-      <p class="muted" style="margin:0;font-size:12px">${esc(theme.hint)} · le joueur choisit <strong>${theme.pickCount}</strong></p>
-      <div class="row" style="margin-top:10px">
-        <div>
-          <label>Ajouter une personne</label>
-          <input class="grille-search" data-ti="${ti}" placeholder="Nom ou ID FI…" autocomplete="off">
-          <div class="suggest" data-suggest="${ti}"></div>
-        </div>
-        <div>
-          <label>Choix joueur (nombre)</label>
-          <input type="number" min="1" max="6" value="${Number(theme.pickCount)||1}" data-pick="${ti}">
-        </div>
-      </div>
-      <div class="people-list">${people||'<span class="muted" style="font-size:12px">Aucune personne pour l’instant</span>'}</div>
-    </div>`;
-  }).join('');
-}
-
-function addPerson(ti, person){
-  const theme=GRILLE.themes[ti];
-  if(!theme)return;
-  if(!theme.people)theme.people=[];
-  if(theme.people.some(p=>p.profileId===person.profileId))return;
-  theme.people.push(person);
-  renderGrilleThemes();
-}
-
-async function loadGrille(){
-  const msg=document.getElementById('grilleMsg');
-  const dateEl=document.getElementById('grilleDate');
-  if(dateEl&&!dateEl.value)dateEl.value=todayUTC();
-  const date=dateEl?.value||todayUTC();
-  try{
-    const data=await api('prono-grille-admin.php?date='+encodeURIComponent(date));
-    GRILLE=data.grille||{date,status:'draft',themes:data.themeCatalog||[]};
-    if(!GRILLE.themes?.length&&data.themeCatalog){
-      GRILLE.themes=data.themeCatalog.map(t=>({...t,people:[]}));
-    }
-    document.getElementById('grilleStatus').value=(GRILLE.status||'draft')+(GRILLE.id?' · '+GRILLE.id.slice(0,8):'');
-    renderGrilleThemes();
-    if(msg)msg.textContent=`Grille ${GRILLE.date||date} chargée`;
-  }catch(e){
-    if(msg)msg.textContent=e.message;
-    const gate=document.getElementById('authGate');
-    if(gate&&(/auth|connect|rôle|role|droit|owner|admin|403|401/i.test(String(e.message||''))))gate.style.display='block';
-  }
-}
-
-async function saveGrille(status){
-  const msg=document.getElementById('grilleMsg');
-  const date=document.getElementById('grilleDate').value||todayUTC();
-  try{
-    const payload={
-      date,
-      status,
-      themes:(GRILLE.themes||[]).map(t=>({
-        key:t.key,
-        label:t.label,
-        hint:t.hint,
-        pickCount:Number(t.pickCount)||1,
-        people:t.people||[]
-      }))
-    };
-    const data=await api('prono-grille-admin.php',payload);
-    GRILLE=data.grille||GRILLE;
-    document.getElementById('grilleStatus').value=(GRILLE.status||status)+(GRILLE.id?' · '+GRILLE.id.slice(0,8):'');
-    renderGrilleThemes();
-    msg.textContent=status==='published'?'Grille publiée ✓':'Brouillon enregistré ✓';
-  }catch(e){msg.textContent=e.message;}
-}
-
-document.getElementById('grilleThemes').addEventListener('click',(e)=>{
-  const rm=e.target.closest('[data-remove-t]');
-  if(!rm)return;
-  const ti=Number(rm.getAttribute('data-remove-t'));
-  const pi=Number(rm.getAttribute('data-remove-p'));
-  if(GRILLE.themes[ti]?.people)GRILLE.themes[ti].people.splice(pi,1);
-  renderGrilleThemes();
-});
-document.getElementById('grilleThemes').addEventListener('input',(e)=>{
-  const pick=e.target.closest('[data-pick]');
-  if(pick){
-    const ti=Number(pick.getAttribute('data-pick'));
-    if(GRILLE.themes[ti])GRILLE.themes[ti].pickCount=Math.max(1,Math.min(6,Number(pick.value)||1));
-    return;
-  }
-  const search=e.target.closest('.grille-search');
-  if(!search)return;
-  const ti=Number(search.getAttribute('data-ti'));
-  const q=search.value.trim().toLowerCase();
-  const box=document.querySelector(`[data-suggest="${ti}"]`);
-  if(!box)return;
-  if(q.length<1){box.style.display='none';box.innerHTML='';return;}
-  const hits=PROFILE_INDEX.filter(p=>p.name.toLowerCase().includes(q)||p.profileId.toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q)).slice(0,12);
-  box.style.display=hits.length?'block':'none';
-  box.innerHTML=hits.map(p=>`<button type="button" data-add-ti="${ti}" data-id="${esc(p.profileId)}">${esc(p.name)} <span class="muted">${esc(p.category||p.profileId)}</span></button>`).join('');
-});
-document.getElementById('grilleThemes').addEventListener('click',(e)=>{
-  const add=e.target.closest('[data-add-ti]');
-  if(!add)return;
-  const ti=Number(add.getAttribute('data-add-ti'));
-  const id=add.getAttribute('data-id');
-  const person=PROFILE_INDEX.find(p=>p.profileId===id);
-  if(person){
-    addPerson(ti,person);
-    const input=document.querySelector(`.grille-search[data-ti="${ti}"]`);
-    const box=document.querySelector(`[data-suggest="${ti}"]`);
-    if(input)input.value='';
-    if(box){box.style.display='none';box.innerHTML='';}
-  }
-});
-document.getElementById('grilleReloadBtn').onclick=loadGrille;
-document.getElementById('grilleDraftBtn').onclick=()=>saveGrille('draft');
-document.getElementById('grillePublishBtn').onclick=()=>{
-  if(!confirm('Publier cette grille du jour ?'))return;
-  saveGrille('published');
-};
-document.getElementById('grilleDate').onchange=loadGrille;
-
-loadProfiles().then(loadGrille);
+renderThemeBlocks();
 loadList();
 loadDaily();
 </script>

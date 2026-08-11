@@ -7,6 +7,7 @@
   const DIAPO_HOLD_MS = 200;
   const state = {
     items: [],
+    themes: [],
     results: [],
     statuses: [],
     balance: { balance: 0, streak: 0 },
@@ -87,9 +88,16 @@
     return {
       auth: true,
       balance: { balance: 1000, streak: 0, floor: 100 },
+      themes: [
+        { key: 'people_influenceurs', label: 'People influenceurs' },
+        { key: 'people_artiste_sportif', label: 'People Artiste/sportif' },
+        { key: 'people_actualite', label: 'People Actualité' },
+      ],
       items: [
         {
           id: 'demo-1',
+          theme: 'people_actualite',
+          themeLabel: 'People Actualité',
           title: 'Himra — perte d’abonnés TikTok en 7 jours ?',
           context: 'Après la polémique de la semaine, quel scénario te semble le plus probable ?',
           stake: 100,
@@ -106,6 +114,8 @@
         },
         {
           id: 'demo-2',
+          theme: 'people_influenceurs',
+          themeLabel: 'People influenceurs',
           title: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?',
           context: 'Classement public Côte d’Ivoire + diaspora.',
           stake: 100,
@@ -121,6 +131,8 @@
         },
         {
           id: 'demo-3',
+          theme: 'people_artiste_sportif',
+          themeLabel: 'People Artiste/sportif',
           title: 'Lo Père Daloa finit-il sa 2ᵉ maison dans 6 mois ?',
           context: 'Votes ouverts 12 h — mesure dans 6 mois.',
           stake: 100,
@@ -499,6 +511,40 @@
     list.innerHTML = state.results.map(resultCard).join('');
   }
 
+  const THEME_ORDER = [
+    { key: 'people_influenceurs', label: 'People influenceurs' },
+    { key: 'people_artiste_sportif', label: 'People Artiste/sportif' },
+    { key: 'people_actualite', label: 'People Actualité' },
+  ];
+
+  function themeSections(items) {
+    const catalog = Array.isArray(state.themes) && state.themes.length
+      ? state.themes.map((t) => ({ key: t.key, label: t.label || t.key }))
+      : THEME_ORDER;
+    const byKey = {};
+    items.forEach((item) => {
+      const key = String(item.theme || '').trim() || '_other';
+      if (!byKey[key]) byKey[key] = [];
+      byKey[key].push(item);
+    });
+    const sections = [];
+    catalog.forEach((theme) => {
+      const list = byKey[theme.key] || [];
+      if (!list.length) return;
+      sections.push({ key: theme.key, label: theme.label, items: list });
+      delete byKey[theme.key];
+    });
+    Object.keys(byKey).forEach((key) => {
+      const list = byKey[key];
+      if (!list.length) return;
+      const label = key === '_other'
+        ? 'Autres pronos'
+        : (list[0].themeLabel || key);
+      sections.push({ key, label, items: list });
+    });
+    return sections;
+  }
+
   function renderList() {
     const list = $('#pronoList');
     const gate = $('#authGate');
@@ -515,7 +561,20 @@
       list.innerHTML = '<div class="empty"><strong>Aucun prono ouvert</strong><div>Reviens bientôt — PASS50 publie Qui fait quoi sur l’actu.</div></div>';
       return;
     }
-    list.innerHTML = state.items.map(card).join('');
+    const sections = themeSections(state.items);
+    if (sections.length <= 1) {
+      list.innerHTML = state.items.map(card).join('');
+      return;
+    }
+    list.innerHTML = sections.map((section, index) => `
+      <div class="theme-block" data-theme="${esc(section.key)}">
+        <div class="theme-head">
+          <h3 class="theme-title">${index + 1}. ${esc(section.label)}</h3>
+          <span class="theme-count">${section.items.length} prono${section.items.length > 1 ? 's' : ''}</span>
+        </div>
+        ${section.items.map(card).join('')}
+      </div>
+    `).join('');
   }
 
   async function loadResults() {
@@ -570,6 +629,7 @@
       const data = demoFeed();
       state.auth = true;
       state.items = data.items;
+      state.themes = data.themes || [];
       state.balance = data.balance;
       renderBalance();
       renderList();
@@ -581,6 +641,7 @@
       const data = await api('prono-feed.php', { auth: true });
       state.auth = Boolean(data.auth);
       state.items = Array.isArray(data.items) ? data.items : [];
+      state.themes = Array.isArray(data.themes) ? data.themes : [];
       state.balance = data.balance || state.balance;
       renderBalance();
       renderList();

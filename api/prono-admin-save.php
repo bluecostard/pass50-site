@@ -17,6 +17,7 @@ $context = trim((string)($input['context'] ?? ''));
 $profileId = trim((string)($input['profileId'] ?? ''));
 $subjectKeyInput = trim((string)($input['subjectKey'] ?? ''));
 $coverImageUrl = trim((string)($input['coverImageUrl'] ?? ''));
+$theme = p50_prono_normalize_theme((string)($input['theme'] ?? ''));
 $options = p50_prono_options($input['options'] ?? []);
 $metricType = trim((string)($input['metricType'] ?? 'manual'));
 $status = trim((string)($input['status'] ?? 'draft'));
@@ -72,8 +73,14 @@ if ($measure < $closes) {
 
 $pdo = db();
 $subjectKey = p50_prono_subject_key($profileId, $subjectKeyInput);
+if ($subjectKey === '' && $theme !== '') {
+    $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $title) ?? 'prono');
+    $slug = trim($slug, '-');
+    if ($slug === '') $slug = substr(sha1($title), 0, 10);
+    $subjectKey = mb_substr('theme:'.$theme.':'.$slug, 0, 120);
+}
 if ($subjectKey === '' && in_array($status, ['open', 'draft', 'locked'], true)) {
-    json_response(['error' => 'Indique un Profile ID FI ou une clé d’actualité (ex. himra-tiktok) pour regrouper les pronos (max '.P50_PRONO_MAX_OPEN_PER_SUBJECT.').'], 400);
+    json_response(['error' => 'Choisis un thème, un Profile ID FI, ou une clé d’actualité (ex. himra-tiktok).'], 400);
 }
 if ($subjectKey !== '' && in_array($status, ['open', 'draft', 'locked'], true)) {
     $openCount = p50_prono_count_open_for_subject($pdo, $subjectKey, $id);
@@ -95,10 +102,11 @@ $metricConfig = isset($input['metricConfig']) && is_array($input['metricConfig']
 if ($id === '') {
     $id = p50_prono_uuid();
     $pdo->prepare('INSERT INTO p50_prono_questions
-      (id,title,context_text,cover_image_url,profile_id,subject_key,options_json,metric_type,metric_config_json,opens_at,closes_at,measure_at,points_correct,status,created_by)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      (id,title,context_text,cover_image_url,theme,profile_id,subject_key,options_json,metric_type,metric_config_json,opens_at,closes_at,measure_at,points_correct,status,created_by)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
         ->execute([
             $id, mb_substr($title, 0, 220), mb_substr($context, 0, 500), mb_substr($coverImageUrl, 0, 500),
+            mb_substr($theme, 0, 80),
             mb_substr($profileId, 0, 100), $subjectKey,
             $optionsJson, $metricType, $metricConfig,
             $opens->format('Y-m-d H:i:s'), $closes->format('Y-m-d H:i:s'), $measure->format('Y-m-d H:i:s'),
@@ -108,9 +116,10 @@ if ($id === '') {
     $exists = $pdo->prepare('SELECT id FROM p50_prono_questions WHERE id=? LIMIT 1');
     $exists->execute([$id]);
     if (!$exists->fetch()) json_response(['error' => 'Prono introuvable.'], 404);
-    $pdo->prepare('UPDATE p50_prono_questions SET title=?,context_text=?,cover_image_url=?,profile_id=?,subject_key=?,options_json=?,metric_type=?,metric_config_json=?,opens_at=?,closes_at=?,measure_at=?,points_correct=?,status=? WHERE id=?')
+    $pdo->prepare('UPDATE p50_prono_questions SET title=?,context_text=?,cover_image_url=?,theme=?,profile_id=?,subject_key=?,options_json=?,metric_type=?,metric_config_json=?,opens_at=?,closes_at=?,measure_at=?,points_correct=?,status=? WHERE id=?')
         ->execute([
             mb_substr($title, 0, 220), mb_substr($context, 0, 500), mb_substr($coverImageUrl, 0, 500),
+            mb_substr($theme, 0, 80),
             mb_substr($profileId, 0, 100), $subjectKey,
             $optionsJson, $metricType, $metricConfig,
             $opens->format('Y-m-d H:i:s'), $closes->format('Y-m-d H:i:s'), $measure->format('Y-m-d H:i:s'),
