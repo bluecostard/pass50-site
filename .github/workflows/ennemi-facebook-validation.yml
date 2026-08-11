@@ -1,0 +1,39 @@
+name: Ennemi Facebook Validation
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['api/ennemi-facebook-validation-cron-v1.php','.github/workflows/ennemi-facebook-validation.yml']
+permissions: {contents: read, statuses: write}
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - name: Confirm official Facebook page
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${CRON_URL:-}" in */metrics-cron.php) ENDPOINT="${CRON_URL%/metrics-cron.php}/ennemi-facebook-validation-cron-v1.php" ;; *) exit 1 ;; esac
+          case "$ENDPOINT" in http://*) ENDPOINT="https://${ENDPOINT#http://}" ;; esac
+          case "$ENDPOINT" in https://www.pass50.store/*) ENDPOINT="https://pass50.store/${ENDPOINT#https://www.pass50.store/}" ;; esac
+          body="$(jq -nc --arg dispatchId "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" '{dispatchId:$dispatchId}')"
+          for attempt in $(seq 1 36); do
+            timestamp="$(date +%s)";signature="$(printf '%s\n%s' "$timestamp" "$body"|openssl dgst -sha256 -hmac "$CRON_SECRET" -r|awk '{print $1}')"
+            code="$(curl --silent --show-error --max-time 90 --output /tmp/ennemi-fb.json --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT" || true)"
+            if [ "$code" = 200 ]&&jq -e '.ok==true and .version=="ENNEMI-FACEBOOK-VALIDATION-V1.0" and .status=="owner_verified" and .publicStateWrites==1' /tmp/ennemi-fb.json >/dev/null 2>&1;then break;fi
+            echo "Endpoint en attente · tentative $attempt/36 · HTTP ${code:-000}";sleep 10
+          done
+          jq -e '.ok==true and .status=="owner_verified" and .publicStateWrites==1' /tmp/ennemi-fb.json >/dev/null
+          cat /tmp/ennemi-fb.json
+      - name: Archive validation proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ennemi-facebook-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/ennemi-fb.json
+          if-no-files-found: warn
+          retention-days: 30
