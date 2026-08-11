@@ -1,13 +1,12 @@
 name: Metrics Ranking Publication Watchdog
 
-# Garde-fou anti-silence: si le classement public n'a pas ete ecrit depuis trop longtemps
-# alors que les flags sont actifs et qu'un candidat eligible existe, on republie.
-# Echoue bruyamment si les flags sont eteints ou si la recovery echoue.
+# Anti-silence: if public ranking was not written for too long while flags are on
+# and a candidate is eligible, republish. Fail loudly if flags are off or recovery fails.
 
-"on":
+on:
   schedule:
-    - cron: "40 * * * *"
-  workflow_dispatch: {}
+    - cron: '40 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -63,7 +62,7 @@ jobs:
             local url="$1"
             local body="$2"
             local out="$3"
-            local timestamp signature code
+            local timestamp signature code st
             timestamp="$(date +%s)"
             signature="$(
               printf '%s\n%s' "$timestamp" "$body" |
@@ -81,7 +80,7 @@ jobs:
                 --data "$body" \
                 "$url"
             )"
-            local st=$?
+            st=$?
             set -e
             echo "$code"
             return "$st"
@@ -89,7 +88,6 @@ jobs:
 
           dispatch_base="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-watchdog"
 
-          # 1) Flags
           probe_body="$(jq -nc --arg dispatchId "${dispatch_base}-probe" '{action:"probe",dispatchId:$dispatchId}')"
           probe_code="$(signed_post "$APPLY_URL" "$probe_body" watchdog-probe.json || true)"
           if [ "$probe_code" != "200" ]; then
@@ -101,11 +99,10 @@ jobs:
           pub="$(jq -r '.publicationEnabled // false' watchdog-probe.json)"
           auto="$(jq -r '.automaticPublicationEnabled // false' watchdog-probe.json)"
           if [ "$pub" != "true" ] || [ "$auto" != "true" ]; then
-            echo "::error::Flags publication éteints (publicationEnabled=$pub, automaticPublicationEnabled=$auto). Relancer Enable Ranking Publication Flags."
+            echo "::error::Flags publication eteints (publicationEnabled=$pub, automaticPublicationEnabled=$auto). Relancer Enable Ranking Publication Flags."
             exit 1
           fi
 
-          # 2) Dernière écriture publique
           hist_body="$(jq -nc --arg dispatchId "${dispatch_base}-history" '{action:"history",dispatchId:$dispatchId}')"
           hist_code="$(signed_post "$HISTORY_URL" "$hist_body" watchdog-history.json || true)"
           if [ "$hist_code" != "200" ]; then
@@ -117,32 +114,16 @@ jobs:
 
           latest_at="$(jq -r '.latestApplied.generatedAt // empty' watchdog-history.json)"
           latest_rev="$(jq -r '.latestApplied.publicRevisionAfter // 0' watchdog-history.json)"
-
           if [ -z "$latest_at" ] || [ "$latest_at" = "null" ]; then
-            echo "::error::Aucune publication apply réussie trouvée dans l’historique."
+            echo "::error::Aucune publication apply reussie trouvee dans l historique."
             exit 1
           fi
 
-          age_hours="$(python3 - <<PY
-from datetime import datetime, timezone
-raw = """$latest_at""".strip().replace(" ", "T")
-if raw.endswith("Z"):
-    raw = raw[:-1] + "+00:00"
-# MySQL UTC "YYYY-MM-DD HH:MM:SS" → assume UTC
-if "T" not in raw and len(raw) >= 19:
-    raw = raw[:19].replace(" ", "T") + "+00:00"
-elif "+" not in raw[10:] and "Z" not in raw:
-    raw = raw[:19] + "+00:00"
-dt = datetime.fromisoformat(raw)
-if dt.tzinfo is None:
-    dt = dt.replace(tzinfo=timezone.utc)
-age = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds() / 3600.0
-print(f"{age:.3f}")
-PY
-)"
-          echo "Dernière écriture : $latest_at (rév. $latest_rev) · âge ${age_hours}h"
+          age_hours="$(
+            LATEST_AT="$latest_at" python3 -c 'import os; from datetime import datetime, timezone; raw=os.environ["LATEST_AT"].strip().replace(" ","T"); raw=(raw[:-1]+"+00:00") if raw.endswith("Z") else raw; raw=(raw[:19].replace(" ","T")+"+00:00") if ("T" not in raw and len(raw)>=19) else ((raw[:19]+"+00:00") if ("+" not in raw[10:] and "Z" not in raw) else raw); dt=datetime.fromisoformat(raw); dt=dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt; print(f"{(datetime.now(timezone.utc)-dt.astimezone(timezone.utc)).total_seconds()/3600.0:.3f}")'
+          )"
+          echo "Derniere ecriture : $latest_at (rev. $latest_rev) / age ${age_hours}h"
 
-          # 3) Preview candidat
           preview_body="$(jq -nc --arg dispatchId "${dispatch_base}-preview" '{action:"preview",dispatchId:$dispatchId}')"
           preview_code="$(signed_post "$APPLY_URL" "$preview_body" watchdog-preview.json || true)"
           if [ "$preview_code" != "200" ]; then
@@ -157,18 +138,15 @@ PY
           {
             printf '### Watchdog publication classement\n'
             printf -- '- flags : publication=`%s` automatic=`%s`\n' "$pub" "$auto"
-            printf -- '- dernière écriture : `%s` (rév. `%s`)\n' "$latest_at" "$latest_rev"
-            printf -- '- âge : `%sh` (seuil `%s`)\n' "$age_hours" "$MAX_STALE_HOURS"
-            printf -- '- preview éligible : `%s` · mutations : `%s`\n' "$eligible" "$mutations"
+            printf -- '- derniere ecriture : `%s` (rev. `%s`)\n' "$latest_at" "$latest_rev"
+            printf -- '- age : `%sh` (seuil `%s`)\n' "$age_hours" "$MAX_STALE_HOURS"
+            printf -- '- preview eligible : `%s` / mutations : `%s`\n' "$eligible" "$mutations"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          stale="$(python3 - <<PY
-print('true' if float("$age_hours") > float("$MAX_STALE_HOURS") else 'false')
-PY
-)"
+          stale="$(python3 -c "print('true' if float('$age_hours') > float('$MAX_STALE_HOURS') else 'false')")"
 
           if [ "$stale" != "true" ]; then
-            echo "::notice::Classement frais (${age_hours}h < ${MAX_STALE_HOURS}h). Rien à faire."
+            echo "::notice::Classement frais (${age_hours}h < ${MAX_STALE_HOURS}h). Rien a faire."
             printf 'stale=false\nrecovered=false\nage_hours=%s\n' "$age_hours" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -176,7 +154,7 @@ PY
           echo "::warning::Classement stale (${age_hours}h). Tentative de recovery."
 
           if [ "$eligible" != "true" ]; then
-            echo "::error::Classement stale et candidat non éligible (mutations=$mutations). Intervention requise."
+            echo "::error::Classement stale et candidat non eligible (mutations=$mutations). Intervention requise."
             exit 1
           fi
 
@@ -189,23 +167,23 @@ PY
           fi
           jq -e '.ok == true' watchdog-apply.json >/dev/null
           skipped="$(jq -r '.skipped // false' watchdog-apply.json)"
-          reason="$(jq -r '.reason // .error // "—"' watchdog-apply.json)"
+          reason="$(jq -r '.reason // .error // "-"' watchdog-apply.json)"
           writes="$(jq -r '.publicStateWrites // 0' watchdog-apply.json)"
           revision="$(jq -r '.publicStateRevision // 0' watchdog-apply.json)"
 
           if [ "$skipped" = "true" ] || [ "${reason}" = "automatic_disabled" ]; then
-            echo "::error::Recovery skippée : $reason"
+            echo "::error::Recovery skippee : $reason"
             exit 1
           fi
           if [ "$writes" = "0" ]; then
-            echo "::error::Recovery sans écriture publique (rév=$revision)."
+            echo "::error::Recovery sans ecriture publique (rev=$revision)."
             cat watchdog-apply.json || true
             exit 1
           fi
 
-          echo "::notice::Recovery OK · révision $revision · writes=$writes"
+          echo "::notice::Recovery OK / revision $revision / writes=$writes"
           {
-            printf -- '- recovery : `ok` · révision `%s` · writes `%s`\n' "$revision" "$writes"
+            printf -- '- recovery : `ok` / revision `%s` / writes `%s`\n' "$revision" "$writes"
           } >> "$GITHUB_STEP_SUMMARY"
           printf 'stale=true\nrecovered=true\nage_hours=%s\nrevision=%s\n' "$age_hours" "$revision" >> "$GITHUB_OUTPUT"
 
@@ -234,7 +212,7 @@ PY
           description="watchdog classement OK"
           if [ "$STEP_OUTCOME" != "success" ]; then
             state="failure"
-            description="watchdog classement en échec · écriture publique à vérifier"
+            description="watchdog classement en echec"
           fi
           payload="$(jq -nc \
             --arg state "$state" \
