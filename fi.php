@@ -188,7 +188,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:16px;pa
   display:grid;place-items:center;font-size:42px;font-weight:1000;
   background:linear-gradient(145deg,#273027,#0c0f0c);border:1px solid var(--line);
 }
-.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar img{width:100%;height:100%;object-fit:cover;object-position:center 18%}
 .eyebrow{color:var(--lime);font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
 h1{margin:8px 0 4px;font-size:clamp(28px,5vw,44px);letter-spacing:-1.8px;line-height:1.05;font-weight:1000}
 .handle{color:var(--muted);font-weight:700}
