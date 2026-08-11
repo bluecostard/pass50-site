@@ -214,6 +214,7 @@ function qCard(item, compact){
     <div class="actions">
       <button type="button" class="ghost" data-copy="${esc(item.id)}">Copier ID</button>
       <button type="button" class="ghost" style="color:#b7ff00;border-color:rgba(183,255,0,.35)" data-edit="${itemJson}">✏ Modifier</button>
+      <button type="button" class="ghost" style="color:#ff6b6b;border-color:rgba(255,107,107,.35)" data-delete="${esc(item.id)}" data-votes="${item.voteCount||0}">🗑 Supprimer</button>
       ${canResolve?`<button type="button" data-fill="${esc(item.id)}" data-keys="${(item.options||[]).map(o=>esc(o.key)).join(',')}">Résoudre</button>`:''}
     </div>
   </div>`;
@@ -392,6 +393,22 @@ function bindListClicks(root){
         const item=JSON.parse(edit.getAttribute('data-edit').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#039;/g,"'"));
         prefillForm(item);
       }catch(ex){console.error('prefill',ex);}
+      return;
+    }
+    const del=e.target.closest('[data-delete]');
+    if(del){
+      const qid=del.getAttribute('data-delete');
+      const votes=Number(del.getAttribute('data-votes')||0);
+      const msg=votes>0
+        ?`Cette question a ${votes} vote(s) — elle sera archivée (pas supprimée définitivement). Continuer ?`
+        :'Supprimer définitivement cette question ? (aucun vote enregistré)';
+      if(!confirm(msg))return;
+      try{
+        const data=await api('prono-admin-delete.php',{id:qid});
+        const action=data.action==='archived'?'archivée':'supprimée';
+        alert(`Question ${action}.`);
+        loadList();
+      }catch(ex){alert('Erreur : '+ex.message);}
     }
   });
 }
