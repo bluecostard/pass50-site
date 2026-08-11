@@ -458,6 +458,8 @@ document.getElementById('refreshDailyBtn').onclick=loadDaily;
 document.getElementById('genDailyBtn').onclick=async()=>{
   const msg=document.getElementById('dailyMsg');
   msg.classList.remove('err');
+  msg.style.display='block';
+  msg.textContent='Génération en cours…';
   try{
     const data=await api('prono-daily.php',{action:'generate'});
     msg.textContent=data.message||`OK · ${data.count} générés`;
