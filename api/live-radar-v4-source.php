@@ -79,7 +79,8 @@ function p50_live_v4_identity(string $platform,string $url): array {
         $handle=$m[1];
         // Comptes TikTok morts / remplacés connus.
         $aliases=[
-            'generalmakossocamille1'=>'generalcamillemakosso',
+            'generalmakossocamille1'=>'generalmakossocamille79',
+            'generalcamillemakosso'=>'generalmakossocamille79',
             'apoutchou.225'=>'apoutchou_national1',
             'apoutchounational'=>'apoutchou_national1',
         ];
@@ -142,7 +143,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
     $key=strtolower(trim($profileId)).'|'.strtolower(trim($platform));
     $overrides=[
         'apoutchou|tiktok'=>'https://www.tiktok.com/@apoutchou_national1',
-        'general-camille-makosso|tiktok'=>'https://www.tiktok.com/@generalcamillemakosso',
+        'general-camille-makosso|tiktok'=>'https://www.tiktok.com/@generalmakossocamille79',
     ];
     return $overrides[$key]??$url;
 }

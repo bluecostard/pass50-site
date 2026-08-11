@@ -2,23 +2,24 @@
 'use strict';
 
 const PROFILE_ID='general-camille-makosso';
-const TIKTOK_URL='https://www.tiktok.com/@generalcamillemakosso';
+const TIKTOK_URL='https://www.tiktok.com/@generalmakossocamille79';
 const INSTAGRAM_URL='https://www.instagram.com/generalcamillemakosso/';
 const FACEBOOK_URL='https://www.facebook.com/Generalcamillemakosso/';
 const FACEBOOK_SOURCE=FACEBOOK_URL;
 const HEEPSY_SOURCE='https://www.heepsy.com/es/instagram-profile/generalcamillemakosso';
 const PRESS_SOURCE='https://carrefourdesmetiers.fr/pratique/qui-est-vraiment-camille-makosso-le-pasteur-influenceur-de-cote-divoire/';
+const STALE_TIKTOK=/(generalmakossocamille1|@?generalcamillemakosso)(?!\w)/i;
 let attempts=0;
 
 function verifiedLink(message){
-  return {status:'manual_verified',checkedAt:'2026-07-28T00:00:00.000Z',message};
+  return {status:'manual_verified',checkedAt:'2026-08-12T00:00:00.000Z',message};
 }
 
 function baseProfile(){
   return {
     id:PROFILE_ID,
     name:'Général Camille Makosso',
-    handle:'@generalcamillemakosso',
+    handle:'@generalmakossocamille79',
     initials:'CM',
     region:'CI',
     category:'Religion / Société / Divertissement / Débats',
@@ -46,7 +47,7 @@ function baseProfile(){
     badges:[],
     links:{TikTok:TIKTOK_URL,Instagram:INSTAGRAM_URL,Facebook:FACEBOOK_URL},
     linkChecks:{
-      TikTok:verifiedLink('Compte TikTok publié dans la biographie Instagram publique de Général Camille Makosso.'),
+      TikTok:verifiedLink('Compte TikTok officiel actif @generalmakossocamille79 (remplace @generalcamillemakosso / @generalmakossocamille1).'),
       Instagram:verifiedLink('Compte Instagram public @generalcamillemakosso.'),
       Facebook:verifiedLink('Page Facebook publique Général Camille Makosso.')
     },
@@ -57,9 +58,10 @@ function baseProfile(){
     sources:[
       {publisher:'Page Facebook publique — Général Camille Makosso',date:'2026-07-28',url:FACEBOOK_SOURCE},
       {publisher:'Heepsy — profil Instagram et réseaux déclarés',date:'2026-07',url:HEEPSY_SOURCE},
-      {publisher:'Carrefour des Métiers — portrait numérique',date:'2023',url:PRESS_SOURCE}
+      {publisher:'Carrefour des Métiers — portrait numérique',date:'2023',url:PRESS_SOURCE},
+      {publisher:'TikTok officiel — @generalmakossocamille79',date:'2026-08-12',url:TIKTOK_URL}
     ],
-    notes:'Camille Makosso, connu publiquement comme Général Camille Makosso, est un pasteur et créateur de contenus ivoirien très actif sur les sujets religieux, sociaux et médiatiques. Profil recensé avec liens personnels concordants. Non classable tant que les métriques récentes ne sont pas validées par PASS50.'
+    notes:'Camille Makosso, connu publiquement comme Général Camille Makosso, est un pasteur et créateur de contenus ivoirien très actif sur les sujets religieux, sociaux et médiatiques. Compte TikTok officiel actuel : @generalmakossocamille79. Non classable tant que les métriques récentes ne sont pas validées par PASS50.'
   };
 }
 
@@ -69,14 +71,27 @@ function applyProfile(){
   let profile=db.profiles.find(item=>{
     const name=String(item&&item.name||'').toLowerCase();
     const handle=String(item&&item.handle||'').toLowerCase();
-    return item&&(item.id===PROFILE_ID||name==='général camille makosso'||name==='general camille makosso'||name==='camille makosso'||name==='makosso camille'||handle==='@generalcamillemakosso'||handle==='@generalmakossocamille1'||handle==='generalcamillemakosso');
+    return item&&(
+      item.id===PROFILE_ID
+      ||name==='général camille makosso'
+      ||name==='general camille makosso'
+      ||name==='camille makosso'
+      ||name==='makosso camille'
+      ||handle==='@generalcamillemakosso'
+      ||handle==='@generalmakossocamille1'
+      ||handle==='@generalmakossocamille79'
+      ||handle==='generalcamillemakosso'
+      ||handle==='generalmakossocamille79'
+    );
   });
   let changed=false;
   if(!profile){profile=patch;db.profiles.push(profile);changed=true;}
   else{
     ['name','handle','initials','region','category','censusStatus','verificationPriority','source','sources','notes'].forEach(key=>{
       const value=profile[key];
-      if(value===undefined||value===null||value===''||(Array.isArray(value)&&!value.length)){profile[key]=patch[key];changed=true;}
+      if(value===undefined||value===null||value===''||(Array.isArray(value)&&!value.length)||key==='handle'||key==='notes'||key==='sources'){
+        if(profile[key]!==patch[key]){profile[key]=patch[key];changed=true;}
+      }
     });
     ['alive','eligible','classable','verifiedPass50','ageStatus','agePublic','photoStatus','photoNote','photoPosition'].forEach(key=>{if(profile[key]===undefined){profile[key]=patch[key];changed=true;}});
     profile.platforms=Array.isArray(profile.platforms)?profile.platforms:[];
@@ -84,12 +99,19 @@ function applyProfile(){
     profile.links=profile.links||{};
     Object.entries(patch.links).forEach(([platform,url])=>{
       const current=String(profile.links[platform]||'');
-      const deadTikTok=/generalmakossocamille1/i.test(current);
-      if(!current||deadTikTok){profile.links[platform]=url;changed=true;}
+      const staleTikTok=platform==='TikTok'&&(!current||STALE_TIKTOK.test(current)||!/generalmakossocamille79/i.test(current));
+      if(!current||staleTikTok||(platform!=='TikTok'&&current!==url&&!current)){profile.links[platform]=url;changed=true;}
+      else if(platform==='TikTok'&&current!==url){profile.links[platform]=url;changed=true;}
     });
-    if(String(profile.handle||'').toLowerCase()==='@generalmakossocamille1'){profile.handle=patch.handle;changed=true;}
+    const handle=String(profile.handle||'').toLowerCase();
+    if(handle==='@generalmakossocamille1'||handle==='@generalcamillemakosso'||handle==='generalcamillemakosso'||handle!=='@generalmakossocamille79'){
+      profile.handle=patch.handle;changed=true;
+    }
     profile.linkChecks=profile.linkChecks||{};
-    Object.entries(patch.linkChecks).forEach(([platform,check])=>{if(!profile.linkChecks[platform]){profile.linkChecks[platform]=check;changed=true;}});
+    Object.entries(patch.linkChecks).forEach(([platform,check])=>{
+      const current=profile.linkChecks[platform];
+      if(!current||platform==='TikTok'){profile.linkChecks[platform]=check;changed=true;}
+    });
     profile.scores=profile.scores||patch.scores;
     profile.badges=Array.isArray(profile.badges)?profile.badges:[];
   }

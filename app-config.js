@@ -167,8 +167,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-general-camille-makosso]')) return;
   var script = document.createElement('script');
-  script.src = './profile-general-camille-makosso.js?v=1.1';
-  script.dataset.pass50ProfileGeneralCamilleMakosso = '1.0';
+  script.src = './profile-general-camille-makosso.js?v=1.2';
+  script.dataset.pass50ProfileGeneralCamilleMakosso = '1.2';
   document.head.appendChild(script);
 })();
 

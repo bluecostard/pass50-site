@@ -1,0 +1,471 @@
+{
+  "ok": true,
+  "tool": "live-scout-standalone",
+  "tested": 15,
+  "summary": {
+    "live": 1,
+    "probable": 0,
+    "offline": 14,
+    "unknown": 0,
+    "replay": 0,
+    "error": 0
+  },
+  "results": [
+    {
+      "name": "Atoulé",
+      "url": "https://www.tiktok.com/@atouleee.officiel",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Atoulé est en direct",
+      "watchUrl": "https://www.tiktok.com/@atouleee.officiel/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.15,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 523,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 701,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 948,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Dez Cocrane 225",
+      "url": "https://www.tiktok.com/@dezcocrane.225",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Dez Cocrane 225 est en direct",
+      "watchUrl": "https://www.tiktok.com/@dezcocrane.225/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.18,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 327,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 503,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 817,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Ennemi des Djandjou",
+      "url": "https://www.tiktok.com/@ennemidesdjandjou",
+      "platform": "TikTok",
+      "state": "live",
+      "confidence": 92,
+      "title": "Ennemi des Djandjou est en direct",
+      "watchUrl": "https://www.tiktok.com/@ennemidesdjandjou/live",
+      "viewers": null,
+      "error": "",
+      "seconds": 1.22,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 622,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 746,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 964,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Général Camille Makosso",
+      "url": "https://www.tiktok.com/@generalmakossocamille79",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Général Camille Makosso est en direct",
+      "watchUrl": "https://www.tiktok.com/@generalmakossocamille79/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.45,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 328,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 511,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 1105,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Ismaël Aka",
+      "url": "https://www.tiktok.com/@ismael.aka.ddr",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Ismaël Aka est en direct",
+      "watchUrl": "https://www.tiktok.com/@ismael.aka.ddr/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.32,
+      "probes": {
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 795,
+          "error": ""
+        },
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 868,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 954,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Ivorian Kid",
+      "url": "https://www.tiktok.com/@ivoriankid",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Ivorian Kid est en direct",
+      "watchUrl": "https://www.tiktok.com/@ivoriankid/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 0.78,
+      "probes": {
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 484,
+          "error": ""
+        },
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 555,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 632,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Kim Makosso",
+      "url": "https://www.tiktok.com/@kim.makosso_officielle",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Kim Makosso est en direct",
+      "watchUrl": "https://www.tiktok.com/@kim.makosso_officielle/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.25,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 383,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 488,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 888,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Lionel PCS",
+      "url": "https://www.tiktok.com/@lionel_pcs",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Lionel PCS est en direct",
+      "watchUrl": "https://www.tiktok.com/@lionel_pcs/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.25,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 793,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 801,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 1036,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Lolo Beauté",
+      "url": "https://www.instagram.com/lolobeaute_officiel/",
+      "platform": "Instagram",
+      "state": "offline",
+      "confidence": 86,
+      "title": "Lolo Beauté est en direct",
+      "watchUrl": "https://www.instagram.com/lolobeaute_officiel/",
+      "viewers": null,
+      "error": "no_signal",
+      "seconds": 3.15,
+      "probes": {
+        "profile_html": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 519,
+          "error": ""
+        },
+        "web_profile": {
+          "ok": false,
+          "status": 400,
+          "timeMs": 2146,
+          "error": "http_400"
+        }
+      }
+    },
+    {
+      "name": "Mélanie TMS",
+      "url": "https://www.tiktok.com/@melanie.tms",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Mélanie TMS est en direct",
+      "watchUrl": "https://www.tiktok.com/@melanie.tms/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.16,
+      "probes": {
+        "room_api": {
+          "ok": false,
+          "status": 0,
+          "timeMs": 81,
+          "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 569,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 1026,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Oustaz Diané",
+      "url": "https://www.tiktok.com/@oustazdianeofficiel1",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Oustaz Diané est en direct",
+      "watchUrl": "https://www.tiktok.com/@oustazdianeofficiel1/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.09,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 432,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 551,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 815,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Yasmine Fofana",
+      "url": "https://www.youtube.com/@YasmineAfrofoodie",
+      "platform": "YouTube",
+      "state": "offline",
+      "confidence": 94,
+      "title": "Afrofoodie",
+      "watchUrl": "https://www.youtube.com/watch?v=E1DJtKOjFcs",
+      "viewers": null,
+      "error": "not_live",
+      "seconds": 1.67,
+      "probes": {
+        "channel_live": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 787,
+          "error": ""
+        }
+      }
+    },
+    {
+      "name": "Himra",
+      "url": "https://www.instagram.com/himra_saiyen/",
+      "platform": "Instagram",
+      "state": "offline",
+      "confidence": 86,
+      "title": "Himra est en direct",
+      "watchUrl": "https://www.instagram.com/himra_saiyen/",
+      "viewers": null,
+      "error": "no_signal",
+      "seconds": 3.04,
+      "probes": {
+        "profile_html": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 1032,
+          "error": ""
+        },
+        "web_profile": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 1866,
+          "error": ""
+        }
+      }
+    },
+    {
+      "name": "Didi B",
+      "url": "https://www.tiktok.com/@didib.mojaveli",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Didi B est en direct",
+      "watchUrl": "https://www.tiktok.com/@didib.mojaveli/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.41,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 766,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 921,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 1169,
+          "error": "http_404"
+        }
+      }
+    },
+    {
+      "name": "Roseline Layo",
+      "url": "https://www.tiktok.com/@roselinelayoofficiel",
+      "platform": "TikTok",
+      "state": "offline",
+      "confidence": 96,
+      "title": "Roseline Layo est en direct",
+      "watchUrl": "https://www.tiktok.com/@roselinelayoofficiel/live",
+      "viewers": null,
+      "error": "ended",
+      "seconds": 1.23,
+      "probes": {
+        "room_api": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 499,
+          "error": ""
+        },
+        "live_page": {
+          "ok": true,
+          "status": 200,
+          "timeMs": 671,
+          "error": ""
+        },
+        "mobile_live": {
+          "ok": false,
+          "status": 404,
+          "timeMs": 904,
+          "error": "http_404"
+        }
+      }
+    }
+  ]
+}
