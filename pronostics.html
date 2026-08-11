@@ -81,7 +81,7 @@
       padding:18px 16px;transition:border-color .2s;
     }
     .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
-    .card-head h2{font-size:14px;font-weight:800;letter-spacing:.04em}
+    .card-head h2{font-size:14px;font-weight:800;letter-spacing:.04em;color:var(--lime)}
     .card-head .hint{font-size:12px;font-weight:600;color:var(--muted);margin-top:3px}
     .badge-live{
       background:rgba(255,77,77,.18);border:1px solid rgba(255,77,77,.35);
@@ -213,19 +213,19 @@
     <div class="card rise rise-2">
       <div class="card-head">
         <div>
-          <h2>TOP 3</h2>
-          <p class="hint">Choisis les 3 FI qui vont dominer le classement</p>
+          <h2>1. Top 3</h2>
+          <p class="hint">Choisis les 3 influenceurs qui vont dominer le classement</p>
         </div>
       </div>
       <div class="picker" id="pickerTop3"></div>
     </div>
 
-    <!-- CLIMBER -->
+    <!-- GRIMPEUR -->
     <div class="card rise rise-3">
       <div class="card-head">
         <div>
-          <h2>CLIMBER</h2>
-          <p class="hint">Qui gagne le plus de places aujourd'hui</p>
+          <h2>2. Grimpeur</h2>
+          <p class="hint">L'influenceur qui va gagner le plus de places aujourd'hui</p>
         </div>
         <span class="badge-up">↑ places</span>
       </div>
@@ -236,8 +236,8 @@
     <div class="card rise rise-4">
       <div class="card-head">
         <div>
-          <h2>PROCHAIN LIVE</h2>
-          <p class="hint">Qui passe en direct ensuite selon toi</p>
+          <h2>3. Prochain live</h2>
+          <p class="hint">L'influenceur dont tu penses qu'il sera le prochain à passer en live</p>
         </div>
         <span class="badge-live">((•)) LIVE</span>
       </div>
@@ -447,7 +447,7 @@
       climber: state.profiles.find(p=>p.id===state.climber)?.name || state.climber,
       live: state.profiles.find(p=>p.id===state.live)?.name || state.live,
     };
-    banner.innerHTML = `✅ Grille enregistrée !<br><small>Top 3 : ${names.top3} · Climber : ${names.climber} · LIVE : ${names.live}</small>`;
+    banner.innerHTML = `✅ Grille enregistrée !<br><small>Top 3 : ${names.top3} · Grimpeur : ${names.climber} · Live : ${names.live}</small>`;
     banner.classList.remove('hidden');
 
     showToast(success ? '🎯 Grille enregistrée — résultat demain !' : '📋 Grille sauvegardée localement');
