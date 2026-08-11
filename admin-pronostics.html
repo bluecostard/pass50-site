@@ -40,6 +40,7 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 <body>
 <div class="shell">
   <h1>Admin · Pronostics</h1>
+  <p id="jsBoot" class="toast" style="margin-top:-6px;font-size:11px">JS…</p>
   <p class="muted">Crée <strong>toi-même</strong> les questions avec cotes dans les 3 thèmes. Image obligatoire (URL ou photo FI via Profile ID). Vote 6/12/24 h.</p>
   <div class="card" id="authGate" style="display:none;border-color:#664;background:#1a1208">
     <strong>Connexion requise (owner / admin)</strong>
@@ -159,6 +160,17 @@ n|Non|2.20</textarea>
   <p class="muted" style="margin-top:18px"><a href="./pronostics.html" style="color:#b7ff00">← Voir Pronostics</a></p>
 </div>
 <script>
+(()=>{
+  const boot=document.getElementById('jsBoot');
+  if(boot) boot.textContent='JS actif';
+  window.addEventListener('error',(ev)=>{
+    const msg=document.getElementById('jsBoot');
+    if(msg){
+      msg.classList.add('err');
+      msg.textContent='Erreur JS: '+(ev.message||'inconnue');
+    }
+  });
+})();
 const THEMES=[
   {key:'people_influenceurs',label:'People influenceurs',hint:'Buzz, lives, classement, duels FI'},
   {key:'people_artiste_sportif',label:'People Artiste/sportif',hint:'Sorties, matchs, perf, top charts'},
@@ -287,7 +299,7 @@ function renderThemeBlocks(){
   if(!box)return;
   box.innerHTML=THEMES.map((theme,ti)=>{
     const items=ALL_ITEMS.filter(i=>i.theme===theme.key).slice(0,12);
-    const list=items.length?items.map(i=>qCard(i,true)).join(''):'<p class="muted" style="margin:8px 0 0;font-size:12px">Aucune question dans ce thème pour l'instant.</p>';
+    const list=items.length?items.map(i=>qCard(i,true)).join(''):'<p class="muted" style="margin:8px 0 0;font-size:12px">Aucune question dans ce thème pour le moment.</p>';
     return `<div class="theme-box" data-theme="${esc(theme.key)}">
       <h3>${ti+1}. ${esc(theme.label)}</h3>
       <p class="muted" style="margin:0;font-size:12px">${esc(theme.hint)}</p>
