@@ -1,12 +1,12 @@
 name: Metrics Ranking Publication Watchdog
 
-# Garde-fou anti-silence : si le classement public n’a pas été écrit depuis trop longtemps
-# alors que les flags sont actifs et qu’un candidat éligible existe, on republie.
-# Échoue bruyamment si les flags sont éteints ou si la recovery échoue.
+# Garde-fou anti-silence: si le classement public n'a pas ete ecrit depuis trop longtemps
+# alors que les flags sont actifs et qu'un candidat eligible existe, on republie.
+# Echoue bruyamment si les flags sont eteints ou si la recovery echoue.
 
-on:
+"on":
   schedule:
-    - cron: '40 * * * *'
+    - cron: "40 * * * *"
   workflow_dispatch: {}
 
 permissions:
