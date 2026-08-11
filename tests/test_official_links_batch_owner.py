@@ -8,8 +8,8 @@ def test_eight_supplied_links_are_exact():
 def test_all_links_become_owner_protected():
     assert 'manual_owner' in E and 'owner_verified' in E
     assert 'persistedServerSide' in E and 'PASS50-STATE-LINK-PROTECTION-V4.1' in E
-def test_lady_sonia_uses_history_only():
-    assert "p50_batch_profile_index($state,'ladysonia')" in E
-    assert 'p50_social_link_evidence' in E and 'p50_social_link_audit' in E
-def test_workflow_requires_eight_and_one_write():
-    assert '.validatedCount==8' in W and '.publicStateWrites==1' in W
+def test_coach_hamond_and_lady_sonia_links_are_exact():
+    for value in ['tiktok.com/@coachhamond','instagram.com/ladysoniam/','tiktok.com/@ladysoniam','facebook.com/LadysoniaMabiala','youtube.com/@LadyMABIALA']:
+        assert value in E
+def test_workflow_requires_thirteen_and_one_write():
+    assert '.validatedCount==13' in W and '.publicStateWrites==1' in W

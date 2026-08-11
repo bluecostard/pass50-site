@@ -22,6 +22,13 @@ $fixed=[
     'holysheilla'=>['Instagram'=>'https://www.instagram.com/holysheilla/','TikTok'=>'https://www.tiktok.com/@holysheilla'],
     'jonathanmorrison'=>['Instagram'=>'https://www.instagram.com/jonathanmorrison13/'],
     'justecrepin'=>['Facebook'=>'https://www.facebook.com/Influenceurpositif'],
+    'coachhamondchic'=>['TikTok'=>'https://www.tiktok.com/@coachhamond'],
+    'ladysonia'=>[
+        'Instagram'=>'https://www.instagram.com/ladysoniam/',
+        'TikTok'=>'https://www.tiktok.com/@ladysoniam',
+        'Facebook'=>'https://www.facebook.com/LadysoniaMabiala',
+        'YouTube'=>'https://www.youtube.com/@LadyMABIALA',
+    ],
 ];
 
 function p50_batch_profile_index(array $state,string $normalizedName): int {
@@ -49,16 +56,8 @@ try{
         $index=p50_batch_profile_index($state,$name);if($index<0)throw new RuntimeException('Fiche introuvable : '.$name.'.');
         foreach($links as $platform=>$url)$validated[]=p50_batch_store($state['profiles'][$index],$platform,$url,'owner_capture');
     }
-    $ladyRestored=[];$ladyIndex=p50_batch_profile_index($state,'ladysonia');
-    if($ladyIndex>=0){
-        $ladyId=(string)$state['profiles'][$ladyIndex]['id'];$candidates=[];
-        $put=static function(array &$out,string $platform,string $url,string $at,string $source):void{if($platform===''||$url==='')return;if(isset($out[$platform])&&strcmp((string)$out[$platform]['at'],$at)>=0)return;$out[$platform]=compact('url','at','source');};
-        $stmt=$pdo->prepare("SELECT platform,normalized_url,fetched_at FROM p50_social_link_evidence WHERE profile_id=? AND source_type IN ('manual_owner','manual_admin','manual_candidate') ORDER BY fetched_at DESC,id DESC");$stmt->execute([$ladyId]);foreach($stmt->fetchAll() as $row)$put($candidates,(string)$row['platform'],(string)$row['normalized_url'],(string)$row['fetched_at'],'evidence');
-        $stmt=$pdo->prepare("SELECT platform,new_url,created_at FROM p50_social_link_audit WHERE profile_id=? AND new_url IS NOT NULL AND new_url<>'' ORDER BY created_at DESC,id DESC");$stmt->execute([$ladyId]);foreach($stmt->fetchAll() as $row)$put($candidates,(string)$row['platform'],(string)$row['new_url'],(string)$row['created_at'],'audit');
-        foreach($candidates as $platform=>$candidate){try{$ladyRestored[]=p50_batch_store($state['profiles'][$ladyIndex],$platform,(string)$candidate['url'],'history_'.$candidate['source']);}catch(Throwable $ignored){}}
-    }
-    if(count($validated)!==8)throw new RuntimeException('Les huit comptes fournis n’ont pas tous été validés.');
-    $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$state['officialLinksBatchOwner']=['version'=>P50_LINKS_BATCH_OWNER_VERSION,'updatedAt'=>gmdate(DATE_ATOM),'validated'=>count($validated),'ladySoniaRestored'=>count($ladyRestored)];
+    if(count($validated)!==13)throw new RuntimeException('Les treize comptes fournis n’ont pas tous été validés.');
+    $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$state['officialLinksBatchOwner']=['version'=>P50_LINKS_BATCH_OWNER_VERSION,'updatedAt'=>gmdate(DATE_ATOM),'validated'=>count($validated)];
     p50_de_save_public_state($state,null,false);$pdo->commit();
-    json_response(['ok'=>true,'version'=>P50_LINKS_BATCH_OWNER_VERSION,'dispatchId'=>$dispatchId,'validated'=>$validated,'validatedCount'=>count($validated),'ladySoniaRestored'=>$ladyRestored,'ladySoniaRestoredCount'=>count($ladyRestored),'publicStateRevision'=>(int)$state['stateRevision'],'publicStateWrites'=>1]);
+    json_response(['ok'=>true,'version'=>P50_LINKS_BATCH_OWNER_VERSION,'dispatchId'=>$dispatchId,'validated'=>$validated,'validatedCount'=>count($validated),'publicStateRevision'=>(int)$state['stateRevision'],'publicStateWrites'=>1]);
 }catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();json_response(['error'=>'Validation groupée interrompue.','detail'=>$error->getMessage()],500);}

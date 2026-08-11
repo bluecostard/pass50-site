@@ -21,8 +21,8 @@ jobs:
           case "$ENDPOINT" in http://*) ENDPOINT="https://${ENDPOINT#http://}" ;; esac
           case "$ENDPOINT" in https://www.pass50.store/*) ENDPOINT="https://pass50.store/${ENDPOINT#https://www.pass50.store/}" ;; esac
           body="$(jq -nc --arg dispatchId "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" '{dispatchId:$dispatchId}')"
-          for attempt in $(seq 1 36);do timestamp="$(date +%s)";signature="$(printf '%s\n%s' "$timestamp" "$body"|openssl dgst -sha256 -hmac "$CRON_SECRET" -r|awk '{print $1}')";code="$(curl --silent --show-error --max-time 90 --output /tmp/links-batch.json --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT"||true)";if [ "$code" = 200 ]&&jq -e '.ok==true and .validatedCount==8 and .publicStateWrites==1' /tmp/links-batch.json >/dev/null 2>&1;then break;fi;echo "Endpoint en attente · $attempt/36 · HTTP ${code:-000}";sleep 10;done
-          jq -e '.ok==true and .validatedCount==8 and .publicStateWrites==1' /tmp/links-batch.json >/dev/null
+          for attempt in $(seq 1 36);do timestamp="$(date +%s)";signature="$(printf '%s\n%s' "$timestamp" "$body"|openssl dgst -sha256 -hmac "$CRON_SECRET" -r|awk '{print $1}')";code="$(curl --silent --show-error --max-time 90 --output /tmp/links-batch.json --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT"||true)";if [ "$code" = 200 ]&&jq -e '.ok==true and .validatedCount==13 and .publicStateWrites==1' /tmp/links-batch.json >/dev/null 2>&1;then break;fi;echo "Endpoint en attente · $attempt/36 · HTTP ${code:-000}";sleep 10;done
+          jq -e '.ok==true and .validatedCount==13 and .publicStateWrites==1' /tmp/links-batch.json >/dev/null
           cat /tmp/links-batch.json
       - name: Archive proof
         if: always()
