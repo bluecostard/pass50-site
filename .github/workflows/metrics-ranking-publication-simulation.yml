@@ -175,23 +175,93 @@ jobs:
             printf 'sim_status=%s\n' "$status"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Dispatch automatic publication when eligible
+      # Appel direct du cron apply (évite le 403 GitHub sur workflow_dispatch via GITHUB_TOKEN).
+      - name: Apply automatic publication when eligible
         if: ${{ steps.simulation.outcome == 'success' && steps.simulation.outputs.automatic_eligible == 'true' && steps.simulation.outputs.sim_status != 'blocked' }}
+        id: auto_apply
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+          CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
         run: |
           set -euo pipefail
-          payload="$(jq -nc --arg ref "main" '{ref:$ref}')"
-          curl --fail-with-body --silent --show-error \
-            -X POST -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" \
-            --data "$payload" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/metrics-ranking-publication-apply.yml/dispatches" || {
-              echo "::warning::Impossible de déclencher metrics-ranking-publication-apply.yml."
-              exit 0
-            }
-          echo "Workflow de publication automatique déclenché."
+          case "$CRON_URL" in
+            */metrics-cron.php)
+              APPLY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"
+              ;;
+            *)
+              echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
+              exit 1
+              ;;
+          esac
+          case "$APPLY_URL" in
+            http://*) APPLY_URL="https://${APPLY_URL#http://}" ;;
+          esac
+          case "$APPLY_URL" in
+            https://www.pass50.store/*) APPLY_URL="https://pass50.store/${APPLY_URL#https://www.pass50.store/}" ;;
+          esac
+
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-publication-apply-auto"
+          body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"apply",dispatchId:$dispatchId,confirm:true}')"
+          response_file="publication-apply-auto.json"
+          timestamp="$(date +%s)"
+          signature="$(
+            printf '%s\n%s' "$timestamp" "$body" |
+              openssl dgst -sha256 -hmac "$CRON_SECRET" -r |
+              awk '{print $1}'
+          )"
+
+          set +e
+          http_code="$(
+            curl --silent --show-error --max-time 180 \
+              --output "$response_file" \
+              --write-out '%{http_code}' \
+              -H "Content-Type: application/json" \
+              -H "X-P50-Timestamp: $timestamp" \
+              -H "X-P50-Signature: $signature" \
+              --data "$body" \
+              "$APPLY_URL"
+          )"
+          curl_status=$?
+          set -e
+
+          if [ "$curl_status" -ne 0 ] || [ "$http_code" != "200" ]; then
+            echo "::error::Publication automatique refusée (curl ${curl_status:-?}, HTTP ${http_code:-000})."
+            cat "$response_file" 2>/dev/null || true
+            exit 1
+          fi
+
+          jq -e '.ok == true' "$response_file" >/dev/null || {
+            echo "::error::Réponse de publication automatique invalide."
+            cat "$response_file" || true
+            exit 1
+          }
+
+          skipped="$(jq -r '.skipped // false' "$response_file")"
+          status="$(jq -r '.status // "unknown"' "$response_file")"
+          writes="$(jq -r '.publicStateWrites // 0' "$response_file")"
+          revision="$(jq -r '.publicStateRevision // 0' "$response_file")"
+          reason="$(jq -r '.reason // .error // "—"' "$response_file")"
+          scores="$(jq -r '.scoresWritten // 0' "$response_file")"
+
+          if [ "$skipped" = "true" ]; then
+            echo "::warning::Publication automatique non exécutée : $reason"
+          else
+            echo "::notice::Classement public mis à jour · révision $revision · $writes écriture(s) · $scores scores"
+          fi
+
+          {
+            printf '### Publication automatique (post-simulation)\n'
+            printf -- '- status : `%s`\n' "$status"
+            printf -- '- skipped : `%s`\n' "$skipped"
+            printf -- '- publicStateWrites : `%s`\n' "$writes"
+            printf -- '- révision publique : `%s`\n' "$revision"
+            printf -- '- scoresWritten : `%s`\n' "$scores"
+            printf -- '- reason : %s\n' "$reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          printf 'apply_skipped=%s\n' "$skipped" >> "$GITHUB_OUTPUT"
+          printf 'apply_revision=%s\n' "$revision" >> "$GITHUB_OUTPUT"
 
       - name: Publish sanitized simulation status
         if: ${{ always() }}
