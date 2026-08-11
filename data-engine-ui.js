@@ -86,12 +86,16 @@
     if(DE.rankingHealthLoading&&!h)return `<div class="de-ranking-health loading">Vérification de la publication publique…</div>`;
     if(!h)return '';
     const last=h.lastApplied||{};
-    const age=last.ageHours==null?'—':(Number(last.ageHours)<1?`${Math.round(Number(last.ageHours)*60)} min`:`${Number(last.ageHours).toFixed(1)} h`);
+    const ageHours=Number(last.ageHours);
+    const age=last.ageHours==null?'—'
+      :(!Number.isFinite(ageHours)?'—'
+        :(ageHours<1?`${Math.max(1,Math.round(ageHours*60))} min`
+          :`${ageHours.toFixed(1).replace(/\.0$/,'')} h`));
     const flags=h.publicationEnabled&&h.automaticPublicationEnabled?'auto ON':'auto OFF';
     const detail=last.generatedAt
       ? `Dernière écriture il y a ${age} · rév. ${last.revision||'—'} · ${flags}`
       : flags;
-    const tone=h.status==='fresh'?'ok':(h.status==='stale'||h.status==='flags_off'?'bad':'warn');
+    const tone=h.status==='fresh'?'ok':(h.status==='aging'?'warn':(h.status==='stale'||h.status==='flags_off'?'bad':'warn'));
     return `<div class="de-ranking-health ${tone}" role="status"><strong>${deEsc(h.label||'Publication')}</strong><span>${deEsc(detail)}</span></div>`;
   }
   async function deLoadRankingCalibration(force=false){

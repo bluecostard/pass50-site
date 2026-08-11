@@ -31,6 +31,8 @@ class MetricsRankingPublicationApplyScheduleGateV1Tests(unittest.TestCase):
         self.assertIn("action:\"probe\"", WATCHDOG)
         self.assertIn("action:\"preview\"", WATCHDOG)
         self.assertIn("MAX_STALE_HOURS", WATCHDOG)
+        self.assertIn("'2.0'", WATCHDOG)
+        self.assertIn("10,40 * * * *", WATCHDOG)
         self.assertNotIn("metrics-ranking-publication-apply.yml/dispatches", WATCHDOG)
 
     def test_apply_transport_is_observable_and_long_enough(self):

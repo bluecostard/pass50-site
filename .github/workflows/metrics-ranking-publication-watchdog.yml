@@ -3,10 +3,10 @@ name: Metrics Ranking Publication Watchdog
 # Anti-silence: if public ranking was not written for too long while flags are on
 # and a candidate is eligible, republish. Fail loudly if flags are off or recovery fails.
 
-on:
+"on":
   schedule:
-    - cron: '40 * * * *'
-  workflow_dispatch:
+    - cron: '10,40 * * * *'
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -23,7 +23,7 @@ jobs:
     env:
       CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
-      MAX_STALE_HOURS: '2.5'
+      MAX_STALE_HOURS: '2.0'
     steps:
       - name: Probe flags, freshness, recover if stale
         id: watchdog
@@ -143,7 +143,7 @@ jobs:
             printf -- '- preview eligible : `%s` / mutations : `%s`\n' "$eligible" "$mutations"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          stale="$(python3 -c "print('true' if float('$age_hours') > float('$MAX_STALE_HOURS') else 'false')")"
+          stale="$(python3 -c "print('true' if float('$age_hours') >= float('$MAX_STALE_HOURS') else 'false')")"
 
           if [ "$stale" != "true" ]; then
             echo "::notice::Classement frais (${age_hours}h < ${MAX_STALE_HOURS}h). Rien a faire."

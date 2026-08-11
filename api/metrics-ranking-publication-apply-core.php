@@ -14,7 +14,7 @@ require_once __DIR__.'/data-engine-core.php';
 const P50_MRP_APPLY_VERSION='PUBAPPLY-V1.0';
 const P50_MRP_APPLY_LOCK='pass50_metrics_ranking_publication_apply_v1';
 const P50_MRP_APPLY_PERIODS=['2H','24H','48H','7J','15J'];
-const P50_MRP_APPLY_STALE_HOURS=2.5;
+const P50_MRP_APPLY_STALE_HOURS=2.0;
 
 function p50_mrp_apply_config(): array {
     $cfg=p50_mo_config();
@@ -57,13 +57,17 @@ function p50_mrp_apply_health(PDO $pdo): array {
     }
     $age=$last['ageHours']??null;
     $flagsOn=!empty($cfg['publicationEnabled'])&&!empty($cfg['automaticPublicationEnabled']);
-    $stale=$age!==null&&$age>P50_MRP_APPLY_STALE_HOURS;
+    // >= seuil : dès 2 h sans écriture, le bandeau ne doit plus être vert (période 2H).
+    $stale=$age!==null&&$age>=P50_MRP_APPLY_STALE_HOURS;
+    $aging=$age!==null&&!$stale&&$age>=1.5;
     if(!$flagsOn)$status='flags_off';
     elseif($last===null)$status='never_published';
     elseif($stale)$status='stale';
+    elseif($aging)$status='aging';
     else $status='fresh';
     $labels=[
         'fresh'=>'Classement public à jour',
+        'aging'=>'Classement public bientôt en retard',
         'stale'=>'Classement public en retard',
         'flags_off'=>'Publication automatique désactivée',
         'never_published'=>'Aucune écriture publique trouvée',
@@ -73,6 +77,7 @@ function p50_mrp_apply_health(PDO $pdo): array {
         'label'=>$labels[$status]??$status,
         'ok'=>$status==='fresh',
         'stale'=>$stale,
+        'aging'=>$aging,
         'staleAfterHours'=>P50_MRP_APPLY_STALE_HOURS,
         'publicationEnabled'=>(bool)$cfg['publicationEnabled'],
         'automaticPublicationEnabled'=>(bool)$cfg['automaticPublicationEnabled'],
