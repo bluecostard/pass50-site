@@ -47,13 +47,20 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("'health'=>$health", cron)
 
     def test_one_time_bootstrap_workflow_is_retired(self):
-        workflow = ROOT / ".github/workflows/metrics-ranking-publication-apply-bootstrap.yml"
-        self.assertFalse(workflow.exists())
         cron = read("api/metrics-ranking-publication-apply-cron.php")
         admin = read("api/metrics-ranking-publication-apply.php")
+        ui = read("data-engine-ui.js")
         self.assertNotIn("cron-bootstrap-recovery", cron)
         self.assertNotIn("$forceBootstrap", cron)
         self.assertNotIn("$forceBootstrap", admin)
+        # L’UI admin ne doit plus envoyer la clé bootstrap (sinon 409 permanent).
+        self.assertNotIn("bootstrap:!!preview.bootstrap", ui)
+        self.assertNotIn("bootstrap:!!", ui)
+
+    def test_admin_publish_post_omits_bootstrap_key(self):
+        ui = read("data-engine-ui.js")
+        self.assertIn("action:'apply',confirm:true,dispatchId:", ui)
+        self.assertNotIn("bootstrap:!!preview.bootstrap", ui)
 
     def test_initial_bootstrap_remains_internal_to_first_success(self):
         core = read("api/metrics-ranking-publication-apply-core.php")

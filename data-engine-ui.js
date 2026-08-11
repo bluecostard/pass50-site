@@ -226,7 +226,7 @@
       ?`BOOTSTRAP : publier ${periods}${skipped} — ${preview.summary?.entries||0} entrées / ${preview.summary?.exits||0} sorties / ${preview.summary?.mutations||0} scores. Continuer ?`
       :`Publier MR‑V1.0 (${periods}${skipped}, ${preview.summary?.mutations||0} scores) vers le classement public ? Un backup sera créé.`;
     if(!confirm(msg))return;
-    const result=await apiFetch('metrics-ranking-publication-apply.php',{method:'POST',body:{action:'apply',confirm:true,bootstrap:!!preview.bootstrap,dispatchId:'admin-'+Date.now()}});
+    const result=await apiFetch('metrics-ranking-publication-apply.php',{method:'POST',body:{action:'apply',confirm:true,dispatchId:'admin-'+Date.now()}});
     DE.rankingLab=null;DE.rankingHealth=null;await deLoadRankingLab(true);
     await loadCloudState?.();render?.();
     const skipNote=(result.skippedPeriods||[]).length?` · ignoré ${result.skippedPeriods.join(', ')}`:'';
