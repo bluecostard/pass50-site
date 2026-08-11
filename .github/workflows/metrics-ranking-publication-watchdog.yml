@@ -7,7 +7,7 @@ name: Metrics Ranking Publication Watchdog
 on:
   schedule:
     - cron: '40 * * * *'
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: read
