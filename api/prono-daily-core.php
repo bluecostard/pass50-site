@@ -470,14 +470,29 @@ function p50_prono_daily_generate(PDO $pdo, string $createdBy, ?string $batchDat
 }
 
 /**
+ * @param list<string>|null $onlyIds Si fourni, ne publie que ces IDs (toujours status draft + batchDate).
  * @return array{published:int,items:list<array>,errors:list<string>}
  */
-function p50_prono_daily_publish(PDO $pdo, string $batchDate): array {
+function p50_prono_daily_publish(PDO $pdo, string $batchDate, ?array $onlyIds = null): array {
     p50_prono_ensure_schema();
     $stmt = $pdo->prepare("SELECT * FROM p50_prono_questions WHERE batch_date=? AND status='draft' ORDER BY created_at ASC");
     $stmt->execute([$batchDate]);
     $rows = $stmt->fetchAll() ?: [];
-    if ($rows === []) {
+
+    if (is_array($onlyIds)) {
+        $want = [];
+        foreach ($onlyIds as $id) {
+            $id = trim((string)$id);
+            if ($id !== '') $want[$id] = true;
+        }
+        if ($want === []) {
+            return ['published' => 0, 'items' => [], 'errors' => ['Aucune selection a publier.']];
+        }
+        $rows = array_values(array_filter($rows, static fn(array $row): bool => isset($want[(string)($row['id'] ?? '')])));
+        if ($rows === []) {
+            return ['published' => 0, 'items' => [], 'errors' => ['Aucun brouillon selectionne pour cette date.']];
+        }
+    } elseif ($rows === []) {
         return ['published' => 0, 'items' => [], 'errors' => ['Aucun brouillon pour cette date.']];
     }
 

@@ -38,7 +38,11 @@ if ($batchDate === '') {
 $pdo = db();
 
 if ($action === 'publish') {
-    $result = p50_prono_daily_publish($pdo, $batchDate);
+    $onlyIds = null;
+    if (isset($input['ids']) && is_array($input['ids'])) {
+        $onlyIds = array_values(array_map(static fn($id): string => trim((string)$id), $input['ids']));
+    }
+    $result = p50_prono_daily_publish($pdo, $batchDate, $onlyIds);
     if ($result['published'] === 0 && ($result['errors'] ?? []) !== []) {
         json_response([
             'ok' => false,

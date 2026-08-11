@@ -57,12 +57,18 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 
   <div class="card">
     <h2 style="margin-top:0">Batch auto · 12 pronos <span class="muted" style="font-weight:700;font-size:13px">(optionnel)</span></h2>
-    <p class="muted" style="margin:0 0 12px">Génère des brouillons à partir des FI/actus. Si une image manque, les autres peuvent quand même être publiés — les erreurs s’affichent clairement.</p>
+    <p class="muted" style="margin:0 0 12px">Génère des brouillons, coche ceux qui te semblent pertinents, puis publie la sélection — ou publie tout le batch.</p>
     <div class="batch-actions">
       <button type="button" id="genDailyBtn">Générer les 12 du jour</button>
       <button type="button" class="ghost" id="refreshDailyBtn">Rafraîchir le batch</button>
-      <button type="button" id="publishDailyBtn">Publier les brouillons</button>
-      <button type="button" id="genPublishDailyBtn">Générer + publier</button>
+      <button type="button" id="publishSelectedBtn">Publier la sélection</button>
+      <button type="button" class="ghost" id="publishDailyBtn">Publier tout le batch</button>
+      <button type="button" class="ghost" id="genPublishDailyBtn">Générer + publier tout</button>
+    </div>
+    <div class="batch-actions" id="batchSelectBar" style="display:none;margin-top:8px">
+      <button type="button" class="ghost" id="selectAllDraftsBtn" style="width:auto">Tout cocher (brouillons)</button>
+      <button type="button" class="ghost" id="clearDraftsBtn" style="width:auto">Tout décocher</button>
+      <span class="muted" id="batchSelectCount" style="align-self:center;font-size:12px"></span>
     </div>
     <div class="toast" id="dailyMsg"></div>
     <div id="dailyList" class="muted" style="margin-top:12px">Aucun batch chargé.</div>
@@ -275,24 +281,55 @@ function renderList(items){
   if(!items.length){box.innerHTML='Aucune question.';return;}
   box.innerHTML=items.map(item=>qCard(item,false)).join('');
 }
+function selectedDraftIds(){
+  return [...document.querySelectorAll('#dailyList input[data-batch-id]:checked')].map(el=>el.getAttribute('data-batch-id')).filter(Boolean);
+}
+function updateBatchSelectCount(){
+  const bar=document.getElementById('batchSelectBar');
+  const countEl=document.getElementById('batchSelectCount');
+  const boxes=[...document.querySelectorAll('#dailyList input[data-batch-id]')];
+  if(bar) bar.style.display=boxes.length?'flex':'none';
+  if(countEl){
+    const n=selectedDraftIds().length;
+    countEl.textContent=boxes.length?`${n} / ${boxes.length} brouillon(s) coche(s)`:'';
+  }
+}
 function renderDailyList(items){
   const box=document.getElementById('dailyList');
-  if(!items.length){box.innerHTML='Aucun prono pour ce batch.';return;}
+  if(!items.length){
+    box.innerHTML='Aucun prono pour ce batch.';
+    updateBatchSelectCount();
+    return;
+  }
   box.innerHTML=items.map((item,i)=>{
     const cover=item.coverPhoto||'';
     const thumb=cover?`<img src="${esc(cover)}" alt="" class="batch-thumb" loading="lazy">`:'<div class="batch-thumb"></div>';
     const opts=(item.options||[]).map(o=>`${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
+    const isDraft=(item.status||'')==='draft';
+    const canPick=isDraft&&!!cover;
+    const check=isDraft
+      ?`<label style="display:flex;align-items:flex-start;gap:8px;margin:0;cursor:${canPick?'pointer':'not-allowed'};opacity:${canPick?1:.45}">
+          <input type="checkbox" data-batch-id="${esc(item.id)}" ${canPick?'':'disabled'} style="width:auto;margin-top:4px">
+          <span>
+            <strong>${i+1}. ${esc(item.title||'—')}</strong>
+            <span class="badge">${esc(item.status||'draft')}</span>
+            ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
+            <div class="meta">${esc(opts)}</div>
+            ${!cover?'<div class="meta" style="color:#f88">Image manquante — non publiable</div>':''}
+          </span>
+        </label>`
+      :`<div>
+          <strong>${i+1}. ${esc(item.title||'—')}</strong>
+          <span class="badge">${esc(item.status||'draft')}</span>
+          ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
+          <div class="meta">${esc(opts)}</div>
+        </div>`;
     return `<div class="q batch-row">
       ${thumb}
-      <div>
-        <strong>${i+1}. ${esc(item.title||'—')}</strong>
-        <span class="badge">${esc(item.status||'draft')}</span>
-        ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
-        <div class="meta">${esc(opts)}</div>
-        ${!cover?'<div class="meta" style="color:#f88">⚠ Image manquante — ce prono ne sera pas publié</div>':''}
-      </div>
+      <div>${check}</div>
     </div>`;
   }).join('');
+  updateBatchSelectCount();
 }
 function renderThemeBlocks(){
   const box=document.getElementById('themeBlocks');
@@ -467,6 +504,17 @@ document.getElementById('themeBlocks').addEventListener('click',async(e)=>{
 
 document.getElementById('refreshList').onclick=loadList;
 document.getElementById('refreshDailyBtn').onclick=loadDaily;
+document.getElementById('dailyList').addEventListener('change',(e)=>{
+  if(e.target&&e.target.matches('input[data-batch-id]')) updateBatchSelectCount();
+});
+document.getElementById('selectAllDraftsBtn').onclick=()=>{
+  document.querySelectorAll('#dailyList input[data-batch-id]:not(:disabled)').forEach(el=>{el.checked=true;});
+  updateBatchSelectCount();
+};
+document.getElementById('clearDraftsBtn').onclick=()=>{
+  document.querySelectorAll('#dailyList input[data-batch-id]').forEach(el=>{el.checked=false;});
+  updateBatchSelectCount();
+};
 document.getElementById('genDailyBtn').onclick=async()=>{
   const msg=document.getElementById('dailyMsg');
   msg.classList.remove('err');
@@ -479,17 +527,38 @@ document.getElementById('genDailyBtn').onclick=async()=>{
     loadList();
   }catch(e){msg.classList.add('err');msg.textContent=e.message;}
 };
+document.getElementById('publishSelectedBtn').onclick=async()=>{
+  const msg=document.getElementById('dailyMsg');
+  msg.classList.remove('err');
+  msg.style.display='block';
+  const ids=selectedDraftIds();
+  if(!ids.length){
+    msg.classList.add('err');
+    msg.textContent='Coche au moins un brouillon a publier.';
+    return;
+  }
+  msg.textContent=`Publication de ${ids.length} prono(s)…`;
+  if(!confirm(`Publier ${ids.length} prono(s) selectionne(s) ?`))return;
+  try{
+    const data=await api('prono-daily.php',{action:'publish',ids});
+    const skipped=Array.isArray(data.errors)&&data.errors.length?` · ignores : ${data.errors.join(' · ')}`:'';
+    msg.classList.toggle('err',!(data.published>0));
+    msg.textContent=`${data.published||0} publie(s)${skipped}`;
+    loadDaily();
+    loadList();
+  }catch(e){msg.classList.add('err');msg.textContent=e.message;}
+};
 document.getElementById('publishDailyBtn').onclick=async()=>{
   const msg=document.getElementById('dailyMsg');
   msg.classList.remove('err');
   msg.style.display='block';
-  msg.textContent='Publication en cours…';
-  if(!confirm('Publier les brouillons du batch du jour (ceux avec image) ?'))return;
+  msg.textContent='Publication de tout le batch…';
+  if(!confirm('Publier TOUS les brouillons du batch (ceux avec image) ?'))return;
   try{
     const data=await api('prono-daily.php',{action:'publish'});
-    const skipped=Array.isArray(data.errors)&&data.errors.length?` · ignorés : ${data.errors.join(' · ')}`:'';
+    const skipped=Array.isArray(data.errors)&&data.errors.length?` · ignores : ${data.errors.join(' · ')}`:'';
     msg.classList.toggle('err',!(data.published>0));
-    msg.textContent=`${data.published||0} publié(s)${skipped}`;
+    msg.textContent=`${data.published||0} publie(s)${skipped}`;
     loadDaily();
     loadList();
   }catch(e){msg.classList.add('err');msg.textContent=e.message;}
@@ -497,14 +566,14 @@ document.getElementById('publishDailyBtn').onclick=async()=>{
 document.getElementById('genPublishDailyBtn').onclick=async()=>{
   const msg=document.getElementById('dailyMsg');
   msg.classList.remove('err');
-  if(!confirm('Générer puis publier le batch du jour ?'))return;
+  if(!confirm('Generer puis publier TOUT le batch du jour ?'))return;
   try{
     const generated=await api('prono-daily.php',{action:'generate'});
     renderDailyList(generated.items||[]);
     const published=await api('prono-daily.php',{action:'publish'});
-    const skipped=Array.isArray(published.errors)&&published.errors.length?` · ignorés : ${published.errors.join(' · ')}`:'';
+    const skipped=Array.isArray(published.errors)&&published.errors.length?` · ignores : ${published.errors.join(' · ')}`:'';
     msg.classList.toggle('err',!(published.published>0));
-    msg.textContent=`${generated.count||0} générés · ${published.published||0} publiés${skipped}`;
+    msg.textContent=`${generated.count||0} generes · ${published.published||0} publies${skipped}`;
     loadDaily();
     loadList();
   }catch(e){msg.classList.add('err');msg.textContent=e.message;}
