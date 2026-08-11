@@ -172,7 +172,7 @@ function p50_ci_sync_official_news(PDO $pdo,int $limit=600): array {
       c.published_at,c.confidence,c.source_type,c.metadata_json,c.last_seen_at,r.public_name
       FROM p50_metric_contents c
       JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY c.profile_id
-      WHERE c.status='active' AND r.alive=1 AND c.confidence>=80 AND c.canonical_url<>''
+      WHERE c.status='active' AND r.alive=1 AND c.confidence>=70 AND c.canonical_url<>''
         AND COALESCE(c.published_at,c.last_seen_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 45 DAY)
       ORDER BY COALESCE(c.published_at,c.last_seen_at) DESC,c.id DESC LIMIT ".$limit;
     $rows=$pdo->query($sql)->fetchAll();

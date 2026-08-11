@@ -102,15 +102,15 @@
       if(cached&&Date.now()-cached.fetchedAt<NEWS_TTL)data=cached.data;
       else{data=await fetchFeed(profileId);P50CI.news.set(key,{data,fetchedAt:Date.now()});}
       if(!document.body.contains(shell))return;const items=data.news||[];
-      const hours=Number(data.rules?.officialNewsHoursApplied||24);
+      const hours=Number(data.rules?.officialNewsHoursApplied||72);
       const fallback=!!data.rules?.officialNewsUsedFallback;
       const windowLabel=fallback
-        ? `Aucune actu en 24 h → publications des ${hours} dernières heures`
+        ? `Aucune actu en 72 h → publications des ${hours} dernières heures`
         : `Publications officielles des ${hours} dernières heures`;
       const emptyLabel=fallback
-        ? 'Aucune actualité récente de moins de 48 heures pour cette fiche.'
-        : 'Aucune actualité récente de moins de 24 heures pour cette fiche.';
-      shell.innerHTML=`<div class="p50ci-news-head"><div><div class="p50ci-news-title">📰 Actualité récente</div><div class="muted" style="font-size:11px">${esc(windowLabel)} · informations externes validées</div></div>${items.length>3?'<button class="btn small" data-p50ci-expand>Voir toute l’actualité</button>':''}</div><div class="p50ci-news-list">${items.length?items.map(newsCard).join(''):`<div class="p50ci-empty">${esc(emptyLabel)}</div>`}</div>`;
+        ? 'Aucune actualité récente de moins de 7 jours pour cette fiche.'
+        : 'Aucune actualité récente de moins de 72 heures pour cette fiche.';
+      shell.innerHTML=`<div class="p50ci-news-head"><div><div class="p50ci-news-title">📰 Actualité récente</div><div class="muted" style="font-size:11px">${esc(windowLabel)} · contenus officiels + validations</div></div>${items.length>3?'<button class="btn small" data-p50ci-expand>Voir toute l’actualité</button>':''}</div><div class="p50ci-news-list">${items.length?items.map(newsCard).join(''):`<div class="p50ci-empty">${esc(emptyLabel)}</div>`}</div>`;
     }catch(error){shell.innerHTML='<div class="p50ci-news-head"><div class="p50ci-news-title">📰 Actualité récente</div></div><div class="p50ci-empty">Actualité momentanément indisponible.</div>';}
   }
 

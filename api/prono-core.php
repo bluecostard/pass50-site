@@ -133,12 +133,20 @@ function p50_prono_ensure_schema(): void {
         like_count INT UNSIGNED NOT NULL DEFAULT 0,
         like_points_awarded DECIMAL(12,2) NOT NULL DEFAULT 0,
         status VARCHAR(24) NOT NULL DEFAULT 'live',
+        slip_id CHAR(36) CHARACTER SET ascii NOT NULL DEFAULT '',
+        legs_json JSON NULL,
+        combined_odd DECIMAL(12,4) NULL,
         created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         expires_at DATETIME NOT NULL,
         INDEX idx_p50_prono_status_live(status,expires_at,created_at),
         INDEX idx_p50_prono_status_user(user_id,created_at),
+        INDEX idx_p50_prono_status_slip(slip_id),
         UNIQUE KEY uq_p50_prono_status_vote(vote_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    p50_prono_ensure_column($pdo, 'p50_prono_statuses', 'slip_id', 'CHAR(36) CHARACTER SET ascii NOT NULL DEFAULT \'\' AFTER status');
+    p50_prono_ensure_column($pdo, 'p50_prono_statuses', 'legs_json', 'JSON NULL AFTER slip_id');
+    p50_prono_ensure_column($pdo, 'p50_prono_statuses', 'combined_odd', 'DECIMAL(12,4) NULL AFTER legs_json');
+    p50_prono_ensure_index($pdo, 'p50_prono_statuses', 'idx_p50_prono_status_slip', 'slip_id');
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS p50_prono_status_likes (
         status_id CHAR(36) CHARACTER SET ascii NOT NULL,
@@ -842,6 +850,32 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
     return $item;
 }
 
+function p50_prono_status_legs_from_json(mixed $raw): array {
+    if (is_string($raw) && $raw !== '') {
+        $decoded = json_decode($raw, true);
+        $raw = is_array($decoded) ? $decoded : [];
+    }
+    if (!is_array($raw)) return [];
+    $legs = [];
+    foreach ($raw as $leg) {
+        if (!is_array($leg)) continue;
+        $questionId = trim((string)($leg['questionId'] ?? $leg['question_id'] ?? ''));
+        $optionKey = trim((string)($leg['optionKey'] ?? $leg['option_key'] ?? ''));
+        if ($questionId === '' || $optionKey === '') continue;
+        $odd = p50_prono_normalize_odd($leg['odd'] ?? $leg['oddLocked'] ?? 1.0);
+        $legs[] = [
+            'questionId' => $questionId,
+            'questionTitle' => (string)($leg['questionTitle'] ?? $leg['title'] ?? ''),
+            'optionKey' => $optionKey,
+            'optionLabel' => (string)($leg['optionLabel'] ?? $leg['label'] ?? $optionKey),
+            'odd' => $odd,
+            'coverPhoto' => trim((string)($leg['coverPhoto'] ?? '')),
+            'profileId' => trim((string)($leg['profileId'] ?? '')),
+        ];
+    }
+    return $legs;
+}
+
 function p50_prono_status_public(array $row, bool $likedByMe = false): array {
     $options = p50_prono_options($row['options_json'] ?? []);
     $optionKey = (string)$row['option_key'];
@@ -854,18 +888,48 @@ function p50_prono_status_public(array $row, bool $likedByMe = false): array {
     $profileId = (string)($row['profile_id'] ?? '');
     $questionTitle = (string)($row['question_title'] ?? '');
     $cover = p50_prono_resolve_cover($profileId, $questionTitle);
+    $legs = p50_prono_status_legs_from_json($row['legs_json'] ?? ($row['legs'] ?? []));
+    if ($legs === [] && !empty($row['grouped_legs']) && is_array($row['grouped_legs'])) {
+        $legs = p50_prono_status_legs_from_json($row['grouped_legs']);
+    }
+    $isGrille = count($legs) >= 2;
+    $combinedOdd = isset($row['combined_odd']) && (float)$row['combined_odd'] > 0
+        ? round((float)$row['combined_odd'], 4)
+        : ($isGrille ? round(array_reduce($legs, static fn($acc, $leg) => $acc * (float)$leg['odd'], 1.0), 4) : $odd);
+    if ($isGrille) {
+        $stake = isset($row['slip_stake_locked']) && (int)$row['slip_stake_locked'] > 0
+            ? (int)$row['slip_stake_locked']
+            : (isset($row['slip_stake']) && (int)$row['slip_stake'] > 0 ? (int)$row['slip_stake'] : $stake);
+        $odd = $combinedOdd;
+        $questionTitle = 'Grille · '.count($legs).' pronos';
+        $optionKey = 'grille';
+        $first = $legs[0];
+        $profileId = $first['profileId'] !== '' ? $first['profileId'] : $profileId;
+        if ($first['coverPhoto'] !== '') {
+            $cover = ['coverPhoto' => $first['coverPhoto'], 'resolvedProfileId' => $profileId];
+        } else {
+            $cover = p50_prono_resolve_cover($profileId, $first['questionTitle']);
+        }
+    }
     return [
         'id' => (string)$row['id'],
         'feedType' => 'prono_status',
+        'mode' => $isGrille ? 'grille' : 'single',
+        'slipId' => trim((string)($row['slip_id'] ?? $row['vote_slip_id'] ?? '')) ?: null,
         'questionId' => (string)$row['question_id'],
         'questionTitle' => $questionTitle,
         'profileId' => $cover['resolvedProfileId'] !== '' ? $cover['resolvedProfileId'] : $profileId,
         'coverPhoto' => $cover['coverPhoto'],
-        'optionKey' => $optionKey,
-        'optionLabel' => (string)($row['option_label'] ?? $optionKey),
+        'optionKey' => $isGrille ? 'grille' : $optionKey,
+        'optionLabel' => $isGrille
+            ? (count($legs).' sélections · cote '.number_format($combinedOdd, 2, '.', ''))
+            : (string)($row['option_label'] ?? $optionKey),
         'odd' => $odd,
+        'combinedOdd' => $combinedOdd,
+        'legs' => $legs,
+        'legCount' => $isGrille ? count($legs) : 1,
         'stake' => $stake,
-        'potentialPayout' => p50_prono_payout($stake, $odd),
+        'potentialPayout' => p50_prono_payout($stake, $combinedOdd),
         'authorPseudo' => (string)($row['author_display_name'] ?? 'Membre PASS50'),
         'authorPhoto' => trim((string)($row['author_avatar_url'] ?? '')),
         'authorUserId' => (string)$row['user_id'],

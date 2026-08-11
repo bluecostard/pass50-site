@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.18';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.19';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -21,6 +21,7 @@
     pronoStatuses: [],
     liveStreams: [],
     diapoIndex: 0,
+    diapoLegIndex: 0,
     diapoTimer: null,
     diapoPaused: false,
     diapoStartedAt: 0,
@@ -375,9 +376,12 @@
     }
     strip.innerHTML = state.pronoStatuses.map((item, index) => {
       const seen = state.seenPronos.has(String(item.id));
+      const label = (Array.isArray(item.legs) && item.legs.length >= 2)
+        ? `${item.authorPseudo || 'Membre'} · ${item.legs.length}`
+        : (item.authorPseudo || 'Membre');
       return `<button type="button" class="prono-story" data-prono-diapo="${index}" aria-label="Voir le prono de ${attr(item.authorPseudo || 'membre')}">
         <span class="prono-story-ring ${seen ? 'seen' : ''}">${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}</span>
-        <span>${esc(item.authorPseudo || 'Membre')}</span>
+        <span>${esc(label)}</span>
       </button>`;
     }).join('');
   }
@@ -429,29 +433,51 @@
     state.diapoTimer = setTimeout(() => nextPronoDiapo(), ms);
   }
 
+  function currentPronoLegs(item) {
+    if (!item) return [];
+    return Array.isArray(item.legs) && item.legs.length >= 2 ? item.legs : [];
+  }
+
+  function currentPronoSlide(item) {
+    const legs = currentPronoLegs(item);
+    if (!legs.length) return null;
+    const idx = Math.max(0, Math.min(state.diapoLegIndex, legs.length - 1));
+    return legs[idx];
+  }
+
   function renderPronoDiapo() {
     const item = state.pronoStatuses[state.diapoIndex];
     if (!item) return closePronoDiapo();
     state.seenPronos.add(String(item.id));
-    const odd = fmtOdd(item.odd);
+    const legs = currentPronoLegs(item);
+    const slide = currentPronoSlide(item);
+    const isGrille = legs.length >= 2;
+    const odd = fmtOdd(isGrille ? (slide?.odd ?? item.odd) : item.odd);
+    const combined = fmtOdd(item.combinedOdd || item.odd);
     const payout = Math.round(Number(item.potentialPayout || 0));
     const cover = $('#pronoDiapoCover');
+    const coverSrc = slide?.coverPhoto || statusCoverSrc({ ...item, profileId: slide?.profileId || item.profileId, questionTitle: slide?.questionTitle || item.questionTitle });
     if (cover) {
-      cover.src = statusCoverSrc(item);
+      cover.src = coverSrc;
       cover.onerror = () => { cover.src = statusCoverDataUri(item, 'feed'); };
     }
     const author = $('#pronoDiapoAuthor');
     if (author) {
-      author.innerHTML = `${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}<div><strong>${esc(item.authorPseudo || 'Membre')}</strong><small>Statut · ${esc(item.durationHours)} h · expire ${esc(relativeDate(item.expiresAt))}</small></div>`;
+      const kind = isGrille ? `Grille · ${legs.length} pronos` : `Statut · ${item.durationHours} h`;
+      author.innerHTML = `${memberAvatarHtml(item.authorPseudo, item.authorPhoto)}<div><strong>${esc(item.authorPseudo || 'Membre')}</strong><small>${esc(kind)} · expire ${esc(relativeDate(item.expiresAt))}</small></div>`;
     }
     const question = $('#pronoDiapoQuestion');
-    if (question) question.textContent = item.questionTitle || 'Pronostic';
+    if (question) question.textContent = slide?.questionTitle || item.questionTitle || 'Pronostic';
     const choice = $('#pronoDiapoChoice');
-    if (choice) choice.textContent = item.optionLabel || item.optionKey || '—';
+    if (choice) choice.textContent = slide?.optionLabel || item.optionLabel || item.optionKey || '—';
     const oddInline = $('#pronoDiapoOddInline');
-    if (oddInline) oddInline.textContent = `x ${odd}`;
+    if (oddInline) oddInline.textContent = isGrille ? `x ${odd} · total ${combined}` : `x ${odd}`;
     const ret = $('#pronoDiapoReturn');
-    if (ret) ret.textContent = payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel';
+    if (ret) {
+      ret.textContent = isGrille
+        ? `Cote combinée ${combined} · gain pot. ${payout} pts · sans argent réel`
+        : (payout > 0 ? `Gain pot. ${payout} pts · sans argent réel` : 'Sans argent réel');
+    }
     const like = $('#pronoDiapoLike');
     if (like) {
       like.textContent = `${item.likedByMe ? '♥ Liké' : '♡ Like'} · ${item.likeCount || 0}`;
@@ -460,10 +486,17 @@
     }
     const bars = $('#pronoDiapoBars');
     if (bars) {
-      bars.innerHTML = state.pronoStatuses.map((_, index) => {
-        const cls = index < state.diapoIndex ? 'done' : index === state.diapoIndex ? 'active' : '';
-        return `<i class="${cls}"><b></b></i>`;
-      }).join('');
+      if (isGrille) {
+        bars.innerHTML = legs.map((_, index) => {
+          const cls = index < state.diapoLegIndex ? 'done' : index === state.diapoLegIndex ? 'active' : '';
+          return `<i class="${cls}"><b></b></i>`;
+        }).join('');
+      } else {
+        bars.innerHTML = state.pronoStatuses.map((_, index) => {
+          const cls = index < state.diapoIndex ? 'done' : index === state.diapoIndex ? 'active' : '';
+          return `<i class="${cls}"><b></b></i>`;
+        }).join('');
+      }
     }
     renderPronoStories();
     armPronoDiapoTimer(DIAPO_MS);
@@ -503,6 +536,7 @@
   function openPronoDiapo(index = 0) {
     if (!state.pronoStatuses.length) return;
     state.diapoIndex = Math.max(0, Math.min(index, state.pronoStatuses.length - 1));
+    state.diapoLegIndex = 0;
     $('#pronoDiapo')?.classList.add('show');
     renderPronoDiapo();
   }
@@ -570,14 +604,32 @@
   }
 
   function nextPronoDiapo() {
+    const item = state.pronoStatuses[state.diapoIndex];
+    const legs = currentPronoLegs(item);
+    if (legs.length >= 2 && state.diapoLegIndex < legs.length - 1) {
+      state.diapoLegIndex += 1;
+      renderPronoDiapo();
+      return;
+    }
     if (state.diapoIndex >= state.pronoStatuses.length - 1) return closePronoDiapo();
     state.diapoIndex += 1;
+    state.diapoLegIndex = 0;
     renderPronoDiapo();
   }
 
   function prevPronoDiapo() {
+    const item = state.pronoStatuses[state.diapoIndex];
+    const legs = currentPronoLegs(item);
+    if (legs.length >= 2 && state.diapoLegIndex > 0) {
+      state.diapoLegIndex -= 1;
+      renderPronoDiapo();
+      return;
+    }
     if (state.diapoIndex <= 0) return;
     state.diapoIndex -= 1;
+    const prev = state.pronoStatuses[state.diapoIndex];
+    const prevLegs = currentPronoLegs(prev);
+    state.diapoLegIndex = Math.max(0, prevLegs.length - 1);
     renderPronoDiapo();
   }
 

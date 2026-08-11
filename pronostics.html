@@ -342,6 +342,7 @@
     statuses: [],
     slip: {}, // questionId -> {optionKey, odd, label, title}
     pendingQuestionIds: [],
+    pendingSlipId: null,
     durationHours: 24,
   };
 
@@ -565,13 +566,20 @@
     renderPublications();
   });
 
-  function openStatusModal(questionIds){
-    state.pendingQuestionIds = questionIds || [];
+  function openStatusModal(payload){
+    if (Array.isArray(payload)) {
+      state.pendingQuestionIds = payload;
+      state.pendingSlipId = null;
+    } else {
+      state.pendingQuestionIds = payload?.questionIds || [];
+      state.pendingSlipId = payload?.slipId || null;
+    }
     document.getElementById('statusModal')?.classList.add('show');
   }
   function closeStatusModal(){
     document.getElementById('statusModal')?.classList.remove('show');
     state.pendingQuestionIds = [];
+    state.pendingSlipId = null;
   }
   document.getElementById('statusDurations')?.addEventListener('click',(e)=>{
     const b=e.target.closest('[data-h]');
@@ -582,26 +590,30 @@
   document.getElementById('statusSkip')?.addEventListener('click', closeStatusModal);
   document.getElementById('statusPublish')?.addEventListener('click', async()=>{
     const ids=state.pendingQuestionIds.slice();
-    if(!ids.length){ closeStatusModal(); return; }
+    const slipId=state.pendingSlipId;
+    if(!ids.length && !slipId){ closeStatusModal(); return; }
     const token=localStorage.getItem('pass50_api_token')||'';
     if(!token){ showToast('Connecte-toi pour publier un statut'); return; }
-    let ok=0;
-    for(const qid of ids){
-      try{
-        const r=await fetch('/api/prono-status-publish.php',{
-          method:'POST',
-          headers:authHeaders(true),
-          body:JSON.stringify({questionId:qid, durationHours:state.durationHours}),
-        });
-        const d=await r.json().catch(()=>({}));
-        if(r.ok) ok++;
-        else if(d.error) console.warn(d.error);
-      }catch(err){ console.warn(err); }
+    try{
+      const body = slipId
+        ? { slipId, durationHours: state.durationHours }
+        : (ids.length > 1
+          ? { questionIds: ids, durationHours: state.durationHours }
+          : { questionId: ids[0], durationHours: state.durationHours });
+      const r=await fetch('/api/prono-status-publish.php',{
+        method:'POST',
+        headers:authHeaders(true),
+        body:JSON.stringify(body),
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      closeStatusModal();
+      showToast(d.message || (d.mode==='grille' ? 'Statut grille publie' : 'Statut publie · Mon fil'));
+      loadPublications();
+      loadStatuses();
+    }catch(err){
+      showToast(err.message||'Statut non publie');
     }
-    closeStatusModal();
-    showToast(ok?`Statut publie (${ok}) · Statut prono + Mon fil`:'Statut non publie');
-    loadPublications();
-    loadStatuses();
   });
 
   document.getElementById('slipValidate')?.addEventListener('click', async()=>{
@@ -624,7 +636,10 @@
       showToast(d.message||'Valide');
       updateSlipBar();
       await loadPublications();
-      openStatusModal(d.questionIds||legs.map(l=>l.questionId));
+      openStatusModal({
+        questionIds: d.questionIds || legs.map(l=>l.questionId),
+        slipId: d.slipId || null,
+      });
     }catch(err){
       showToast(err.message||'Validation impossible');
     }finally{

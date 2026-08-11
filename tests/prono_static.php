@@ -75,7 +75,7 @@ foreach (["['pronostics','Pronostics']", 'deRenderPronosticsAdmin', 'admin-prono
 }
 
 $fil = file_get_contents($root.'/mon-fil.js');
-foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'pronoStoriesStrip', 'openPronoDiapo', 'memberAvatarHtml', 'PASS50-FOLLOW-FEED-PAGE-V2.18'] as $needle) {
+foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'pronoStoriesStrip', 'openPronoDiapo', 'memberAvatarHtml', 'diapoLegIndex', 'PASS50-FOLLOW-FEED-PAGE-V2.19'] as $needle) {
     if (!str_contains($fil, $needle)) {
         fwrite(STDERR, "MON-FIL missing $needle\n");
         exit(1);
@@ -83,7 +83,7 @@ foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'p
 }
 
 $filHtml = file_get_contents($root.'/mon-fil.html');
-foreach (['pronoStoriesStrip', 'pronoDiapo', 'pronoDiapoShare', 'pronoDiapoOdd', 'mon-fil.js?v=2.10'] as $needle) {
+foreach (['pronoStoriesStrip', 'pronoDiapo', 'pronoDiapoShare', 'pronoDiapoOdd', 'mon-fil.js?v=2.19'] as $needle) {
     if (!str_contains($filHtml, $needle)) {
         fwrite(STDERR, "MON-FIL-HTML missing $needle\n");
         exit(1);
@@ -126,6 +126,14 @@ $resolve = file_get_contents($root.'/api/prono-admin-resolve.php');
 foreach (['p50_prono_settle_slips', 'slip_id'] as $needle) {
     if (!str_contains($resolve, $needle)) {
         fwrite(STDERR, "RESOLVE missing $needle\n");
+        exit(1);
+    }
+}
+
+$feed = file_get_contents($root.'/api/prono-statuses-feed.php');
+foreach (['legs_json', 'vote_slip_id', 'slip:'] as $needle) {
+    if (!str_contains($feed, $needle)) {
+        fwrite(STDERR, "STATUSES-FEED missing $needle\n");
         exit(1);
     }
 }

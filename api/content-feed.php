@@ -89,18 +89,18 @@ foreach($trendStmt->fetchAll() as $row){
 }
 
 $news=[];
-$officialNewsHoursApplied=24;
+$officialNewsHoursApplied=72;
 $officialNewsUsedFallback=false;
 if($profileId!==''){
     $officialCountStmt=$pdo->prepare("SELECT COUNT(*) FROM p50_news_items n
       WHERE BINARY n.profile_id=BINARY ? AND n.validation_status='published' AND n.is_official=1
         AND (n.expires_at IS NULL OR n.expires_at>UTC_TIMESTAMP())
-        AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR)");
+        AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 72 HOUR)");
     $officialCountStmt->execute([$profileId]);
-    $hasOfficial24h=(int)$officialCountStmt->fetchColumn()>0;
-    // FI active (ex. plusieurs vidéos/jour) → 24 h strict. Sinon, et seulement sinon → 48 h.
-    $officialNewsHoursApplied=$hasOfficial24h?24:48;
-    $officialNewsUsedFallback=!$hasOfficial24h;
+    $hasOfficial72h=(int)$officialCountStmt->fetchColumn()>0;
+    // FI active → 72 h. Sinon fallback 7 jours pour éviter les fiches vides alors que le classement bouge.
+    $officialNewsHoursApplied=$hasOfficial72h?72:168;
+    $officialNewsUsedFallback=!$hasOfficial72h;
 
     $newsStmt=$pdo->prepare("SELECT n.id,n.content_id,n.platform,n.item_type,n.canonical_url,n.title,n.thumbnail_url,
       n.source_published_at,n.source_type,n.confidence,n.is_official,n.pass50_published_at,
@@ -146,7 +146,7 @@ json_response([
     'message'=>$trendDataStale?'Mise à jour des tendances en attente. Le dernier Top 5 valide reste affiché.':null,
     'rules'=>[
         'maxPerProfile'=>2,'topLimit'=>5,'officialContentAutomatic'=>true,'externalNewsHumanValidation'=>true,
-        'officialNewsMaxAgeHours'=>24,'officialNewsFallbackMaxAgeHours'=>48,
+        'officialNewsMaxAgeHours'=>72,'officialNewsFallbackMaxAgeHours'=>168,
         'officialNewsHoursApplied'=>$officialNewsHoursApplied,'officialNewsUsedFallback'=>$officialNewsUsedFallback,
         'externalNewsMaxAgeDays'=>7,'trendMaxAgeHours'=>$trendMaxAgeHours,'maxTrendRunAgeMinutes'=>30,
         'staleTrendsRemainVisible'=>true,

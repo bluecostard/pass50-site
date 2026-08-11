@@ -31,12 +31,35 @@ if ($user) {
             $votes[(string)$vote['question_id']] = $vote;
         }
         $voteIds = array_values(array_map(static fn($v) => (string)$v['id'], $votes));
+        $slipIds = [];
+        foreach ($votes as $vote) {
+            $sid = trim((string)($vote['slip_id'] ?? ''));
+            if ($sid !== '') $slipIds[$sid] = true;
+        }
         if ($voteIds) {
             $statusPlaceholders = implode(',', array_fill(0, count($voteIds), '?'));
-            $statusStmt = $pdo->prepare("SELECT vote_id FROM p50_prono_statuses WHERE vote_id IN ($statusPlaceholders)");
+            $statusStmt = $pdo->prepare("SELECT vote_id,slip_id FROM p50_prono_statuses WHERE vote_id IN ($statusPlaceholders)");
             $statusStmt->execute($voteIds);
             foreach ($statusStmt->fetchAll() ?: [] as $statusRow) {
                 $statusPublished[(string)$statusRow['vote_id']] = true;
+                $sid = trim((string)($statusRow['slip_id'] ?? ''));
+                if ($sid !== '') $slipIds[$sid] = true;
+            }
+        }
+        if ($slipIds) {
+            $slipKeys = array_keys($slipIds);
+            $ph = implode(',', array_fill(0, count($slipKeys), '?'));
+            $slipStatus = $pdo->prepare("SELECT slip_id FROM p50_prono_statuses WHERE slip_id IN ($ph)");
+            $slipStatus->execute($slipKeys);
+            $publishedSlips = [];
+            foreach ($slipStatus->fetchAll() ?: [] as $sr) {
+                $publishedSlips[trim((string)$sr['slip_id'])] = true;
+            }
+            foreach ($votes as $vote) {
+                $sid = trim((string)($vote['slip_id'] ?? ''));
+                if ($sid !== '' && isset($publishedSlips[$sid])) {
+                    $statusPublished[(string)$vote['id']] = true;
+                }
             }
         }
     }
