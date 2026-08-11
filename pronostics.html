@@ -293,19 +293,21 @@
     try {
       const r = await fetch('/api/state.php');
       const data = await r.json();
-      const profiles = (data.profiles || [])
-        .filter(p => p.classable !== false)
-        .sort((a,b) => (b.scores?.['24H'] ?? 0) - (a.scores?.['24H'] ?? 0))
+      const root = data.data && typeof data.data === 'object' ? data.data : data;
+      const profiles = (root.profiles || [])
+        .filter(p => p && p.id && p.classable !== false)
+        .sort((a,b) => (Number(b.scores?.['24H']) || 0) - (Number(a.scores?.['24H']) || 0))
         .slice(0,12);
+
+      if(!profiles.length) throw new Error('no profiles');
 
       state.profiles = profiles.map(p => ({
         id: p.id,
-        name: p.displayName || p.name || p.id,
+        name: p.name || p.displayName || p.id,
         photo: p.photoUrl || p.photo || '',
-        initials: initials(p.displayName || p.name || p.id),
+        initials: p.initials || initials(p.name || p.displayName || p.id),
       }));
     } catch(e) {
-      // Fallback: demo profiles
       state.profiles = [
         {id:'himra',name:'Himra',photo:'',initials:'HI'},
         {id:'african-ryou',name:'African Ryou',photo:'',initials:'AR'},
@@ -330,8 +332,16 @@
     try {
       const r = await fetch('/api/prono-feed.php');
       const data = await r.json();
-      if(data.balance != null) state.points = data.balance;
-      if(data.streak != null) state.streak = data.streak;
+      const bal = data.balance;
+      if (bal != null) {
+        if (typeof bal === 'object') {
+          const pts = Number(bal.balance);
+          state.points = Number.isFinite(pts) ? pts : (Number(data.startingBalance) || 1000);
+          state.streak = Number(bal.streak) || 0;
+        } else {
+          state.points = Number(bal) || 1000;
+        }
+      }
       document.getElementById('pts').textContent = Math.round(state.points).toLocaleString('fr-FR');
       document.getElementById('streakNum').textContent = state.streak;
     } catch(e){}
@@ -419,8 +429,9 @@
       const d = await r.json();
       if(d.ok || d.saved){
         success = true;
-        if(d.points) state.points = d.points;
-        if(d.streak) state.streak = d.streak;
+        const pts = typeof d.points === 'object' ? Number(d.points?.balance) : Number(d.points);
+        if(Number.isFinite(pts)) state.points = pts;
+        if(d.streak != null) state.streak = Number(d.streak) || 0;
         document.getElementById('pts').textContent = Math.round(state.points).toLocaleString('fr-FR');
         document.getElementById('streakNum').textContent = state.streak;
       }
