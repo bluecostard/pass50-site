@@ -58,9 +58,9 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <h2 style="margin-top:0">Batch auto · 12 pronos <span class="muted" style="font-weight:700;font-size:13px">(optionnel)</span></h2>
     <p class="muted" style="margin:0 0 12px">Génère des brouillons à partir des FI/actus. Si une image manque, les autres peuvent quand même être publiés — les erreurs s’affichent clairement.</p>
     <div class="batch-actions">
-      <button type="button" id="genDailyBtn">Générer les 12 du jour</button>
+      <button type="button" id="genDailyBtn" onclick="(function(){var msg=document.getElementById('dailyMsg'); if(msg){msg.style.display='block'; msg.textContent='clicked gen';}})();">Générer les 12 du jour</button>
       <button type="button" class="ghost" id="refreshDailyBtn">Rafraîchir le batch</button>
-      <button type="button" id="publishDailyBtn">Publier les brouillons</button>
+      <button type="button" id="publishDailyBtn" onclick="(function(){var msg=document.getElementById('dailyMsg'); if(msg){msg.style.display='block'; msg.textContent='clicked publish';}})();">Publier les brouillons</button>
       <button type="button" id="genPublishDailyBtn">Générer + publier</button>
     </div>
     <div class="toast" id="dailyMsg"></div>
