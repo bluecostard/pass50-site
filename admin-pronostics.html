@@ -287,7 +287,7 @@ function renderThemeBlocks(){
   if(!box)return;
   box.innerHTML=THEMES.map((theme,ti)=>{
     const items=ALL_ITEMS.filter(i=>i.theme===theme.key).slice(0,12);
-    const list=items.length?items.map(i=>qCard(i,true)).join(''):'<p class="muted" style="margin:8px 0 0;font-size:12px">Aucune question dans ce thème pour l’instant.</p>';
+    const list=items.length?items.map(i=>qCard(i,true)).join(''):'<p class="muted" style="margin:8px 0 0;font-size:12px">Aucune question dans ce thème pour l'instant.</p>';
     return `<div class="theme-box" data-theme="${esc(theme.key)}">
       <h3>${ti+1}. ${esc(theme.label)}</h3>
       <p class="muted" style="margin:0;font-size:12px">${esc(theme.hint)}</p>
