@@ -37,7 +37,15 @@ try{
     $stmt=$pdo->prepare("SELECT platform,new_url,created_at FROM p50_social_link_audit WHERE profile_id=? AND action_type IN ('save','confirm','restore','bulk_save','integrity_restore') AND new_url IS NOT NULL AND new_url<>'' ORDER BY created_at DESC,id DESC");
     $stmt->execute([$profileId]);foreach($stmt->fetchAll() as $row)$put($candidates,(string)$row['platform'],(string)$row['new_url'],(string)$row['created_at'],'audit');
     foreach((array)($profile['links']??[]) as $platform=>$url)$put($candidates,(string)$platform,(string)$url,'','state');
-    if(!$candidates)throw new RuntimeException('Aucune ancienne saisie Dolpho retrouvée dans les sauvegardes PASS50.');
+    // La dernière saisie explicite du propriétaire est la source de vérité et
+    // remplace toute ancienne valeur contradictoire retrouvée dans l'historique.
+    $canonicalLinks=[
+        'Instagram'=>'https://www.instagram.com/dolpho_dolpho225/',
+        'TikTok'=>'https://www.tiktok.com/@dolpho_dolpho1',
+        'Facebook'=>'https://www.facebook.com/profile.php?id=61559188443333',
+        'YouTube'=>'https://www.youtube.com/@dolphodolpho',
+    ];
+    foreach($canonicalLinks as $platform=>$url)$candidates[$platform]=['url'=>$url,'at'=>gmdate('Y-m-d H:i:s'),'source'=>'owner_explicit_2026-08-11'];
     $profile['links']=is_array($profile['links']??null)?$profile['links']:[];$profile['linkChecks']=is_array($profile['linkChecks']??null)?$profile['linkChecks']:[];$profile['platforms']=is_array($profile['platforms']??null)?$profile['platforms']:[];
     $restored=[];$skipped=[];
     foreach($candidates as $platform=>$candidate){
@@ -50,7 +58,7 @@ try{
         $profile['links'][$platform]=$normalized;$profile['linkChecks'][$platform]=['status'=>'owner_verified','checkedAt'=>gmdate(DATE_ATOM),'message'=>'Lien restauré depuis l’historique serveur et protégé','persistedServerSide'=>true,'protectedBy'=>'PASS50-STATE-LINK-PROTECTION-V4.1','restoredFrom'=>$candidate['source']];$profile['platforms'][]=$platform;
         $restored[$platform]=['url'=>$normalized,'source'=>$candidate['source']];
     }
-    if(!$restored)throw new RuntimeException('Les anciennes saisies retrouvées ne contiennent aucun lien de profil direct valide.');
+    if(count($restored)!==4)throw new RuntimeException('Les quatre comptes officiels Dolpho n’ont pas tous été validés.');
     $profile['platforms']=array_values(array_unique(array_map('strval',$profile['platforms'])));$profile['officialLinksValidatedAt']=gmdate(DATE_ATOM);$profile['officialLinksValidationVersion']=P50_DOLPHO_RECOVERY_VERSION;
     $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$state['dolphoProfileRecovery']=['version'=>P50_DOLPHO_RECOVERY_VERSION,'profileId'=>$profileId,'updatedAt'=>gmdate(DATE_ATOM),'platforms'=>array_keys($restored)];
     p50_de_save_public_state($state,null,false);$pdo->commit();

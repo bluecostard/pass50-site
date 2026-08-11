@@ -25,10 +25,10 @@ jobs:
           for attempt in $(seq 1 36); do
             timestamp="$(date +%s)"; signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
             code="$(curl --silent --show-error --max-time 90 --output /tmp/dolpho-recovery.json --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT" || true)"
-            if [ "$code" = 200 ] && jq -e '.ok==true and .version=="DOLPHO-PROFILE-RECOVERY-V1.0" and .restoredCount>0 and .publicStateWrites==1' /tmp/dolpho-recovery.json >/dev/null 2>&1; then break; fi
+            if [ "$code" = 200 ] && jq -e '.ok==true and .version=="DOLPHO-PROFILE-RECOVERY-V1.0" and .restoredCount==4 and .publicStateWrites==1' /tmp/dolpho-recovery.json >/dev/null 2>&1; then break; fi
             echo "Endpoint en attente · tentative $attempt/36 · HTTP ${code:-000}"; sleep 10
           done
-          jq -e '.ok==true and .restoredCount>0 and .publicStateWrites==1' /tmp/dolpho-recovery.json >/dev/null
+          jq -e '.ok==true and .restoredCount==4 and .publicStateWrites==1' /tmp/dolpho-recovery.json >/dev/null
           cat /tmp/dolpho-recovery.json
       - name: Archive recovery proof
         if: always()
