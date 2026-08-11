@@ -504,7 +504,9 @@ function p50_prono_public_state(): array {
     try {
         $raw = db()->query("SELECT data FROM app_state WHERE id='public' LIMIT 1")->fetchColumn();
         $decoded = is_string($raw) ? json_decode($raw, true) : [];
-        $state = is_array($decoded) ? $decoded : [];
+        if (!is_array($decoded)) $decoded = [];
+        // app_state may be wrapped as {ok:true, data:{profiles:[...]}}
+        $state = isset($decoded['data']) && is_array($decoded['data']) ? $decoded['data'] : $decoded;
     } catch (Throwable $e) {
         error_log('PASS50 prono public state: '.$e->getMessage());
         $state = [];
@@ -606,7 +608,8 @@ function p50_prono_profile_photo_any(array $profile): string {
     if ($cover !== '') {
         return $cover;
     }
-    foreach (['photoUrl', 'photoCandidateUrl', 'avatarUrl', 'image'] as $key) {
+    // Accept any direct URL even without photoStatus validated (batch generation is lenient)
+    foreach (['photoUrl', 'photoCandidateUrl', 'photo', 'avatarUrl', 'image', 'coverUrl'] as $key) {
         $url = p50_prono_abs_media_url(trim((string)($profile[$key] ?? '')));
         if ($url !== '') {
             return $url;
