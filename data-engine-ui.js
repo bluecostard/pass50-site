@@ -1,7 +1,7 @@
 (function(){
   window.majPass50Running=Boolean(window.majPass50Running);
   const fallbackRenderAdminPane=renderAdminPane;
-  const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,rankingLab:null,rankingLabPeriod:'2H',rankingLabLoading:false,rankingLabView:'current',rankingCalibration:null,rankingCalibrationLoading:false,rankingCalibrationRuns:24,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
+  const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,rankingLab:null,rankingLabPeriod:'2H',rankingLabLoading:false,rankingLabView:'current',rankingCalibration:null,rankingCalibrationLoading:false,rankingCalibrationRuns:24,rankingHealth:null,rankingHealthLoading:false,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
   const ADMIN_ITEMS=[
     ['adminhome','Accueil'],['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],
     ['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['pronostics','Pronostics'],['update','MAJ PASS50'],
@@ -70,6 +70,29 @@
     try{DE.rankingLab=await apiFetch(`metrics-ranking.php?period=${encodeURIComponent(DE.rankingLabPeriod)}&limit=100`);}
     catch(error){DE.rankingLab={error:error.message||'Classement expérimental indisponible'};}
     finally{DE.rankingLabLoading=false;if(ui.adminTab==='rankinglab')deDrawRankingLab($('#adminPane'));}
+    deLoadRankingHealth(force);
+  }
+  async function deLoadRankingHealth(force=false){
+    if(DE.rankingHealthLoading||(!force&&DE.rankingHealth))return;
+    DE.rankingHealthLoading=true;
+    try{
+      const preview=await apiFetch('metrics-ranking-publication-apply.php');
+      DE.rankingHealth=preview?.health||null;
+    }catch(error){DE.rankingHealth={status:'error',label:error.message||'Santé publication indisponible',ok:false};}
+    finally{DE.rankingHealthLoading=false;if(ui.adminTab==='rankinglab')deDrawRankingLab($('#adminPane'));}
+  }
+  function deRankingHealthHtml(){
+    const h=DE.rankingHealth;
+    if(DE.rankingHealthLoading&&!h)return `<div class="de-ranking-health loading">Vérification de la publication publique…</div>`;
+    if(!h)return '';
+    const last=h.lastApplied||{};
+    const age=last.ageHours==null?'—':(Number(last.ageHours)<1?`${Math.round(Number(last.ageHours)*60)} min`:`${Number(last.ageHours).toFixed(1)} h`);
+    const flags=h.publicationEnabled&&h.automaticPublicationEnabled?'auto ON':'auto OFF';
+    const detail=last.generatedAt
+      ? `Dernière écriture il y a ${age} · rév. ${last.revision||'—'} · ${flags}`
+      : flags;
+    const tone=h.status==='fresh'?'ok':(h.status==='stale'||h.status==='flags_off'?'bad':'warn');
+    return `<div class="de-ranking-health ${tone}" role="status"><strong>${deEsc(h.label||'Publication')}</strong><span>${deEsc(detail)}</span></div>`;
   }
   async function deLoadRankingCalibration(force=false){
     if(DE.rankingCalibrationLoading||(!force&&DE.rankingCalibration?.selectedPeriod===DE.rankingLabPeriod&&Number(DE.rankingCalibration?.requestedRuns||DE.rankingCalibrationRuns)===DE.rankingCalibrationRuns))return;
@@ -136,7 +159,12 @@
     if(DE.rankingLabLoading&&!DE.rankingLab){pane.innerHTML='<div class="de-ranking-lab"><div class="de-loading">Chargement du classement expérimental…</div></div>';return;}
     if(DE.rankingLabView!=='current'&&DE.rankingCalibrationLoading&&!DE.rankingCalibration){pane.innerHTML='<div class="de-ranking-lab"><div class="de-loading">Chargement de l’historique…</div></div>';return;}
     const content=DE.rankingLabView==='history'?deRankingHistoryHtml():DE.rankingLabView==='calibration'?deRankingCalibrationHtml():deRankingCurrentHtml();
-    pane.innerHTML=`<div class="de-ranking-lab"><div class="section-head"><div><div class="section-title">CLASSEMENT MÉTRIQUE MR‑V1.0</div><div class="de-ranking-warning">Calcul expérimental → publication publique via le bouton ci‑dessous (backup + garde‑fous). Le sélecteur de période ne fait que changer la vue ; la publication couvre toutes les périodes éligibles (ex. 24H+).</div></div><div class="de-ranking-actions"><button class="btn primary de-ranking-calculate">Calculer les 5 périodes</button><button class="btn primary de-ranking-publish">Publier vers le classement public</button><button class="btn de-ranking-refresh">Actualiser</button><select id="deRankingLabPeriod">${periods.map(period=>`<option ${period===DE.rankingLabPeriod?'selected':''}>${period}</option>`).join('')}</select></div></div><nav class="de-ranking-subnav" aria-label="Vues du classement expérimental"><button class="btn ${DE.rankingLabView==='current'?'primary':''}" data-ranking-view="current">Classement actuel</button><button class="btn ${DE.rankingLabView==='history'?'primary':''}" data-ranking-view="history">Historique des cycles</button><button class="btn ${DE.rankingLabView==='calibration'?'primary':''}" data-ranking-view="calibration">Calibration</button></nav>${content}</div>`;
+    pane.innerHTML=`<div class="de-ranking-lab"><div class="section-head"><div><div class="section-title">CLASSEMENT MÉTRIQUE MR‑V1.0</div><div class="de-ranking-warning">Calcul expérimental → publication publique via le bouton ci‑dessous (backup + garde‑fous). Le sélecteur de période ne fait que changer la vue ; la publication couvre toutes les périodes éligibles (ex. 24H+).</div></div><div class="de-ranking-actions"><button class="btn primary de-ranking-calculate">Calculer les 5 périodes</button><button class="btn primary de-ranking-publish">Publier vers le classement public</button><button class="btn de-ranking-refresh">Actualiser</button><select id="deRankingLabPeriod">${periods.map(period=>`<option ${period===DE.rankingLabPeriod?'selected':''}>${period}</option>`).join('')}</select></div></div>${deRankingHealthHtml()}<nav class="de-ranking-subnav" aria-label="Vues du classement expérimental"><button class="btn ${DE.rankingLabView==='current'?'primary':''}" data-ranking-view="current">Classement actuel</button><button class="btn ${DE.rankingLabView==='history'?'primary':''}" data-ranking-view="history">Historique des cycles</button><button class="btn ${DE.rankingLabView==='calibration'?'primary':''}" data-ranking-view="calibration">Calibration</button></nav>${content}</div>`;
+    if(!document.getElementById('deRankingHealthStyles')){
+      const style=document.createElement('style');style.id='deRankingHealthStyles';
+      style.textContent=`.de-ranking-health{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline;margin:0 0 14px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#0c100c}.de-ranking-health strong{font-size:13px}.de-ranking-health span{font-size:12px;color:var(--muted)}.de-ranking-health.ok{border-color:rgba(183,255,0,.45);background:linear-gradient(180deg,rgba(183,255,0,.1),rgba(10,13,10,.95))}.de-ranking-health.ok strong{color:var(--lime)}.de-ranking-health.warn{border-color:rgba(255,176,80,.45)}.de-ranking-health.warn strong{color:#ffc065}.de-ranking-health.bad{border-color:rgba(255,110,90,.55);background:linear-gradient(180deg,rgba(255,80,60,.1),rgba(10,13,10,.95))}.de-ranking-health.bad strong{color:#ff9e9e}.de-ranking-health.loading{color:var(--muted)}`;
+      document.head.appendChild(style);
+    }
   }
   async function deCalculateRankingLab(button){await deAction(button,async()=>{await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});DE.rankingLab=null;DE.rankingCalibration=null;await deLoadRankingLab(true);if(DE.rankingLabView!=='current')await deLoadRankingCalibration(true);toast('Classements expérimentaux calculés');},'Calcul…');}
   const DE_PUBLISH_GATE_LABELS={
@@ -192,6 +220,7 @@
       :`Publier MR‑V1.0 (${periods}${skipped}, ${preview.summary?.mutations||0} scores) vers le classement public ? Un backup sera créé.`;
     if(!confirm(msg))return;
     const result=await apiFetch('metrics-ranking-publication-apply.php',{method:'POST',body:{action:'apply',confirm:true,bootstrap:!!preview.bootstrap,dispatchId:'admin-'+Date.now()}});
+    DE.rankingLab=null;DE.rankingHealth=null;await deLoadRankingLab(true);
     await loadCloudState?.();render?.();
     const skipNote=(result.skippedPeriods||[]).length?` · ignoré ${result.skippedPeriods.join(', ')}`:'';
     toast(`Classement public mis à jour · révision ${result.publicStateRevision} · ${result.scoresWritten||0} scores${skipNote}`);
@@ -580,7 +609,7 @@
       if(e.target.id==='deMajPass50')await deRunMajPass50();
       if(e.target.id==='deReloadIntelligence')await deLoadIntelligence();
       if(e.target.matches('.de-metrics-refresh')){DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);}
-      if(e.target.matches('.de-ranking-refresh')){DE.rankingLab=null;DE.rankingCalibration=null;await Promise.all([deLoadRankingLab(true),deLoadRankingCalibration(true)]);}
+      if(e.target.matches('.de-ranking-refresh')){DE.rankingLab=null;DE.rankingCalibration=null;DE.rankingHealth=null;await Promise.all([deLoadRankingLab(true),deLoadRankingCalibration(true)]);}
       if(e.target.matches('.de-ranking-calculate'))await deCalculateRankingLab(e.target);
       if(e.target.matches('.de-ranking-publish'))await dePublishRankingLab(e.target);
       if(e.target.matches('[data-ranking-view]')){DE.rankingLabView=e.target.dataset.rankingView;if(DE.rankingLabView!=='current'&&!DE.rankingCalibration)await deLoadRankingCalibration();else deDrawRankingLab($('#adminPane'));}

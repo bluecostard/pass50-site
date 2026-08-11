@@ -14,6 +14,7 @@ require_once __DIR__.'/data-engine-core.php';
 const P50_MRP_APPLY_VERSION='PUBAPPLY-V1.0';
 const P50_MRP_APPLY_LOCK='pass50_metrics_ranking_publication_apply_v1';
 const P50_MRP_APPLY_PERIODS=['2H','24H','48H','7J','15J'];
+const P50_MRP_APPLY_STALE_HOURS=2.5;
 
 function p50_mrp_apply_config(): array {
     $cfg=p50_mo_config();
@@ -27,6 +28,55 @@ function p50_mrp_apply_config(): array {
         'automaticPublicationEnabled'=>$publication&&$automatic,
         'bootstrapAllowed'=>$bootstrap,
         'cronSecret'=>(string)$cfg['cronSecret'],
+    ];
+}
+
+/** Santé publication pour l’admin (pas besoin d’ouvrir GitHub). */
+function p50_mrp_apply_health(PDO $pdo): array {
+    $cfg=p50_mrp_apply_config();
+    $last=null;
+    if(function_exists('p50_metrics_table_exists')&&p50_metrics_table_exists($pdo,'p50_metric_publication_applies')){
+        $stmt=$pdo->query("SELECT apply_uuid,public_revision_after,profiles_updated,scores_written,generated_at
+          FROM p50_metric_publication_applies
+          WHERE status='applied' AND public_revision_after>0
+          ORDER BY id DESC LIMIT 1");
+        $row=$stmt?$stmt->fetch():false;
+        if($row){
+            $generatedAt=(string)$row['generated_at'];
+            $ts=strtotime($generatedAt.' UTC');
+            $ageHours=$ts===false?null:max(0,(time()-$ts)/3600);
+            $last=[
+                'applyUuid'=>(string)$row['apply_uuid'],
+                'revision'=>(int)$row['public_revision_after'],
+                'profilesUpdated'=>(int)$row['profiles_updated'],
+                'scoresWritten'=>(int)$row['scores_written'],
+                'generatedAt'=>gmdate('c',$ts?:time()),
+                'ageHours'=>$ageHours===null?null:round($ageHours,3),
+            ];
+        }
+    }
+    $age=$last['ageHours']??null;
+    $flagsOn=!empty($cfg['publicationEnabled'])&&!empty($cfg['automaticPublicationEnabled']);
+    $stale=$age!==null&&$age>P50_MRP_APPLY_STALE_HOURS;
+    if(!$flagsOn)$status='flags_off';
+    elseif($last===null)$status='never_published';
+    elseif($stale)$status='stale';
+    else $status='fresh';
+    $labels=[
+        'fresh'=>'Classement public à jour',
+        'stale'=>'Classement public en retard',
+        'flags_off'=>'Publication automatique désactivée',
+        'never_published'=>'Aucune écriture publique trouvée',
+    ];
+    return [
+        'status'=>$status,
+        'label'=>$labels[$status]??$status,
+        'ok'=>$status==='fresh',
+        'stale'=>$stale,
+        'staleAfterHours'=>P50_MRP_APPLY_STALE_HOURS,
+        'publicationEnabled'=>(bool)$cfg['publicationEnabled'],
+        'automaticPublicationEnabled'=>(bool)$cfg['automaticPublicationEnabled'],
+        'lastApplied'=>$last,
     ];
 }
 
@@ -222,6 +272,7 @@ function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $
         ],
         'plans'=>$plans,
         'nextPhase'=>$eligible?'apply_with_backup':'resolve_gates_or_enable_publication',
+        'health'=>p50_mrp_apply_health($pdo),
     ];
 }
 

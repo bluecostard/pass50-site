@@ -22,6 +22,8 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("'candidate_non_empty','successful_run','exit_ratio','entry_ratio','maximum_rank_movement'", core)
         self.assertIn("publishPlans", core)
         self.assertIn("p50_de_load_public_state_for_update", core)
+        self.assertIn("p50_mrp_apply_health", core)
+        self.assertIn("'health'=>p50_mrp_apply_health", core)
 
     def test_admin_and_cron_endpoints_exist_and_reject_forced_bootstrap(self):
         admin = read("api/metrics-ranking-publication-apply.php")
