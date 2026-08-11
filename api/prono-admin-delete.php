@@ -18,28 +18,35 @@ if ($id === '') {
 
 $pdo = db();
 
-// Check exists
-$stmt = $pdo->prepare('SELECT id, status, vote_count FROM p50_prono_questions WHERE id = ? LIMIT 1');
+$stmt = $pdo->prepare('SELECT id, status FROM p50_prono_questions WHERE id = ? LIMIT 1');
 $stmt->execute([$id]);
 $row = $stmt->fetch();
 if (!$row) {
     json_response(['error' => 'Prono introuvable.'], 404);
 }
 
-// Safety: don't hard-delete resolved questions that have votes — archive instead
-$hasVotes = (int)($row['vote_count'] ?? 0) > 0;
-$isResolved = $row['status'] === 'resolved';
+$voteStmt = $pdo->prepare('SELECT COUNT(*) FROM p50_prono_votes WHERE question_id = ?');
+$voteStmt->execute([$id]);
+$voteCount = (int)$voteStmt->fetchColumn();
+$status = (string)($row['status'] ?? '');
 
-if ($hasVotes || $isResolved) {
-    // Soft delete: archive
-    $pdo->prepare('UPDATE p50_prono_questions SET status = ? WHERE id = ?')
-        ->execute(['archived', $id]);
-    json_response(['ok' => true, 'action' => 'archived', 'id' => $id,
-        'message' => 'Question archivée (avait des votes ou était résolue).']);
+// Soft-archive if resolved or has votes; otherwise hard delete
+if ($voteCount > 0 || $status === 'resolved') {
+    $pdo->prepare("UPDATE p50_prono_questions SET status='archived' WHERE id=?")
+        ->execute([$id]);
+    json_response([
+        'ok' => true,
+        'action' => 'archived',
+        'id' => $id,
+        'message' => 'Question archivee (votes ou deja resolue).',
+    ]);
 }
 
-// Hard delete: no votes, not resolved
 $pdo->prepare('DELETE FROM p50_prono_questions WHERE id = ?')->execute([$id]);
 
-json_response(['ok' => true, 'action' => 'deleted', 'id' => $id,
-    'message' => 'Question supprimée définitivement.']);
+json_response([
+    'ok' => true,
+    'action' => 'deleted',
+    'id' => $id,
+    'message' => 'Question supprimee definitivement.',
+]);

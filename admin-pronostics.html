@@ -219,6 +219,7 @@ function defaultMeasure(){
 function qCard(item, compact){
   const opts=(item.options||[]).map(o=>`${o.key} ${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
   const canResolve=item.status==='open'||item.status==='locked';
+  const canPublish=item.status==='draft';
   const cover=item.coverPhoto?`<img src="${esc(item.coverPhoto)}" alt="" class="batch-cover" loading="lazy" style="max-width:${compact?'160px':'320px'}">`:'';
   const itemJson=esc(JSON.stringify(item));
   return `<div class="q" data-id="${esc(item.id)}">
@@ -228,12 +229,13 @@ function qCard(item, compact){
     ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
     <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
     <div class="meta">${esc(opts)}</div>
-    ${!item.coverPhoto?'<div class="meta" style="color:#f88">⚠ Image manquante</div>':''}
+    ${!item.coverPhoto?'<div class="meta" style="color:#f88">Image manquante</div>':''}
     <div class="actions">
       <button type="button" class="ghost" data-copy="${esc(item.id)}">Copier ID</button>
-      <button type="button" class="ghost" style="color:#b7ff00;border-color:rgba(183,255,0,.35)" data-edit="${itemJson}">✏ Modifier</button>
-      <button type="button" class="ghost" style="color:#ff6b6b;border-color:rgba(255,107,107,.35)" data-delete="${esc(item.id)}" data-votes="${item.voteCount||0}">🗑 Supprimer</button>
-      ${canResolve?`<button type="button" data-fill="${esc(item.id)}" data-keys="${(item.options||[]).map(o=>esc(o.key)).join(',')}">Résoudre</button>`:''}
+      <button type="button" class="ghost" style="color:#b7ff00;border-color:rgba(183,255,0,.35)" data-edit="${itemJson}">Modifier</button>
+      ${canPublish?`<button type="button" data-publish="${esc(item.id)}">Publier</button>`:''}
+      <button type="button" class="ghost" style="color:#ff6b6b;border-color:rgba(255,107,107,.35)" data-delete="${esc(item.id)}" data-votes="${item.voteCount||0}">Supprimer</button>
+      ${canResolve?`<button type="button" data-fill="${esc(item.id)}" data-keys="${(item.options||[]).map(o=>esc(o.key)).join(',')}">Resoudre</button>`:''}
     </div>
   </div>`;
 }
@@ -316,6 +318,7 @@ function renderDailyList(items){
             ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
             <div class="meta">${esc(opts)}</div>
             ${!cover?'<div class="meta" style="color:#f88">Image manquante — non publiable</div>':''}
+            ${canPick?`<div class="actions" style="margin-top:8px"><button type="button" data-publish="${esc(item.id)}">Publier</button></div>`:''}
           </span>
         </label>`
       :`<div>
@@ -449,20 +452,33 @@ function bindListClicks(root){
       const qid=del.getAttribute('data-delete');
       const votes=Number(del.getAttribute('data-votes')||0);
       const msg=votes>0
-        ?`Cette question a ${votes} vote(s) — elle sera archivée (pas supprimée définitivement). Continuer ?`
-        :'Supprimer définitivement cette question ? (aucun vote enregistré)';
+        ?`Cette question a ${votes} vote(s) — elle sera archivee. Continuer ?`
+        :'Supprimer definitivement cette question ?';
       if(!confirm(msg))return;
       try{
         const data=await api('prono-admin-delete.php',{id:qid});
-        const action=data.action==='archived'?'archivée':'supprimée';
+        const action=data.action==='archived'?'archivee':'supprimee';
         alert(`Question ${action}.`);
         loadList();
+        loadDaily();
+      }catch(ex){alert('Erreur : '+ex.message);}
+      return;
+    }
+    const pub=e.target.closest('[data-publish]');
+    if(pub){
+      const qid=pub.getAttribute('data-publish');
+      if(!confirm('Publier ce prono maintenant ?'))return;
+      try{
+        await api('prono-admin-status.php',{id:qid,status:'open'});
+        loadList();
+        loadDaily();
       }catch(ex){alert('Erreur : '+ex.message);}
     }
   });
 }
 bindListClicks(document.getElementById('qList'));
 bindListClicks(document.getElementById('themeBlocks'));
+bindListClicks(document.getElementById('dailyList'));
 
 document.getElementById('themeBlocks').addEventListener('click',async(e)=>{
   const btn=e.target.closest('[data-theme-save]');
