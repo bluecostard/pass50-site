@@ -53,6 +53,6 @@ try{
     if(!$restored)throw new RuntimeException('Les anciennes saisies retrouvées ne contiennent aucun lien de profil direct valide.');
     $profile['platforms']=array_values(array_unique(array_map('strval',$profile['platforms'])));$profile['officialLinksValidatedAt']=gmdate(DATE_ATOM);$profile['officialLinksValidationVersion']=P50_DOLPHO_RECOVERY_VERSION;
     $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$state['dolphoProfileRecovery']=['version'=>P50_DOLPHO_RECOVERY_VERSION,'profileId'=>$profileId,'updatedAt'=>gmdate(DATE_ATOM),'platforms'=>array_keys($restored)];
-    p50_de_save_public_state($state,'owner-pass50',false);$pdo->commit();
+    p50_de_save_public_state($state,null,false);$pdo->commit();
     json_response(['ok'=>true,'version'=>P50_DOLPHO_RECOVERY_VERSION,'dispatchId'=>$dispatchId,'profileId'=>$profileId,'restored'=>$restored,'restoredCount'=>count($restored),'skipped'=>$skipped,'publicStateRevision'=>(int)$state['stateRevision'],'publicStateWrites'=>1]);
 }catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();json_response(['error'=>'Récupération Dolpho interrompue.','detail'=>$error->getMessage()],500);}

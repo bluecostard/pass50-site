@@ -75,7 +75,7 @@ try{
         'version'=>P50_DBZ_VALIDATION_VERSION,'profileId'=>$profileId,
         'updatedAt'=>gmdate(DATE_ATOM),'platforms'=>array_keys($validated),
     ];
-    p50_de_save_public_state($state,'owner-pass50',false);
+    p50_de_save_public_state($state,null,false);
     $pdo->commit();
     json_response([
         'ok'=>true,'version'=>P50_DBZ_VALIDATION_VERSION,'dispatchId'=>$dispatchId,

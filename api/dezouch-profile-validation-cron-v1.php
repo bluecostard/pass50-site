@@ -54,6 +54,6 @@ try{
     $profile['officialLinksValidatedAt']=gmdate(DATE_ATOM);$profile['officialLinksValidationVersion']=P50_DEZOUCH_VALIDATION_VERSION;
     $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
     $state['dezouchProfileValidation']=['version'=>P50_DEZOUCH_VALIDATION_VERSION,'profileId'=>$profileId,'updatedAt'=>gmdate(DATE_ATOM),'platforms'=>array_keys($validated)];
-    p50_de_save_public_state($state,'owner-pass50',false);$pdo->commit();
+    p50_de_save_public_state($state,null,false);$pdo->commit();
     json_response(['ok'=>true,'version'=>P50_DEZOUCH_VALIDATION_VERSION,'dispatchId'=>$dispatchId,'profileId'=>$profileId,'name'=>(string)($profile['name']??'Dezouch officiel'),'validatedLinks'=>$validated,'validatedCount'=>count($validated),'youtubePreservedEmpty'=>empty($profile['links']['YouTube']),'publicStateRevision'=>(int)$state['stateRevision'],'publicStateWrites'=>1]);
 }catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();json_response(['error'=>'Validation Dezouch interrompue.','detail'=>$error->getMessage()],500);}
