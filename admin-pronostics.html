@@ -227,25 +227,35 @@ function defaultMeasure(){
   d.setUTCDate(d.getUTCDate()+7);
   return d.toISOString().slice(0,10);
 }
+function statusLabelFr(status){
+  if(status==='draft') return 'draft · brouillon';
+  if(status==='open') return 'open · en ligne';
+  if(status==='locked') return 'locked · votes clos';
+  if(status==='resolved') return 'resolved · resolu';
+  if(status==='archived') return 'archived · archive';
+  return status||'—';
+}
 function qCard(item, compact){
   const opts=(item.options||[]).map(o=>`${o.key} ${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
   const canResolve=item.status==='open'||item.status==='locked';
   const canPublish=item.status==='draft';
-  const isLive=item.status==='open';
   const cover=item.coverPhoto?`<img src="${esc(item.coverPhoto)}" alt="" class="batch-cover" loading="lazy" style="max-width:${compact?'160px':'320px'}">`:'';
   const itemJson=esc(JSON.stringify(item));
-  const statusLabel=isLive?'open · en ligne':(canPublish?'draft · brouillon':item.status);
+  const publishTitle=canPublish
+    ?'Mettre en ligne maintenant'
+    :(item.status==='open'?'Deja publie (en ligne)':(item.status==='locked'?'Votes clos — utilise Resoudre':('Statut : '+item.status)));
   return `<div class="q" data-id="${esc(item.id)}" style="${canPublish?'border-color:rgba(183,255,0,.45)':''}">
     ${cover}
     <strong>${esc(item.title||'—')}</strong>
-    <span class="badge">${esc(statusLabel)}</span>
+    <span class="badge">${esc(statusLabelFr(item.status))}</span>
     ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
     <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
     <div class="meta">${esc(opts)}</div>
+    ${item.status==='locked'?'<div class="meta" style="color:#b7ff00">Votes termines — clique Resoudre quand tu as le resultat</div>':''}
     ${!item.coverPhoto?'<div class="meta" style="color:#f88">Image manquante</div>':''}
     <div class="actions">
       ${canPublish?`<label style="display:inline-flex;align-items:center;gap:6px;margin:0;width:auto;font-size:12px;font-weight:800;color:#b7ff00"><input type="checkbox" data-queue-id="${esc(item.id)}" style="width:auto;margin:0"> Choisir</label>`:''}
-      ${canPublish?`<button type="button" data-publish="${esc(item.id)}">Publier</button>`:''}
+      <button type="button" data-publish="${esc(item.id)}" ${canPublish?'':'disabled style="opacity:.35;cursor:not-allowed"'} title="${esc(publishTitle)}">Publier</button>
       <button type="button" class="ghost" data-copy="${esc(item.id)}">Copier ID</button>
       <button type="button" class="ghost" style="color:#b7ff00;border-color:rgba(183,255,0,.35)" data-edit="${itemJson}">Modifier</button>
       <button type="button" class="ghost" style="color:#ff6b6b;border-color:rgba(255,107,107,.35)" data-delete="${esc(item.id)}" data-votes="${item.voteCount||0}">Supprimer</button>
@@ -512,6 +522,7 @@ function bindListClicks(root){
     }
     const pub=e.target.closest('[data-publish]');
     if(pub){
+      if(pub.disabled)return;
       const qid=pub.getAttribute('data-publish');
       if(!confirm('Publier ce prono maintenant ?'))return;
       try{
