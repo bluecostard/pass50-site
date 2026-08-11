@@ -11,6 +11,7 @@ $required = [
     'api/prono-core.php',
     'api/prono-feed.php',
     'api/prono-vote.php',
+    'api/prono-slip.php',
     'api/prono-results.php',
     'api/prono-status-publish.php',
     'api/prono-status-like.php',
@@ -34,7 +35,7 @@ foreach ($required as $rel) {
 }
 
 $core = file_get_contents($root.'/api/prono-core.php');
-foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked', 'P50_PRONO_VOTE_HOURS', '[6, 12, 24]', 'P50_PRONO_MAX_OPEN_PER_SUBJECT', 'p50_prono_subject_key', 'p50_prono_resolve_cover', 'coverPhoto', 'cover_image_url', 'p50_prono_compute_odds', 'p50_prono_assert_cover', 'P50_PRONO_DAILY_COUNT', 'p50_prono_profile_photo_any', 'P50_PRONO_THEMES', 'p50_prono_map_to_product_theme'] as $needle) {
+foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked', 'P50_PRONO_VOTE_HOURS', '[6, 12, 24]', 'P50_PRONO_MAX_OPEN_PER_SUBJECT', 'p50_prono_subject_key', 'p50_prono_resolve_cover', 'coverPhoto', 'cover_image_url', 'p50_prono_compute_odds', 'p50_prono_assert_cover', 'P50_PRONO_DAILY_COUNT', 'p50_prono_profile_photo_any', 'P50_PRONO_THEMES', 'p50_prono_map_to_product_theme', 'p50_prono_slips', 'p50_prono_settle_slips', 'slip_id'] as $needle) {
     if (!str_contains($core, $needle)) {
         fwrite(STDERR, "CORE missing $needle\n");
         exit(1);
@@ -106,9 +107,25 @@ if (preg_match('/href="\.\/"[^>]*>\s*Classement\s*</u', $pronoHtml)) {
     fwrite(STDERR, "PRONO page still has Classement button\n");
     exit(1);
 }
-foreach (['Statut prono', 'Qui fait quoi'] as $needle) {
+foreach (['Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html'] as $needle) {
     if (!str_contains($pronoHtml, $needle)) {
         fwrite(STDERR, "PRONO-HTML missing $needle\n");
+        exit(1);
+    }
+}
+
+$slip = file_get_contents($root.'/api/prono-slip.php');
+foreach (['combined_odd', 'legs', 'p50_prono_debit_stake', 'Maximum 8'] as $needle) {
+    if (!str_contains($slip, $needle)) {
+        fwrite(STDERR, "SLIP missing $needle\n");
+        exit(1);
+    }
+}
+
+$resolve = file_get_contents($root.'/api/prono-admin-resolve.php');
+foreach (['p50_prono_settle_slips', 'slip_id'] as $needle) {
+    if (!str_contains($resolve, $needle)) {
+        fwrite(STDERR, "RESOLVE missing $needle\n");
         exit(1);
     }
 }

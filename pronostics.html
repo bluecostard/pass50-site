@@ -28,6 +28,28 @@
     a{color:inherit;text-decoration:none}
     button{font:inherit;cursor:pointer;background:none;border:none;color:inherit}
     .hidden{display:none!important}
+    .muted{color:var(--muted)}
+
+    .status-section{margin-top:18px}
+    .status-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .status-head h2{margin:0;color:var(--lime);font-size:18px}
+    .status-strip{
+      display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;
+      -webkit-overflow-scrolling:touch;scrollbar-width:none;
+    }
+    .status-strip::-webkit-scrollbar{display:none}
+    .status-chip{
+      flex:0 0 auto;width:148px;border:1px solid var(--line);background:var(--panel);
+      border-radius:16px;padding:10px;text-align:left;cursor:pointer;
+      transition:border-color .15s,transform .15s;
+    }
+    .status-chip:hover{border-color:rgba(183,255,0,.45)}
+    .status-chip:active{transform:scale(.97)}
+    .status-chip .who{font-size:11px;font-weight:800;color:var(--lime);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .status-chip .q{font-size:12px;font-weight:700;line-height:1.25;height:2.5em;overflow:hidden}
+    .status-chip .pick{margin-top:8px;font-size:12px;font-weight:800}
+    .status-chip .odd{color:var(--lime)}
+    .status-empty{font-size:13px;color:var(--muted);padding:8px 0}
 
     .shell{width:min(680px,100%);margin:auto;padding:0 18px calc(110px + env(safe-area-inset-bottom))}
 
@@ -102,6 +124,31 @@
     .pub-opt:hover{border-color:rgba(183,255,0,.45)}
     .pub-opt .odd{color:var(--lime);font-size:18px;font-family:"Archivo Black",Impact,sans-serif}
     .pub-opt.mine{border-color:var(--lime);background:rgba(183,255,0,.08)}
+
+    .pub-opt.selected{border-color:var(--lime);background:rgba(183,255,0,.12)}
+    .pub-opt.done{opacity:.7;cursor:default}
+    .pub-hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+    .slip-bar{
+      position:fixed;left:50%;transform:translateX(-50%);
+      bottom:calc(78px + env(safe-area-inset-bottom));z-index:40;
+      width:min(640px,calc(100% - 24px));
+      background:rgba(10,14,10,.96);border:1px solid rgba(183,255,0,.35);
+      border-radius:18px;padding:12px 14px;backdrop-filter:blur(12px);
+      box-shadow:0 16px 40px rgba(0,0,0,.45);display:none;
+    }
+    .slip-bar.show{display:block}
+    .slip-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .slip-meta{font-size:12px;color:var(--muted);font-weight:700}
+    .slip-odd{font-family:"Archivo Black",Impact,sans-serif;color:var(--lime);font-size:22px;line-height:1}
+    .slip-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:10px}
+    .slip-actions button{margin:0;width:100%}
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;display:none;align-items:flex-end;justify-content:center;padding:16px}
+    .modal-bg.show{display:flex}
+    .modal-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px}
+    .modal-card h3{margin:0 0 8px;font-size:18px}
+    .durations{display:flex;gap:8px;margin:12px 0}
+    .durations button{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-weight:800}
+    .durations button.on{border-color:var(--lime);background:rgba(183,255,0,.12);color:var(--lime)}
     .pub-theme{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--lime);margin-bottom:8px}
 
     /* Picker avatars */
@@ -220,12 +267,25 @@
     </div>
   </div>
 
+
+  <!-- Statut prono (live) -->
+  <section class="status-section rise rise-1" id="statusSection">
+    <div class="status-head">
+      <div>
+        <h2>Statut prono</h2>
+        <p class="hint" style="margin:4px 0 0">Pronos publies · visibles aussi dans Mon fil</p>
+      </div>
+      <a class="btn" href="./mon-fil.html" style="flex-shrink:0">Mon fil</a>
+    </div>
+    <div class="status-strip" id="statusStrip"><div class="status-empty">Chargement des statuts…</div></div>
+  </section>
+
   <!-- Publications (questions ouvertes) -->
   <section class="pubs rise" id="pubsSection" style="margin-top:18px">
     <div class="card-head" style="margin-bottom:12px">
       <div>
         <h2 style="color:var(--lime);font-size:18px;margin:0">Qui fait quoi</h2>
-        <p class="hint" style="margin:4px 0 0">Questions publiees · mise × cote · sans argent reel</p>
+        <p class="hint" style="margin:4px 0 0">Selectionne des options, construis ta grille, puis valide · sans argent reel</p>
       </div>
       <span class="badge-up" id="pubsCount">0</span>
     </div>
@@ -234,14 +294,64 @@
 
 </div>
 
+<!-- Slip / grille -->
+<div class="slip-bar" id="slipBar">
+  <div class="slip-top">
+    <div>
+      <div style="font-weight:800" id="slipTitle">Ma grille</div>
+      <div class="slip-meta" id="slipMeta">0 selection</div>
+    </div>
+    <div style="text-align:right">
+      <div class="slip-odd" id="slipOdd">—</div>
+      <div class="slip-meta" id="slipPayout">gain potentiel</div>
+    </div>
+  </div>
+  <div class="slip-actions">
+    <button type="button" class="btn" id="slipClear">Vider</button>
+    <button type="button" class="btn primary" id="slipValidate">Valider</button>
+  </div>
+</div>
+
+<!-- Status modal -->
+<div class="modal-bg" id="statusModal">
+  <div class="modal-card">
+    <h3>Publier le statut prono ?</h3>
+    <p class="muted" style="margin:0;font-size:13px">Ca apparait dans <strong>Statut prono</strong> et dans <strong>Mon fil</strong>. Sinon le prono reste prive.</p>
+    <div class="durations" id="statusDurations">
+      <button type="button" data-h="12">12 h</button>
+      <button type="button" data-h="24" class="on">24 h</button>
+      <button type="button" data-h="48">48 h</button>
+    </div>
+    <button type="button" class="btn primary" id="statusPublish" style="width:100%">Publier le statut</button>
+    <a class="btn" id="statusSeeFil" href="./mon-fil.html" style="display:block;width:100%;margin-top:8px;text-align:center;box-sizing:border-box">Voir Mon fil</a>
+    <button type="button" class="btn" id="statusSkip" style="width:100%;margin-top:8px">Plus tard</button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script src="./mobile-bottom-nav-v1.js?v=1.6"></script>
 <script>
 (function(){
-  const state = { points: 1000, streak: 0 };
+  const STAKE = 100;
+  const state = {
+    points: 1000,
+    streak: 0,
+    items: [],
+    statuses: [],
+    slip: {}, // questionId -> {optionKey, odd, label, title}
+    pendingQuestionIds: [],
+    durationHours: 24,
+  };
 
+  function authHeaders(json){
+    const token = localStorage.getItem('pass50_api_token') || '';
+    const h = { Accept: 'application/json' };
+    if (token) h.Authorization = 'Bearer ' + token;
+    if (json) h['Content-Type'] = 'application/json';
+    return h;
+  }
   function updateCountdown(){
     const now = new Date();
     const end = new Date();
@@ -263,26 +373,6 @@
     t.classList.add('show');
     setTimeout(()=>t.classList.remove('show'), 2800);
   }
-
-  async function loadBalance(){
-    try {
-      const r = await fetch('/api/prono-feed.php');
-      const data = await r.json();
-      const bal = data.balance;
-      if (bal != null) {
-        if (typeof bal === 'object') {
-          const pts = Number(bal.balance);
-          state.points = Number.isFinite(pts) ? pts : (Number(data.startingBalance) || 1000);
-          state.streak = Number(bal.streak) || 0;
-        } else {
-          state.points = Number(bal) || 1000;
-        }
-      }
-      document.getElementById('pts').textContent = Math.round(state.points).toLocaleString('fr-FR');
-      document.getElementById('streakNum').textContent = state.streak;
-    } catch(e){}
-  }
-
   function escHtml(s){
     return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   }
@@ -298,85 +388,256 @@
     const m=Math.floor((ms%3600000)/60000);
     return `Votes clos dans ${h} h ${m} min`;
   }
-  async function loadPublications(){
+  function slipLegs(){
+    return Object.entries(state.slip).map(([questionId, leg]) => ({ questionId, ...leg }));
+  }
+  function combinedOdd(){
+    const legs = slipLegs();
+    if (!legs.length) return 0;
+    return Number(legs.reduce((acc, leg) => acc * Number(leg.odd || 1), 1).toFixed(4));
+  }
+  function updateSlipBar(){
+    const bar = document.getElementById('slipBar');
+    const legs = slipLegs();
+    if (!legs.length) {
+      bar.classList.remove('show');
+      return;
+    }
+    bar.classList.add('show');
+    const odd = combinedOdd();
+    const n = legs.length;
+    document.getElementById('slipTitle').textContent = n === 1 ? '1 prono selectionne' : `Grille · ${n} pronos`;
+    document.getElementById('slipMeta').textContent = n === 1
+      ? 'Valider seul, ou ajoute d autres pronos pour multiplier la cote'
+      : `Cotes multipliees · mise ${STAKE} pts`;
+    document.getElementById('slipOdd').textContent = fmtOdd(odd);
+    document.getElementById('slipPayout').textContent = `+${Math.round(STAKE * odd)} pts si tout est bon`;
+    document.getElementById('slipValidate').textContent = n === 1 ? 'Valider ce prono' : 'Valider ma grille';
+  }
+
+  function applyBalance(data){
+    const bal = data.balance;
+    if (bal != null) {
+      if (typeof bal === 'object') {
+        const pts = Number(bal.balance);
+        state.points = Number.isFinite(pts) ? pts : (Number(data.startingBalance) || state.points);
+        state.streak = Number(bal.streak) || 0;
+      } else {
+        state.points = Number(bal) || state.points;
+      }
+    }
+    document.getElementById('pts').textContent = Math.round(state.points).toLocaleString('fr-FR');
+    document.getElementById('streakNum').textContent = state.streak;
+  }
+
+  function renderStatuses(){
+    const strip = document.getElementById('statusStrip');
+    if (!strip) return;
+    const items = state.statuses;
+    if (!items.length) {
+      strip.innerHTML = '<div class="status-empty">Aucun statut prono live. Valide un prono puis publie-le ici.</div>';
+      return;
+    }
+    strip.innerHTML = items.map(s => {
+      const who = escHtml(s.authorPseudo || 'Membre');
+      const q = escHtml(s.questionTitle || 'Prono');
+      const pick = escHtml(s.optionLabel || s.optionKey || '—');
+      const odd = fmtOdd(s.odd);
+      return `<button type="button" class="status-chip" data-goto-fil="1">
+        <div class="who">${who}</div>
+        <div class="q">${q}</div>
+        <div class="pick">${pick} <span class="odd">x ${odd}</span></div>
+      </button>`;
+    }).join('');
+  }
+
+  async function loadStatuses(){
+    const strip = document.getElementById('statusStrip');
+    try{
+      const r = await fetch('/api/prono-statuses-feed.php?limit=30&_=' + Date.now(), { headers: authHeaders() });
+      const data = await r.json().catch(()=>({}));
+      state.statuses = Array.isArray(data.items) ? data.items : [];
+      renderStatuses();
+    }catch(e){
+      if (strip) strip.innerHTML = '<div class="status-empty">Statuts indisponibles pour le moment.</div>';
+    }
+  }
+
+  function renderPublications(){
     const box=document.getElementById('pubsList');
     const countEl=document.getElementById('pubsCount');
+    const items=state.items;
+    if(countEl) countEl.textContent=items.length?`${items.length} prono(s)`:'0';
+    if(!items.length){
+      box.innerHTML='<p class="muted" style="margin:0">Aucune question ouverte pour le moment.</p>';
+      updateSlipBar();
+      return;
+    }
+    const byTheme={};
+    for(const item of items){
+      const key=item.theme||'autre';
+      (byTheme[key]=byTheme[key]||[]).push(item);
+    }
+    const order=['people_influenceurs','people_artiste_sportif','people_actualite'];
+    const keys=[...order.filter(k=>byTheme[k]),...Object.keys(byTheme).filter(k=>!order.includes(k))];
+    box.innerHTML=keys.map(themeKey=>{
+      const rows=byTheme[themeKey];
+      const label=rows[0]?.themeLabel||themeKey;
+      return `<div style="margin-top:8px">
+        <div class="pub-theme">${escHtml(label)}</div>
+        ${rows.map(item=>{
+          const voted=item.myVote?.optionKey||'';
+          const picked=state.slip[item.id]?.optionKey||'';
+          const canPublishStatus = !!(voted && !item.statusPublished);
+          const opts=(item.options||[]).map(o=>{
+            const selected = !voted && picked===o.key;
+            const mine = voted && voted===o.key;
+            const cls = mine ? 'mine done' : (selected ? 'selected' : (voted ? 'done' : ''));
+            return `<button type="button" class="pub-opt ${cls}" data-qid="${escHtml(item.id)}" data-opt="${escHtml(o.key)}" data-odd="${escHtml(o.odd)}" data-label="${escHtml(o.label)}" ${voted?'disabled':''}>
+              <span>${escHtml(o.label)}${mine?' · valide':''}</span>
+              <span class="odd">${fmtOdd(o.odd)}</span>
+            </button>`;
+          }).join('');
+          const cover=item.coverPhoto?`<img class="cover" src="${escHtml(item.coverPhoto)}" alt="" loading="lazy">`:'';
+          let hint='Touche une cote pour ajouter a ta grille (pas encore valide)';
+          if (voted && item.statusPublished) hint='Prono valide · Statut prono en ligne dans Mon fil';
+          else if (voted) hint='Prono valide · pas encore dans Mon fil';
+          else if (picked) hint='Ajoute a ta grille — choisis d autres ou valide';
+          const publishBtn=canPublishStatus
+            ? `<button type="button" class="btn primary" style="width:100%;margin-top:10px" data-publish-qid="${escHtml(item.id)}">Publier le statut prono</button>`
+            : '';
+          return `<article class="pub-card" data-card="${escHtml(item.id)}">
+            ${cover}
+            <div class="pub-meta">${escHtml(closesLabel(item.closesAt))}</div>
+            <h3>${escHtml(item.title||'')}</h3>
+            ${item.context?`<div class="pub-meta">${escHtml(item.context)}</div>`:''}
+            <p class="pub-hint">${hint}</p>
+            <div class="pub-opts">${opts}</div>
+            ${publishBtn}
+          </article>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+    updateSlipBar();
+  }
+
+  async function loadPublications(){
+    const box=document.getElementById('pubsList');
     try{
-      const headers={Accept:'application/json'};
-      const token=localStorage.getItem('pass50_api_token')||'';
-      if(token) headers.Authorization='Bearer '+token;
-      const r=await fetch('/api/prono-feed.php',{headers});
+      const r=await fetch('/api/prono-feed.php',{headers:authHeaders()});
       const data=await r.json();
-      const items=Array.isArray(data.items)?data.items:[];
-      if(countEl) countEl.textContent=items.length?`${items.length} prono(s)`:'0';
-      if(!items.length){
-        box.innerHTML='<p class="muted" style="margin:0">Aucune question ouverte pour le moment. Les publications admin (statut open) apparaissent ici.</p>';
-        return;
+      state.items=Array.isArray(data.items)?data.items:[];
+      applyBalance(data);
+      // drop slip picks that are already voted
+      for (const item of state.items) {
+        if (item.myVote && state.slip[item.id]) delete state.slip[item.id];
       }
-      const byTheme={};
-      for(const item of items){
-        const key=item.theme||'autre';
-        (byTheme[key]=byTheme[key]||[]).push(item);
-      }
-      const order=['people_influenceurs','people_artiste_sportif','people_actualite'];
-      const keys=[...order.filter(k=>byTheme[k]),...Object.keys(byTheme).filter(k=>!order.includes(k))];
-      box.innerHTML=keys.map(themeKey=>{
-        const rows=byTheme[themeKey];
-        const label=rows[0]?.themeLabel||themeKey;
-        return `<div style="margin-top:8px">
-          <div class="pub-theme">${escHtml(label)}</div>
-          ${rows.map(item=>{
-            const mine=item.myVote?.optionKey||'';
-            const opts=(item.options||[]).map(o=>{
-              const selected=mine&&mine===o.key;
-              return `<button type="button" class="pub-opt${selected?' mine':''}" data-qid="${escHtml(item.id)}" data-opt="${escHtml(o.key)}">
-                <span>${escHtml(o.label)}</span>
-                <span class="odd">${fmtOdd(o.odd)}</span>
-              </button>`;
-            }).join('');
-            const cover=item.coverPhoto?`<img class="cover" src="${escHtml(item.coverPhoto)}" alt="" loading="lazy">`:'';
-            return `<article class="pub-card">
-              ${cover}
-              <div class="pub-meta">${escHtml(closesLabel(item.closesAt))}</div>
-              <h3>${escHtml(item.title||'')}</h3>
-              ${item.context?`<div class="pub-meta">${escHtml(item.context)}</div>`:''}
-              <div class="pub-opts">${opts}</div>
-            </article>`;
-          }).join('')}
-        </div>`;
-      }).join('');
+      renderPublications();
     }catch(e){
       box.innerHTML='<p class="muted" style="margin:0;color:#f88">Impossible de charger les publications.</p>';
     }
   }
-  document.getElementById('pubsList')?.addEventListener('click',async(e)=>{
-    const btn=e.target.closest('[data-qid][data-opt]');
-    if(!btn) return;
-    const qid=btn.getAttribute('data-qid');
-    const opt=btn.getAttribute('data-opt');
-    const token=localStorage.getItem('pass50_api_token')||'';
-    if(!token){
-      showToast('Connecte-toi pour voter');
+
+  document.getElementById('pubsList')?.addEventListener('click',(e)=>{
+    const pub=e.target.closest('[data-publish-qid]');
+    if(pub){
+      openStatusModal([pub.getAttribute('data-publish-qid')]);
       return;
     }
+    const btn=e.target.closest('[data-qid][data-opt]');
+    if(!btn || btn.disabled) return;
+    const qid=btn.getAttribute('data-qid');
+    const opt=btn.getAttribute('data-opt');
+    const odd=Number(btn.getAttribute('data-odd')||1);
+    const label=btn.getAttribute('data-label')||opt;
+    const item=state.items.find(i=>i.id===qid);
+    if(!item || item.myVote) return;
+    if(state.slip[qid]?.optionKey===opt){
+      delete state.slip[qid];
+    } else {
+      state.slip[qid]={ optionKey:opt, odd, label, title:item.title||'' };
+    }
+    renderPublications();
+  });
+
+  document.getElementById('slipClear')?.addEventListener('click',()=>{
+    state.slip={};
+    renderPublications();
+  });
+
+  function openStatusModal(questionIds){
+    state.pendingQuestionIds = questionIds || [];
+    document.getElementById('statusModal')?.classList.add('show');
+  }
+  function closeStatusModal(){
+    document.getElementById('statusModal')?.classList.remove('show');
+    state.pendingQuestionIds = [];
+  }
+  document.getElementById('statusDurations')?.addEventListener('click',(e)=>{
+    const b=e.target.closest('[data-h]');
+    if(!b) return;
+    state.durationHours=Number(b.getAttribute('data-h'))||24;
+    document.querySelectorAll('#statusDurations button').forEach(el=>el.classList.toggle('on', el===b));
+  });
+  document.getElementById('statusSkip')?.addEventListener('click', closeStatusModal);
+  document.getElementById('statusPublish')?.addEventListener('click', async()=>{
+    const ids=state.pendingQuestionIds.slice();
+    if(!ids.length){ closeStatusModal(); return; }
+    const token=localStorage.getItem('pass50_api_token')||'';
+    if(!token){ showToast('Connecte-toi pour publier un statut'); return; }
+    let ok=0;
+    for(const qid of ids){
+      try{
+        const r=await fetch('/api/prono-status-publish.php',{
+          method:'POST',
+          headers:authHeaders(true),
+          body:JSON.stringify({questionId:qid, durationHours:state.durationHours}),
+        });
+        const d=await r.json().catch(()=>({}));
+        if(r.ok) ok++;
+        else if(d.error) console.warn(d.error);
+      }catch(err){ console.warn(err); }
+    }
+    closeStatusModal();
+    showToast(ok?`Statut publie (${ok}) · Statut prono + Mon fil`:'Statut non publie');
+    loadPublications();
+    loadStatuses();
+  });
+
+  document.getElementById('slipValidate')?.addEventListener('click', async()=>{
+    const legs = slipLegs().map(l=>({questionId:l.questionId, optionKey:l.optionKey}));
+    if(!legs.length) return;
+    const token=localStorage.getItem('pass50_api_token')||'';
+    if(!token){ showToast('Connecte-toi pour valider'); return; }
+    const btn=document.getElementById('slipValidate');
+    btn.disabled=true;
     try{
-      const r=await fetch('/api/prono-vote.php',{
+      const r=await fetch('/api/prono-slip.php',{
         method:'POST',
-        headers:{'Content-Type':'application/json',Authorization:'Bearer '+token,Accept:'application/json'},
-        body:JSON.stringify({questionId:qid,optionKey:opt}),
+        headers:authHeaders(true),
+        body:JSON.stringify({stake:STAKE, legs}),
       });
       const d=await r.json().catch(()=>({}));
       if(!r.ok) throw new Error(d.error||d.message||('HTTP '+r.status));
-      showToast('Prono enregistre');
-      loadPublications();
-      loadBalance();
+      applyBalance(d);
+      state.slip={};
+      showToast(d.message||'Valide');
+      updateSlipBar();
+      await loadPublications();
+      openStatusModal(d.questionIds||legs.map(l=>l.questionId));
     }catch(err){
-      showToast(err.message||'Vote impossible');
+      showToast(err.message||'Validation impossible');
+    }finally{
+      btn.disabled=false;
     }
   });
 
-  loadBalance();
+  document.getElementById('statusStrip')?.addEventListener('click',(e)=>{
+    if(e.target.closest('[data-goto-fil]')) location.href='./mon-fil.html';
+  });
+
   loadPublications();
+  loadStatuses();
 })();
 </script>
 </body>

@@ -151,6 +151,24 @@ function p50_prono_ensure_schema(): void {
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'measure_at', 'DATETIME NULL AFTER closes_at');
     p50_prono_ensure_column($pdo, 'p50_prono_votes', 'odd_locked', 'DECIMAL(8,2) NOT NULL DEFAULT 1.00 AFTER option_key');
     p50_prono_ensure_column($pdo, 'p50_prono_votes', 'stake_locked', 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER odd_locked');
+    p50_prono_ensure_column($pdo, 'p50_prono_votes', 'slip_id', 'CHAR(36) CHARACTER SET ascii NOT NULL DEFAULT \'\' AFTER stake_locked');
+    p50_prono_ensure_index($pdo, 'p50_prono_votes', 'idx_p50_prono_vote_slip', 'slip_id');
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS p50_prono_slips (
+        id CHAR(36) CHARACTER SET ascii PRIMARY KEY,
+        user_id CHAR(36) NOT NULL,
+        stake INT UNSIGNED NOT NULL DEFAULT 100,
+        stake_locked INT UNSIGNED NOT NULL DEFAULT 0,
+        combined_odd DECIMAL(12,4) NOT NULL DEFAULT 1.0000,
+        potential_payout INT UNSIGNED NOT NULL DEFAULT 0,
+        status VARCHAR(24) NOT NULL DEFAULT 'open',
+        legs_json JSON NOT NULL,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        settled_at DATETIME NULL,
+        INDEX idx_p50_prono_slips_user(user_id,created_at),
+        INDEX idx_p50_prono_slips_status(status,created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'subject_key', 'VARCHAR(120) NOT NULL DEFAULT \'\' AFTER profile_id');
     try {
         $pdo->exec("UPDATE p50_prono_questions SET subject_key=CONCAT('fi:', LOWER(profile_id)) WHERE subject_key='' AND profile_id<>''");
@@ -419,6 +437,57 @@ function p50_prono_debit_stake(PDO $pdo, string $userId, int $desiredStake, stri
     if ($take <= 0) return 0;
     p50_prono_credit($pdo, $userId, -1 * $take, 'prono_stake', $refId);
     return $take;
+}
+
+/**
+ * Regle les slips dont tous les legs sont resolus.
+ * @param list<string> $slipIds
+ */
+function p50_prono_settle_slips(PDO $pdo, array $slipIds): int {
+    $settled = 0;
+    foreach ($slipIds as $slipId) {
+        $slipId = trim((string)$slipId);
+        if ($slipId === '') continue;
+        $slipStmt = $pdo->prepare("SELECT * FROM p50_prono_slips WHERE id=? AND status='open' LIMIT 1");
+        $slipStmt->execute([$slipId]);
+        $slip = $slipStmt->fetch();
+        if (!$slip) continue;
+
+        $legsStmt = $pdo->prepare('SELECT v.option_key,v.question_id,q.status,q.winning_option_key
+          FROM p50_prono_votes v
+          JOIN p50_prono_questions q ON q.id=v.question_id
+          WHERE v.slip_id=?');
+        $legsStmt->execute([$slipId]);
+        $legs = $legsStmt->fetchAll() ?: [];
+        if ($legs === []) continue;
+
+        $allResolved = true;
+        $allWon = true;
+        foreach ($legs as $leg) {
+            if ((string)$leg['status'] !== 'resolved') {
+                $allResolved = false;
+                break;
+            }
+            if ((string)$leg['option_key'] !== (string)$leg['winning_option_key']) {
+                $allWon = false;
+            }
+        }
+        if (!$allResolved) continue;
+
+        if ($allWon) {
+            $stakeLocked = (int)$slip['stake_locked'];
+            $odd = (float)$slip['combined_odd'];
+            $payout = p50_prono_payout($stakeLocked > 0 ? $stakeLocked : (int)$slip['stake'], $odd);
+            p50_prono_credit($pdo, (string)$slip['user_id'], $payout, 'prono_grille_win', $slipId);
+            $pdo->prepare("UPDATE p50_prono_slips SET status='won', potential_payout=?, settled_at=UTC_TIMESTAMP() WHERE id=?")
+                ->execute([$payout, $slipId]);
+        } else {
+            $pdo->prepare("UPDATE p50_prono_slips SET status='lost', settled_at=UTC_TIMESTAMP() WHERE id=?")
+                ->execute([$slipId]);
+        }
+        $settled++;
+    }
+    return $settled;
 }
 
 function p50_prono_credit(PDO $pdo, string $userId, float $delta, string $reason, string $refId = ''): float {

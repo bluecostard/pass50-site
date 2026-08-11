@@ -45,12 +45,24 @@ try {
     $pdo->prepare("UPDATE p50_prono_questions SET status='resolved', winning_option_key=?, evidence_json=?, resolved_at=UTC_TIMESTAMP() WHERE id=?")
         ->execute([$winningKey, json_encode($evidence, JSON_UNESCAPED_UNICODE), $questionId]);
 
-    $votes = $pdo->prepare('SELECT id,user_id,option_key,odd_locked,stake_locked FROM p50_prono_votes WHERE question_id=?');
+    $votes = $pdo->prepare('SELECT id,user_id,option_key,odd_locked,stake_locked,slip_id FROM p50_prono_votes WHERE question_id=?');
     $votes->execute([$questionId]);
     $winners = 0;
     $losers = 0;
     $pointsPaid = 0;
+    $slipIds = [];
     foreach ($votes->fetchAll() ?: [] as $vote) {
+        $slipId = trim((string)($vote['slip_id'] ?? ''));
+        if ($slipId !== '') {
+            $slipIds[$slipId] = true;
+            // Legs de grille : pas de payout individuel (regle sur le slip)
+            if ((string)$vote['option_key'] !== $winningKey) {
+                $losers++;
+            } else {
+                $winners++;
+            }
+            continue;
+        }
         $odd = isset($vote['odd_locked']) && (float)$vote['odd_locked'] > 0
             ? p50_prono_normalize_odd($vote['odd_locked'])
             : $fallbackOdd;
@@ -67,6 +79,10 @@ try {
         $winners++;
         $pointsPaid += $payout;
     }
+
+    // Regler les grilles multi dont tous les legs sont resolus
+    $slipsSettled = p50_prono_settle_slips($pdo, array_keys($slipIds));
+
     $pdo->commit();
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
@@ -79,6 +95,7 @@ json_response([
     'questionId' => $questionId,
     'winningOptionKey' => $winningKey,
     'winnersPaid' => $winners,
+    'slipsSettled' => $slipsSettled ?? 0,
     'losers' => $losers,
     'stake' => $stake,
     'pointsPaidTotal' => $pointsPaid,
