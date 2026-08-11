@@ -470,6 +470,8 @@ document.getElementById('genDailyBtn').onclick=async()=>{
 document.getElementById('publishDailyBtn').onclick=async()=>{
   const msg=document.getElementById('dailyMsg');
   msg.classList.remove('err');
+  msg.style.display='block';
+  msg.textContent='Publication en cours…';
   if(!confirm('Publier les brouillons du batch du jour (ceux avec image) ?'))return;
   try{
     const data=await api('prono-daily.php',{action:'publish'});
