@@ -470,15 +470,13 @@ function p50_prono_daily_generate(PDO $pdo, string $createdBy, ?string $batchDat
 }
 
 /**
- * @param list<string>|null $onlyIds Si fourni, ne publie que ces IDs (toujours status draft + batchDate).
+ * @param list<string>|null $onlyIds Si fourni, publie uniquement ces IDs (draft), sans filtrer par date.
  * @return array{published:int,items:list<array>,errors:list<string>}
  */
 function p50_prono_daily_publish(PDO $pdo, string $batchDate, ?array $onlyIds = null): array {
     p50_prono_ensure_schema();
-    $stmt = $pdo->prepare("SELECT * FROM p50_prono_questions WHERE batch_date=? AND status='draft' ORDER BY created_at ASC");
-    $stmt->execute([$batchDate]);
-    $rows = $stmt->fetchAll() ?: [];
 
+    $rows = [];
     if (is_array($onlyIds)) {
         $want = [];
         foreach ($onlyIds as $id) {
@@ -488,12 +486,20 @@ function p50_prono_daily_publish(PDO $pdo, string $batchDate, ?array $onlyIds = 
         if ($want === []) {
             return ['published' => 0, 'items' => [], 'errors' => ['Aucune selection a publier.']];
         }
-        $rows = array_values(array_filter($rows, static fn(array $row): bool => isset($want[(string)($row['id'] ?? '')])));
+        $placeholders = implode(',', array_fill(0, count($want), '?'));
+        $stmt = $pdo->prepare("SELECT * FROM p50_prono_questions WHERE status='draft' AND id IN ($placeholders) ORDER BY created_at ASC");
+        $stmt->execute(array_keys($want));
+        $rows = $stmt->fetchAll() ?: [];
         if ($rows === []) {
-            return ['published' => 0, 'items' => [], 'errors' => ['Aucun brouillon selectionne pour cette date.']];
+            return ['published' => 0, 'items' => [], 'errors' => ['Aucun brouillon trouve pour ces IDs.']];
         }
-    } elseif ($rows === []) {
-        return ['published' => 0, 'items' => [], 'errors' => ['Aucun brouillon pour cette date.']];
+    } else {
+        $stmt = $pdo->prepare("SELECT * FROM p50_prono_questions WHERE batch_date=? AND status='draft' ORDER BY created_at ASC");
+        $stmt->execute([$batchDate]);
+        $rows = $stmt->fetchAll() ?: [];
+        if ($rows === []) {
+            return ['published' => 0, 'items' => [], 'errors' => ['Aucun brouillon pour cette date.']];
+        }
     }
 
     $errors = [];

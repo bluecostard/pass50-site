@@ -50,14 +50,25 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
 
   <div class="card" id="themesCard">
     <h2 style="margin-top:0">Les 3 thèmes · questions + cotes</h2>
-    <p class="muted" style="margin:0 0 8px">Ajoute des questions dans chaque bloc, puis publie (open). Visible sur <a href="./pronostics.html" style="color:#b7ff00">pronostics.html</a>.</p>
+    <p class="muted" style="margin:0 0 8px">Ajoute des questions dans chaque bloc. Un brouillon affiche le bouton <strong style="color:#b7ff00">Publier</strong>. Un badge <strong>open</strong> = deja en ligne.</p>
+    <div id="draftQueue" class="theme-box" style="display:none;border-color:rgba(183,255,0,.45);margin-bottom:14px">
+      <h3 style="margin:0 0 4px">Brouillons a publier</h3>
+      <p class="muted" style="margin:0 0 10px;font-size:12px">Coche ceux que tu veux, ou clique Publier sur une carte.</p>
+      <div class="batch-actions" style="margin:0 0 10px">
+        <button type="button" id="publishDraftQueueBtn">Publier la selection</button>
+        <button type="button" class="ghost" id="selectAllQueueBtn" style="width:auto;margin:0">Tout cocher</button>
+        <button type="button" class="ghost" id="clearQueueBtn" style="width:auto;margin:0">Tout decocher</button>
+        <span class="muted" id="queueSelectCount" style="align-self:center;font-size:12px"></span>
+      </div>
+      <div id="draftQueueList" class="qlist"></div>
+    </div>
     <div id="themeBlocks"></div>
     <div class="toast" id="themeMsg"></div>
   </div>
 
   <div class="card">
     <h2 style="margin-top:0">Batch auto · 12 pronos <span class="muted" style="font-weight:700;font-size:13px">(optionnel)</span></h2>
-    <p class="muted" style="margin:0 0 12px">Génère des brouillons, coche ceux qui te semblent pertinents, puis publie la sélection — ou publie tout le batch.</p>
+    <p class="muted" style="margin:0 0 12px"><strong>1.</strong> Clique <em>Generer les 12 du jour</em> → les cartes apparaissent ici avec une case a cocher.<br><strong>2.</strong> Coche ceux qui te plaisent → <em>Publier la selection</em>. Ou publie tout.</p>
     <div class="batch-actions">
       <button type="button" id="genDailyBtn">Générer les 12 du jour</button>
       <button type="button" class="ghost" id="refreshDailyBtn">Rafraîchir le batch</button>
@@ -124,7 +135,7 @@ n|Non|2.20</textarea>
         <input id="measureAt" type="date" required>
       </div>
       <div><label>Statut</label>
-        <select id="status"><option value="open">open</option><option value="draft">draft</option></select>
+        <select id="status"><option value="draft" selected>draft (brouillon)</option><option value="open">open (publier)</option></select>
       </div>
     </div>
     <p class="muted" style="margin:8px 0 0;font-size:12px">Votes clos après 6/12/24 h. Résolution / points à la date de mesure.</p>
@@ -220,24 +231,50 @@ function qCard(item, compact){
   const opts=(item.options||[]).map(o=>`${o.key} ${o.label} @${Number(o.odd||0).toFixed(2)}`).join(' · ');
   const canResolve=item.status==='open'||item.status==='locked';
   const canPublish=item.status==='draft';
+  const isLive=item.status==='open';
   const cover=item.coverPhoto?`<img src="${esc(item.coverPhoto)}" alt="" class="batch-cover" loading="lazy" style="max-width:${compact?'160px':'320px'}">`:'';
   const itemJson=esc(JSON.stringify(item));
-  return `<div class="q" data-id="${esc(item.id)}">
+  const statusLabel=isLive?'open · en ligne':(canPublish?'draft · brouillon':item.status);
+  return `<div class="q" data-id="${esc(item.id)}" style="${canPublish?'border-color:rgba(183,255,0,.45)':''}">
     ${cover}
     <strong>${esc(item.title||'—')}</strong>
-    <span class="badge">${esc(item.status)}</span>
+    <span class="badge">${esc(statusLabel)}</span>
     ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
     <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
     <div class="meta">${esc(opts)}</div>
     ${!item.coverPhoto?'<div class="meta" style="color:#f88">Image manquante</div>':''}
     <div class="actions">
+      ${canPublish?`<label style="display:inline-flex;align-items:center;gap:6px;margin:0;width:auto;font-size:12px;font-weight:800;color:#b7ff00"><input type="checkbox" data-queue-id="${esc(item.id)}" style="width:auto;margin:0"> Choisir</label>`:''}
+      ${canPublish?`<button type="button" data-publish="${esc(item.id)}">Publier</button>`:''}
       <button type="button" class="ghost" data-copy="${esc(item.id)}">Copier ID</button>
       <button type="button" class="ghost" style="color:#b7ff00;border-color:rgba(183,255,0,.35)" data-edit="${itemJson}">Modifier</button>
-      ${canPublish?`<button type="button" data-publish="${esc(item.id)}">Publier</button>`:''}
       <button type="button" class="ghost" style="color:#ff6b6b;border-color:rgba(255,107,107,.35)" data-delete="${esc(item.id)}" data-votes="${item.voteCount||0}">Supprimer</button>
       ${canResolve?`<button type="button" data-fill="${esc(item.id)}" data-keys="${(item.options||[]).map(o=>esc(o.key)).join(',')}">Resoudre</button>`:''}
     </div>
   </div>`;
+}
+function selectedQueueIds(){
+  return [...document.querySelectorAll('input[data-queue-id]:checked')].map(el=>el.getAttribute('data-queue-id')).filter(Boolean);
+}
+function updateQueueCount(){
+  const el=document.getElementById('queueSelectCount');
+  const boxes=[...document.querySelectorAll('input[data-queue-id]')];
+  if(el) el.textContent=boxes.length?`${selectedQueueIds().length} / ${boxes.length} choisi(s)`:'';
+}
+function renderDraftQueue(){
+  const wrap=document.getElementById('draftQueue');
+  const list=document.getElementById('draftQueueList');
+  if(!wrap||!list)return;
+  const drafts=ALL_ITEMS.filter(i=>i.status==='draft');
+  if(!drafts.length){
+    wrap.style.display='none';
+    list.innerHTML='';
+    updateQueueCount();
+    return;
+  }
+  wrap.style.display='block';
+  list.innerHTML=drafts.map(i=>qCard(i,true)).join('');
+  updateQueueCount();
 }
 function prefillForm(item){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v??''};
@@ -281,7 +318,12 @@ function prefillForm(item){
 function renderList(items){
   const box=document.getElementById('qList');
   if(!items.length){box.innerHTML='Aucune question.';return;}
-  box.innerHTML=items.map(item=>qCard(item,false)).join('');
+  const sorted=[...items].sort((a,b)=>{
+    const rank=s=>s==='draft'?0:s==='open'?1:2;
+    return rank(a.status)-rank(b.status);
+  });
+  box.innerHTML=sorted.map(item=>qCard(item,false)).join('');
+  renderDraftQueue();
 }
 function selectedDraftIds(){
   return [...document.querySelectorAll('#dailyList input[data-batch-id]:checked')].map(el=>el.getAttribute('data-batch-id')).filter(Boolean);
@@ -299,7 +341,10 @@ function updateBatchSelectCount(){
 function renderDailyList(items){
   const box=document.getElementById('dailyList');
   if(!items.length){
-    box.innerHTML='Aucun prono pour ce batch.';
+    box.innerHTML=`<div style="border:1px dashed #3a453a;border-radius:12px;padding:14px">
+      <strong style="color:#b7ff00">Aucune carte ici pour l instant</strong>
+      <p class="muted" style="margin:8px 0 0;font-size:13px">Clique d abord sur <strong>Generer les 12 du jour</strong>. Ensuite chaque brouillon aura une case a cocher + un bouton Publier.</p>
+    </div>`;
     updateBatchSelectCount();
     return;
   }
@@ -382,8 +427,8 @@ n|Non|2.20</textarea>
             <div>
               <label>Statut</label>
               <select data-tf="status" data-ti="${ti}">
+                <option value="draft" selected>Brouillon</option>
                 <option value="open">Publier (open)</option>
-                <option value="draft">Brouillon</option>
               </select>
             </div>
             <div>
@@ -415,6 +460,7 @@ async function loadList(){
     ALL_ITEMS=data.items||[];
     renderList(ALL_ITEMS);
     renderThemeBlocks();
+    renderDraftQueue();
   }catch(e){
     const msg=String(e.message||'Erreur');
     box.textContent=msg;
@@ -479,6 +525,36 @@ function bindListClicks(root){
 bindListClicks(document.getElementById('qList'));
 bindListClicks(document.getElementById('themeBlocks'));
 bindListClicks(document.getElementById('dailyList'));
+bindListClicks(document.getElementById('draftQueueList'));
+
+document.getElementById('draftQueue')?.addEventListener('change',(e)=>{
+  if(e.target&&e.target.matches('input[data-queue-id]')) updateQueueCount();
+});
+document.getElementById('selectAllQueueBtn')?.addEventListener('click',()=>{
+  document.querySelectorAll('input[data-queue-id]').forEach(el=>{el.checked=true;});
+  updateQueueCount();
+});
+document.getElementById('clearQueueBtn')?.addEventListener('click',()=>{
+  document.querySelectorAll('input[data-queue-id]').forEach(el=>{el.checked=false;});
+  updateQueueCount();
+});
+document.getElementById('publishDraftQueueBtn')?.addEventListener('click',async()=>{
+  const msg=document.getElementById('themeMsg');
+  const ids=selectedQueueIds();
+  if(!ids.length){
+    msg.classList.add('err');
+    msg.textContent='Coche au moins un brouillon (case Choisir).';
+    return;
+  }
+  if(!confirm(`Publier ${ids.length} brouillon(s) ?`))return;
+  try{
+    const data=await api('prono-daily.php',{action:'publish',ids});
+    msg.classList.remove('err');
+    msg.textContent=`${data.published||0} publie(s)`;
+    loadList();
+    loadDaily();
+  }catch(e){msg.classList.add('err');msg.textContent=e.message;}
+});
 
 document.getElementById('themeBlocks').addEventListener('click',async(e)=>{
   const btn=e.target.closest('[data-theme-save]');
