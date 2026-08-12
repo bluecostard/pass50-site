@@ -107,7 +107,7 @@ if (preg_match('/href="\.\/"[^>]*>\s*Classement\s*</u', $pronoHtml)) {
     fwrite(STDERR, "PRONO page still has Classement button\n");
     exit(1);
 }
-foreach (['Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'Publier le statut grille', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html', 'z-index:260', 'slip-open', 'data-publish-slip'] as $needle) {
+foreach (['Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'Publier le statut grille', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html', 'z-index:260', 'slip-open', 'data-publish-slip', 'Jeux de pronostics sans argent', '100.000 pts'] as $needle) {
     if (!str_contains($pronoHtml, $needle)) {
         fwrite(STDERR, "PRONO-HTML missing $needle\n");
         exit(1);
