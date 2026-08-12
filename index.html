@@ -171,7 +171,7 @@
 
   <div class="filters">
     <div class="seg" id="periodFilters">
-      <button class="active" data-period="2H">2 H</button><button data-period="24H">24 H</button><button data-period="48H">48 H</button><button data-period="7J">7 JOURS</button><button data-period="15J">15 JOURS</button>
+      <button data-period="2H">2 H</button><button class="active" data-period="24H">24 H</button><button data-period="48H">48 H</button><button data-period="7J">7 JOURS</button><button data-period="15J">15 JOURS</button>
     </div>
     <div class="spacer"></div>
     <div class="seg" id="regionFilters"><button class="active" data-region="ALL">TOUS</button><button data-region="CI">🇨🇮 CÔTE D’IVOIRE</button><button data-region="DIASPORA">🌍 DIASPORA</button></div>
@@ -358,7 +358,7 @@ function migrateDb(){
   db.events.forEach(e=>{e.coverUrl=e.coverUrl||'';e.coverCandidateUrl=e.coverCandidateUrl||'';e.coverStatus=e.coverStatus||'missing';e.coverSource=e.coverSource||'';e.coverNote=e.coverNote||'';});
   db.version=Math.max(Number(db.version||1),5);
 }
-let session={userId:sessionStorage.getItem('pass50_session')||null};let ui={period:'2H',region:'ALL',adminTab:'adminhome',scoreMotion:false};
+let session={userId:sessionStorage.getItem('pass50_session')||null};let ui={period:'24H',region:'ALL',adminTab:'adminhome',scoreMotion:false};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function normalizeLiveStreams(){
   if(!Array.isArray(db.liveStreams))db.liveStreams=[];
