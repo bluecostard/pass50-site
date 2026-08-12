@@ -420,7 +420,14 @@ function openLives(){
   open('liveModal');
 }
 async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){const changed=JSON.stringify(db.liveStreams||[])!==JSON.stringify(data.liveStreams);db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));if(CLOUD.ready){if(changed)render();else renderLiveHeader();}}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
-function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false;}
+function hasPeriodScore(p,period=ui.period){
+  const scores=p&&typeof p==='object'?p.scores:null;
+  if(!scores||typeof scores!=='object')return false;
+  if(!Object.prototype.hasOwnProperty.call(scores,period))return false;
+  const value=Number(scores[period]);
+  return Number.isFinite(value)&&value>0;
+}
+function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false&&hasPeriodScore(p);}
 function ranking(){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));}
 function completeRanking(){
   const visible=db.profiles.filter(p=>p.alive&&regionEligible(p));
