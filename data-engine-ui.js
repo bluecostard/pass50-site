@@ -3,13 +3,14 @@
   const fallbackRenderAdminPane=renderAdminPane;
   const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,rankingLab:null,rankingLabPeriod:'2H',rankingLabLoading:false,rankingLabView:'current',rankingCalibration:null,rankingCalibrationLoading:false,rankingCalibrationRuns:24,rankingHealth:null,rankingHealthLoading:false,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
   const ADMIN_ITEMS=[
-    ['adminhome','Accueil'],['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],
+    ['adminhome','Accueil'],['todo','A faire !'],['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],
     ['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['pronostics','Pronostics'],['update','MAJ PASS50'],
     ['metricsdiag','Diagnostic métriques'],['intelligence','PASS50 Intelligence'],['hub','Data Hub'],
     ['quality','Contrôle qualité'],['rankinglab','Classement métrique'],['ranking','Classement'],['data','Maintenance']
   ];
   const ADMIN_DESCRIPTIONS={
     adminhome:'Vue d’ensemble et accès rapide à tous les outils administratifs.',
+    todo:'Notifications automatiques · clôtures, brouillons, médias, liens, LIVE…',
     signals:'Valider les signaux et événements détectés.',profiles:'Créer et modifier les fiches des influenceurs.',
     media:'Contrôler les photos et couvertures proposées.',links:'Vérifier les comptes officiels des plateformes.',
     news:'Rechercher et valider les contenus déclencheurs.',live:'Superviser les directs et leur disponibilité.',
@@ -26,11 +27,10 @@
     renderAdminPane();
   };
 
-  renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='pronostics')return deRenderPronosticsAdmin($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='rankinglab')return deRenderRankingLab($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
+  renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='todo')return deRenderAdminTodo($('#adminPane'));if(ui.adminTab==='pronostics')return deRenderPronosticsAdmin($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='rankinglab')return deRenderRankingLab($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function deRenderAdminHome(pane){
-    const TODO_KEY='pass50_admin_todo_v1';
     pane.innerHTML=`<div class="de-admin-home">
       <div class="section-head">
         <div>
@@ -38,11 +38,22 @@
           <div class="muted">Pilotez les données, les fiches, les métriques et la publication de PASS50.</div>
         </div>
       </div>
+      <div class="de-admin-home-grid">${ADMIN_ITEMS.filter(([id])=>id!=='adminhome'&&id!=='todo').map(([id,label])=>`<button class="de-admin-home-card" data-admin-tab="${id}"><strong>${deEsc(label)}</strong><span>${deEsc(ADMIN_DESCRIPTIONS[id])}</span><i aria-hidden="true">Ouvrir →</i></button>`).join('')}</div>
+    </div>`;
+  }
+  function deRenderAdminTodo(pane){
+    const TODO_KEY='pass50_admin_todo_v1';
+    pane.innerHTML=`<div class="de-admin-home">
+      <div class="section-head">
+        <div>
+          <button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button>
+          <div class="section-title" style="margin-top:10px">A FAIRE !</div>
+          <div class="muted">Notifications automatiques (clôture, brouillons, préparation) · cochez pour marquer “terminé”.</div>
+        </div>
+      </div>
 
       <div class="de-admin-todo">
         <div class="de-admin-todo-head">
-          <div class="section-title" style="font-size:16px;margin-top:0">A faire !</div>
-          <div class="muted">Notifications automatiques (clôture, brouillons, préparation) · cochez pour marquer “terminé”.</div>
           <div class="de-admin-todo-filters" aria-label="Filtres tâches">
             <input id="deTodoSearch" type="search" placeholder="Rechercher (ex: prono, live, médias…)" />
             <select id="deTodoTag">
@@ -70,8 +81,6 @@
         </div>
         <div class="muted" style="font-size:12px;margin-top:8px">Auto-refresh lors de l’ouverture de cet onglet.</div>
       </div>
-
-      <div class="de-admin-home-grid">${ADMIN_ITEMS.filter(([id])=>id!=='adminhome').map(([id,label])=>`<button class="de-admin-home-card" data-admin-tab="${id}"><strong>${deEsc(label)}</strong><span>${deEsc(ADMIN_DESCRIPTIONS[id])}</span><i aria-hidden="true">Ouvrir →</i></button>`).join('')}</div>
     </div>`;
 
     // CSS léger (injecté une fois).
