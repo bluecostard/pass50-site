@@ -1,5 +1,4 @@
 name: Metrics Priority P0
-# Relance opérateur couverture fraîche — 2026-08-12T11:55+02:00.
 
 on:
   schedule:
@@ -43,6 +42,8 @@ jobs:
             */metrics-cron.php) PROBE_URL="${CRON_URL%/metrics-cron.php}/metrics-collector-readiness-cron.php" ;;
             *) echo "::error::PASS50_METRICS_CRON_URL invalide"; exit 1 ;;
           esac
+          case "$PROBE_URL" in http://*) PROBE_URL="https://${PROBE_URL#http://}" ;; esac
+          case "$PROBE_URL" in https://www.pass50.store/*) PROBE_URL="https://pass50.store/${PROBE_URL#https://www.pass50.store/}" ;; esac
           signed_call() {
             local url="$1" body="$2" output="$3" timestamp signature
             timestamp="$(date +%s)"
@@ -79,6 +80,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          case "$CRON_URL" in http://*) CRON_URL="https://${CRON_URL#http://}" ;; esac
+          case "$CRON_URL" in https://www.pass50.store/*) CRON_URL="https://pass50.store/${CRON_URL#https://www.pass50.store/}" ;; esac
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-p0"
           : > p0-work-diagnostics.jsonl
           signed_cron() {
