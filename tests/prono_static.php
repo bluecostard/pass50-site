@@ -107,11 +107,16 @@ if (preg_match('/href="\.\/"[^>]*>\s*Classement\s*</u', $pronoHtml)) {
     fwrite(STDERR, "PRONO page still has Classement button\n");
     exit(1);
 }
-foreach (['Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html'] as $needle) {
+foreach (['Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'Publier le statut grille', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html', 'z-index:260', 'slip-open', 'data-publish-slip'] as $needle) {
     if (!str_contains($pronoHtml, $needle)) {
         fwrite(STDERR, "PRONO-HTML missing $needle\n");
         exit(1);
     }
+}
+
+if (!str_contains($core, "'slipId'")) {
+    fwrite(STDERR, "CORE missing myVote slipId\n");
+    exit(1);
 }
 
 $slip = file_get_contents($root.'/api/prono-slip.php');

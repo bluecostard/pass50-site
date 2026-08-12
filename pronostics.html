@@ -130,16 +130,21 @@
     .pub-hint{font-size:12px;color:var(--muted);margin:8px 0 0}
     .slip-bar{
       position:fixed;left:50%;transform:translateX(-50%);
-      bottom:calc(78px + env(safe-area-inset-bottom));z-index:40;
+      /* Au-dessus de la nav mobile (z-index 240) — sinon la grille est masquée */
+      bottom:calc(92px + env(safe-area-inset-bottom));z-index:260;
       width:min(640px,calc(100% - 24px));
-      background:rgba(10,14,10,.96);border:1px solid rgba(183,255,0,.35);
+      background:rgba(10,14,10,.98);border:1px solid rgba(183,255,0,.45);
       border-radius:18px;padding:12px 14px;backdrop-filter:blur(12px);
-      box-shadow:0 16px 40px rgba(0,0,0,.45);display:none;
+      box-shadow:0 16px 40px rgba(0,0,0,.55);display:none;
     }
     .slip-bar.show{display:block}
+    body.slip-open .shell{padding-bottom:calc(210px + env(safe-area-inset-bottom))}
     .slip-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .slip-meta{font-size:12px;color:var(--muted);font-weight:700}
     .slip-odd{font-family:"Archivo Black",Impact,sans-serif;color:var(--lime);font-size:22px;line-height:1}
+    .slip-legs{margin-top:10px;display:grid;gap:6px;max-height:96px;overflow:auto}
+    .slip-leg{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;padding:6px 8px;border-radius:10px;background:rgba(183,255,0,.06);border:1px solid rgba(183,255,0,.14)}
+    .slip-leg .odd{color:var(--lime);font-family:"Archivo Black",Impact,sans-serif;flex-shrink:0}
     .slip-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:10px}
     .slip-actions button{margin:0;width:100%}
     .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;display:none;align-items:flex-end;justify-content:center;padding:16px}
@@ -306,6 +311,7 @@
       <div class="slip-meta" id="slipPayout">gain potentiel</div>
     </div>
   </div>
+  <div class="slip-legs" id="slipLegs" hidden></div>
   <div class="slip-actions">
     <button type="button" class="btn" id="slipClear">Vider</button>
     <button type="button" class="btn primary" id="slipValidate">Valider</button>
@@ -399,21 +405,34 @@
   }
   function updateSlipBar(){
     const bar = document.getElementById('slipBar');
+    const legsBox = document.getElementById('slipLegs');
     const legs = slipLegs();
     if (!legs.length) {
       bar.classList.remove('show');
+      document.body.classList.remove('slip-open');
+      if (legsBox) { legsBox.hidden = true; legsBox.innerHTML = ''; }
       return;
     }
     bar.classList.add('show');
+    document.body.classList.add('slip-open');
     const odd = combinedOdd();
     const n = legs.length;
-    document.getElementById('slipTitle').textContent = n === 1 ? '1 prono selectionne' : `Grille · ${n} pronos`;
-    document.getElementById('slipMeta').textContent = n === 1
-      ? 'Valider seul, ou ajoute d autres pronos pour multiplier la cote'
-      : `Cotes multipliees · mise ${STAKE} pts`;
+    const isGrille = n >= 2;
+    document.getElementById('slipTitle').textContent = isGrille ? `Grille · ${n} pronos` : '1 prono sélectionné';
+    document.getElementById('slipMeta').textContent = isGrille
+      ? `Cotes multipliées · mise ${STAKE} pts`
+      : 'Ajoute un 2e prono pour créer une grille, ou valide seul';
     document.getElementById('slipOdd').textContent = fmtOdd(odd);
-    document.getElementById('slipPayout').textContent = `+${Math.round(STAKE * odd)} pts si tout est bon`;
-    document.getElementById('slipValidate').textContent = n === 1 ? 'Valider ce prono' : 'Valider ma grille';
+    document.getElementById('slipPayout').textContent = isGrille
+      ? `+${Math.round(STAKE * odd)} pts si toute la grille est bonne`
+      : `+${Math.round(STAKE * odd)} pts si ce prono est bon`;
+    document.getElementById('slipValidate').textContent = isGrille ? 'Valider ma grille →' : 'Valider ce prono';
+    if (legsBox) {
+      legsBox.hidden = !isGrille;
+      legsBox.innerHTML = isGrille
+        ? legs.map((leg) => `<div class="slip-leg"><span>${escHtml(leg.label || leg.optionKey)} · ${escHtml((leg.title || '').slice(0, 42))}</span><span class="odd">x ${fmtOdd(leg.odd)}</span></div>`).join('')
+        : '';
+    }
   }
 
   function applyBalance(data){
@@ -481,6 +500,7 @@
     }
     const order=['people_influenceurs','people_artiste_sportif','people_actualite'];
     const keys=[...order.filter(k=>byTheme[k]),...Object.keys(byTheme).filter(k=>!order.includes(k))];
+    const shownSlips=new Set();
     box.innerHTML=keys.map(themeKey=>{
       const rows=byTheme[themeKey];
       const label=rows[0]?.themeLabel||themeKey;
@@ -489,24 +509,31 @@
         ${rows.map(item=>{
           const voted=item.myVote?.optionKey||'';
           const picked=state.slip[item.id]?.optionKey||'';
+          const slipId=String(item.myVote?.slipId||'').trim();
+          const isGrilleVote=Boolean(slipId);
           const canPublishStatus = !!(voted && !item.statusPublished);
+          const showPublishGrille = canPublishStatus && isGrilleVote && !shownSlips.has(slipId);
+          if (showPublishGrille) shownSlips.add(slipId);
+          const showPublishSingle = canPublishStatus && !isGrilleVote;
           const opts=(item.options||[]).map(o=>{
             const selected = !voted && picked===o.key;
             const mine = voted && voted===o.key;
             const cls = mine ? 'mine done' : (selected ? 'selected' : (voted ? 'done' : ''));
             return `<button type="button" class="pub-opt ${cls}" data-qid="${escHtml(item.id)}" data-opt="${escHtml(o.key)}" data-odd="${escHtml(o.odd)}" data-label="${escHtml(o.label)}" ${voted?'disabled':''}>
-              <span>${escHtml(o.label)}${mine?' · valide':''}</span>
+              <span>${escHtml(o.label)}${mine?' · validé':''}</span>
               <span class="odd">${fmtOdd(o.odd)}</span>
             </button>`;
           }).join('');
           const cover=item.coverPhoto?`<img class="cover" src="${escHtml(item.coverPhoto)}" alt="" loading="lazy">`:'';
-          let hint='Touche une cote pour ajouter a ta grille (pas encore valide)';
-          if (voted && item.statusPublished) hint='Prono valide · Statut prono en ligne dans Mon fil';
-          else if (voted) hint='Prono valide · pas encore dans Mon fil';
-          else if (picked) hint='Ajoute a ta grille — choisis d autres ou valide';
-          const publishBtn=canPublishStatus
-            ? `<button type="button" class="btn primary" style="width:100%;margin-top:10px" data-publish-qid="${escHtml(item.id)}">Publier le statut prono</button>`
-            : '';
+          let hint='Touche une cote pour l’ajouter à ta grille (pas encore validé)';
+          if (voted && item.statusPublished) hint=isGrilleVote?'Grille validée · statut en ligne dans Mon fil':'Prono validé · Statut prono en ligne dans Mon fil';
+          else if (voted) hint=isGrilleVote?'Grille validée · pas encore dans Mon fil':'Prono validé · pas encore dans Mon fil';
+          else if (picked) hint='Ajouté à ta grille — choisis d’autres ou valide en bas';
+          const publishBtn=showPublishGrille
+            ? `<button type="button" class="btn primary" style="width:100%;margin-top:10px" data-publish-slip="${escHtml(slipId)}">Publier le statut grille →</button>`
+            : (showPublishSingle
+              ? `<button type="button" class="btn primary" style="width:100%;margin-top:10px" data-publish-qid="${escHtml(item.id)}">Publier le statut prono</button>`
+              : '');
           return `<article class="pub-card" data-card="${escHtml(item.id)}">
             ${cover}
             <div class="pub-meta">${escHtml(closesLabel(item.closesAt))}</div>
@@ -540,6 +567,11 @@
   }
 
   document.getElementById('pubsList')?.addEventListener('click',(e)=>{
+    const pubSlip=e.target.closest('[data-publish-slip]');
+    if(pubSlip){
+      openStatusModal({ slipId: pubSlip.getAttribute('data-publish-slip'), questionIds: [] });
+      return;
+    }
     const pub=e.target.closest('[data-publish-qid]');
     if(pub){
       openStatusModal([pub.getAttribute('data-publish-qid')]);
@@ -574,6 +606,11 @@
       state.pendingQuestionIds = payload?.questionIds || [];
       state.pendingSlipId = payload?.slipId || null;
     }
+    const isGrille = Boolean(state.pendingSlipId) || state.pendingQuestionIds.length >= 2;
+    const title = document.querySelector('#statusModal h3');
+    const publishBtn = document.getElementById('statusPublish');
+    if (title) title.textContent = isGrille ? 'Publier le statut grille ?' : 'Publier le statut prono ?';
+    if (publishBtn) publishBtn.textContent = isGrille ? 'Publier ma grille' : 'Publier le statut';
     document.getElementById('statusModal')?.classList.add('show');
   }
   function closeStatusModal(){
