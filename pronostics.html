@@ -78,6 +78,10 @@
     .page-header{padding:20px 0 8px}
     .page-header .kicker{font-size:10px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:6px}
     .page-header h1{font-family:"Archivo Black",Impact,sans-serif;font-size:clamp(26px,7vw,38px);letter-spacing:-.03em;line-height:1}
+    .page-header .rules-line{
+      margin:10px 0 0;max-width:34rem;
+      font-size:12.5px;font-weight:650;line-height:1.45;color:rgba(244,247,240,.78);
+    }
     .countdown-chip{
       display:inline-flex;align-items:center;gap:6px;margin-top:14px;
       background:var(--panel);border:1px solid var(--line);border-radius:30px;
@@ -138,7 +142,6 @@
       box-shadow:0 16px 40px rgba(0,0,0,.55);display:none;
     }
     .slip-bar.show{display:block}
-    body.slip-open .shell{padding-bottom:calc(210px + env(safe-area-inset-bottom))}
     .slip-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .slip-meta{font-size:12px;color:var(--muted);font-weight:700}
     .slip-odd{font-family:"Archivo Black",Impact,sans-serif;color:var(--lime);font-size:22px;line-height:1}
@@ -147,6 +150,25 @@
     .slip-leg .odd{color:var(--lime);font-family:"Archivo Black",Impact,sans-serif;flex-shrink:0}
     .slip-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:10px}
     .slip-actions button{margin:0;width:100%}
+    .slip-stake{margin-top:10px;display:grid;gap:8px}
+    .slip-stake-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .slip-stake-label{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .slip-stake-ctrl{display:flex;align-items:center;gap:6px}
+    .slip-stake-ctrl button{
+      width:36px;height:36px;border-radius:12px;border:1px solid rgba(183,255,0,.35);
+      background:rgba(183,255,0,.08);color:var(--lime);font-weight:900;font-size:18px;line-height:1;
+    }
+    .slip-stake-ctrl input{
+      width:88px;height:36px;border-radius:12px;border:1px solid var(--line);
+      background:#0a0d0a;color:var(--ink);text-align:center;font-weight:800;font-size:15px;
+    }
+    .slip-stake-chips{display:flex;flex-wrap:wrap;gap:6px}
+    .slip-stake-chips button{
+      padding:7px 10px;border-radius:999px;border:1px solid var(--line);
+      background:var(--panel2);color:var(--ink);font-size:12px;font-weight:800;
+    }
+    .slip-stake-chips button.on{border-color:var(--lime);background:rgba(183,255,0,.12);color:var(--lime)}
+    body.slip-open .shell{padding-bottom:calc(280px + env(safe-area-inset-bottom))}
     .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;display:none;align-items:flex-end;justify-content:center;padding:16px}
     .modal-bg.show{display:flex}
     .modal-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px}
@@ -255,6 +277,7 @@
   <header class="page-header rise">
     <p class="kicker">Pronostics 24H</p>
     <h1>Ta grille du jour</h1>
+    <p class="rules-line">Jeux de pronostics sans argent. L’objectif est d’atteindre en 1er les 100.000 pts. Différents lots sont à gagner.</p>
     <div class="countdown-chip">
       ⏱ Clôture dans <span id="countdown">--:--:--</span>
     </div>
@@ -312,6 +335,23 @@
     </div>
   </div>
   <div class="slip-legs" id="slipLegs" hidden></div>
+  <div class="slip-stake" id="slipStake">
+    <div class="slip-stake-row">
+      <div class="slip-stake-label">Mise (pts)</div>
+      <div class="slip-stake-ctrl">
+        <button type="button" id="stakeMinus" aria-label="Diminuer la mise">−</button>
+        <input id="stakeInput" type="number" inputmode="numeric" min="100" step="50" value="100">
+        <button type="button" id="stakePlus" aria-label="Augmenter la mise">+</button>
+      </div>
+    </div>
+    <div class="slip-stake-chips" id="stakeChips" aria-label="Mises rapides">
+      <button type="button" data-stake="100" class="on">100</button>
+      <button type="button" data-stake="250">250</button>
+      <button type="button" data-stake="500">500</button>
+      <button type="button" data-stake="1000">1000</button>
+      <button type="button" data-stake="max">Max</button>
+    </div>
+  </div>
   <div class="slip-actions">
     <button type="button" class="btn" id="slipClear">Vider</button>
     <button type="button" class="btn primary" id="slipValidate">Valider</button>
@@ -340,10 +380,15 @@
 <script src="./mobile-bottom-nav-v1.js?v=1.6"></script>
 <script>
 (function(){
-  const STAKE = 100;
+  const STAKE_DEFAULT = 100;
+  const STAKE_MIN = 100;
+  const STAKE_STEP = 50;
+  const BALANCE_FLOOR = 100;
   const state = {
     points: 1000,
     streak: 0,
+    stake: STAKE_DEFAULT,
+    floor: BALANCE_FLOOR,
     items: [],
     statuses: [],
     slip: {}, // questionId -> {optionKey, odd, label, title}
@@ -395,6 +440,39 @@
     const m=Math.floor((ms%3600000)/60000);
     return `Votes clos dans ${h} h ${m} min`;
   }
+  function maxStake(){
+    return Math.max(STAKE_MIN, Math.floor(Math.max(0, Number(state.points) || 0) - Number(state.floor || BALANCE_FLOOR)));
+  }
+  function currentStake(){
+    const max = maxStake();
+    let stake = Math.round(Number(state.stake) || STAKE_DEFAULT);
+    if (!Number.isFinite(stake)) stake = STAKE_DEFAULT;
+    stake = Math.max(STAKE_MIN, Math.min(max, stake));
+    state.stake = stake;
+    return stake;
+  }
+  function syncStakeUi(){
+    const stake = currentStake();
+    const input = document.getElementById('stakeInput');
+    if (input && document.activeElement !== input) input.value = String(stake);
+    if (input) {
+      input.min = String(STAKE_MIN);
+      input.max = String(maxStake());
+    }
+    document.querySelectorAll('#stakeChips [data-stake]').forEach((btn) => {
+      const key = btn.getAttribute('data-stake');
+      const val = key === 'max' ? maxStake() : Number(key);
+      btn.classList.toggle('on', Number(val) === stake);
+    });
+  }
+  function setStake(next){
+    const max = maxStake();
+    let stake = Math.round(Number(next) || STAKE_DEFAULT);
+    if (!Number.isFinite(stake)) stake = STAKE_DEFAULT;
+    state.stake = Math.max(STAKE_MIN, Math.min(max, stake));
+    syncStakeUi();
+    updateSlipBar();
+  }
   function slipLegs(){
     return Object.entries(state.slip).map(([questionId, leg]) => ({ questionId, ...leg }));
   }
@@ -418,14 +496,16 @@
     const odd = combinedOdd();
     const n = legs.length;
     const isGrille = n >= 2;
+    const stake = currentStake();
+    syncStakeUi();
     document.getElementById('slipTitle').textContent = isGrille ? `Grille · ${n} pronos` : '1 prono sélectionné';
     document.getElementById('slipMeta').textContent = isGrille
-      ? `Cotes multipliées · mise ${STAKE} pts`
+      ? `Cotes multipliées · mise ${stake} pts`
       : 'Ajoute un 2e prono pour créer une grille, ou valide seul';
     document.getElementById('slipOdd').textContent = fmtOdd(odd);
     document.getElementById('slipPayout').textContent = isGrille
-      ? `+${Math.round(STAKE * odd)} pts si toute la grille est bonne`
-      : `+${Math.round(STAKE * odd)} pts si ce prono est bon`;
+      ? `+${Math.round(stake * odd)} pts si toute la grille est bonne`
+      : `+${Math.round(stake * odd)} pts si ce prono est bon`;
     document.getElementById('slipValidate').textContent = isGrille ? 'Valider ma grille →' : 'Valider ce prono';
     if (legsBox) {
       legsBox.hidden = !isGrille;
@@ -442,12 +522,14 @@
         const pts = Number(bal.balance);
         state.points = Number.isFinite(pts) ? pts : (Number(data.startingBalance) || state.points);
         state.streak = Number(bal.streak) || 0;
+        if (Number.isFinite(Number(bal.floor))) state.floor = Number(bal.floor);
       } else {
         state.points = Number(bal) || state.points;
       }
     }
     document.getElementById('pts').textContent = Math.round(state.points).toLocaleString('fr-FR');
     document.getElementById('streakNum').textContent = state.streak;
+    syncStakeUi();
   }
 
   function renderStatuses(){
@@ -653,18 +735,35 @@
     }
   });
 
+  document.getElementById('stakeMinus')?.addEventListener('click',()=>setStake(currentStake()-STAKE_STEP));
+  document.getElementById('stakePlus')?.addEventListener('click',()=>setStake(currentStake()+STAKE_STEP));
+  document.getElementById('stakeInput')?.addEventListener('input',(e)=>{
+    const raw=Number(e.target.value);
+    if(!Number.isFinite(raw)) return;
+    state.stake=raw;
+    updateSlipBar();
+  });
+  document.getElementById('stakeInput')?.addEventListener('change',(e)=>setStake(e.target.value));
+  document.getElementById('stakeChips')?.addEventListener('click',(e)=>{
+    const btn=e.target.closest('[data-stake]');
+    if(!btn) return;
+    const key=btn.getAttribute('data-stake');
+    setStake(key==='max'?maxStake():Number(key));
+  });
+
   document.getElementById('slipValidate')?.addEventListener('click', async()=>{
     const legs = slipLegs().map(l=>({questionId:l.questionId, optionKey:l.optionKey}));
     if(!legs.length) return;
     const token=localStorage.getItem('pass50_api_token')||'';
     if(!token){ showToast('Connecte-toi pour valider'); return; }
+    const stake=currentStake();
     const btn=document.getElementById('slipValidate');
     btn.disabled=true;
     try{
       const r=await fetch('/api/prono-slip.php',{
         method:'POST',
         headers:authHeaders(true),
-        body:JSON.stringify({stake:STAKE, legs}),
+        body:JSON.stringify({stake, legs}),
       });
       const d=await r.json().catch(()=>({}));
       if(!r.ok) throw new Error(d.error||d.message||('HTTP '+r.status));
