@@ -1,13 +1,12 @@
 name: Metrics Ranking Publication Apply
-# Relance opérateur du candidat 2H MR-V1.3 — 2026-08-10T20:18+02:00.
+# Relance opérateur du candidat 2H MR-V1.3 — collecte validée le 2026-08-12T12:11+02:00.
 
 # Ce workflow ne possède volontairement aucun cron autonome.
 # Il est déclenché :
 # - manuellement pour un passage public contrôlé ;
-# - en secours opérateur / push de ce fichier ;
-# - la publication auto passe par le cron apply appelé depuis
-#   metrics-ranking-publication-simulation.yml, avec filet
-#   metrics-ranking-publication-watchdog.yml si rien n’a été écrit.
+# - par la simulation uniquement lorsque automaticPublicationEligible=true ;
+# - sur modification explicite de ce workflow pour permettre un déclenchement opérateur traçable.
+# - relance opérateur après assouplissement des barrières de mouvement PUBSIM-V1.1.
 on:
   workflow_dispatch:
   push:
