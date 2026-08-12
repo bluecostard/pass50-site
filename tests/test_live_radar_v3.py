@@ -111,12 +111,13 @@ class LiveRadarV41Tests(unittest.TestCase):
 
     def test_coverage_rolling_and_unknown_first(self):
         source = (ROOT / 'api' / 'live-radar-v4-source.php').read_text(encoding='utf-8')
-        self.assertIn("P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-1'", source)
+        self.assertIn("P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-2'", source)
         self.assertIn('function p50_live_v4_coverage_stats', source)
         self.assertIn("$source['last_state']=(string)($health[$key]['last_state']??'never_checked')", source)
         self.assertIn('function p50_live_v4_discovery_rank', source)
         self.assertIn("return [0,$meta,'']", source)
         self.assertIn("return [1,$meta,$checked]", source)
+        self.assertIn("new DateTimeZone('UTC')", source)
         contract = (ROOT / 'api' / 'live-radar-contract.php').read_text(encoding='utf-8')
         self.assertIn("'radarVersion'=>'4.6'", contract)
         self.assertIn('coverageRevision', contract)
