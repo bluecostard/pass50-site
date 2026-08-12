@@ -142,12 +142,24 @@
       box-shadow:0 16px 40px rgba(0,0,0,.55);display:none;
     }
     .slip-bar.show{display:block}
-    .slip-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .slip-bar.is-collapsed{padding:10px 12px}
+    .slip-bar.is-collapsed .slip-details{display:none}
+    .slip-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .slip-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex:1;min-width:0}
+    .slip-toggle{
+      flex-shrink:0;width:36px;height:36px;border-radius:12px;
+      border:1px solid rgba(183,255,0,.35);background:rgba(183,255,0,.08);
+      color:var(--lime);font-weight:900;font-size:16px;line-height:1;
+    }
     .slip-meta{font-size:12px;color:var(--muted);font-weight:700}
     .slip-odd{font-family:"Archivo Black",Impact,sans-serif;color:var(--lime);font-size:22px;line-height:1}
-    .slip-legs{margin-top:10px;display:grid;gap:6px;max-height:96px;overflow:auto}
-    .slip-leg{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;padding:6px 8px;border-radius:10px;background:rgba(183,255,0,.06);border:1px solid rgba(183,255,0,.14)}
-    .slip-leg .odd{color:var(--lime);font-family:"Archivo Black",Impact,sans-serif;flex-shrink:0}
+    .slip-legs{margin-top:10px;display:grid;gap:6px;max-height:120px;overflow:auto}
+    .slip-leg{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;font-size:12px;font-weight:700;padding:6px 8px;border-radius:10px;background:rgba(183,255,0,.06);border:1px solid rgba(183,255,0,.14)}
+    .slip-leg .odd{color:var(--lime);font-family:"Archivo Black",Impact,sans-serif}
+    .slip-leg-remove{
+      width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);color:#f4f7f0;font-size:16px;line-height:1;font-weight:900;
+    }
     .slip-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:10px}
     .slip-actions button{margin:0;width:100%}
     .slip-stake{margin-top:10px;display:grid;gap:8px}
@@ -169,6 +181,7 @@
     }
     .slip-stake-chips button.on{border-color:var(--lime);background:rgba(183,255,0,.12);color:var(--lime)}
     body.slip-open .shell{padding-bottom:calc(280px + env(safe-area-inset-bottom))}
+    body.slip-open.slip-collapsed .shell{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
     .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;display:none;align-items:flex-end;justify-content:center;padding:16px}
     .modal-bg.show{display:flex}
     .modal-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px}
@@ -324,37 +337,42 @@
 
 <!-- Slip / grille -->
 <div class="slip-bar" id="slipBar">
-  <div class="slip-top">
-    <div>
-      <div style="font-weight:800" id="slipTitle">Ma grille</div>
-      <div class="slip-meta" id="slipMeta">0 selection</div>
-    </div>
-    <div style="text-align:right">
-      <div class="slip-odd" id="slipOdd">—</div>
-      <div class="slip-meta" id="slipPayout">gain potentiel</div>
-    </div>
-  </div>
-  <div class="slip-legs" id="slipLegs" hidden></div>
-  <div class="slip-stake" id="slipStake">
-    <div class="slip-stake-row">
-      <div class="slip-stake-label">Mise (pts)</div>
-      <div class="slip-stake-ctrl">
-        <button type="button" id="stakeMinus" aria-label="Diminuer la mise">−</button>
-        <input id="stakeInput" type="number" inputmode="numeric" min="100" step="50" value="100">
-        <button type="button" id="stakePlus" aria-label="Augmenter la mise">+</button>
+  <div class="slip-head">
+    <div class="slip-top">
+      <div>
+        <div style="font-weight:800" id="slipTitle">Ma grille</div>
+        <div class="slip-meta" id="slipMeta">0 selection</div>
+      </div>
+      <div style="text-align:right">
+        <div class="slip-odd" id="slipOdd">—</div>
+        <div class="slip-meta" id="slipPayout">gain potentiel</div>
       </div>
     </div>
-    <div class="slip-stake-chips" id="stakeChips" aria-label="Mises rapides">
-      <button type="button" data-stake="100" class="on">100</button>
-      <button type="button" data-stake="250">250</button>
-      <button type="button" data-stake="500">500</button>
-      <button type="button" data-stake="1000">1000</button>
-      <button type="button" data-stake="max">Max</button>
-    </div>
+    <button type="button" class="slip-toggle" id="slipToggle" aria-expanded="true" aria-controls="slipDetails" title="Replier la grille">▴</button>
   </div>
-  <div class="slip-actions">
-    <button type="button" class="btn" id="slipClear">Vider</button>
-    <button type="button" class="btn primary" id="slipValidate">Valider</button>
+  <div class="slip-details" id="slipDetails">
+    <div class="slip-legs" id="slipLegs" hidden></div>
+    <div class="slip-stake" id="slipStake">
+      <div class="slip-stake-row">
+        <div class="slip-stake-label">Mise (pts)</div>
+        <div class="slip-stake-ctrl">
+          <button type="button" id="stakeMinus" aria-label="Diminuer la mise">−</button>
+          <input id="stakeInput" type="number" inputmode="numeric" min="100" step="50" value="100">
+          <button type="button" id="stakePlus" aria-label="Augmenter la mise">+</button>
+        </div>
+      </div>
+      <div class="slip-stake-chips" id="stakeChips" aria-label="Mises rapides">
+        <button type="button" data-stake="100" class="on">100</button>
+        <button type="button" data-stake="250">250</button>
+        <button type="button" data-stake="500">500</button>
+        <button type="button" data-stake="1000">1000</button>
+        <button type="button" data-stake="max">Max</button>
+      </div>
+    </div>
+    <div class="slip-actions">
+      <button type="button" class="btn" id="slipClear">Vider</button>
+      <button type="button" class="btn primary" id="slipValidate">Valider</button>
+    </div>
   </div>
 </div>
 
@@ -392,6 +410,7 @@
     items: [],
     statuses: [],
     slip: {}, // questionId -> {optionKey, odd, label, title}
+    slipCollapsed: false,
     pendingQuestionIds: [],
     pendingSlipId: null,
     durationHours: 24,
@@ -481,6 +500,18 @@
     if (!legs.length) return 0;
     return Number(legs.reduce((acc, leg) => acc * Number(leg.odd || 1), 1).toFixed(4));
   }
+  function applySlipCollapsedUi(){
+    const bar = document.getElementById('slipBar');
+    const toggle = document.getElementById('slipToggle');
+    const collapsed = Boolean(state.slipCollapsed);
+    if (bar) bar.classList.toggle('is-collapsed', collapsed);
+    document.body.classList.toggle('slip-collapsed', collapsed);
+    if (toggle) {
+      toggle.textContent = collapsed ? '▾' : '▴';
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      toggle.title = collapsed ? 'Déplier la grille' : 'Replier la grille';
+    }
+  }
   function updateSlipBar(){
     const bar = document.getElementById('slipBar');
     const legsBox = document.getElementById('slipLegs');
@@ -488,30 +519,38 @@
     if (!legs.length) {
       bar.classList.remove('show');
       document.body.classList.remove('slip-open');
+      document.body.classList.remove('slip-collapsed');
+      state.slipCollapsed = false;
+      applySlipCollapsedUi();
       if (legsBox) { legsBox.hidden = true; legsBox.innerHTML = ''; }
       return;
     }
     bar.classList.add('show');
     document.body.classList.add('slip-open');
+    applySlipCollapsedUi();
     const odd = combinedOdd();
     const n = legs.length;
     const isGrille = n >= 2;
     const stake = currentStake();
     syncStakeUi();
     document.getElementById('slipTitle').textContent = isGrille ? `Grille · ${n} pronos` : '1 prono sélectionné';
-    document.getElementById('slipMeta').textContent = isGrille
-      ? `Cotes multipliées · mise ${stake} pts`
-      : 'Ajoute un 2e prono pour créer une grille, ou valide seul';
+    document.getElementById('slipMeta').textContent = state.slipCollapsed
+      ? (isGrille ? `Repliée · mise ${stake} pts · tape ▾` : `Replié · mise ${stake} pts · tape ▾`)
+      : (isGrille
+        ? `Cotes multipliées · mise ${stake} pts`
+        : 'Ajoute un 2e prono pour créer une grille, ou valide seul');
     document.getElementById('slipOdd').textContent = fmtOdd(odd);
     document.getElementById('slipPayout').textContent = isGrille
       ? `+${Math.round(stake * odd)} pts si toute la grille est bonne`
       : `+${Math.round(stake * odd)} pts si ce prono est bon`;
     document.getElementById('slipValidate').textContent = isGrille ? 'Valider ma grille →' : 'Valider ce prono';
     if (legsBox) {
-      legsBox.hidden = !isGrille;
-      legsBox.innerHTML = isGrille
-        ? legs.map((leg) => `<div class="slip-leg"><span>${escHtml(leg.label || leg.optionKey)} · ${escHtml((leg.title || '').slice(0, 42))}</span><span class="odd">x ${fmtOdd(leg.odd)}</span></div>`).join('')
-        : '';
+      legsBox.hidden = false;
+      legsBox.innerHTML = legs.map((leg) => `<div class="slip-leg">
+        <span>${escHtml(leg.label || leg.optionKey)} · ${escHtml((leg.title || '').slice(0, 36))}</span>
+        <span class="odd">x ${fmtOdd(leg.odd)}</span>
+        <button type="button" class="slip-leg-remove" data-remove-qid="${escHtml(leg.questionId)}" aria-label="Retirer ce prono de la grille">×</button>
+      </div>`).join('');
     }
   }
 
@@ -735,6 +774,19 @@
     }
   });
 
+  document.getElementById('slipToggle')?.addEventListener('click',()=>{
+    state.slipCollapsed = !state.slipCollapsed;
+    applySlipCollapsedUi();
+    updateSlipBar();
+  });
+  document.getElementById('slipLegs')?.addEventListener('click',(e)=>{
+    const btn=e.target.closest('[data-remove-qid]');
+    if(!btn) return;
+    const qid=btn.getAttribute('data-remove-qid');
+    if(!qid || !state.slip[qid]) return;
+    delete state.slip[qid];
+    renderPublications();
+  });
   document.getElementById('stakeMinus')?.addEventListener('click',()=>setStake(currentStake()-STAKE_STEP));
   document.getElementById('stakePlus')?.addEventListener('click',()=>setStake(currentStake()+STAKE_STEP));
   document.getElementById('stakeInput')?.addEventListener('input',(e)=>{
