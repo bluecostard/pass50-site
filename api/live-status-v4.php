@@ -63,6 +63,9 @@ if($mode==='full'){
         if(isset($activeKeys[$key])){$reconfirm[]=$source;$used[(string)$source['source_key']]=true;}
         else $discovery[]=$source;
     }
+    // Meta classifiés par Graph : le cron OAuth suffit, on libère les slots scrape.
+    $reconfirm=array_values(array_filter($reconfirm,static fn(array $source): bool => !p50_live_v4_is_graph_fresh($source)));
+    $discovery=array_values(array_filter($discovery,static fn(array $source): bool => !p50_live_v4_is_graph_fresh($source)));
     usort($reconfirm,static function(array $a,array $b): int {
         $ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');
         if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
@@ -92,7 +95,12 @@ if($mode==='full'){
     $discoveryPick=array_merge($metaPick,array_slice($discoveryRest,0,max(0,$discoveryQuota-count($metaPick))));
     $selected=array_merge($reconfirm,$discoveryPick);
     foreach($selected as $source)$used[(string)$source['source_key']]=true;
-    if(count($selected)<$batch)foreach($sources as $source){$key=(string)$source['source_key'];if(isset($used[$key]))continue;$selected[]=$source;$used[$key]=true;if(count($selected)>=$batch)break;}
+    if(count($selected)<$batch)foreach($sources as $source){
+        $key=(string)$source['source_key'];
+        if(isset($used[$key])||p50_live_v4_is_graph_fresh($source))continue;
+        $selected[]=$source;$used[$key]=true;
+        if(count($selected)>=$batch)break;
+    }
     $selected=array_slice($selected,0,$batch);
 }else{
     $selected=array_slice($sources,0,$batch);

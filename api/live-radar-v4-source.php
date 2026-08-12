@@ -4,7 +4,7 @@ declare(strict_types=1);
 const P50_LIVE_V4_PLATFORMS = ['TikTok','YouTube','Instagram','Facebook'];
 const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];
 /** Couverture rolling (scan récent) — distincte du trust gate anti-ghost. */
-const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-2';
+const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-3';
 const P50_LIVE_V4_COVERAGE_WINDOW_SECONDS = 7200;
 /** @deprecated Utiliser p50_live_v4_reconfirm_grace_map() — conservé pour compat tests/clients. */
 const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>12,'YouTube'=>18,'Instagram'=>15,'Facebook'=>15];
@@ -126,7 +126,7 @@ function p50_live_v4_active_auto_ids(): array {
 function p50_live_v4_health_map(): array {
     $out=[];
     try{
-        $stmt=db()->query('SELECT profile_id,platform,last_state,last_checked_at,last_live_at,consecutive_offline,consecutive_unknown FROM p50_live_source_health');
+        $stmt=db()->query('SELECT profile_id,platform,last_state,last_checked_at,last_live_at,consecutive_offline,consecutive_unknown,metadata FROM p50_live_source_health');
         foreach($stmt->fetchAll() as $row)$out[(string)$row['platform'].'|'.(string)$row['profile_id']]=$row;
     }catch(Throwable){}
     return $out;
@@ -189,6 +189,13 @@ function p50_live_v4_sources(array $state): array {
         $source['priority']=isset($manual[$id])?0:(isset($automatic[$key])?1:(in_array($status,['owner_verified','manual_verified','verified'],true)?2:3));
         $source['last_checked_at']=(string)($health[$key]['last_checked_at']??'');
         $source['last_state']=(string)($health[$key]['last_state']??'never_checked');
+        $metaJson=json_decode((string)($health[$key]['metadata']??''),true);
+        $probe='';
+        if(is_array($metaJson)){
+            $probe=(string)(($metaJson['evidence']['probe']??'')?:'');
+            if($probe===''&&isset($metaJson['probes']['meta_graph']))$probe='meta_graph';
+        }
+        $source['health_probe']=$probe;
         $source['platform_order']=$platformOrder[$platform]??9;
     }
     unset($source);
@@ -213,6 +220,19 @@ function p50_live_v4_discovery_rank(array $source): array {
     if($checked===''||$state===''||$state==='never_checked')return [0,$meta,''];
     if($state==='unknown')return [1,$meta,$checked];
     return [2,$meta,$checked];
+}
+
+/** Source Meta déjà classifiée récemment via Graph OAuth — inutile de rescraper. */
+function p50_live_v4_is_graph_fresh(array $source,int $maxAgeSeconds=1200): bool {
+    if(!in_array((string)($source['platform']??''),['Instagram','Facebook'],true))return false;
+    if((string)($source['health_probe']??'')!=='meta_graph')return false;
+    $state=strtolower(trim((string)($source['last_state']??'')));
+    if(!in_array($state,['live','offline'],true))return false;
+    $checkedAt=trim((string)($source['last_checked_at']??''));
+    if($checkedAt==='')return false;
+    try{$ts=(new DateTimeImmutable($checkedAt,new DateTimeZone('UTC')))->getTimestamp();}
+    catch(Throwable){$ts=strtotime($checkedAt.' UTC')?:0;}
+    return $ts>0&&(time()-$ts)<=$maxAgeSeconds;
 }
 
 /** Couverture rolling : sources sondées dans la fenêtre / total officiel. */

@@ -31,5 +31,5 @@ jobs:
               data=json.load(stream)
           if not data.get('ok'):
               raise SystemExit('Collecte Meta refusée')
-          print(f"Meta PASS50 : {int(data.get('assetsChecked') or 0)} actifs contrôlés · {int(data.get('activeLives') or 0)} live(s)")
+          print(f"Meta PASS50 : {int(data.get('assetsChecked') or 0)} actifs contrôlés · {int(data.get('mappedAssets') or 0)} mappés · {int(data.get('healthUpdated') or 0)} health · {int(data.get('activeLives') or 0)} live(s)")
           PY

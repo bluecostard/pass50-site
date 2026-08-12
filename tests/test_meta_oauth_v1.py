@@ -120,6 +120,10 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn("'LIVE'", COLLECT)
         self.assertIn("source='meta_authorized'", COLLECT)
         self.assertIn("'meta_authorized'", STORAGE)
+        self.assertIn('function p50_meta_health_update', COLLECT)
+        self.assertIn('p50_live_v4_health_update', COLLECT)
+        self.assertIn("'meta_graph'", COLLECT)
+        self.assertIn('healthUpdated', COLLECT)
 
     def test_ui_is_loaded_and_has_no_publish_action(self):
         self.assertIn('meta-oauth-ui-v1.js?v=1.5', LOADER)
