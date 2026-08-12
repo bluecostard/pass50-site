@@ -43,6 +43,16 @@
         <div class="de-admin-todo-head">
           <div class="section-title" style="font-size:16px;margin-top:0">A faire !</div>
           <div class="muted">Notifications automatiques (clôture, brouillons, préparation) · cochez pour marquer “terminé”.</div>
+          <div class="de-admin-todo-filters" aria-label="Filtres tâches">
+            <input id="deTodoSearch" type="search" placeholder="Rechercher (ex: prono, live, médias…)" />
+            <select id="deTodoTag">
+              <option value="all" selected>Toutes</option>
+              <option value="prono">Prono</option>
+              <option value="live">LIVE</option>
+              <option value="media">Médias</option>
+              <option value="links">Liens</option>
+            </select>
+          </div>
         </div>
         <div class="de-admin-todo-grid" role="region" aria-label="Tâches prioritaires">
           <section class="de-admin-todo-col" data-priority="urgent">
@@ -71,6 +81,8 @@
       style.textContent=`
         .de-admin-todo{border:1px solid var(--line);border-radius:16px;padding:14px 14px 10px;margin:14px 0;background:rgba(11,15,11,.25)}
         .de-admin-todo-head{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+        .de-admin-todo-filters{display:grid;grid-template-columns:1fr 160px;gap:10px;margin-top:10px}
+        .de-admin-todo-filters input,.de-admin-todo-filters select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #293129;background:#0a0d0a;color:#fff;font:inherit}
         .de-admin-todo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
         .de-admin-todo-col-title{margin-bottom:8px}
         .de-admin-pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:1000;border:1px solid rgba(255,255,255,.15)}
@@ -78,10 +90,13 @@
         .de-admin-pill.must{color:#ffb050;border-color:rgba(255,176,80,.45);background:rgba(255,176,80,.08)}
         .de-admin-pill.plan{color:#b7ff00;border-color:rgba(183,255,0,.45);background:rgba(183,255,0,.08)}
         .de-admin-todo-list{display:grid;gap:8px}
-        .de-admin-todo-item{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(10,13,10,.45)}
+        .de-admin-todo-item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(10,13,10,.45)}
         .de-admin-todo-item input{width:auto;margin:0;transform:translateY(2px)}
         .de-admin-todo-title{font-weight:1000;font-size:13px;line-height:1.25}
         .de-admin-todo-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.3}
+        .de-admin-todo-open{width:auto;margin:0;padding:8px 12px;border-radius:12px;border:1px solid #ff6b00;background:#ff6b00;color:#050705;font-weight:1000;font-size:12px;white-space:nowrap;cursor:pointer}
+        .de-admin-todo-open.must{border-color:#ffb050;background:#ffb050}
+        .de-admin-todo-open.plan{border-color:#b7ff00;background:#b7ff00}
       `;
       document.head.appendChild(style);
     }
@@ -116,13 +131,18 @@
         }
         el.innerHTML=tasks.map(t=>{
           const done=Boolean(state.done?.[t.id]);
-          return `<label class="de-admin-todo-item">
+          const pri=String(t.priority||'plan');
+          const openClass=pri==='must'?'must':(pri==='plan'?'plan':'');
+          const tags=Array.isArray(t.tags)&&t.tags.length?t.tags.map(x=>String(x)).join(', '):'';
+          const meta=String([t.meta||'',tags?`Tags: ${tags}`:''].filter(Boolean).join(' · '));
+          return `<div class="de-admin-todo-item">
             <input type="checkbox" ${done?'checked':''} data-admin-todo-id="${deEsc(t.id)}" aria-label="Terminé : ${deEsc(t.title)}">
             <div>
               <div class="de-admin-todo-title">${deEsc(t.title)}</div>
-              <div class="de-admin-todo-meta">${deEsc(t.meta||'')}</div>
+              <div class="de-admin-todo-meta">${deEsc(meta)}</div>
             </div>
-          </label>`;
+            <button type="button" class="de-admin-todo-open ${openClass}" data-admin-tab="${deEsc(t.openTab||'adminhome')}" data-scroll="${deEsc(t.scroll||'')}">Ouvrir →</button>
+          </div>`;
         }).join('');
       };
 
@@ -135,38 +155,157 @@
       const now=Date.now();
       const withinMs=6*3600000;
 
-      // Source : admin pronostics (statut / dates / cotes).
-      let items=[];
-      try{items=(await apiFetch('prono-admin-list.php?limit=120')||{}).items||[];}catch{items=[];}
+      // Source tâches (multi-domaines) : état local (db) + quelques endpoints.
+      let allTasks=[];
 
-      const urgent=items.filter(i=>String(i.status||'')==='locked');
-      const must=items.filter(i=>{
-        if(String(i.status||'')!=='open') return false;
-        if(!i.closesAt) return false;
-        const t=new Date(i.closesAt).getTime();
-        return Number.isFinite(t)&&t>=now&&t-now<=withinMs;
-      });
-      const plan=items.filter(i=>String(i.status||'')==='draft');
+      // --- PRONOS ---
+      try{
+        const items=(await apiFetch('prono-admin-list.php?limit=120')||{}).items||[];
 
-      // Tri : échéance la plus proche d'abord.
-      urgent.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
-      must.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
-      plan.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+        const locked=items.filter(i=>String(i.status||'')==='locked');
+        locked.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
+        for(const item of locked.slice(0,20)){
+          allTasks.push({
+            id:`prono-${item.id}`,
+            title:item.title||item.id||'Prono',
+            meta:[item.voteCount!=null?`${Number(item.voteCount)} vote(s)`:'','clôturé · attribuer les points'].filter(Boolean).join(' · '),
+            priority:'urgent',
+            tags:['prono'],
+            openTab:'pronostics',
+            scroll:'resolveId'
+          });
+        }
 
-      const mapTask=(item,priority)=>{
-        const title=item.title||item.id||'Prono';
-        const meta=[];
-        if(item.voteCount!=null) meta.push(`${Number(item.voteCount)} vote(s)`);
-        if(priority==='urgent') meta.push(`clôturé · résout via “Résoudre”`);
-        if(priority==='must') meta.push(`clôture bientôt · ${fmtTime(item.closesAt)}`);
-        if(priority==='plan') meta.push(`brouillon · à publier (open)`);
-        if(item.measureAt) meta.push(`mesure ${fmtTime(item.measureAt)}`);
-        return {id:`prono-${item.id}`, title, meta:meta.join(' · ')};
+        const closesSoon=items.filter(i=>{
+          if(String(i.status||'')!=='open') return false;
+          if(!i.closesAt) return false;
+          const t=new Date(i.closesAt).getTime();
+          return Number.isFinite(t)&&t>=now&&t-now<=withinMs;
+        });
+        closesSoon.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
+        for(const item of closesSoon.slice(0,20)){
+          allTasks.push({
+            id:`prono-${item.id}`,
+            title:item.title||item.id||'Prono',
+            meta:[item.voteCount!=null?`${Number(item.voteCount)} vote(s)`:'',`clôture bientôt · ${fmtTime(item.closesAt)}`].filter(Boolean).join(' · '),
+            priority:'must',
+            tags:['prono'],
+            openTab:'pronostics',
+            scroll:'qList'
+          });
+        }
+
+        const drafts=items.filter(i=>String(i.status||'')==='draft');
+        drafts.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+        for(const item of drafts.slice(0,12)){
+          allTasks.push({
+            id:`prono-${item.id}`,
+            title:item.title||item.id||'Brouillon prono',
+            meta:'brouillon · à publier (open)',
+            priority:'plan',
+            tags:['prono'],
+            openTab:'pronostics',
+            scroll:'freeForm'
+          });
+        }
+      }catch(_e){}
+
+      // --- LIVE ---
+      try{
+        const live=await apiFetch('live-status.php?mode=quick');
+        const radar=live?.radar||{};
+        const lastScanAt=radar.lastScanAt;
+        const ageMs=lastScanAt?(now-new Date(lastScanAt).getTime()):Infinity;
+        const coverage=Number(radar.coveragePercent);
+        if(!lastScanAt||!Number.isFinite(ageMs)){
+          allTasks.push({id:'live-radar',title:'LIVE · relancer le radar',meta:'scan non disponible',priority:'urgent',tags:['live'],openTab:'live',scroll:''});
+        }else if(ageMs>12*3600000){
+          allTasks.push({id:'live-radar',title:'LIVE · relancer le radar',meta:`dernier scan ${fmtTime(lastScanAt)}`,priority:'urgent',tags:['live'],openTab:'live',scroll:''});
+        }else if(Number.isFinite(coverage)&&coverage<90){
+          allTasks.push({id:'live-radar',title:'LIVE · couverture à améliorer',meta:`coverage ${coverage}%`,priority:'must',tags:['live'],openTab:'live',scroll:''});
+        }
+      }catch(_e){}
+
+      // --- MÉDIAS ---
+      try{
+        const profiles=db?.profiles||[];
+        const events=db?.events||[];
+        const pendingPhotos=profiles.filter(p=>['pending','missing','rejected'].includes(String(p.photoStatus||''))).length;
+        const pendingCovers=events.filter(e=>['pending','missing','rejected'].includes(String(e.coverStatus||''))).length;
+        if(pendingPhotos>0){
+          allTasks.push({
+            id:'media-photos',
+            title:`Médias · photos à valider (${pendingPhotos})`,
+            meta:'Influenceurs (photoStatus)',
+            priority:pendingPhotos>40?'urgent':'must',
+            tags:['media'],
+            openTab:'media',
+            scroll:''
+          });
+        }
+        if(pendingCovers>0){
+          allTasks.push({
+            id:'media-covers',
+            title:`Médias · couvertures à valider (${pendingCovers})`,
+            meta:'Éléments déclencheurs (coverStatus)',
+            priority:pendingCovers>40?'urgent':'must',
+            tags:['media'],
+            openTab:'media',
+            scroll:''
+          });
+        }
+      }catch(_e){}
+
+      // --- LIENS ---
+      try{
+        const profiles=db?.profiles||[];
+        const linkIssues=profiles.filter(p=>{
+          const checks=p?.linkChecks||{};
+          const vals=Object.values(checks||{});
+          if(!vals.length) return false;
+          return vals.some(v=>{
+            const st=String(v?.status||'');
+            if(!st) return true;
+            return !['owner_verified','manual_verified','verified','ok','blocked_but_exists','manual_owner'].includes(st);
+          });
+        }).length;
+        if(linkIssues>0){
+          allTasks.push({
+            id:'links-audit',
+            title:`Liens · vérifications en attente (${linkIssues})`,
+            meta:'Statut incomplet / rejeté',
+            priority:linkIssues>30?'urgent':'must',
+            tags:['links'],
+            openTab:'links',
+            scroll:''
+          });
+        }
+      }catch(_e){}
+
+      // Filtrage UI.
+      const searchEl=document.getElementById('deTodoSearch');
+      const tagEl=document.getElementById('deTodoTag');
+      let filteredTasks=allTasks;
+      const render=()=>{
+        const q=String(searchEl?.value||'').trim().toLowerCase();
+        const tag=String(tagEl?.value||'all');
+        filteredTasks=allTasks.filter(t=>{
+          const tagsText=(t.tags||[]).join(' ');
+          const text=String([t.title,t.meta,tagsText].filter(Boolean).join(' · ')).toLowerCase();
+          const okQ=!q||text.includes(q);
+          const okTag=(tag==='all')||((t.tags||[]).includes(tag));
+          return okQ&&okTag;
+        });
+        const urgent=filteredTasks.filter(t=>String(t.priority||'plan')==='urgent').slice(0,12);
+        const must=filteredTasks.filter(t=>String(t.priority||'plan')==='must').slice(0,12);
+        const plan=filteredTasks.filter(t=>String(t.priority||'plan')==='plan').slice(0,12);
+        setList(urgentEl,urgent,'Rien en urgent');
+        setList(mustEl,must,'Rien à faire absolument');
+        setList(planEl,plan,'Rien à prévoir');
       };
-
-      setList(urgentEl,urgent.slice(0,12).map(i=>mapTask(i,'urgent')),'Rien à résoudre');
-      setList(mustEl,must.slice(0,12).map(i=>mapTask(i,'must')),'Aucune clôture imminente');
-      setList(planEl,plan.slice(0,12).map(i=>mapTask(i,'plan')),'Aucun brouillon');
+      if(searchEl) searchEl.addEventListener('input',render);
+      if(tagEl) tagEl.addEventListener('change',render);
+      render();
     }
 
     // Auto-refresh immédiat.
