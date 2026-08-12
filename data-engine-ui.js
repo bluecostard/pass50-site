@@ -10,7 +10,7 @@
   ];
   const ADMIN_DESCRIPTIONS={
     adminhome:'Vue d’ensemble et accès rapide à tous les outils administratifs.',
-    todo:'Notifications automatiques · clôtures, brouillons, médias, liens, LIVE…',
+    todo:'Alertes cloche + push · clôtures, brouillons, médias, liens, LIVE…',
     signals:'Valider les signaux et événements détectés.',profiles:'Créer et modifier les fiches des influenceurs.',
     media:'Contrôler les photos et couvertures proposées.',links:'Vérifier les comptes officiels des plateformes.',
     news:'Rechercher et valider les contenus déclencheurs.',live:'Superviser les directs et leur disponibilité.',
@@ -30,6 +30,82 @@
   renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='todo')return deRenderAdminTodo($('#adminPane'));if(ui.adminTab==='pronostics')return deRenderPronosticsAdmin($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='rankinglab')return deRenderRankingLab($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+  function deTodoFmtTime(v){
+    if(!v) return '—';
+    const d=new Date(v);
+    return Number.isNaN(d.getTime())?'—':d.toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  }
+  window.p50CollectAdminTodoTasks=async function p50CollectAdminTodoTasks(){
+    const allTasks=[];
+    const now=Date.now();
+    const withinMs=6*3600000;
+    try{
+      const items=(await apiFetch('prono-admin-list.php?limit=120')||{}).items||[];
+      const locked=items.filter(i=>String(i.status||'')==='locked');
+      locked.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
+      for(const item of locked.slice(0,20)){
+        allTasks.push({id:`prono-${item.id}`,title:item.title||item.id||'Prono',meta:[item.voteCount!=null?`${Number(item.voteCount)} vote(s)`:'','clôturé · attribuer les points'].filter(Boolean).join(' · '),priority:'urgent',tags:['prono'],openTab:'pronostics',scroll:'resolveId'});
+      }
+      const closesSoon=items.filter(i=>{
+        if(String(i.status||'')!=='open') return false;
+        if(!i.closesAt) return false;
+        const t=new Date(i.closesAt).getTime();
+        return Number.isFinite(t)&&t>=now&&t-now<=withinMs;
+      });
+      closesSoon.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
+      for(const item of closesSoon.slice(0,20)){
+        allTasks.push({id:`prono-${item.id}`,title:item.title||item.id||'Prono',meta:[item.voteCount!=null?`${Number(item.voteCount)} vote(s)`:'',`clôture bientôt · ${deTodoFmtTime(item.closesAt)}`].filter(Boolean).join(' · '),priority:'must',tags:['prono'],openTab:'pronostics',scroll:'qList'});
+      }
+      const drafts=items.filter(i=>String(i.status||'')==='draft');
+      drafts.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+      for(const item of drafts.slice(0,12)){
+        allTasks.push({id:`prono-${item.id}`,title:item.title||item.id||'Brouillon prono',meta:'brouillon · à publier (open)',priority:'plan',tags:['prono'],openTab:'pronostics',scroll:'freeForm'});
+      }
+    }catch(_e){}
+    try{
+      const live=await apiFetch('live-status.php?mode=quick');
+      const radar=live?.radar||{};
+      const lastScanAt=radar.lastScanAt;
+      const ageMs=lastScanAt?(now-new Date(lastScanAt).getTime()):Infinity;
+      const coverage=Number(radar.coveragePercent);
+      if(!lastScanAt||!Number.isFinite(ageMs)){
+        allTasks.push({id:'live-radar',title:'LIVE · relancer le radar',meta:'scan non disponible',priority:'urgent',tags:['live'],openTab:'live',scroll:''});
+      }else if(ageMs>12*3600000){
+        allTasks.push({id:'live-radar',title:'LIVE · relancer le radar',meta:`dernier scan ${deTodoFmtTime(lastScanAt)}`,priority:'urgent',tags:['live'],openTab:'live',scroll:''});
+      }else if(Number.isFinite(coverage)&&coverage<90){
+        allTasks.push({id:'live-radar',title:'LIVE · couverture à améliorer',meta:`coverage ${coverage}%`,priority:'must',tags:['live'],openTab:'live',scroll:''});
+      }
+    }catch(_e){}
+    try{
+      const profiles=db?.profiles||[];
+      const events=db?.events||[];
+      const pendingPhotos=profiles.filter(p=>['pending','missing','rejected'].includes(String(p.photoStatus||''))).length;
+      const pendingCovers=events.filter(e=>['pending','missing','rejected'].includes(String(e.coverStatus||''))).length;
+      if(pendingPhotos>0){
+        allTasks.push({id:'media-photos',title:`Médias · photos à valider (${pendingPhotos})`,meta:'Influenceurs (photoStatus)',priority:pendingPhotos>40?'urgent':'must',tags:['media'],openTab:'media',scroll:''});
+      }
+      if(pendingCovers>0){
+        allTasks.push({id:'media-covers',title:`Médias · couvertures à valider (${pendingCovers})`,meta:'Éléments déclencheurs (coverStatus)',priority:pendingCovers>40?'urgent':'must',tags:['media'],openTab:'media',scroll:''});
+      }
+    }catch(_e){}
+    try{
+      const profiles=db?.profiles||[];
+      const linkIssues=profiles.filter(p=>{
+        const checks=p?.linkChecks||{};
+        const vals=Object.values(checks||{});
+        if(!vals.length) return false;
+        return vals.some(v=>{
+          const st=String(v?.status||'');
+          if(!st) return true;
+          return !['owner_verified','manual_verified','verified','ok','blocked_but_exists','manual_owner'].includes(st);
+        });
+      }).length;
+      if(linkIssues>0){
+        allTasks.push({id:'links-audit',title:`Liens · vérifications en attente (${linkIssues})`,meta:'Statut incomplet / rejeté',priority:linkIssues>30?'urgent':'must',tags:['links'],openTab:'links',scroll:''});
+      }
+    }catch(_e){}
+    return allTasks;
+  };
   function deRenderAdminHome(pane){
     pane.innerHTML=`<div class="de-admin-home">
       <div class="section-head">
@@ -48,7 +124,7 @@
         <div>
           <button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button>
           <div class="section-title" style="margin-top:10px">A FAIRE !</div>
-          <div class="muted">Notifications automatiques (clôture, brouillons, préparation) · cochez pour marquer “terminé”.</div>
+          <div class="muted">Alertes cloche + push · cochez pour marquer “terminé”.</div>
         </div>
       </div>
 
@@ -79,7 +155,7 @@
             <div class="de-admin-todo-list" id="deTodoPlan"></div>
           </section>
         </div>
-        <div class="muted" style="font-size:12px;margin-top:8px">Auto-refresh lors de l’ouverture de cet onglet.</div>
+        <div class="muted" style="font-size:12px;margin-top:8px">Auto-refresh à l’ouverture · alertes cloche toutes les 5 min.</div>
       </div>
     </div>`;
 
@@ -155,150 +231,17 @@
         }).join('');
       };
 
-      const fmtTime=(v)=>{
-        if(!v) return '—';
-        const d=new Date(v);
-        return Number.isNaN(d.getTime())?'—':d.toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      };
-
-      const now=Date.now();
-      const withinMs=6*3600000;
-
-      // Source tâches (multi-domaines) : état local (db) + quelques endpoints.
       let allTasks=[];
-
-      // --- PRONOS ---
       try{
-        const items=(await apiFetch('prono-admin-list.php?limit=120')||{}).items||[];
-
-        const locked=items.filter(i=>String(i.status||'')==='locked');
-        locked.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
-        for(const item of locked.slice(0,20)){
-          allTasks.push({
-            id:`prono-${item.id}`,
-            title:item.title||item.id||'Prono',
-            meta:[item.voteCount!=null?`${Number(item.voteCount)} vote(s)`:'','clôturé · attribuer les points'].filter(Boolean).join(' · '),
-            priority:'urgent',
-            tags:['prono'],
-            openTab:'pronostics',
-            scroll:'resolveId'
-          });
-        }
-
-        const closesSoon=items.filter(i=>{
-          if(String(i.status||'')!=='open') return false;
-          if(!i.closesAt) return false;
-          const t=new Date(i.closesAt).getTime();
-          return Number.isFinite(t)&&t>=now&&t-now<=withinMs;
-        });
-        closesSoon.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
-        for(const item of closesSoon.slice(0,20)){
-          allTasks.push({
-            id:`prono-${item.id}`,
-            title:item.title||item.id||'Prono',
-            meta:[item.voteCount!=null?`${Number(item.voteCount)} vote(s)`:'',`clôture bientôt · ${fmtTime(item.closesAt)}`].filter(Boolean).join(' · '),
-            priority:'must',
-            tags:['prono'],
-            openTab:'pronostics',
-            scroll:'qList'
-          });
-        }
-
-        const drafts=items.filter(i=>String(i.status||'')==='draft');
-        drafts.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
-        for(const item of drafts.slice(0,12)){
-          allTasks.push({
-            id:`prono-${item.id}`,
-            title:item.title||item.id||'Brouillon prono',
-            meta:'brouillon · à publier (open)',
-            priority:'plan',
-            tags:['prono'],
-            openTab:'pronostics',
-            scroll:'freeForm'
-          });
-        }
+        allTasks=await window.p50CollectAdminTodoTasks();
       }catch(_e){}
 
-      // --- LIVE ---
-      try{
-        const live=await apiFetch('live-status.php?mode=quick');
-        const radar=live?.radar||{};
-        const lastScanAt=radar.lastScanAt;
-        const ageMs=lastScanAt?(now-new Date(lastScanAt).getTime()):Infinity;
-        const coverage=Number(radar.coveragePercent);
-        if(!lastScanAt||!Number.isFinite(ageMs)){
-          allTasks.push({id:'live-radar',title:'LIVE · relancer le radar',meta:'scan non disponible',priority:'urgent',tags:['live'],openTab:'live',scroll:''});
-        }else if(ageMs>12*3600000){
-          allTasks.push({id:'live-radar',title:'LIVE · relancer le radar',meta:`dernier scan ${fmtTime(lastScanAt)}`,priority:'urgent',tags:['live'],openTab:'live',scroll:''});
-        }else if(Number.isFinite(coverage)&&coverage<90){
-          allTasks.push({id:'live-radar',title:'LIVE · couverture à améliorer',meta:`coverage ${coverage}%`,priority:'must',tags:['live'],openTab:'live',scroll:''});
-        }
-      }catch(_e){}
-
-      // --- MÉDIAS ---
-      try{
-        const profiles=db?.profiles||[];
-        const events=db?.events||[];
-        const pendingPhotos=profiles.filter(p=>['pending','missing','rejected'].includes(String(p.photoStatus||''))).length;
-        const pendingCovers=events.filter(e=>['pending','missing','rejected'].includes(String(e.coverStatus||''))).length;
-        if(pendingPhotos>0){
-          allTasks.push({
-            id:'media-photos',
-            title:`Médias · photos à valider (${pendingPhotos})`,
-            meta:'Influenceurs (photoStatus)',
-            priority:pendingPhotos>40?'urgent':'must',
-            tags:['media'],
-            openTab:'media',
-            scroll:''
-          });
-        }
-        if(pendingCovers>0){
-          allTasks.push({
-            id:'media-covers',
-            title:`Médias · couvertures à valider (${pendingCovers})`,
-            meta:'Éléments déclencheurs (coverStatus)',
-            priority:pendingCovers>40?'urgent':'must',
-            tags:['media'],
-            openTab:'media',
-            scroll:''
-          });
-        }
-      }catch(_e){}
-
-      // --- LIENS ---
-      try{
-        const profiles=db?.profiles||[];
-        const linkIssues=profiles.filter(p=>{
-          const checks=p?.linkChecks||{};
-          const vals=Object.values(checks||{});
-          if(!vals.length) return false;
-          return vals.some(v=>{
-            const st=String(v?.status||'');
-            if(!st) return true;
-            return !['owner_verified','manual_verified','verified','ok','blocked_but_exists','manual_owner'].includes(st);
-          });
-        }).length;
-        if(linkIssues>0){
-          allTasks.push({
-            id:'links-audit',
-            title:`Liens · vérifications en attente (${linkIssues})`,
-            meta:'Statut incomplet / rejeté',
-            priority:linkIssues>30?'urgent':'must',
-            tags:['links'],
-            openTab:'links',
-            scroll:''
-          });
-        }
-      }catch(_e){}
-
-      // Filtrage UI.
       const searchEl=document.getElementById('deTodoSearch');
       const tagEl=document.getElementById('deTodoTag');
-      let filteredTasks=allTasks;
       const render=()=>{
         const q=String(searchEl?.value||'').trim().toLowerCase();
         const tag=String(tagEl?.value||'all');
-        filteredTasks=allTasks.filter(t=>{
+        const filteredTasks=allTasks.filter(t=>{
           const tagsText=(t.tags||[]).join(' ');
           const text=String([t.title,t.meta,tagsText].filter(Boolean).join(' · ')).toLowerCase();
           const okQ=!q||text.includes(q);
@@ -315,6 +258,9 @@
       if(searchEl) searchEl.addEventListener('input',render);
       if(tagEl) tagEl.addEventListener('change',render);
       render();
+      if(typeof window.p50AdminNotifyAfterTodoLoad==='function'){
+        window.p50AdminNotifyAfterTodoLoad(allTasks,state.done||{});
+      }
     }
 
     // Auto-refresh immédiat.
