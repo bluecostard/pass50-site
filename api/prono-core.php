@@ -840,6 +840,7 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
             'oddLocked' => $locked,
             'stakeLocked' => $stakeLocked,
             'potentialPayout' => p50_prono_payout($effectiveStake, $locked),
+            'slipId' => trim((string)($vote['slip_id'] ?? '')) ?: null,
             'updatedAt' => gmdate('c', strtotime((string)$vote['updated_at'] . ' UTC')),
         ];
     }
