@@ -12,6 +12,7 @@ foreach([
 
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/content-freshness-core.php';
+require_once __DIR__.'/metrics-social-collectors-core.php';
 
 require_method('POST');
 $user=auth_user();

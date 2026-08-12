@@ -12,6 +12,7 @@ foreach([
 
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/content-freshness-core.php';
+require_once __DIR__.'/metrics-social-collectors-core.php';
 
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
