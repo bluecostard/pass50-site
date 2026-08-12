@@ -1,5 +1,4 @@
 name: Metrics Public Baseline P1
-# Relance opérateur couverture fraîche — 2026-08-12T11:56+02:00
 # Contract history: PUBLIC-BASELINE-P1-V1.1 -> V1.2 -> V1.3
 # V1.3: priorité Top 40 public, cible fraîcheur <=45 min, file distincte.
 
@@ -45,6 +44,8 @@ jobs:
             */metrics-cron.php) BASELINE_URL="${CRON_URL%/metrics-cron.php}/metrics-public-baseline-cron.php" ;;
             *) echo "::error::PASS50_METRICS_CRON_URL invalide."; exit 1 ;;
           esac
+          case "$BASELINE_URL" in http://*) BASELINE_URL="https://${BASELINE_URL#http://}" ;; esac
+          case "$BASELINE_URL" in https://www.pass50.store/*) BASELINE_URL="https://pass50.store/${BASELINE_URL#https://www.pass50.store/}" ;; esac
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-baseline-probe"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"probe",dispatchId:$dispatchId}')"
           deployed=false
@@ -72,6 +73,8 @@ jobs:
             */metrics-cron.php) BASELINE_URL="${CRON_URL%/metrics-cron.php}/metrics-public-baseline-cron.php" ;;
             *) echo "::error::PASS50_METRICS_CRON_URL invalide."; exit 1 ;;
           esac
+          case "$BASELINE_URL" in http://*) BASELINE_URL="https://${BASELINE_URL#http://}" ;; esac
+          case "$BASELINE_URL" in https://www.pass50.store/*) BASELINE_URL="https://pass50.store/${BASELINE_URL#https://www.pass50.store/}" ;; esac
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-public-baseline"
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"dispatch",dispatchId:$dispatchId}')"
           http_code=000
