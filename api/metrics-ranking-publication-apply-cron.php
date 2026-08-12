@@ -67,7 +67,7 @@ try{
     error_log('PASS50 publication apply cron: '.p50_mr_safe_error($error));
     $msg=$error->getMessage();
     // Soft-skip when gates block — avoids failing the workflow every cycle.
-    if(str_contains($msg,'Garde-fous')||str_contains($msg,'Aucune mutation')){
+    if(str_contains($msg,'Garde-fous')||str_contains($msg,'Aucune mutation')||str_contains($msg,'Révision publique changée pendant la publication')||str_contains($msg,'Empreinte publique incohérente au moment de l’écriture.')){
         json_response([
             'ok'=>true,'skipped'=>true,'reason'=>'gates_or_empty',
             'error'=>$msg,'dispatchId'=>$dispatchId,

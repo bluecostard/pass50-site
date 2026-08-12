@@ -340,6 +340,12 @@ function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): 
     return ['state'=>$state,'profilesUpdated'=>count($profilesUpdated),'scoresWritten'=>$scoresWritten];
 }
 
+function p50_mrp_apply_is_transient_race(Throwable $error): bool {
+    $msg=$error->getMessage();
+    return str_contains($msg,'Révision publique changée pendant la publication')
+        ||str_contains($msg,'Empreinte publique incohérente au moment de l’écriture.');
+}
+
 function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
     $cfg=p50_mrp_apply_config();
     $mode=trim((string)($options['mode']??'controlled'));
@@ -375,6 +381,7 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
     }
 
     $applyUuid=p50_mr_uuid();
+    $raceAttempts=3;
     try{
         $prior=p50_mrp_apply_has_prior_success($pdo);
         $bootstrap=($forceBootstrap||!$prior)&&$cfg['bootstrapAllowed'];
@@ -382,94 +389,110 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
             throw new RuntimeException('Bootstrap automatique refusé.');
         }
 
-        // forceBootstrap doit assouplir exit/entry/movement dans la preview, sinon la recovery reste bloquée.
-        $preview=p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now,$forceBootstrap);
-        $reasons=(array)($preview['summary']['reasons']??[]);
-        $blockedPeriods=(array)($preview['summary']['blockedPeriods']??[]);
-        if(($preview['status']??'')==='blocked'||empty($preview['runUuid'])||empty($preview['publicationEligible'])){
-            throw new RuntimeException('Garde-fous de publication non satisfaits: '.implode(',', $reasons?:($blockedPeriods?:['blocked'])));
+        $lastRaceError=null;
+        for($raceAttempt=1;$raceAttempt<=$raceAttempts;$raceAttempt++){
+            try{
+                // forceBootstrap doit assouplir exit/entry/movement dans la preview, sinon la recovery reste bloquée.
+                $preview=p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now,$forceBootstrap);
+                $reasons=(array)($preview['summary']['reasons']??[]);
+                $blockedPeriods=(array)($preview['summary']['blockedPeriods']??[]);
+                if(($preview['status']??'')==='blocked'||empty($preview['runUuid'])||empty($preview['publicationEligible'])){
+                    throw new RuntimeException('Garde-fous de publication non satisfaits: '.implode(',', $reasons?:($blockedPeriods?:['blocked'])));
+                }
+                if((int)($preview['summary']['mutations']??0)<=0)throw new RuntimeException('Aucune mutation de score à publier.');
+
+                $runUuid=(string)$preview['runUuid'];
+                $plans=(array)($preview['publishPlans']??[]);
+                if(!$plans)throw new RuntimeException('Aucune période publiable.');
+                $anchorPeriod=(string)(array_key_exists('24H',$plans)?'24H':array_key_first($plans));
+                $anchor=$plans[$anchorPeriod];
+                $fingerprintBefore=(string)($anchor['publicFingerprint']??'');
+                $candidateFp=(string)($anchor['candidateFingerprint']??'');
+                $revisionBefore=(int)($anchor['publicStateRevision']??0);
+
+                $pdo->beginTransaction();
+                $state=p50_de_load_public_state_for_update();
+                if(!$state)throw new RuntimeException('État public introuvable.');
+                $currentRevision=(int)($state['stateRevision']??0);
+                if($currentRevision!==$revisionBefore){
+                    throw new RuntimeException('Révision publique changée pendant la publication ('.$currentRevision.' ≠ '.$revisionBefore.').');
+                }
+                $publicNow=p50_mrp_public_rows($state,$anchorPeriod);
+                $fpNow=p50_mrp_fingerprint(['period'=>$anchorPeriod,'stateRevision'=>$currentRevision,'rows'=>$publicNow['rows']]);
+                if($fingerprintBefore===''||!hash_equals($fingerprintBefore,$fpNow)){
+                    throw new RuntimeException('Empreinte publique incohérente au moment de l’écriture.');
+                }
+
+                $backupJson=p50_mr_json($state,false);
+                $mutated=p50_mrp_apply_mutate_state($state,$plans,$runUuid);
+                $newState=$mutated['state'];
+                $newState['stateRevision']=$currentRevision+1;
+                $stateActor=p50_mrp_apply_state_actor($appliedBy);
+                $stmt=$pdo->prepare("UPDATE app_state SET data=?,updated_by=?,updated_at=NOW() WHERE id='public'");
+                $stmt->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$stateActor]);
+                if($stmt->rowCount()===0){
+                    $ins=$pdo->prepare("INSERT INTO app_state(id,data,updated_by) VALUES('public',?,?)");
+                    $ins->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$stateActor]);
+                }
+
+                $report=[
+                    'version'=>P50_MRP_APPLY_VERSION,'mode'=>$mode,'bootstrap'=>$bootstrap,
+                    'runUuid'=>$runUuid,'periods'=>array_keys($plans),'skippedPeriods'=>(array)($preview['summary']['skippedPeriods']??[]),
+                    'summary'=>$preview['summary'],'anchorPeriod'=>$anchorPeriod,
+                ];
+                if($raceAttempt>1)$report['raceRetries']=$raceAttempt-1;
+                $insert=$pdo->prepare("INSERT INTO p50_metric_publication_applies(
+                    apply_uuid,dispatch_id,mode,status,algorithm_version,run_uuid,periods_json,
+                    public_revision_before,public_revision_after,public_fingerprint_before,candidate_fingerprint,
+                    profiles_updated,scores_written,entries_count,exits_count,bootstrap,backup_json,report_json,applied_by,generated_at
+                  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                $insert->execute([
+                    $applyUuid,$dispatchId,$bootstrap?'bootstrap':$mode,'applied',P50_MR_ALGORITHM_VERSION,$runUuid,
+                    p50_mr_json(array_keys($plans)),$revisionBefore,$currentRevision+1,$fingerprintBefore,$candidateFp,
+                    (int)$mutated['profilesUpdated'],(int)$mutated['scoresWritten'],
+                    (int)($preview['summary']['entries']??0),(int)($preview['summary']['exits']??0),
+                    $bootstrap?1:0,$backupJson,p50_mr_json($report),mb_substr($appliedBy,0,120),
+                    $now->format('Y-m-d H:i:s'),
+                ]);
+                $pdo->commit();
+
+                // Snapshot ranking history (best-effort, hors transaction critique)
+                try{p50_de_capture_snapshots('2H');}catch(Throwable){}
+
+                return [
+                    'ok'=>true,
+                    'version'=>P50_MRP_APPLY_VERSION,
+                    'status'=>'applied',
+                    'mode'=>$bootstrap?'bootstrap':$mode,
+                    'bootstrap'=>$bootstrap,
+                    'applyUuid'=>$applyUuid,
+                    'dispatchId'=>$dispatchId,
+                    'runUuid'=>$runUuid,
+                    'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
+                    'periods'=>array_keys($plans),
+                    'skippedPeriods'=>(array)($preview['summary']['skippedPeriods']??[]),
+                    'publicStateRevision'=>$currentRevision+1,
+                    'publicStateWrites'=>1,
+                    'profilesUpdated'=>(int)$mutated['profilesUpdated'],
+                    'scoresWritten'=>(int)$mutated['scoresWritten'],
+                    'entries'=>(int)($preview['summary']['entries']??0),
+                    'exits'=>(int)($preview['summary']['exits']??0),
+                    'backupCreated'=>true,
+                    'rollbackAvailable'=>true,
+                    'generatedAt'=>$now->format(DATE_ATOM),
+                    'raceRetries'=>$raceAttempt>1?$raceAttempt-1:0,
+                ];
+            }catch(Throwable $error){
+                if($pdo->inTransaction())$pdo->rollBack();
+                if($raceAttempt<$raceAttempts&&p50_mrp_apply_is_transient_race($error)){
+                    $lastRaceError=$error;
+                    usleep(150000*$raceAttempt);
+                    continue;
+                }
+                throw $error;
+            }
         }
-        if((int)($preview['summary']['mutations']??0)<=0)throw new RuntimeException('Aucune mutation de score à publier.');
-
-        $runUuid=(string)$preview['runUuid'];
-        $plans=(array)($preview['publishPlans']??[]);
-        if(!$plans)throw new RuntimeException('Aucune période publiable.');
-        $anchorPeriod=(string)(array_key_exists('24H',$plans)?'24H':array_key_first($plans));
-        $anchor=$plans[$anchorPeriod];
-        $fingerprintBefore=(string)($anchor['publicFingerprint']??'');
-        $candidateFp=(string)($anchor['candidateFingerprint']??'');
-        $revisionBefore=(int)($anchor['publicStateRevision']??0);
-
-        $pdo->beginTransaction();
-        $state=p50_de_load_public_state_for_update();
-        if(!$state)throw new RuntimeException('État public introuvable.');
-        $currentRevision=(int)($state['stateRevision']??0);
-        if($currentRevision!==$revisionBefore){
-            throw new RuntimeException('Révision publique changée pendant la publication ('.$currentRevision.' ≠ '.$revisionBefore.').');
-        }
-        $publicNow=p50_mrp_public_rows($state,$anchorPeriod);
-        $fpNow=p50_mrp_fingerprint(['period'=>$anchorPeriod,'stateRevision'=>$currentRevision,'rows'=>$publicNow['rows']]);
-        if($fingerprintBefore===''||!hash_equals($fingerprintBefore,$fpNow)){
-            throw new RuntimeException('Empreinte publique incohérente au moment de l’écriture.');
-        }
-
-        $backupJson=p50_mr_json($state,false);
-        $mutated=p50_mrp_apply_mutate_state($state,$plans,$runUuid);
-        $newState=$mutated['state'];
-        $newState['stateRevision']=$currentRevision+1;
-        $stateActor=p50_mrp_apply_state_actor($appliedBy);
-        $stmt=$pdo->prepare("UPDATE app_state SET data=?,updated_by=?,updated_at=NOW() WHERE id='public'");
-        $stmt->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$stateActor]);
-        if($stmt->rowCount()===0){
-            $ins=$pdo->prepare("INSERT INTO app_state(id,data,updated_by) VALUES('public',?,?)");
-            $ins->execute([json_encode($newState,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$stateActor]);
-        }
-
-        $report=[
-            'version'=>P50_MRP_APPLY_VERSION,'mode'=>$mode,'bootstrap'=>$bootstrap,
-            'runUuid'=>$runUuid,'periods'=>array_keys($plans),'skippedPeriods'=>(array)($preview['summary']['skippedPeriods']??[]),
-            'summary'=>$preview['summary'],'anchorPeriod'=>$anchorPeriod,
-        ];
-        $insert=$pdo->prepare("INSERT INTO p50_metric_publication_applies(
-            apply_uuid,dispatch_id,mode,status,algorithm_version,run_uuid,periods_json,
-            public_revision_before,public_revision_after,public_fingerprint_before,candidate_fingerprint,
-            profiles_updated,scores_written,entries_count,exits_count,bootstrap,backup_json,report_json,applied_by,generated_at
-          ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        $insert->execute([
-            $applyUuid,$dispatchId,$bootstrap?'bootstrap':$mode,'applied',P50_MR_ALGORITHM_VERSION,$runUuid,
-            p50_mr_json(array_keys($plans)),$revisionBefore,$currentRevision+1,$fingerprintBefore,$candidateFp,
-            (int)$mutated['profilesUpdated'],(int)$mutated['scoresWritten'],
-            (int)($preview['summary']['entries']??0),(int)($preview['summary']['exits']??0),
-            $bootstrap?1:0,$backupJson,p50_mr_json($report),mb_substr($appliedBy,0,120),
-            $now->format('Y-m-d H:i:s'),
-        ]);
-        $pdo->commit();
-
-        // Snapshot ranking history (best-effort, hors transaction critique)
-        try{p50_de_capture_snapshots('2H');}catch(Throwable){}
-
-        return [
-            'ok'=>true,
-            'version'=>P50_MRP_APPLY_VERSION,
-            'status'=>'applied',
-            'mode'=>$bootstrap?'bootstrap':$mode,
-            'bootstrap'=>$bootstrap,
-            'applyUuid'=>$applyUuid,
-            'dispatchId'=>$dispatchId,
-            'runUuid'=>$runUuid,
-            'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
-            'periods'=>array_keys($plans),
-            'skippedPeriods'=>(array)($preview['summary']['skippedPeriods']??[]),
-            'publicStateRevision'=>$currentRevision+1,
-            'publicStateWrites'=>1,
-            'profilesUpdated'=>(int)$mutated['profilesUpdated'],
-            'scoresWritten'=>(int)$mutated['scoresWritten'],
-            'entries'=>(int)($preview['summary']['entries']??0),
-            'exits'=>(int)($preview['summary']['exits']??0),
-            'backupCreated'=>true,
-            'rollbackAvailable'=>true,
-            'generatedAt'=>$now->format(DATE_ATOM),
-        ];
+        throw $lastRaceError??new RuntimeException('Publication interrompue après conflit de révision publique.');
     }catch(Throwable $error){
         if($pdo->inTransaction())$pdo->rollBack();
         try{
