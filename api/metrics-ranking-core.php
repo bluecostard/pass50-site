@@ -116,8 +116,10 @@ function p50_mr_uuid(): string {
     return vsprintf('%s%s-%s-%s-%s-%s%s%s',str_split(bin2hex($data),4));
 }
 
-function p50_mr_json(array $value): string {
-    p50_metrics_assert_safe($value,'ranking');
+function p50_mr_json(array $value,bool $strict=true): string {
+    if($strict)p50_metrics_assert_safe($value,'ranking');
+    else $value=p50_metrics_redact_unsafe($value);
+    if(!is_array($value))$value=[];
     return json_encode($value,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
 }
 

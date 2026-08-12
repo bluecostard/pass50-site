@@ -413,7 +413,7 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
             throw new RuntimeException('Empreinte publique incohérente au moment de l’écriture.');
         }
 
-        $backupJson=p50_mr_json($state);
+        $backupJson=p50_mr_json($state,false);
         $mutated=p50_mrp_apply_mutate_state($state,$plans,$runUuid);
         $newState=$mutated['state'];
         $newState['stateRevision']=$currentRevision+1;

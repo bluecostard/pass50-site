@@ -75,6 +75,25 @@ function p50_metrics_assert_safe(array $value,string $path='payload'): void {
     }
 }
 
+/** Redacte les chaînes sensibles sans bloquer (backups d’état public complets). */
+function p50_metrics_redact_unsafe(mixed $value): mixed {
+    if(is_array($value)){
+        $out=[];
+        foreach($value as $key=>$item){
+            $name=(string)$key;
+            if(preg_match('/(?:token|secret|password|passwd|cookie|authorization|session)/i',$name))$out[$key]='[redacted]';
+            else $out[$key]=p50_metrics_redact_unsafe($item);
+        }
+        return $out;
+    }
+    if(is_string($value)){
+        $value=preg_replace('/Bearer\s+[A-Za-z0-9._~+\/=-]+/i','Bearer [redacted]',$value)??$value;
+        $value=preg_replace('/\b(token|secret|password|cookie)\s*[=:]\s*\S+/i','$1=[redacted]',$value)??$value;
+        return $value;
+    }
+    return $value;
+}
+
 function p50_metrics_provenance(array $input): array {
     $provenance=(array)($input['provenance']??[]);
     if(!$provenance)throw new InvalidArgumentException('Provenance obligatoire.');
