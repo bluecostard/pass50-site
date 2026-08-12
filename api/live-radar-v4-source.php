@@ -4,7 +4,7 @@ declare(strict_types=1);
 const P50_LIVE_V4_PLATFORMS = ['TikTok','YouTube','Instagram','Facebook'];
 const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];
 /** Couverture rolling (scan récent) — distincte du trust gate anti-ghost. */
-const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-1';
+const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-2';
 const P50_LIVE_V4_COVERAGE_WINDOW_SECONDS = 7200;
 /** @deprecated Utiliser p50_live_v4_reconfirm_grace_map() — conservé pour compat tests/clients. */
 const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>12,'YouTube'=>18,'Instagram'=>15,'Facebook'=>15];
@@ -220,8 +220,12 @@ function p50_live_v4_coverage_stats(array $sources,int $windowSeconds=P50_LIVE_V
     $now=time();$checkedRecent=0;$classifiedRecent=0;$unknownRecent=0;$neverChecked=0;
     foreach($sources as $source){
         $state=strtolower(trim((string)($source['last_state']??'never_checked')));
-        $checkedAt=(string)($source['last_checked_at']??'');
-        $ts=$checkedAt!==''?(strtotime($checkedAt)?:0):0;
+        $checkedAt=trim((string)($source['last_checked_at']??''));
+        $ts=0;
+        if($checkedAt!==''){
+            try{$ts=(new DateTimeImmutable($checkedAt,new DateTimeZone('UTC')))->getTimestamp();}
+            catch(Throwable){$ts=strtotime($checkedAt.' UTC')?:0;}
+        }
         if($ts<=0||($now-$ts)>$windowSeconds){
             if($checkedAt===''||$state==='never_checked')$neverChecked++;
             continue;
