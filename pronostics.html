@@ -735,18 +735,35 @@
     }
   });
 
+  document.getElementById('stakeMinus')?.addEventListener('click',()=>setStake(currentStake()-STAKE_STEP));
+  document.getElementById('stakePlus')?.addEventListener('click',()=>setStake(currentStake()+STAKE_STEP));
+  document.getElementById('stakeInput')?.addEventListener('input',(e)=>{
+    const raw=Number(e.target.value);
+    if(!Number.isFinite(raw)) return;
+    state.stake=raw;
+    updateSlipBar();
+  });
+  document.getElementById('stakeInput')?.addEventListener('change',(e)=>setStake(e.target.value));
+  document.getElementById('stakeChips')?.addEventListener('click',(e)=>{
+    const btn=e.target.closest('[data-stake]');
+    if(!btn) return;
+    const key=btn.getAttribute('data-stake');
+    setStake(key==='max'?maxStake():Number(key));
+  });
+
   document.getElementById('slipValidate')?.addEventListener('click', async()=>{
     const legs = slipLegs().map(l=>({questionId:l.questionId, optionKey:l.optionKey}));
     if(!legs.length) return;
     const token=localStorage.getItem('pass50_api_token')||'';
     if(!token){ showToast('Connecte-toi pour valider'); return; }
+    const stake=currentStake();
     const btn=document.getElementById('slipValidate');
     btn.disabled=true;
     try{
       const r=await fetch('/api/prono-slip.php',{
         method:'POST',
         headers:authHeaders(true),
-        body:JSON.stringify({stake:STAKE, legs}),
+        body:JSON.stringify({stake, legs}),
       });
       const d=await r.json().catch(()=>({}));
       if(!r.ok) throw new Error(d.error||d.message||('HTTP '+r.status));
