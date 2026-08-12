@@ -99,7 +99,7 @@ function p50mo_assets_from_page(array $page): array {
     $pageName=trim((string)($data['name']??$page['name']??''));if($pageName==='')$pageName='Page Facebook';
     $picture=(string)($data['picture']['data']['url']??$page['picture']['data']['url']??'');
     $assets=[[
-        'platform'=>'Facebook','asset_id'=>$pageId,'profile_id'=>p50mo_match_profile('Facebook',$pageUrl),
+        'platform'=>'Facebook','asset_id'=>$pageId,'profile_id'=>p50mo_match_profile('Facebook',$pageUrl,'',$pageId),
         'name'=>$pageName,'username'=>'','url'=>$pageUrl,'picture'=>$picture,'parent'=>null,'token'=>$pageToken,
         'tasks'=>json_encode($data['tasks']??$page['tasks']??[],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
     ]];
@@ -109,7 +109,7 @@ function p50mo_assets_from_page(array $page): array {
         if(empty($ig['username'])){$igResponse=p50mo_graph($igId,$pageToken,['fields'=>'id,username,name,profile_picture_url']);if($igResponse['status']>=200&&$igResponse['status']<300)$igDetail=$igResponse['json'];}
         $username=trim((string)($igDetail['username']??''));$igUrl=$username!==''?'https://www.instagram.com/'.$username.'/':'';
         $assets[]=[
-            'platform'=>'Instagram','asset_id'=>$igId,'profile_id'=>p50mo_match_profile('Instagram',$igUrl,$username),
+            'platform'=>'Instagram','asset_id'=>$igId,'profile_id'=>p50mo_match_profile('Instagram',$igUrl,$username,$igId),
             'name'=>(string)($igDetail['name']??$username?:'Compte Instagram'),'username'=>$username,'url'=>$igUrl,
             'picture'=>(string)($igDetail['profile_picture_url']??''),'parent'=>$pageId,'token'=>$pageToken,'tasks'=>null,
         ];
@@ -173,4 +173,56 @@ function p50mo_replace_assets_for_user(string $userId,array $assets): void {
             $asset['parent'],p50mo_encrypt((string)$asset['token']),$asset['tasks'],
         ]);
     }
+}
+
+/** Associe automatiquement les assets Meta encore sans fiche PASS50 (match strict unique). */
+function p50mo_auto_map_unmapped_assets(?string $userId=null): array {
+    $pdo=db();
+    if($userId!==null){
+        $stmt=$pdo->prepare("SELECT id,user_id,platform,asset_id,parent_page_id,profile_url,username,asset_name FROM p50_meta_oauth_assets WHERE user_id=? AND status='active' AND (profile_id IS NULL OR profile_id='')");
+        $stmt->execute([$userId]);
+        $rows=$stmt->fetchAll();
+    }else{
+        $rows=$pdo->query("SELECT id,user_id,platform,asset_id,parent_page_id,profile_url,username,asset_name FROM p50_meta_oauth_assets WHERE status='active' AND (profile_id IS NULL OR profile_id='')")->fetchAll();
+    }
+    $checked=0;$mapped=0;$results=[];
+    foreach($rows as $asset){
+        $checked++;
+        $platform=(string)$asset['platform'];
+        $assetId=(string)$asset['asset_id'];
+        $ownerId=(string)$asset['user_id'];
+        $match=p50mo_match_profile($platform,(string)($asset['profile_url']??''),(string)($asset['username']??''),$assetId);
+        if($match===null){
+            $results[]=['platform'=>$platform,'assetId'=>$assetId,'name'=>(string)$asset['asset_name'],'mapped'=>false,'profileId'=>null];
+            continue;
+        }
+        $updated=p50mo_apply_profile_mapping($ownerId,$platform,$assetId,$match);
+        if($updated>0)$mapped++;
+        $results[]=['platform'=>$platform,'assetId'=>$assetId,'name'=>(string)$asset['asset_name'],'mapped'=>$updated>0,'profileId'=>$match,'updatedAssets'=>$updated];
+    }
+    return ['checked'=>$checked,'mapped'=>$mapped,'results'=>$results];
+}
+
+/** Applique une association fiche ↔ asset (FB propage vers IG lié). */
+function p50mo_apply_profile_mapping(string $userId,string $platform,string $assetId,?string $profileId): int {
+    $pdo=db();
+    $stmt=$pdo->prepare('SELECT platform,asset_id,parent_page_id FROM p50_meta_oauth_assets WHERE user_id=? AND platform=? AND asset_id=? LIMIT 1');
+    $stmt->execute([$userId,$platform,$assetId]);
+    $asset=$stmt->fetch();
+    if(!is_array($asset))return 0;
+    $value=$profileId!==null&&$profileId!==''?$profileId:null;
+    if($platform==='Facebook'){
+        $update=$pdo->prepare('UPDATE p50_meta_oauth_assets SET profile_id=? WHERE user_id=? AND ((platform=\'Facebook\' AND asset_id=?) OR (platform=\'Instagram\' AND parent_page_id=?))');
+        $update->execute([$value,$userId,$assetId,$assetId]);
+        return $update->rowCount();
+    }
+    $parent=trim((string)($asset['parent_page_id']??''));
+    if($parent!==''){
+        $update=$pdo->prepare('UPDATE p50_meta_oauth_assets SET profile_id=? WHERE user_id=? AND ((platform=\'Facebook\' AND asset_id=?) OR (platform=\'Instagram\' AND parent_page_id=?))');
+        $update->execute([$value,$userId,$parent,$parent]);
+        return $update->rowCount();
+    }
+    $update=$pdo->prepare('UPDATE p50_meta_oauth_assets SET profile_id=? WHERE user_id=? AND platform=\'Instagram\' AND asset_id=?');
+    $update->execute([$value,$userId,$assetId]);
+    return $update->rowCount();
 }

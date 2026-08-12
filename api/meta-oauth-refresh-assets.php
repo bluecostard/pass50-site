@@ -18,9 +18,11 @@ try{
             ->execute([$warning!==null?substr((string)$warning,0,255):null,$userId]);
         $pdo->commit();
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+    $autoMap=p50mo_auto_map_unmapped_assets($userId);
     json_response([
         'ok'=>true,'assets'=>count($discovery['assets']),'facebookPages'=>$discovery['pagesWithToken'],
         'selectedPages'=>$discovery['selectedPages'],'pagesWithoutToken'=>$discovery['pagesWithoutToken'],
+        'autoMapped'=>(int)$autoMap['mapped'],'autoMapChecked'=>(int)$autoMap['checked'],
         'warning'=>$warning,'refreshedAt'=>gmdate(DATE_ATOM),
     ]);
 }catch(Throwable $e){
