@@ -385,7 +385,7 @@ render();
   };
 
   const oldAdminRows=adminProfileRows;
-  adminProfileRows=function(list){return list.map(p=>{const m=p50RankMeta(p);return `<tr data-admin-profile-name="${safeAttr(p.name.toLowerCase())}"><td><div class="admin-profile-name"><strong>${p.name}</strong>${m.top50?'<span class="top50-marker">TOP 50</span>':''}</div><div class="muted">${m.rank?'#'+m.rank+' · ':''}${p.handle}</div></td><td>${p.region}</td><td>${score(p)}</td><td>${p.eligible&&p.alive?'Oui':'Non'}</td><td><button class="btn small edit-profile" data-id="${p.id}">Modifier</button></td></tr>`}).join('')};
+  adminProfileRows=function(list){return list.map(p=>{const m=p50RankMeta(p);const removed=!p.alive||p.adminDeleted;return `<tr data-admin-profile-name="${safeAttr(p.name.toLowerCase())}" class="${removed?'is-removed':''}"><td><div class="admin-profile-name"><strong>${p.name}</strong>${m.top50?'<span class="top50-marker">TOP 50</span>':''}${removed?' <span class="muted">(retiré)</span>':''}</div><div class="muted">${m.rank?'#'+m.rank+' · ':''}${p.handle}</div></td><td>${p.region}</td><td>${score(p)}</td><td>${p.eligible&&p.alive?'Oui':'Non'}</td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small edit-profile" data-id="${p.id}">Modifier</button>${removed?`<button class="btn small restore-profile" data-id="${p.id}">Restaurer</button>`:`<button class="btn small danger delete-profile" data-id="${p.id}">Supprimer</button>`}</td></tr>`}).join('')};
 
   document.addEventListener('change',e=>{
     if(e.target.id==='linksProfileSelect'){PASS50_V9.linksProfileId=e.target.value;p50v9RenderLinks();}
