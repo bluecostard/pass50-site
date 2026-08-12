@@ -208,6 +208,24 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Zagba le Requin.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-zagba-le-requin]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-zagba-le-requin.js?v=1.0';
+  script.dataset.pass50ProfileZagbaLeRequin = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Samo Samo.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-samo-samo]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-samo-samo.js?v=1.0';
+  script.dataset.pass50ProfileSamoSamo = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Radar LIVE V4 : balayage continu de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;

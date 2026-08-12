@@ -245,6 +245,9 @@
     const platform = compact(meta.split('·')[0] || '', 32);
     const position = compact(card.querySelector('.feed-position')?.textContent || '', 60);
     const cover = String(card.querySelector('.feed-media img')?.currentSrc || card.querySelector('.feed-media img')?.src || '');
+    const originalLink = String(card.querySelector('.feed-actions a.btn.primary[href^="http"]')?.href || '');
+    const VIDEO_PLATFORMS = /tiktok\.com|youtube\.com|youtu\.be|instagram\.com\/reel|facebook\.com\/watch|facebook\.com\/reel|fb\.watch/i;
+    const isVideo = VIDEO_PLATFORMS.test(originalLink) || platform.toLowerCase().includes('tiktok') || platform.toLowerCase().includes('youtube');
     const payload = {
       kind: 'feed-post',
       type: 'feed-post',
@@ -254,6 +257,8 @@
       platform,
       position,
       cover,
+      originalLink,
+      isVideo,
       photoUrl: photoUrl(profile || profileId, 260),
       initials: initials(name),
       subtitle: [platform, position].filter(Boolean).join(' · '),
@@ -404,6 +409,9 @@
       return `📊 ${payload.title} — ${payload.periodLabel}, ${payload.regionLabel}.${leader ? `\nN°1 : ${leader.name} · ${leader.score}/100` : ''}\n${payload.url}`;
     }
     if (payload.kind === 'duel-audio') return `🎙 ${payload.author} commente ${payload.duel}.\n${payload.url}`;
+    if (payload.kind === 'feed-post' && payload.isVideo && payload.originalLink) {
+      return `▶ ${payload.name} : ${payload.title}\n${payload.originalLink}\n${payload.url}`;
+    }
     return `📰 ${payload.name} : ${payload.title}\n${payload.url}`;
   }
 

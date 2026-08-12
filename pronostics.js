@@ -558,7 +558,7 @@
       return;
     }
     if (!state.items.length) {
-      list.innerHTML = '<div class="empty"><strong>Aucun prono ouvert</strong><div>Reviens bientôt — PASS50 publie Qui fait quoi sur l’actu.</div></div>';
+      list.innerHTML = '<div class="empty"><strong>Aucun pronostic pour le moment.</strong><div>Reviens bientôt — PASS50 publie Qui fait quoi sur l’actu.</div></div>';
       return;
     }
     const sections = themeSections(state.items);
