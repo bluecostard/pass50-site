@@ -30,7 +30,147 @@
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function deRenderAdminHome(pane){
-    pane.innerHTML=`<div class="de-admin-home"><div class="section-head"><div><div class="section-title">ACCUEIL DE L’ADMINISTRATION</div><div class="muted">Pilotez les données, les fiches, les métriques et la publication de PASS50.</div></div></div><div class="de-admin-home-grid">${ADMIN_ITEMS.filter(([id])=>id!=='adminhome').map(([id,label])=>`<button class="de-admin-home-card" data-admin-tab="${id}"><strong>${deEsc(label)}</strong><span>${deEsc(ADMIN_DESCRIPTIONS[id])}</span><i aria-hidden="true">Ouvrir →</i></button>`).join('')}</div></div>`;
+    const TODO_KEY='pass50_admin_todo_v1';
+    pane.innerHTML=`<div class="de-admin-home">
+      <div class="section-head">
+        <div>
+          <div class="section-title">ACCUEIL DE L’ADMINISTRATION</div>
+          <div class="muted">Pilotez les données, les fiches, les métriques et la publication de PASS50.</div>
+        </div>
+      </div>
+
+      <div class="de-admin-todo">
+        <div class="de-admin-todo-head">
+          <div class="section-title" style="font-size:16px;margin-top:0">A faire !</div>
+          <div class="muted">Notifications automatiques (clôture, brouillons, préparation) · cochez pour marquer “terminé”.</div>
+        </div>
+        <div class="de-admin-todo-grid" role="region" aria-label="Tâches prioritaires">
+          <section class="de-admin-todo-col" data-priority="urgent">
+            <div class="de-admin-todo-col-title"><span class="de-admin-pill urgent">Urgent</span></div>
+            <div class="de-admin-todo-list" id="deTodoUrgent"></div>
+          </section>
+          <section class="de-admin-todo-col" data-priority="must">
+            <div class="de-admin-todo-col-title"><span class="de-admin-pill must">À faire absolument</span></div>
+            <div class="de-admin-todo-list" id="deTodoMust"></div>
+          </section>
+          <section class="de-admin-todo-col" data-priority="plan">
+            <div class="de-admin-todo-col-title"><span class="de-admin-pill plan">À prévoir</span></div>
+            <div class="de-admin-todo-list" id="deTodoPlan"></div>
+          </section>
+        </div>
+        <div class="muted" style="font-size:12px;margin-top:8px">Auto-refresh lors de l’ouverture de cet onglet.</div>
+      </div>
+
+      <div class="de-admin-home-grid">${ADMIN_ITEMS.filter(([id])=>id!=='adminhome').map(([id,label])=>`<button class="de-admin-home-card" data-admin-tab="${id}"><strong>${deEsc(label)}</strong><span>${deEsc(ADMIN_DESCRIPTIONS[id])}</span><i aria-hidden="true">Ouvrir →</i></button>`).join('')}</div>
+    </div>`;
+
+    // CSS léger (injecté une fois).
+    if(!document.getElementById('deAdminTodoStyles')){
+      const style=document.createElement('style');
+      style.id='deAdminTodoStyles';
+      style.textContent=`
+        .de-admin-todo{border:1px solid var(--line);border-radius:16px;padding:14px 14px 10px;margin:14px 0;background:rgba(11,15,11,.25)}
+        .de-admin-todo-head{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+        .de-admin-todo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+        .de-admin-todo-col-title{margin-bottom:8px}
+        .de-admin-pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:1000;border:1px solid rgba(255,255,255,.15)}
+        .de-admin-pill.urgent{color:#ff6b6b;border-color:rgba(255,107,107,.45);background:rgba(255,107,107,.08)}
+        .de-admin-pill.must{color:#ffb050;border-color:rgba(255,176,80,.45);background:rgba(255,176,80,.08)}
+        .de-admin-pill.plan{color:#b7ff00;border-color:rgba(183,255,0,.45);background:rgba(183,255,0,.08)}
+        .de-admin-todo-list{display:grid;gap:8px}
+        .de-admin-todo-item{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(10,13,10,.45)}
+        .de-admin-todo-item input{width:auto;margin:0;transform:translateY(2px)}
+        .de-admin-todo-title{font-weight:1000;font-size:13px;line-height:1.25}
+        .de-admin-todo-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.3}
+      `;
+      document.head.appendChild(style);
+    }
+
+    if(pane&&!pane.__deAdminTodoBound){
+      pane.__deAdminTodoBound=true;
+      pane.addEventListener('change',async(e)=>{
+        const t=e.target;
+        if(!(t instanceof HTMLInputElement) || !t.dataset.adminTodoId) return;
+        const id=String(t.dataset.adminTodoId||'');
+        const storage=localStorage.getItem(TODO_KEY);
+        const state=storage?JSON.parse(storage):{done:{}};
+        state.done=state.done||{};
+        if(t.checked) state.done[id]=new Date().toISOString();
+        else delete state.done[id];
+        localStorage.setItem(TODO_KEY,JSON.stringify(state));
+      });
+    }
+
+    async function loadAdminTodo(){
+      const urgentEl=document.getElementById('deTodoUrgent');
+      const mustEl=document.getElementById('deTodoMust');
+      const planEl=document.getElementById('deTodoPlan');
+      if(!urgentEl||!mustEl||!planEl) return;
+      const state=(()=>{try{return JSON.parse(localStorage.getItem(TODO_KEY)||'{}')||{}}catch{return {}}})();
+      state.done=state.done||{};
+
+      const setList=(el,tasks,emptyMsg)=>{
+        if(!tasks.length){
+          el.innerHTML=`<div class="muted" style="font-size:12px;padding:4px 2px">${deEsc(emptyMsg)}</div>`;
+          return;
+        }
+        el.innerHTML=tasks.map(t=>{
+          const done=Boolean(state.done?.[t.id]);
+          return `<label class="de-admin-todo-item">
+            <input type="checkbox" ${done?'checked':''} data-admin-todo-id="${deEsc(t.id)}" aria-label="Terminé : ${deEsc(t.title)}">
+            <div>
+              <div class="de-admin-todo-title">${deEsc(t.title)}</div>
+              <div class="de-admin-todo-meta">${deEsc(t.meta||'')}</div>
+            </div>
+          </label>`;
+        }).join('');
+      };
+
+      const fmtTime=(v)=>{
+        if(!v) return '—';
+        const d=new Date(v);
+        return Number.isNaN(d.getTime())?'—':d.toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      };
+
+      const now=Date.now();
+      const withinMs=6*3600000;
+
+      // Source : admin pronostics (statut / dates / cotes).
+      let items=[];
+      try{items=(await apiFetch('prono-admin-list.php?limit=120')||{}).items||[];}catch{items=[];}
+
+      const urgent=items.filter(i=>String(i.status||'')==='locked');
+      const must=items.filter(i=>{
+        if(String(i.status||'')!=='open') return false;
+        if(!i.closesAt) return false;
+        const t=new Date(i.closesAt).getTime();
+        return Number.isFinite(t)&&t>=now&&t-now<=withinMs;
+      });
+      const plan=items.filter(i=>String(i.status||'')==='draft');
+
+      // Tri : échéance la plus proche d'abord.
+      urgent.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
+      must.sort((a,b)=>new Date(a.closesAt||0)-new Date(b.closesAt||0));
+      plan.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+
+      const mapTask=(item,priority)=>{
+        const title=item.title||item.id||'Prono';
+        const meta=[];
+        if(item.voteCount!=null) meta.push(`${Number(item.voteCount)} vote(s)`);
+        if(priority==='urgent') meta.push(`clôturé · résout via “Résoudre”`);
+        if(priority==='must') meta.push(`clôture bientôt · ${fmtTime(item.closesAt)}`);
+        if(priority==='plan') meta.push(`brouillon · à publier (open)`);
+        if(item.measureAt) meta.push(`mesure ${fmtTime(item.measureAt)}`);
+        return {id:`prono-${item.id}`, title, meta:meta.join(' · ')};
+      };
+
+      setList(urgentEl,urgent.slice(0,12).map(i=>mapTask(i,'urgent')),'Rien à résoudre');
+      setList(mustEl,must.slice(0,12).map(i=>mapTask(i,'must')),'Aucune clôture imminente');
+      setList(planEl,plan.slice(0,12).map(i=>mapTask(i,'plan')),'Aucun brouillon');
+    }
+
+    // Auto-refresh immédiat.
+    loadAdminTodo();
   }
   function deRenderPronosticsAdmin(pane){
     pane.innerHTML=`<div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button><div class="section-title" style="margin-top:10px">PRONOSTICS</div><div class="muted">3 thèmes · questions + cotes que tu écris toi-même.</div></div></div>
