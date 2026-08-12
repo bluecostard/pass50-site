@@ -74,14 +74,77 @@ function p50mo_graph(string $path,string $token,array $fields=[]): array {
 }
 function p50mo_connection(string $userId): ?array {$stmt=db()->prepare('SELECT * FROM p50_meta_oauth_connections WHERE user_id=? LIMIT 1');$stmt->execute([$userId]);$row=$stmt->fetch();return is_array($row)?$row:null;}
 function p50mo_assets(string $userId): array {$stmt=db()->prepare('SELECT * FROM p50_meta_oauth_assets WHERE user_id=? AND status=\'active\' ORDER BY platform,asset_name');$stmt->execute([$userId]);return $stmt->fetchAll();}
-function p50mo_normalize_url(string $url): string {$url=trim($url);if($url==='')return '';if(!preg_match('#^https?://#i',$url))$url='https://'.$url;$parts=parse_url($url);if(!$parts||empty($parts['host']))return '';return strtolower(preg_replace('/^www\./i','',(string)$parts['host']).'/'.trim((string)($parts['path']??''),'/'));}
-function p50mo_match_profile(string $platform,string $profileUrl,string $username=''): ?string {
-    $candidates=[];if($profileUrl!=='')$candidates[]=p50mo_normalize_url($profileUrl);
+function p50mo_normalize_url(string $url): string {
+    $url=trim($url);
+    if($url==='')return '';
+    if(!preg_match('#^https?://#i',$url))$url='https://'.$url;
+    $parts=parse_url($url);
+    if(!$parts||empty($parts['host']))return '';
+    $host=strtolower(preg_replace('/^www\./i','',(string)$parts['host']));
+    $path=trim((string)($parts['path']??''),'/');
+    $query=[];
+    parse_str((string)($parts['query']??''),$query);
+    if(str_contains($host,'facebook.')||$host==='fb.com'||str_ends_with($host,'.fb.com')){
+        if(isset($query['id'])&&preg_match('/^\d{5,}$/',(string)$query['id']))return 'facebook.com/'.(string)$query['id'];
+        if(preg_match('#(?:^|/)(?:pages/[^/]+/)?(\d{5,})(?:/|$)#',$path,$m))return 'facebook.com/'.$m[1];
+        $path=preg_replace('#/(live|videos|posts|reels?|about|photos|watch)(/.*)?$#i','',$path)??$path;
+        return 'facebook.com/'.strtolower(trim($path,'/'));
+    }
+    if(str_contains($host,'instagram.')){
+        $path=preg_replace('#/(reels?|live|p|tv|stories)(/.*)?$#i','',$path)??$path;
+        return 'instagram.com/'.strtolower(trim($path,'/'));
+    }
+    return strtolower($host.'/'.trim($path,'/'));
+}
+
+function p50mo_match_profile(string $platform,string $profileUrl,string $username='',string $assetId=''): ?string {
+    $candidates=[];
+    if($profileUrl!=='')$candidates[]=p50mo_normalize_url($profileUrl);
     if($platform==='Instagram'&&$username!=='')$candidates[]=p50mo_normalize_url('https://www.instagram.com/'.ltrim($username,'@').'/');
-    $candidates=array_values(array_unique(array_filter($candidates)));if(!$candidates)return null;
-    $stmt=db()->prepare("SELECT profile_id,normalized_url FROM p50_social_links WHERE platform=? AND status='verified'");$stmt->execute([$platform]);
-    foreach($stmt->fetchAll() as $row)if(in_array(p50mo_normalize_url((string)$row['normalized_url']),$candidates,true))return (string)$row['profile_id'];
-    return null;
+    if($platform==='Facebook'&&$assetId!==''&&preg_match('/^\d{5,}$/',$assetId)){
+        $candidates[]='facebook.com/'.$assetId;
+        $candidates[]=p50mo_normalize_url('https://www.facebook.com/'.$assetId);
+    }
+    $candidates=array_values(array_unique(array_filter($candidates)));
+    $slug='';
+    if($platform==='Instagram'){
+        $slug=strtolower(ltrim($username,'@'));
+        if($slug===''&&$candidates){
+            foreach($candidates as $candidate){
+                if(!str_starts_with($candidate,'instagram.com/'))continue;
+                $slug=explode('/',substr($candidate,strlen('instagram.com/')))[0]??'';
+                if($slug!=='')break;
+            }
+        }
+    }elseif($platform==='Facebook'&&$assetId!==''&&preg_match('/^\d{5,}$/',$assetId))$slug=$assetId;
+
+    try{
+        $stmt=db()->prepare("SELECT profile_id,normalized_url FROM p50_social_links WHERE platform=? AND status IN ('verified','owner_verified','manual_verified','ok','blocked_but_exists')");
+        $stmt->execute([$platform]);
+        $rows=$stmt->fetchAll();
+    }catch(Throwable){return null;}
+
+    $exact=[];
+    foreach($rows as $row){
+        $norm=p50mo_normalize_url((string)$row['normalized_url']);
+        if($norm===''||!$candidates||!in_array($norm,$candidates,true))continue;
+        $exact[(string)$row['profile_id']]=true;
+    }
+    if(count($exact)===1)return (string)array_key_first($exact);
+
+    if($slug===''||!preg_match('/^[A-Za-z0-9._-]{2,80}$/',$slug))return null;
+    $slugMatches=[];
+    $slugLower=strtolower($slug);
+    foreach($rows as $row){
+        $norm=p50mo_normalize_url((string)$row['normalized_url']);
+        if($norm==='')continue;
+        $path=str_contains($norm,'/')?substr($norm,strpos($norm,'/')+1):$norm;
+        $pathSlug=strtolower(explode('/',$path)[0]??'');
+        if($pathSlug===$slugLower||$norm==='facebook.com/'.$slugLower||$norm==='instagram.com/'.$slugLower){
+            $slugMatches[(string)$row['profile_id']]=true;
+        }
+    }
+    return count($slugMatches)===1?(string)array_key_first($slugMatches):null;
 }
 function p50mo_cookie_domain(): ?string {
     $host=strtolower(trim((string)parse_url(p50mo_config()['redirect_uri'],PHP_URL_HOST)));

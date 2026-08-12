@@ -17,7 +17,7 @@
     missing_code:'Meta n’a pas renvoyé de code d’autorisation.',
     connection_failed:'Meta a autorisé la connexion, mais PASS50 n’a pas pu terminer l’enregistrement côté serveur.'
   };
-  let status=null,loading=false,connecting=false,refreshingAssets=false,lastError='';
+  let status=null,loading=false,connecting=false,refreshingAssets=false,autoMapping=false,lastError='';
   let mappingProfiles=null,mappingAsset=null,mappingSaving=false;
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const apiBase=()=>String(window.PASS50_API?.baseUrl||'./api').replace(/\/+$/,'')||'./api';
@@ -66,13 +66,15 @@
     if(!status?.connected){
       section.innerHTML=`<div class="user-title"><span>Meta · Facebook & Instagram</span><span class="muted">Connexion officielle</span></div><div class="p50-meta-card"><div class="p50-meta-head"><div class="p50-meta-main"><div class="p50-meta-logo">META</div><div><div class="p50-meta-title">Connecter mes comptes professionnels</div><div class="p50-meta-copy">PASS50 lira uniquement les Pages Facebook gérées et les comptes Instagram Business ou Creator liés. Aucune publication automatique.</div></div></div><div class="p50-meta-actions"><button class="btn primary" type="button" data-p50-meta-connect ${connecting?'disabled':''}>${connecting?'Redirection vers Meta…':'Connecter Meta'}</button></div></div>${configurationWarning()}${errorHtml()}</div>`;return;
     }
-    const assets=Array.isArray(status.assets)?status.assets:[],mapped=assets.filter(asset=>asset.mapped).length;
+    const assets=Array.isArray(status.assets)?status.assets:[],mapped=assets.filter(asset=>asset.mapped).length,unmapped=assets.length-mapped;
     const items=assets.map(asset=>{
       const mapButton=status.canManageMappings?`<button type="button" class="p50-meta-map" data-p50-meta-map data-platform="${esc(asset.platform)}" data-asset-id="${esc(asset.id)}">${asset.mapped?'Modifier l’association':'Associer à une fiche'}</button>`:'';
       return `<div class="p50-meta-asset"><div class="p50-meta-platform">${esc(asset.platform)}</div><div class="p50-meta-name">${esc(asset.name||asset.username||asset.id)}</div><div class="p50-meta-state ${asset.mapped?'':'warn'}">${asset.mapped?`Relié à la fiche PASS50 ${esc(asset.profileId)}`:'Compte connecté, fiche PASS50 non associée'}${asset.lastError?` · ${esc(asset.lastError)}`:''}</div>${mapButton}</div>`;
     }).join('');
+    const autoMapButton=status.canManageMappings&&unmapped>0?`<button class="btn" type="button" data-p50-meta-auto-map ${autoMapping?'disabled':''}>${autoMapping?'Association…':'Associer automatiquement'}</button>`:'';
     const primary=status.requiresReauthorization?'<button class="btn primary" type="button" data-p50-meta-connect>Reconnecter</button>':assets.length?'<button class="btn primary" type="button" data-p50-meta-collect>Actualiser les LIVE</button>':`<button class="btn primary" type="button" data-p50-meta-refresh-assets ${refreshingAssets?'disabled':''}>${refreshingAssets?'Recherche en cours…':'Rechercher mes Pages'}</button>`;
-    section.innerHTML=`<div class="user-title"><span>Meta · Facebook & Instagram</span><span class="muted">Lecture seule</span></div><div class="p50-meta-card"><div class="p50-meta-head"><div class="p50-meta-main"><div class="p50-meta-logo">META</div><div><div class="p50-meta-title">${esc(status.account?.name||'Compte Meta connecté')}</div><div class="p50-meta-copy">${assets.length} compte(s) professionnel(s) découvert(s) · ${mapped} associé(s) à une fiche PASS50${status.requiresReauthorization?' · Reconnexion nécessaire':''}</div></div></div><div class="p50-meta-actions">${primary}<button class="btn danger" type="button" data-p50-meta-disconnect>Déconnecter</button></div></div>${items?`<div class="p50-meta-assets">${items}</div>`:'<div class="p50-meta-copy" style="margin-top:12px">Connexion enregistrée. PASS50 va relire les Pages sélectionnées dans l’autorisation Meta.</div>'}${discoveryWarning()}${errorHtml()}</div>${mappingModalHtml()}`;
+    const growHint=assets.length<3?`<div class="p50-meta-message warn" role="status">Pour classer plus d’IG/FB : reconnecte Meta et sélectionne <strong>toutes</strong> les Pages FI dans l’autorisation Business, puis « Rechercher mes Pages ».</div>`:'';
+    section.innerHTML=`<div class="user-title"><span>Meta · Facebook & Instagram</span><span class="muted">Lecture seule</span></div><div class="p50-meta-card"><div class="p50-meta-head"><div class="p50-meta-main"><div class="p50-meta-logo">META</div><div><div class="p50-meta-title">${esc(status.account?.name||'Compte Meta connecté')}</div><div class="p50-meta-copy">${assets.length} compte(s) professionnel(s) découvert(s) · ${mapped} associé(s)${unmapped?` · ${unmapped} à associer`:''}${status.requiresReauthorization?' · Reconnexion nécessaire':''}</div></div></div><div class="p50-meta-actions">${primary}${autoMapButton}${assets.length?`<button class="btn" type="button" data-p50-meta-refresh-assets ${refreshingAssets?'disabled':''}>${refreshingAssets?'Recherche…':'Rechercher mes Pages'}</button>`:''}<button class="btn danger" type="button" data-p50-meta-disconnect>Déconnecter</button></div></div>${items?`<div class="p50-meta-assets">${items}</div>`:'<div class="p50-meta-copy" style="margin-top:12px">Connexion enregistrée. PASS50 va relire les Pages sélectionnées dans l’autorisation Meta.</div>'}${growHint}${discoveryWarning()}${errorHtml()}</div>${mappingModalHtml()}`;
     if(mappingAsset)setTimeout(()=>section.querySelector('[data-p50-meta-profile-input]')?.focus(),0);
   }
 
@@ -84,7 +86,11 @@
   async function disconnect(){if(!confirm('Déconnecter Facebook et Instagram de PASS50 ?'))return;try{const data=await api('meta-oauth-disconnect.php',{method:'POST',body:{}});status={connected:false,configuration:status?.configuration,canManageMappings:status?.canManageMappings};mappingAsset=null;lastError='';render();notify(data.warning||'Comptes Meta déconnectés.');}catch(error){lastError=error.message;render();notify(lastError);}}
   async function refreshAssets(thenCollect=false){
     if(refreshingAssets)return;refreshingAssets=true;lastError='';render();
-    try{const data=await api('meta-oauth-refresh-assets.php',{method:'POST',body:{}});notify(`${Number(data.assets||0)} compte(s) professionnel(s) retrouvé(s).`);await refresh(false);if(thenCollect&&Number(data.assets||0)>0)await collect(true);}catch(error){lastError=error.message||'Impossible de relire les Pages Meta.';notify(lastError);}finally{refreshingAssets=false;render();}
+    try{const data=await api('meta-oauth-refresh-assets.php',{method:'POST',body:{}});const auto=Number(data.autoMapped||0);notify(`${Number(data.assets||0)} compte(s) professionnel(s) retrouvé(s)${auto?` · ${auto} associé(s) auto`:''}.`);await refresh(false);if(thenCollect&&Number(data.assets||0)>0)await collect(true);}catch(error){lastError=error.message||'Impossible de relire les Pages Meta.';notify(lastError);}finally{refreshingAssets=false;render();}
+  }
+  async function autoMap(){
+    if(autoMapping)return;autoMapping=true;lastError='';render();
+    try{const data=await api('meta-oauth-auto-map.php',{method:'POST',body:{}});notify(`${Number(data.mapped||0)} association(s) automatique(s) · ${Number(data.checked||0)} compte(s) contrôlé(s).`);await refresh(false);if(Number(data.mapped||0)>0)await collect(true);}catch(error){lastError=error.message||'Association automatique impossible.';notify(lastError);}finally{autoMapping=false;render();}
   }
   async function collect(skipRefresh=false){
     if(!skipRefresh&&(!Array.isArray(status?.assets)||status.assets.length===0)){await refreshAssets(true);return;}
@@ -127,6 +133,7 @@
     styles();document.addEventListener('click',event=>{
       const connectButton=event.target.closest?.('[data-p50-meta-connect]');if(connectButton){event.preventDefault();event.stopPropagation();connect();return;}
       const refreshButton=event.target.closest?.('[data-p50-meta-refresh-assets]');if(refreshButton){event.preventDefault();event.stopPropagation();refreshAssets(false);return;}
+      const autoMapButton=event.target.closest?.('[data-p50-meta-auto-map]');if(autoMapButton){event.preventDefault();event.stopPropagation();autoMap();return;}
       const disconnectButton=event.target.closest?.('[data-p50-meta-disconnect]');if(disconnectButton){event.preventDefault();event.stopPropagation();disconnect();return;}
       const collectButton=event.target.closest?.('[data-p50-meta-collect]');if(collectButton){event.preventDefault();event.stopPropagation();collect();return;}
       const mapButton=event.target.closest?.('[data-p50-meta-map]');if(mapButton){event.preventDefault();event.stopPropagation();openMapping(String(mapButton.dataset.platform||''),String(mapButton.dataset.assetId||''));return;}

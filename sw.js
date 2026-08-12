@@ -39,7 +39,7 @@ const ASSETS=[
   './live-experience-v4-1.js?v=1.7','./live-dismiss-ui-v1.js?v=1.0',
   './official-links-persistence-v3.js?v=3.4','./public-copy-fixes.js?v=1.1',
   './connector-sections-v1.js?v=1.1','./youtube-analytics-ui-v1.js?v=1.0',
-  './meta-oauth-ui-v1.js?v=1.5','./tiktok-oauth-ui-v1.js?v=1.0',
+  './meta-oauth-ui-v1.js?v=1.6','./tiktok-oauth-ui-v1.js?v=1.0',
   './admin-fictive-ranking-v1.js?v=1.0','./classement-fictif.html',
   './v9-tools.css?v=22.4','./v9-tools.js?v=15.10',
   './pass50_nouveaux_candidats_90_v19.json?v=22.11','./data-engine-ui.js?v=18.17',

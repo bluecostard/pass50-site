@@ -126,10 +126,25 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('healthUpdated', COLLECT)
 
     def test_ui_is_loaded_and_has_no_publish_action(self):
-        self.assertIn('meta-oauth-ui-v1.js?v=1.5', LOADER)
+        self.assertIn('meta-oauth-ui-v1.js?v=1.6', LOADER)
         self.assertIn('meta-live-collect.php', UI)
         self.assertIn('Aucune publication automatique', UI)
         self.assertNotIn('publish', UI.lower())
+        self.assertIn('data-p50-meta-auto-map', UI)
+        self.assertIn('Associer automatiquement', UI)
+        self.assertIn('toutes</strong> les Pages FI', UI)
+
+    def test_auto_map_endpoint_and_match_improvements(self):
+        auto_map = (ROOT / 'api' / 'meta-oauth-auto-map.php').read_text(encoding='utf-8')
+        self.assertIn('p50mo_auto_map_unmapped_assets', auto_map)
+        self.assertIn('HTTP_X_PASS50_CRON_SECRET', auto_map)
+        self.assertIn('function p50mo_auto_map_unmapped_assets', ASSET_DISCOVERY)
+        self.assertIn('function p50mo_apply_profile_mapping', ASSET_DISCOVERY)
+        self.assertIn('autoMapped', REFRESH_ASSETS)
+        self.assertIn("facebook.com/'", CORE)
+        self.assertIn("\$query['id']", CORE)
+        self.assertIn('meta-oauth-auto-map.php', (ROOT / '.github' / 'workflows' / 'meta-live-sweep.yml').read_text(encoding='utf-8'))
+        self.assertIn('owner_verified', CORE)
 
     def test_connect_button_cannot_fail_silently(self):
         self.assertIn('Redirection vers Meta…', UI)

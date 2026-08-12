@@ -7,8 +7,10 @@ $secret='meta-token-example';$encrypted=p50mo_encrypt($secret);must($encrypted!=
 $nonce=p50mo_b64e(random_bytes(24));$sid=hash('sha256','session-token');$state=p50mo_create_state($sid,$nonce);must(p50mo_verify_state($state,$nonce)===$sid,'L’état OAuth doit conserver la session.');
 $rejected=false;try{p50mo_verify_state($state,$nonce.'x');}catch(Throwable){$rejected=true;}must($rejected,'Un nonce différent doit être rejeté.');
 must(in_array('pages_show_list',P50MO_REQUIRED_SCOPES,true),'pages_show_list requis.');must(in_array('pages_read_engagement',P50MO_REQUIRED_SCOPES,true),'pages_read_engagement requis.');must(in_array('instagram_basic',P50MO_REQUIRED_SCOPES,true),'instagram_basic requis.');must(!in_array('pages_manage_metadata',P50MO_REQUIRED_SCOPES,true),'pages_manage_metadata ne doit pas être demandée.');must(p50mo_normalize_url('https://www.instagram.com/Test/')==='instagram.com/test','Normalisation Instagram stable.');
+must(p50mo_normalize_url('https://m.facebook.com/profile.php?id=123456789012345')==='facebook.com/123456789012345','Normalisation Facebook id.');
+must(p50mo_normalize_url('https://www.facebook.com/SomePage/live')==='facebook.com/somepage','Normalisation Facebook live.');
 $payload=p50mo_b64e((string)json_encode(['algorithm'=>'HMAC-SHA256','user_id'=>'meta-user-123'],JSON_UNESCAPED_SLASHES));
 $signature=p50mo_b64e(hash_hmac('sha256',$payload,$config['meta_oauth']['app_secret'],true));
 $parsed=p50mo_parse_signed_request($signature.'.'.$payload);must(($parsed['user_id']??'')==='meta-user-123','La demande Meta signée doit être validée.');
 $bad=false;try{p50mo_parse_signed_request(p50mo_b64e(str_repeat('x',32)).'.'.$payload);}catch(Throwable){$bad=true;}must($bad,'Une signature de suppression falsifiée doit être rejetée.');
-echo json_encode(['ok'=>true,'cases'=>11],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>13],JSON_UNESCAPED_SLASHES).PHP_EOL;

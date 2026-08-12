@@ -154,7 +154,7 @@
   loadScript('script[data-pass50-youtube-oauth-ui]','./youtube-oauth-ui-v1.js?v=1.0','pass50YoutubeOauthUi','1.0');
   loadScript('script[data-pass50-youtube-click-hotfix-v3]','./youtube-oauth-click-hotfix-v2.js?v=3.0','pass50YoutubeClickHotfixV3','3.0');
   loadScript('script[data-pass50-youtube-analytics-ui]','./youtube-analytics-ui-v1.js?v=1.0','pass50YoutubeAnalyticsUi','1.0');
-  loadScript('script[data-pass50-meta-oauth-ui]','./meta-oauth-ui-v1.js?v=1.5','pass50MetaOauthUi','1.5');
+  loadScript('script[data-pass50-meta-oauth-ui]','./meta-oauth-ui-v1.js?v=1.6','pass50MetaOauthUi','1.6');
   loadScript('script[data-pass50-tiktok-oauth-ui]','./tiktok-oauth-ui-v1.js?v=1.0','pass50TiktokOauthUi','1.0');
   loadScript('script[data-pass50-live-trust-gate]','./live-trust-gate-v1.js?v=1.2','pass50LiveTrustGate','1.2');
   loadScript('script[data-pass50-live-experience-v41]','./live-experience-v4-1.js?v=1.7','pass50LiveExperienceV41','1.7');

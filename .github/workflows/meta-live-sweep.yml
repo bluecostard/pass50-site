@@ -19,6 +19,20 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$CRON_SECRET"
+          map_response="$(curl --fail --silent --show-error --location --max-time 45 \
+            -X POST \
+            -H "Accept: application/json" \
+            -H "X-PASS50-CRON-SECRET: ${CRON_SECRET}" \
+            "https://pass50.store/api/meta-oauth-auto-map.php?t=$(date +%s)")"
+          printf '%s' "$map_response" > /tmp/meta-auto-map.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/meta-auto-map.json', encoding='utf-8') as stream:
+              data=json.load(stream)
+          if not data.get('ok'):
+              raise SystemExit('Auto-map Meta refusé')
+          print(f"Meta auto-map : {int(data.get('checked') or 0)} contrôlé(s) · {int(data.get('mapped') or 0)} associé(s)")
+          PY
           response="$(curl --fail --silent --show-error --location --max-time 45 \
             -X POST \
             -H "Accept: application/json" \
