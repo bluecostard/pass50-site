@@ -1,4 +1,5 @@
 name: Metrics Priority P0
+# Relance opérateur couverture fraîche — 2026-08-12T11:55+02:00.
 
 on:
   schedule:
