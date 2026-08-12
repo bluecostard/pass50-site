@@ -35,7 +35,7 @@ const ASSETS=[
   './profile-dez-cocrane225.js?v=1.0','./profile-atoule.js?v=1.0',
   './profile-zagba-le-requin.js?v=1.0','./profile-samo-samo.js?v=1.0',
   './profile-lionel-pcs.js?v=1.0','./profile-yasmine-fofana.js?v=1.0',
-  './live-radar-v3.js?v=1.8','./live-trust-gate-v1.js?v=1.3',
+  './live-radar-v3.js?v=1.9','./live-trust-gate-v1.js?v=1.3',
   './live-experience-v4-1.js?v=1.7','./live-dismiss-ui-v1.js?v=1.0',
   './official-links-persistence-v3.js?v=3.4','./public-copy-fixes.js?v=1.1',
   './connector-sections-v1.js?v=1.1','./youtube-analytics-ui-v1.js?v=1.0',

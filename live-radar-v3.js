@@ -118,6 +118,7 @@ function renderStatus(){
   if(!box)return;
   const radar=lastData?.radar||window.PASS50_LIVE_RADAR||{};
   const total=Number(radar.officialSourcesKnown??radar.cycleTotal??0),scanned=Number(radar.cycleScanned||0),coverage=Number(radar.coveragePercent||0);
+  const classified=Number(radar.classifiedPercent||0),passCoverage=Number(radar.passCoveragePercent||0);
   const completed=radar.lastFullSweep?.completedAt||'';
   const diagnostics=Array.isArray(radar.diagnostics)?radar.diagnostics:[];
   const detected=diagnostics.filter(item=>item.state==='live').map(item=>esc(item.name)).filter(Boolean);
@@ -126,10 +127,13 @@ function renderStatus(){
     const probes=Object.entries(item.probes||{}).map(([name,probe])=>`${name}:${probe.status||probe.error||'—'}`).join(', ');
     return `${esc(item.name||'—')} · ${esc(item.platform||'—')} · ${esc(item.publicState||item.state||'unknown')} · confiance ${Number(item.confidence||0)} · ${esc(probes||'—')}`;
   }).join('<br>');
+  const coverageLine=Number.isFinite(coverage)
+    ? `Couverture 2h : ${coverage}% sondés · ${classified}% classifiés${passCoverage?` · passe ${passCoverage}%`:''}`
+    : 'Surveillance rapide active';
   box.innerHTML=`<strong style="color:#b7ff00">RADAR LIVE V4</strong> · ${liveCount()} direct${liveCount()>1?'s':''} actif${liveCount()>1?'s':''}<br>`+
     `${total} lien${total>1?'s':''} officiel${total>1?'s':''} surveillé${total>1?'s':''}<br>`+
     `<span style="color:#aeb8aa">${platformText(radar.platforms)}</span><br>`+
-    `${scanned>0?`Dernier balayage : ${scanned}/${Number(radar.cycleTotal||total)} · ${coverage}%`:'Surveillance rapide active toutes les 45 secondes'}<br>`+
+    `${scanned>0?`Dernier balayage : ${scanned}/${Number(radar.cycleTotal||total)} · `:''}${coverageLine}<br>`+
     `${healthText(radar.health)}`+
     `${detected.length?`<br><strong style="color:#b7ff00">Confirmé : ${detected.join(', ')}</strong>`:''}`+
     `${candidates.length?`<br><span style="color:#f2d36b">À confirmer : ${candidates.join(', ')}</span>`:''}`+

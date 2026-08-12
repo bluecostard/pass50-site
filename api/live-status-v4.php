@@ -18,6 +18,8 @@ $platformPriority=['TikTok'=>0,'Facebook'=>1,'YouTube'=>2,'Instagram'=>3];
 usort($sources,static function(array $a,array $b) use($platformPriority): int {
     $cmp=((int)($a['priority']??3))<=>((int)($b['priority']??3));
     if($cmp!==0)return $cmp;
+    $rankCmp=p50_live_v4_discovery_rank($a)<=>p50_live_v4_discovery_rank($b);
+    if($rankCmp!==0)return $rankCmp;
     $ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');
     if($ad!==$bd){if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);}
     $cmp=($platformPriority[(string)($a['platform']??'')]??9)<=>($platformPriority[(string)($b['platform']??'')]??9);
@@ -67,6 +69,8 @@ if($mode==='full'){
         if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);
     });
     usort($discovery,static function(array $a,array $b): int {
+        $rankCmp=p50_live_v4_discovery_rank($a)<=>p50_live_v4_discovery_rank($b);
+        if($rankCmp!==0)return $rankCmp;
         $ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');
         if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
         if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);
@@ -75,7 +79,18 @@ if($mode==='full'){
     $reconfirmCap=max(0,$batch-$discoveryFloor);
     $reconfirm=array_slice($reconfirm,0,$reconfirmCap);
     $discoveryQuota=min($discoveryFloor,max(0,$batch-count($reconfirm)));
-    $selected=array_merge($reconfirm,array_slice($discovery,0,$discoveryQuota));
+    // Réserver une part Meta unknown/never_checked pour remonter Instagram/Facebook.
+    $metaNeed=array_values(array_filter($discovery,static function(array $source): bool {
+        if(!in_array((string)($source['platform']??''),['Instagram','Facebook'],true))return false;
+        $state=strtolower(trim((string)($source['last_state']??'never_checked')));
+        return $state===''||$state==='never_checked'||$state==='unknown';
+    }));
+    $metaFloor=min(4,max(2,(int)floor($discoveryQuota/2)));
+    $metaPick=array_slice($metaNeed,0,min($metaFloor,$discoveryQuota));
+    $metaUsed=[];foreach($metaPick as $source)$metaUsed[(string)$source['source_key']]=true;
+    $discoveryRest=[];foreach($discovery as $source){if(!isset($metaUsed[(string)$source['source_key']]))$discoveryRest[]=$source;}
+    $discoveryPick=array_merge($metaPick,array_slice($discoveryRest,0,max(0,$discoveryQuota-count($metaPick))));
+    $selected=array_merge($reconfirm,$discoveryPick);
     foreach($selected as $source)$used[(string)$source['source_key']]=true;
     if(count($selected)<$batch)foreach($sources as $source){$key=(string)$source['source_key'];if(isset($used[$key]))continue;$selected[]=$source;$used[$key]=true;if(count($selected)>=$batch)break;}
     $selected=array_slice($selected,0,$batch);
@@ -146,13 +161,29 @@ $automatic=array_values(array_filter(p50_live_v4_active_rows(),static function(a
 $manual=p50_live_v4_manual_streams($state);
 $streams=p50_live_v4_filter_public_streams(p50_live_v4_dedup($automatic,$manual));
 $healthSummary=p50_live_v4_health_summary($sources,$automatic);
-$coverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;$lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
+if($scanPerformed){
+    $healthFresh=p50_live_v4_health_map();
+    foreach($sources as &$source){
+        $key=(string)$source['platform'].'|'.(string)$source['profile_id'];
+        if(!isset($healthFresh[$key]))continue;
+        $source['last_checked_at']=(string)($healthFresh[$key]['last_checked_at']??'');
+        $source['last_state']=(string)($healthFresh[$key]['last_state']??'never_checked');
+    }
+    unset($source);
+}
+$passCoverage=$cycleTotal>0?(int)round(($mode==='full'?$cycleScanned:count($selected))*100/$cycleTotal):100;
+$coverageStats=p50_live_v4_coverage_stats($sources);
+$coverage=(int)$coverageStats['coveragePercent'];
+$lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
 
 json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
-    'version'=>'4.5','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
+    'version'=>'4.6','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
     'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
-    'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,'coveragePercent'=>$coverage,
+    'livesFoundInCycle'=>$cycleFound,'candidatesFoundInCycle'=>$cycleCandidates,
+    'coveragePercent'=>$coverage,'passCoveragePercent'=>$passCoverage,'classifiedPercent'=>(int)$coverageStats['classifiedPercent'],
+    'coverageWindowSeconds'=>(int)$coverageStats['windowSeconds'],'coverageCheckedRecent'=>(int)$coverageStats['checkedRecent'],
+    'coverageUnknownRecent'=>(int)$coverageStats['unknownRecent'],'coverageRevision'=>P50_LIVE_V4_COVERAGE_REVISION,
     'officialSourcesKnown'=>count($sources),'activeAutomaticConfirmed'=>count($automatic),'platforms'=>$platformStats,'health'=>$healthSummary,'lastFullSweep'=>$lastFull,
     'refreshSeconds'=>$refresh,'batchSize'=>$batch,'discoveryQuota'=>$discoveryQuota,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],
     'graceMinutes'=>p50_live_v4_reconfirm_grace_map(),'trustSeconds'=>p50_live_v4_trust_seconds_map(),'trustGate'=>P50_LIVE_V4_TRUST_REVISION,'diagnostics'=>$diagnostics,

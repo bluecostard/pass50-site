@@ -11,7 +11,8 @@ json_response([
     'ok'=>true,
     'contract'=>P50_LIVE_V4_LOGIC_REVISION,
     'trustGate'=>P50_LIVE_V4_TRUST_REVISION,
-    'radarVersion'=>'4.5',
+    'radarVersion'=>'4.6',
+    'coverageRevision'=>P50_LIVE_V4_COVERAGE_REVISION,
     'publicMaxAgeSeconds'=>p50_live_v4_trust_seconds_map(),
     'publicStateWrites'=>0,
 ]);
