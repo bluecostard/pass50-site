@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 const P50_LIVE_V4_PLATFORMS = ['TikTok','YouTube','Instagram','Facebook'];
 const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];
+/** Couverture rolling (scan récent) — distincte du trust gate anti-ghost. */
+const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-1';
+const P50_LIVE_V4_COVERAGE_WINDOW_SECONDS = 7200;
 /** @deprecated Utiliser p50_live_v4_reconfirm_grace_map() — conservé pour compat tests/clients. */
 const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>12,'YouTube'=>18,'Instagram'=>15,'Facebook'=>15];
 const P50_LIVE_V4_CANDIDATE_TTL_MINUTES = 30;
@@ -184,17 +187,59 @@ function p50_live_v4_sources(array $state): array {
         $id=(string)$source['profile_id'];$platform=(string)$source['platform'];$key=$platform.'|'.$id;$status=(string)($source['verification_status']??'');
         $source['source_key']=$key;
         $source['priority']=isset($manual[$id])?0:(isset($automatic[$key])?1:(in_array($status,['owner_verified','manual_verified','verified'],true)?2:3));
-        $source['last_checked_at']=(string)($health[$key]['last_checked_at']??'');$source['platform_order']=$platformOrder[$platform]??9;
+        $source['last_checked_at']=(string)($health[$key]['last_checked_at']??'');
+        $source['last_state']=(string)($health[$key]['last_state']??'never_checked');
+        $source['platform_order']=$platformOrder[$platform]??9;
     }
     unset($source);
     usort($out,static function(array $a,array $b): int {
         $cmp=((int)$a['priority'])<=>((int)$b['priority']);if($cmp!==0)return $cmp;
+        $rankCmp=p50_live_v4_discovery_rank($a)<=>p50_live_v4_discovery_rank($b);
+        if($rankCmp!==0)return $rankCmp;
         $ad=(string)$a['last_checked_at'];$bd=(string)$b['last_checked_at'];
         if($ad!==$bd){if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);}
         $cmp=((int)$a['platform_order'])<=>((int)$b['platform_order']);
         return $cmp!==0?$cmp:strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
     });
     return $out;
+}
+
+/** Ordre de découverte : never_checked → unknown Meta → unknown → plus ancien. */
+function p50_live_v4_discovery_rank(array $source): array {
+    $state=strtolower(trim((string)($source['last_state']??'never_checked')));
+    $checked=(string)($source['last_checked_at']??'');
+    $platform=(string)($source['platform']??'');
+    $meta=in_array($platform,['Instagram','Facebook'],true)?0:1;
+    if($checked===''||$state===''||$state==='never_checked')return [0,$meta,''];
+    if($state==='unknown')return [1,$meta,$checked];
+    return [2,$meta,$checked];
+}
+
+/** Couverture rolling : sources sondées dans la fenêtre / total officiel. */
+function p50_live_v4_coverage_stats(array $sources,int $windowSeconds=P50_LIVE_V4_COVERAGE_WINDOW_SECONDS): array {
+    $now=time();$checkedRecent=0;$classifiedRecent=0;$unknownRecent=0;$neverChecked=0;
+    foreach($sources as $source){
+        $state=strtolower(trim((string)($source['last_state']??'never_checked')));
+        $checkedAt=(string)($source['last_checked_at']??'');
+        $ts=$checkedAt!==''?(strtotime($checkedAt)?:0):0;
+        if($ts<=0||($now-$ts)>$windowSeconds){
+            if($checkedAt===''||$state==='never_checked')$neverChecked++;
+            continue;
+        }
+        $checkedRecent++;
+        if($state==='unknown')$unknownRecent++;
+        elseif(in_array($state,['live','offline','replay','probable'],true))$classifiedRecent++;
+    }
+    $total=count($sources);
+    return [
+        'windowSeconds'=>$windowSeconds,
+        'checkedRecent'=>$checkedRecent,
+        'classifiedRecent'=>$classifiedRecent,
+        'unknownRecent'=>$unknownRecent,
+        'neverChecked'=>$neverChecked,
+        'coveragePercent'=>$total>0?(int)round($checkedRecent*100/$total):100,
+        'classifiedPercent'=>$total>0?(int)round($classifiedRecent*100/$total):100,
+    ];
 }
 
 function p50_live_v4_probe_requests(array $source): array {

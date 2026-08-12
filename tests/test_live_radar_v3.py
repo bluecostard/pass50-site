@@ -103,9 +103,26 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("'discoveryQuota'=>$discoveryQuota", ENDPOINT)
         self.assertIn("['TikTok'=>0,'Facebook'=>1,'YouTube'=>2,'Instagram'=>3]", ENDPOINT)
         self.assertIn("$_GET['batch']??14", ENDPOINT)
+        self.assertIn('p50_live_v4_discovery_rank', ENDPOINT)
+        self.assertIn('$metaFloor=min(4,max(2,(int)floor($discoveryQuota/2)))', ENDPOINT)
+        self.assertIn('passCoveragePercent', ENDPOINT)
+        self.assertIn('coverageWindowSeconds', ENDPOINT)
+        self.assertIn("'version'=>'4.6'", ENDPOINT)
+
+    def test_coverage_rolling_and_unknown_first(self):
+        source = (ROOT / 'api' / 'live-radar-v4-source.php').read_text(encoding='utf-8')
+        self.assertIn("P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-1'", source)
+        self.assertIn('function p50_live_v4_coverage_stats', source)
+        self.assertIn("$source['last_state']=(string)($health[$key]['last_state']??'never_checked')", source)
+        self.assertIn('function p50_live_v4_discovery_rank', source)
+        self.assertIn("return [0,$meta,'']", source)
+        self.assertIn("return [1,$meta,$checked]", source)
+        contract = (ROOT / 'api' / 'live-radar-contract.php').read_text(encoding='utf-8')
+        self.assertIn("'radarVersion'=>'4.6'", contract)
+        self.assertIn('coverageRevision', contract)
 
     def test_client_is_compatibly_loaded_but_uses_v4(self):
-        self.assertIn("live-radar-v3.js?v=1.8", CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.9", CONFIG)
         self.assertIn("const ENDPOINT='./api/live-status-v4.php'", CLIENT)
         self.assertIn('RADAR LIVE V4', CLIENT)
         self.assertIn('TikTok:480', CLIENT)
@@ -123,6 +140,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         quick = (ROOT / '.github' / 'workflows' / 'live-radar-quick.yml').read_text(encoding='utf-8')
         self.assertIn('*/2 * * * *', quick)
         self.assertIn('mode=quick', quick)
+        self.assertIn('batch=16', quick)
 
 
 if __name__ == '__main__':

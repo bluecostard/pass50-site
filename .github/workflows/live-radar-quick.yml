@@ -24,9 +24,9 @@ jobs:
           set -euo pipefail
           total_found=0
           total_active=0
-          for pass in 1 2 3 4; do
+          for pass in 1 2 3 4 5; do
             response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
-              "${ENDPOINT}?mode=quick&force=1&batch=14&t=$(date +%s)${pass}")"
+              "${ENDPOINT}?mode=quick&force=1&batch=16&t=$(date +%s)${pass}")"
             readarray -t values < <(printf '%s' "$response" | python3 -c '
           import json,sys
           data=json.load(sys.stdin)
