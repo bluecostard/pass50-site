@@ -174,8 +174,16 @@ render();
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=18.16';
+    js.src='./data-engine-ui.js?v=18.17';
     js.dataset.pass50DataEngine='1';
+    js.onload=function(){
+      if(document.querySelector('script[data-pass50-admin-notifications]'))return;
+      const notify=document.createElement('script');
+      notify.src='./admin-notifications-v1.js?v=1.0';
+      notify.dataset.pass50AdminNotifications='1.0';
+      notify.onload=function(){if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();};
+      document.body.appendChild(notify);
+    };
     document.body.appendChild(js);
   }
 })();
