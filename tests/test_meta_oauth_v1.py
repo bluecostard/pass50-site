@@ -142,7 +142,7 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('function p50mo_apply_profile_mapping', ASSET_DISCOVERY)
         self.assertIn('autoMapped', REFRESH_ASSETS)
         self.assertIn("facebook.com/'", CORE)
-        self.assertIn("\$query['id']", CORE)
+        self.assertIn("$query['id']", CORE)
         self.assertIn('meta-oauth-auto-map.php', (ROOT / '.github' / 'workflows' / 'meta-live-sweep.yml').read_text(encoding='utf-8'))
         self.assertIn('owner_verified', CORE)
 
