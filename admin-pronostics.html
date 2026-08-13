@@ -107,7 +107,9 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <input id="coverImageUrl" placeholder="https://… photo FI, miniature actu ou couverture événement">
     <img id="coverPreview" class="batch-cover" alt="" hidden>
     <label>Profile ID FI (optionnel — remplit l’image si possible)</label>
-    <input id="profileId" placeholder="himra">
+    <input id="profileId" list="fiProfileList" placeholder="Rechercher ou choisir un influenceur…" autocomplete="off">
+    <datalist id="fiProfileList"></datalist>
+    <p id="profileIdHint" class="muted" style="margin:6px 0 0;font-size:12px">Chargement de la liste des influenceurs…</p>
     <label>Clé sujet actu (si pas de FI — ex. himra-perte-tiktok)</label>
     <input id="subjectKey" placeholder="Auto = thème + titre">
     <p class="muted" style="margin:6px 0 0;font-size:12px">Plusieurs questions OK sur le même sujet · plafond 6 actifs (open/draft/locked).</p>
@@ -194,6 +196,37 @@ const THEMES=[
   {key:'people_actualite',label:'People Actualité',hint:'Polémiques, annonces, faits du jour'}
 ];
 let ALL_ITEMS=[];
+let FI_PROFILES=[];
+
+function profileOptionLabel(p){
+  const name=String(p?.name||p?.id||'').trim();
+  const id=String(p?.id||'').trim();
+  const handle=String(p?.handle||'').trim();
+  if(!id) return name;
+  if(handle) return `${name} · @${handle} (${id})`;
+  return `${name} (${id})`;
+}
+function renderProfileDatalist(){
+  const dl=document.getElementById('fiProfileList');
+  if(!dl) return;
+  dl.innerHTML=FI_PROFILES.map(p=>`<option value="${esc(p.id)}">${esc(profileOptionLabel(p))}</option>`).join('');
+  const hint=document.getElementById('profileIdHint');
+  if(hint){
+    hint.textContent=FI_PROFILES.length
+      ? `${FI_PROFILES.length} influenceur(s) — tape pour filtrer ou choisis dans la liste`
+      : 'Liste indisponible — saisis l’identifiant à la main (ex. himra)';
+  }
+}
+async function loadFiProfiles(){
+  try{
+    const data=await api('prono-admin-profiles.php');
+    FI_PROFILES=Array.isArray(data.profiles)?data.profiles:[];
+    renderProfileDatalist();
+  }catch(e){
+    const hint=document.getElementById('profileIdHint');
+    if(hint) hint.textContent='Liste FI indisponible — saisis l’identifiant à la main';
+  }
+}
 
 async function api(path, body){
   const token=localStorage.getItem('pass50_api_token')||'';
@@ -417,7 +450,7 @@ n|Non|2.20</textarea>
             </div>
             <div>
               <label>Profile ID FI</label>
-              <input data-tf="profile" data-ti="${ti}" placeholder="himra">
+              <input data-tf="profile" data-ti="${ti}" list="fiProfileList" placeholder="Rechercher un influenceur…" autocomplete="off">
             </div>
           </div>
           <div class="row">
@@ -736,6 +769,7 @@ document.getElementById('resolveBtn').onclick=async()=>{
 })();
 renderThemeBlocks();
 loadList();
+loadFiProfiles();
 loadDaily();
 </script>
 </body>
