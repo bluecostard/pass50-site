@@ -246,7 +246,8 @@
       <div class="card-media"><img src="${cover}" alt="" loading="lazy"></div>
       <p class="card-kicker">${esc(closesLabel(item.closesAt))}${item.totalVotes ? ` · ${esc(item.totalVotes)} joueurs` : ''}${voted ? ' · Pari validé' : ''}</p>
       <h2>${esc(item.title)}</h2>
-      ${item.context ? `<div class="ctx">${esc(item.context)}</div>` : ''}
+      ${item.context ? `<div class="pub-context"><span class="pub-context-label">Contexte</span><p>${esc(item.context)}</p></div>` : ''}
+      ${item.measureAt ? `<div class="pub-measure">${esc(measureLabel(item.measureAt))}</div>` : ''}
       <div class="opts">${opts}</div>
       <div class="meta">${esc(measureLabel(item.measureAt) || 'Résolution à la date de mesure')} · ${esc(locked)} · Sans argent réel</div>
       <div class="actions">

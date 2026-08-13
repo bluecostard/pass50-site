@@ -247,6 +247,7 @@ function qCard(item, compact){
   return `<div class="q" data-id="${esc(item.id)}" style="${canPublish?'border-color:rgba(183,255,0,.45)':''}">
     ${cover}
     <strong>${esc(item.title||'—')}</strong>
+    ${item.context?`<div class="meta" style="color:#d8e0d4;font-weight:700">Contexte · ${esc(item.context)}</div>`:''}
     <span class="badge">${esc(statusLabelFr(item.status))}</span>
     ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
     <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>

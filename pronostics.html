@@ -119,6 +119,16 @@
     .pub-card img.cover{width:100%;max-height:180px;object-fit:cover;object-position:center 18%;border-radius:14px;margin-bottom:10px}
     .pub-card h3{margin:0;font-size:16px;line-height:1.3}
     .pub-meta{margin-top:6px;font-size:12px;color:var(--muted)}
+    .pub-context{
+      margin-top:10px;padding:10px 12px;border-radius:12px;
+      border:1px solid rgba(183,255,0,.32);background:rgba(183,255,0,.07);
+    }
+    .pub-context-label{
+      display:block;font-size:10px;font-weight:800;letter-spacing:.12em;
+      text-transform:uppercase;color:var(--lime);margin-bottom:4px;
+    }
+    .pub-context p{margin:0;font-size:13px;line-height:1.45;color:rgba(244,247,240,.94);font-weight:650}
+    .pub-measure{margin-top:8px;font-size:12px;font-weight:700;color:rgba(244,247,240,.72)}
     .pub-opts{display:grid;gap:8px;margin-top:12px}
     .pub-opt{
       display:flex;justify-content:space-between;align-items:center;gap:10px;
@@ -155,6 +165,8 @@
     .slip-odd{font-family:"Archivo Black",Impact,sans-serif;color:var(--lime);font-size:22px;line-height:1}
     .slip-legs{margin-top:10px;display:grid;gap:6px;max-height:120px;overflow:auto}
     .slip-leg{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;font-size:12px;font-weight:700;padding:6px 8px;border-radius:10px;background:rgba(183,255,0,.06);border:1px solid rgba(183,255,0,.14)}
+    .slip-leg-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+    .slip-leg-ctx{font-size:11px;font-weight:600;color:var(--muted);line-height:1.3}
     .slip-leg .odd{color:var(--lime);font-family:"Archivo Black",Impact,sans-serif}
     .slip-leg-remove{
       width:28px;height:28px;border-radius:999px;border:1px solid rgba(255,255,255,.18);
@@ -459,6 +471,17 @@
     const m=Math.floor((ms%3600000)/60000);
     return `Votes clos dans ${h} h ${m} min`;
   }
+  function measureLabel(iso){
+    if(!iso) return '';
+    const d=new Date(iso);
+    if(Number.isNaN(d.getTime())) return '';
+    return `Résolution le ${d.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}`;
+  }
+  function renderPronoContext(context){
+    const text=String(context||'').trim();
+    if(!text) return '';
+    return `<div class="pub-context"><span class="pub-context-label">Contexte</span><p>${escHtml(text)}</p></div>`;
+  }
   function maxStake(){
     return Math.max(STAKE_MIN, Math.floor(Math.max(0, Number(state.points) || 0) - Number(state.floor || BALANCE_FLOOR)));
   }
@@ -546,11 +569,18 @@
     document.getElementById('slipValidate').textContent = isGrille ? 'Valider ma grille →' : 'Valider ce prono';
     if (legsBox) {
       legsBox.hidden = false;
-      legsBox.innerHTML = legs.map((leg) => `<div class="slip-leg">
-        <span>${escHtml(leg.label || leg.optionKey)} · ${escHtml((leg.title || '').slice(0, 36))}</span>
+      legsBox.innerHTML = legs.map((leg) => {
+        const ctx = String(leg.context || '').trim();
+        const ctxHtml = ctx ? `<span class="slip-leg-ctx">${escHtml(ctx.length > 96 ? ctx.slice(0, 96) + '…' : ctx)}</span>` : '';
+        return `<div class="slip-leg">
+        <div class="slip-leg-main">
+          <span>${escHtml(leg.label || leg.optionKey)} · ${escHtml((leg.title || '').slice(0, 36))}</span>
+          ${ctxHtml}
+        </div>
         <span class="odd">x ${fmtOdd(leg.odd)}</span>
         <button type="button" class="slip-leg-remove" data-remove-qid="${escHtml(leg.questionId)}" aria-label="Retirer ce prono de la grille">×</button>
-      </div>`).join('');
+      </div>`;
+      }).join('');
     }
   }
 
@@ -659,7 +689,8 @@
             ${cover}
             <div class="pub-meta">${escHtml(closesLabel(item.closesAt))}</div>
             <h3>${escHtml(item.title||'')}</h3>
-            ${item.context?`<div class="pub-meta">${escHtml(item.context)}</div>`:''}
+            ${renderPronoContext(item.context)}
+            ${item.measureAt?`<div class="pub-measure">${escHtml(measureLabel(item.measureAt))}</div>`:''}
             <p class="pub-hint">${hint}</p>
             <div class="pub-opts">${opts}</div>
             ${publishBtn}
@@ -709,7 +740,7 @@
     if(state.slip[qid]?.optionKey===opt){
       delete state.slip[qid];
     } else {
-      state.slip[qid]={ optionKey:opt, odd, label, title:item.title||'' };
+      state.slip[qid]={ optionKey:opt, odd, label, title:item.title||'', context:item.context||'' };
     }
     renderPublications();
   });

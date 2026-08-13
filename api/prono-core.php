@@ -156,6 +156,7 @@ function p50_prono_ensure_schema(): void {
         INDEX idx_p50_prono_status_likes_user(user_id,created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+    p50_prono_ensure_column($pdo, 'p50_prono_questions', 'context_text', 'VARCHAR(500) NOT NULL DEFAULT \'\' AFTER title');
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'measure_at', 'DATETIME NULL AFTER closes_at');
     p50_prono_ensure_column($pdo, 'p50_prono_votes', 'odd_locked', 'DECIMAL(8,2) NOT NULL DEFAULT 1.00 AFTER option_key');
     p50_prono_ensure_column($pdo, 'p50_prono_votes', 'stake_locked', 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER odd_locked');
@@ -867,6 +868,7 @@ function p50_prono_status_legs_from_json(mixed $raw): array {
         $legs[] = [
             'questionId' => $questionId,
             'questionTitle' => (string)($leg['questionTitle'] ?? $leg['title'] ?? ''),
+            'context' => trim((string)($leg['context'] ?? $leg['questionContext'] ?? '')),
             'optionKey' => $optionKey,
             'optionLabel' => (string)($leg['optionLabel'] ?? $leg['label'] ?? $optionKey),
             'odd' => $odd,
@@ -919,6 +921,7 @@ function p50_prono_status_public(array $row, bool $likedByMe = false): array {
         'slipId' => trim((string)($row['slip_id'] ?? $row['vote_slip_id'] ?? '')) ?: null,
         'questionId' => (string)$row['question_id'],
         'questionTitle' => $questionTitle,
+        'questionContext' => trim((string)($row['question_context'] ?? $row['context_text'] ?? '')),
         'profileId' => $cover['resolvedProfileId'] !== '' ? $cover['resolvedProfileId'] : $profileId,
         'coverPhoto' => $cover['coverPhoto'],
         'optionKey' => $isGrille ? 'grille' : $optionKey,
