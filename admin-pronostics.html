@@ -42,6 +42,23 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
   <h1>Admin · Pronostics</h1>
   <p id="jsBoot" class="toast" style="margin-top:-6px;font-size:11px">JS…</p>
   <p class="muted">Crée <strong>toi-même</strong> les questions avec cotes dans les 3 thèmes. Image obligatoire (URL ou photo FI via Profile ID). Vote 6/12/24 h.</p>
+  <p class="muted" style="margin-top:8px"><a href="./admin-membres.html" style="color:#b7ff00;font-weight:900">Voir les membres inscrits et attribuer un rôle admin →</a></p>
+  <div class="card" id="membersCard">
+    <h2 style="margin-top:0">Membres inscrits</h2>
+    <p class="muted" style="margin:0 0 10px">Les plus récents en haut. Passe un compte en <strong>Administrateur</strong> pour lui ouvrir l’administration.</p>
+    <div class="row" style="margin-top:0">
+      <div>
+        <label>Recherche</label>
+        <input id="membersSearch" type="search" placeholder="Nom ou e-mail…">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button type="button" class="ghost" id="membersRefresh" style="margin-top:0">Actualiser</button>
+      </div>
+    </div>
+    <div class="toast" id="membersMsg"></div>
+    <div id="membersList" class="muted" style="margin-top:10px">Chargement des inscriptions…</div>
+  </div>
   <div class="card" id="authGate" style="display:none;border-color:#664;background:#1a1208">
     <strong>Connexion requise (owner / admin)</strong>
     <p class="muted" style="margin:8px 0 0">Connecte-toi d’abord sur la page d’accueil PASS50 avec ton compte propriétaire, puis reviens ici.</p>
@@ -107,7 +124,9 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <input id="coverImageUrl" placeholder="https://… photo FI, miniature actu ou couverture événement">
     <img id="coverPreview" class="batch-cover" alt="" hidden>
     <label>Profile ID FI (optionnel — remplit l’image si possible)</label>
-    <input id="profileId" placeholder="himra">
+    <input id="profileId" list="fiProfileList" placeholder="Rechercher ou choisir un influenceur…" autocomplete="off">
+    <datalist id="fiProfileList"></datalist>
+    <p id="profileIdHint" class="muted" style="margin:6px 0 0;font-size:12px">Chargement de la liste des influenceurs…</p>
     <label>Clé sujet actu (si pas de FI — ex. himra-perte-tiktok)</label>
     <input id="subjectKey" placeholder="Auto = thème + titre">
     <p class="muted" style="margin:6px 0 0;font-size:12px">Plusieurs questions OK sur le même sujet · plafond 6 actifs (open/draft/locked).</p>
@@ -194,6 +213,104 @@ const THEMES=[
   {key:'people_actualite',label:'People Actualité',hint:'Polémiques, annonces, faits du jour'}
 ];
 let ALL_ITEMS=[];
+let FI_PROFILES=[];
+
+function profileOptionLabel(p){
+  const name=String(p?.name||p?.id||'').trim();
+  const id=String(p?.id||'').trim();
+  const handle=String(p?.handle||'').trim();
+  if(!id) return name;
+  if(handle) return `${name} · @${handle} (${id})`;
+  return `${name} (${id})`;
+}
+function renderProfileDatalist(){
+  const dl=document.getElementById('fiProfileList');
+  if(!dl) return;
+  dl.innerHTML=FI_PROFILES.map(p=>`<option value="${esc(p.id)}">${esc(profileOptionLabel(p))}</option>`).join('');
+  const hint=document.getElementById('profileIdHint');
+  if(hint){
+    hint.textContent=FI_PROFILES.length
+      ? `${FI_PROFILES.length} influenceur(s) — tape pour filtrer ou choisis dans la liste`
+      : 'Liste indisponible — saisis l’identifiant à la main (ex. himra)';
+  }
+}
+function roleLabel(role){
+  return {owner:'Propriétaire',admin:'Administrateur',member:'Membre',editor:'Éditeur',verifier:'Vérificateur'}[role]||role||'Membre';
+}
+async function loadMembers(){
+  const box=document.getElementById('membersList');
+  const msg=document.getElementById('membersMsg');
+  if(!box) return;
+  if(msg){msg.classList.remove('err');msg.textContent='';}
+  try{
+    const q=document.getElementById('membersSearch')?.value?.trim()||'';
+    const data=await api('admin-users.php?limit=80&q='+encodeURIComponent(q));
+    const canAssign=Boolean(data.canAssignRoles);
+    const stats=data.stats||{};
+    const items=Array.isArray(data.items)?data.items:[];
+    const head=`<p class="muted" style="margin:0 0 8px">${Number(stats.total||items.length)} inscrit(s) · ${Number(stats.last7d||0)} sur 7 jours · ${Number(stats.admins||0)} admin(s)${canAssign?'':' · lecture seule'}</p>`;
+    if(!items.length){
+      box.innerHTML=head+'<p class="muted" style="margin:0">Aucun membre pour cette recherche.</p>';
+      return;
+    }
+    box.innerHTML=head+items.map(item=>{
+      const role=String(item.role||'member');
+      const locked=role==='owner'||!canAssign;
+      const select=locked
+        ? `<span class="badge">${esc(roleLabel(role))}</span>`
+        : `<select data-member-role="${esc(item.id)}" data-current="${esc(role)}" style="width:auto;min-width:160px;padding:8px">
+            <option value="member" ${role==='member'?'selected':''}>Membre</option>
+            <option value="admin" ${role==='admin'?'selected':''}>Administrateur</option>
+          </select>`;
+      return `<div class="q" style="margin-top:8px">
+        <strong>${esc(item.displayName||'—')}</strong>
+        <div class="meta">${esc(item.email||'')} · ${esc(fmt(item.createdAt))} · ${item.emailConfirmed?'confirmé':'e-mail en attente'}</div>
+        <div class="actions" style="margin-top:8px">${select}</div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    const text=String(e.message||'Erreur');
+    box.innerHTML='';
+    if(msg){msg.classList.add('err');msg.textContent=text;}
+    else box.textContent=text;
+  }
+}
+document.getElementById('membersRefresh')?.addEventListener('click',loadMembers);
+let membersTimer=null;
+document.getElementById('membersSearch')?.addEventListener('input',()=>{
+  clearTimeout(membersTimer);
+  membersTimer=setTimeout(loadMembers,280);
+});
+document.getElementById('membersList')?.addEventListener('change',async(e)=>{
+  const sel=e.target.closest('[data-member-role]');
+  if(!sel) return;
+  const previous=sel.getAttribute('data-current')||'member';
+  const role=sel.value;
+  if(role===previous) return;
+  if(!confirm(role==='admin'?'Donner l’accès administration à ce compte ?':'Retirer l’accès administration ?')){
+    sel.value=previous;
+    return;
+  }
+  const msg=document.getElementById('membersMsg');
+  try{
+    await api('admin-users.php',{userId:sel.getAttribute('data-member-role'),role});
+    if(msg){msg.classList.remove('err');msg.textContent=role==='admin'?'Accès administration attribué.':'Rôle membre restauré.';}
+    loadMembers();
+  }catch(err){
+    sel.value=previous;
+    if(msg){msg.classList.add('err');msg.textContent=err.message||'Rôle non modifié';}
+  }
+});
+async function loadFiProfiles(){
+  try{
+    const data=await api('prono-admin-profiles.php');
+    FI_PROFILES=Array.isArray(data.profiles)?data.profiles:[];
+    renderProfileDatalist();
+  }catch(e){
+    const hint=document.getElementById('profileIdHint');
+    if(hint) hint.textContent='Liste FI indisponible — saisis l’identifiant à la main';
+  }
+}
 
 async function api(path, body){
   const token=localStorage.getItem('pass50_api_token')||'';
@@ -247,6 +364,7 @@ function qCard(item, compact){
   return `<div class="q" data-id="${esc(item.id)}" style="${canPublish?'border-color:rgba(183,255,0,.45)':''}">
     ${cover}
     <strong>${esc(item.title||'—')}</strong>
+    ${item.context?`<div class="meta" style="color:#d8e0d4;font-weight:700">Contexte · ${esc(item.context)}</div>`:''}
     <span class="badge">${esc(statusLabelFr(item.status))}</span>
     ${item.themeLabel||item.theme?`<span class="badge">${esc(item.themeLabel||item.theme)}</span>`:''}
     <div class="meta">${item.voteCount||0} vote(s) · mise ${item.stake||item.pointsCorrect||100} · Votes clos ${fmt(item.closesAt)} · Mesure ${fmt(item.measureAt)}</div>
@@ -416,7 +534,7 @@ n|Non|2.20</textarea>
             </div>
             <div>
               <label>Profile ID FI</label>
-              <input data-tf="profile" data-ti="${ti}" placeholder="himra">
+              <input data-tf="profile" data-ti="${ti}" list="fiProfileList" placeholder="Rechercher un influenceur…" autocomplete="off">
             </div>
           </div>
           <div class="row">
@@ -735,6 +853,8 @@ document.getElementById('resolveBtn').onclick=async()=>{
 })();
 renderThemeBlocks();
 loadList();
+loadFiProfiles();
+loadMembers();
 loadDaily();
 </script>
 </body>

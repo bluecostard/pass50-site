@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Membres — PASS50</title>
+<style>
+body{margin:0;background:#050705;color:#f6f8f4;font:15px/1.4 Inter,system-ui,sans-serif}
+.shell{max-width:860px;margin:auto;padding:20px}
+h1{font-size:28px;letter-spacing:-1px;margin:0 0 8px}
+.muted{color:#9da79b}
+.nav{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 16px}
+.nav a{color:#b7ff00;font-weight:800;text-decoration:none}
+.card{border:1px solid #293129;border-radius:16px;padding:16px;margin-top:16px;background:#0d110d}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0}
+.kpis div{border:1px solid #293129;border-radius:14px;padding:12px;background:#0a0d0a}
+.kpis strong{display:block;font-size:22px;color:#b7ff00}
+.kpis span{font-size:11px;color:#9da79b;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+input,select,button{box-sizing:border-box;border:1px solid #293129;border-radius:12px;background:#0a0d0a;color:#fff;padding:12px;font:inherit}
+input{width:100%}
+button{background:#b7ff00;color:#050705;font-weight:1000;cursor:pointer;width:auto}
+button.ghost{background:#0a0d0a;color:#f6f8f4}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.toolbar input{flex:1;min-width:180px}
+.row{display:grid;grid-template-columns:1fr 170px 110px 140px;gap:10px;align-items:center;border:1px solid #293129;border-radius:12px;padding:12px;margin-top:8px;background:#0a0d0a}
+.row strong{display:block}
+.row .mail{font-size:12px;color:#9da79b;word-break:break-all}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid #3a453a;color:#b7ff00}
+.badge.wait{color:#ffc065}
+.toast{margin-top:12px;color:#b7ff00;font-weight:900}
+.toast.err{color:#f88}
+@media(max-width:720px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="nav">
+    <a href="./">← Accueil</a>
+    <a href="./admin-pronostics.html">Pronostics</a>
+  </div>
+  <h1>Membres inscrits</h1>
+  <p class="muted">Les plus récents en haut. Choisis <strong>Administrateur</strong> pour donner l’accès à l’administration. Réservé au propriétaire.</p>
+  <div class="card" id="authGate" style="display:none;border-color:#664;background:#1a1208">
+    <strong>Connexion requise (owner / admin)</strong>
+    <p class="muted" style="margin:8px 0 0">Connecte-toi d’abord sur pass50.store, puis reviens ici.</p>
+    <p style="margin:12px 0 0"><a href="./?open=account">→ Se connecter</a></p>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Rechercher un nom ou un e-mail…">
+    <button type="button" class="ghost" id="refreshBtn">Actualiser</button>
+  </div>
+  <div class="toast" id="msg"></div>
+  <div id="list">Chargement des inscriptions…</div>
+</div>
+<script>
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+function fmt(iso){
+  if(!iso) return '—';
+  const d=new Date(iso);
+  return Number.isFinite(d.getTime())?d.toLocaleString('fr-FR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+}
+function roleLabel(role){
+  return {owner:'Propriétaire',admin:'Administrateur',member:'Membre',editor:'Éditeur',verifier:'Vérificateur'}[role]||role||'Membre';
+}
+async function api(path, body){
+  const token=localStorage.getItem('pass50_api_token')||'';
+  const opts={method:body===undefined?'GET':'POST',headers:{Accept:'application/json',...(token?{Authorization:'Bearer '+token}:{})}};
+  if(body!==undefined){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
+  const res=await fetch('./api/'+path,opts);
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||data.message||('Erreur HTTP '+res.status));
+  return data;
+}
+let canAssign=false;
+async function loadMembers(){
+  const box=document.getElementById('list');
+  const msg=document.getElementById('msg');
+  const gate=document.getElementById('authGate');
+  msg.textContent='';
+  msg.classList.remove('err');
+  try{
+    const q=document.getElementById('search').value.trim();
+    const data=await api('admin-users.php?limit=150&q='+encodeURIComponent(q));
+    if(gate) gate.style.display='none';
+    canAssign=Boolean(data.canAssignRoles);
+    const stats=data.stats||{};
+    document.getElementById('kpis').innerHTML=[
+      ['Inscrits',stats.total??0],
+      ['7 derniers jours',stats.last7d??0],
+      ['E-mail confirmé',stats.confirmed??0],
+      ['Administrateurs',stats.admins??0],
+    ].map(([l,v])=>`<div><strong>${esc(v)}</strong><span>${esc(l)}</span></div>`).join('');
+    const items=Array.isArray(data.items)?data.items:[];
+    if(!items.length){
+      box.innerHTML='<p class="muted">Aucun membre pour cette recherche.</p>';
+      return;
+    }
+    box.innerHTML=items.map(item=>{
+      const role=String(item.role||'member');
+      const locked=role==='owner'||!canAssign;
+      const select=locked
+        ? `<span class="badge">${esc(roleLabel(role))}</span>`
+        : `<select data-role="${esc(item.id)}" data-current="${esc(role)}">
+            <option value="member" ${role==='member'?'selected':''}>Membre</option>
+            <option value="admin" ${role==='admin'?'selected':''}>Administrateur</option>
+          </select>`;
+      return `<div class="row">
+        <div><strong>${esc(item.displayName||'—')}</strong><div class="mail">${esc(item.email||'')}</div></div>
+        <div>${select}</div>
+        <div><span class="badge ${item.emailConfirmed?'':'wait'}">${item.emailConfirmed?'Confirmé':'En attente'}</span></div>
+        <div class="muted">${esc(fmt(item.createdAt))}</div>
+      </div>`;
+    }).join('');
+    if(!canAssign) msg.textContent='Lecture seule : seul le propriétaire peut changer les rôles.';
+  }catch(e){
+    const text=String(e.message||'Erreur');
+    box.innerHTML='';
+    msg.classList.add('err');
+    msg.textContent=text;
+    if(gate&&(/auth|connect|rôle|role|droit|owner|admin|403|401|insuffisant|non autor/i.test(text)||!(localStorage.getItem('pass50_api_token')||''))){
+      gate.style.display='block';
+    }
+  }
+}
+document.getElementById('refreshBtn').onclick=loadMembers;
+let timer=null;
+document.getElementById('search').addEventListener('input',()=>{
+  clearTimeout(timer);
+  timer=setTimeout(loadMembers,280);
+});
+document.getElementById('list').addEventListener('change',async(e)=>{
+  const sel=e.target.closest('[data-role]');
+  if(!sel) return;
+  const previous=sel.getAttribute('data-current')||'member';
+  const role=sel.value;
+  if(role===previous) return;
+  if(!confirm(role==='admin'?'Donner l’accès administration à ce compte ?':'Retirer l’accès administration ?')){
+    sel.value=previous;
+    return;
+  }
+  const msg=document.getElementById('msg');
+  try{
+    await api('admin-users.php',{userId:sel.getAttribute('data-role'),role});
+    msg.classList.remove('err');
+    msg.textContent=role==='admin'?'Accès administration attribué.':'Rôle membre restauré.';
+    loadMembers();
+  }catch(err){
+    sel.value=previous;
+    msg.classList.add('err');
+    msg.textContent=err.message||'Rôle non modifié';
+  }
+});
+loadMembers();
+</script>
+</body>
+</html>

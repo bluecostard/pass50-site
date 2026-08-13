@@ -19,11 +19,14 @@ $required = [
     'api/prono-admin-save.php',
     'api/prono-admin-resolve.php',
     'api/prono-admin-list.php',
+    'api/prono-admin-profiles.php',
+    'api/admin-users.php',
     'api/prono-daily.php',
     'api/prono-daily-core.php',
     'pronostics.html',
     'pronostics.js',
     'admin-pronostics.html',
+    'admin-membres.html',
 ];
 
 foreach ($required as $rel) {
@@ -59,7 +62,7 @@ foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sa
 }
 
 $admin = file_get_contents($root.'/admin-pronostics.html');
-foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 'stake', 'authGate', 'prono-daily.php', 'coverImageUrl', 'genDailyBtn', 'publishDailyBtn', 'people_influenceurs', 'data-theme-save', 'Les 3 thèmes'] as $needle) {
+foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'prono-admin-profiles.php', 'fiProfileList', 'loadFiProfiles', 'admin-membres.html', 'loadMembers', 'membersList', 'key|label|cote', 'stake', 'authGate', 'prono-daily.php', 'coverImageUrl', 'genDailyBtn', 'publishDailyBtn', 'people_influenceurs', 'data-theme-save', 'Les 3 thèmes'] as $needle) {
     if (!str_contains($admin, $needle)) {
         fwrite(STDERR, "ADMIN-UI missing $needle\n");
         exit(1);
@@ -67,7 +70,7 @@ foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'key|label|cote', 's
 }
 
 $de = file_get_contents($root.'/data-engine-ui.js');
-foreach (["['pronostics','Pronostics']", 'deRenderPronosticsAdmin', 'admin-pronostics.html'] as $needle) {
+foreach (["['pronostics','Pronostics']", "['members','Membres']", 'deRenderPronosticsAdmin', 'deRenderMembersAdmin', 'admin-users.php', 'admin-pronostics.html'] as $needle) {
     if (!str_contains($de, $needle)) {
         fwrite(STDERR, "DATA-ENGINE missing $needle\n");
         exit(1);
@@ -107,7 +110,7 @@ if (preg_match('/href="\.\/"[^>]*>\s*Classement\s*</u', $pronoHtml)) {
     fwrite(STDERR, "PRONO page still has Classement button\n");
     exit(1);
 }
-foreach (['Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'Publier le statut grille', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html', 'z-index:260', 'slip-open', 'data-publish-slip', 'Jeux de pronostics sans argent', '100.000 pts', 'stakeInput', 'stakePlus', 'slipToggle', 'data-remove-qid', 'is-collapsed'] as $needle) {
+foreach (['Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'Publier le statut grille', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html', 'z-index:260', 'slip-open', 'data-publish-slip', 'Jeux de pronostics sans argent', '100.000 pts', 'stakeInput', 'stakePlus', 'slipToggle', 'data-remove-qid', 'is-collapsed', 'pub-context', 'pub-context-label', 'renderPronoContext', 'coverLightbox', 'pub-cover-btn', 'openCoverLightbox'] as $needle) {
     if (!str_contains($pronoHtml, $needle)) {
         fwrite(STDERR, "PRONO-HTML missing $needle\n");
         exit(1);

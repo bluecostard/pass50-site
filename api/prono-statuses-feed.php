@@ -16,7 +16,7 @@ $limit = max(1, min(40, (int)($_GET['limit'] ?? 20)));
 
 // Fetch a bit more so we can collapse multi-leg slips into one story chip.
 $fetchLimit = min(120, max(40, $limit * 4));
-$stmt = $pdo->query("SELECT s.*, q.title AS question_title, q.options_json, q.profile_id, q.points_correct,
+$stmt = $pdo->query("SELECT s.*, q.title AS question_title, q.context_text AS question_context, q.options_json, q.profile_id, q.points_correct,
     v.odd_locked, v.stake_locked, v.slip_id AS vote_slip_id,
     sl.combined_odd AS slip_combined_odd, sl.stake AS slip_stake, sl.stake_locked AS slip_stake_locked,
     u.display_name AS author_display_name, u.avatar_url AS author_avatar_url
@@ -75,6 +75,7 @@ foreach ($rows as $row) {
     $groups[$key]['legs'][] = [
         'questionId' => (string)$row['question_id'],
         'questionTitle' => (string)$row['question_title'],
+        'context' => trim((string)($row['question_context'] ?? '')),
         'optionKey' => $optionKey,
         'optionLabel' => p50_prono_option_label($row, $optionKey),
         'odd' => p50_prono_normalize_odd($row['odd_locked'] ?? null, p50_prono_option_odd(p50_prono_options($row['options_json'] ?? []), $optionKey)),

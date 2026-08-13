@@ -65,6 +65,7 @@ foreach ($legsIn as $raw) {
     $legs[] = [
         'questionId' => $questionId,
         'title' => (string)$question['title'],
+        'context' => trim((string)($question['context_text'] ?? '')),
         'optionKey' => $optionKey,
         'optionLabel' => p50_prono_option_label($question, $optionKey),
         'odd' => $odd,
