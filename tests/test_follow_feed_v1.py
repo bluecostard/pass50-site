@@ -32,7 +32,7 @@ class FollowFeedV2Tests(unittest.TestCase):
 
     def test_mobile_menu_is_compact_centered_and_has_no_live_tab(self):
         nav = read("mobile-bottom-nav-v1.js")
-        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.6", nav)
+        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.7", nav)
         self.assertIn("position:fixed;left:50%;right:auto", nav)
         self.assertIn("width:min(400px,calc(100vw - 16px))", nav)
         self.assertIn("transform:translateX(-50%)", nav)
@@ -41,7 +41,7 @@ class FollowFeedV2Tests(unittest.TestCase):
         self.assertNotIn('data-p50-tab="live"', nav)
         self.assertNotIn("<span>En direct</span>", nav)
         self.assertIn('data-p50-tab="prono"', nav)
-        self.assertIn("pronostics.html", nav)
+        self.assertIn("pronostics.html?v=83", nav)
         self.assertIn("touchend", nav)
         self.assertIn("freezeScroll", nav)
 
@@ -82,15 +82,15 @@ class FollowFeedV2Tests(unittest.TestCase):
         loader = read("public-copy-fixes.js")
         worker = read("sw.js")
         page = read("mon-fil.html")
-        self.assertIn("mobile-bottom-nav-v1.js?v=1.6", loader)
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.7", loader)
         self.assertNotIn("data-pass50-follow-watch", loader)
         self.assertIn("live-experience-v4-1.js?v=1.7", loader)
         self.assertIn("./mon-fil.html", worker)
         page_feed = re.search(r"mon-fil\.js\?v=([0-9.]+)", page)
         self.assertIsNotNone(page_feed)
         self.assertIn(f"mon-fil.js?v={page_feed.group(1)}", page)
-        self.assertIn("mobile-bottom-nav-v1.js?v=1.6", worker)
-        self.assertIn("live-radar-v3.js?v=1.7", worker)
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.7", worker)
+        self.assertIn("live-radar-v3.js?v=1.9", worker)
         self.assertRegex(worker, r"pass50-v\d+-[a-z0-9-]+")
 
 

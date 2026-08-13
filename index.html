@@ -163,7 +163,7 @@
 <div class="app">
   <header>
     <a class="brand" href="./" aria-label="PASS50 — Accueil"><div class="brand-wordmark" aria-hidden="true"><span class="pass">PASS</span><span class="fifty">50</span></div><div class="tagline">Qui dit quoi, qui va où ?</div></a>
-    <nav><button class="nav-btn active" data-scroll="buzz">BUZZ</button><button class="nav-btn" data-scroll="top10">TOP 10</button><button class="nav-btn" data-scroll="tendance">TENDANCES</button><a class="nav-btn" href="./pronostics.html" data-nav="prono">PRONOSTICS</a><button class="nav-btn" data-scroll="coules">LES COULÉS</button></nav>
+    <nav><button class="nav-btn active" data-scroll="buzz">BUZZ</button><button class="nav-btn" data-scroll="top10">TOP 10</button><button class="nav-btn" data-scroll="tendance">TENDANCES</button><a class="nav-btn" href="./pronostics.html?v=83" data-nav="prono">PRONOSTICS</a><button class="nav-btn" data-scroll="coules">LES COULÉS</button></nav>
     <div class="actions"><button class="icon-btn" id="shareBtn" aria-label="Partager">↗</button><button class="icon-btn" id="notificationCenterBtn" aria-label="Notifications">🔔 <span id="unreadCount"></span></button><button class="btn" id="accountBtn">Mon espace</button><button class="btn live" id="liveBtn"><span class="live-dot" style="color:var(--red)">●</span> LIVE <span id="liveCount"></span></button></div>
   </header>
 
@@ -200,7 +200,7 @@
     </header>
     <div class="sunk-duel"><div class="duel-question">Qui est le plus coulé&nbsp;?</div><div class="duel-sub">Vote unique par compte · choix modifiable</div><div class="sunk-grid" id="sunkGrid"></div></div>
   </section>
-  <footer class="footer"><div class="footer-brand" aria-label="PASS50"><span class="pass">PASS</span><span class="fifty">50</span></div><div class="footer-slogan">QUI DIT QUOI, <span style="color:var(--lime)">QUI VA OÙ ?</span></div><div id="lastPublished" class="footer-maj"></div><div class="footer-links" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:12px;font-size:13px;font-weight:800"><a href="./pronostics.html">Pronostics</a><a href="./informations-legales.html">Informations légales</a><a href="./conditions-utilisation.html">Conditions</a><a href="./politique-confidentialite.html">Confidentialité</a></div></footer>
+  <footer class="footer"><div class="footer-brand" aria-label="PASS50"><span class="pass">PASS</span><span class="fifty">50</span></div><div class="footer-slogan">QUI DIT QUOI, <span style="color:var(--lime)">QUI VA OÙ ?</span></div><div id="lastPublished" class="footer-maj"></div><div class="footer-links" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:12px;font-size:13px;font-weight:800"><a href="./pronostics.html?v=83">Pronostics</a><a href="./informations-legales.html">Informations légales</a><a href="./conditions-utilisation.html">Conditions</a><a href="./politique-confidentialite.html">Confidentialité</a></div></footer>
 </div>
 
 <div class="modal" id="liveModal"><div class="modal-box" style="width:min(760px,96vw)"><div class="modal-head"><strong>● EN DIRECT MAINTENANT</strong><button class="close" data-close="liveModal">×</button></div><div class="modal-body" id="liveBody"></div></div></div>
@@ -1155,7 +1155,7 @@ $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)close(m.i
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const visible=[...document.querySelectorAll('.modal.show')].pop();if(visible)close(visible.id)});
 window.addEventListener('storage',()=>{db=load();render()});
 normalizeLiveStreams();refreshLiveStatus();setInterval(refreshLiveStatus,60000);setInterval(()=>{normalizeLiveStreams();renderLiveHeader();if($('#liveModal')?.classList.contains('show'))openLives();},30000);
-if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=88').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=89').catch(()=>{});
 
 // --- Adaptateur IONOS + MySQL + Brevo ---
 const apiConfig=window.PASS50_API||{};

@@ -1,7 +1,8 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.6';
+  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.7';
+  const PRONO_HREF = './pronostics.html?v=83';
   const LEGACY_CONTEXT_SHARE_ASSET = './context-share-v1.js?v=1.0';
   const path = location.pathname || '';
   const isFeed = /(?:^|\/)mon-fil\.html$/i.test(path);
@@ -60,19 +61,19 @@
         body.p50-nav-leaving .p50-bottom-link.active{opacity:1}
         .p50-bottom-link-ranking{
           position:relative;z-index:2;min-height:78px;margin-top:-18px;padding:7px 6px 6px;
-          border:1px solid rgba(183,255,0,.38);border-radius:21px;
+          border:1px solid rgba(255,255,255,.12);border-radius:21px;
           background:linear-gradient(180deg,#151d13,#090d09);
           color:#dce5d8;box-shadow:0 12px 28px rgba(0,0,0,.45);
           transform:translateY(-3px);
         }
         .p50-bottom-link-ranking .p50-bottom-icon{
-          width:44px;height:44px;border:1px solid rgba(183,255,0,.36);border-radius:15px;
-          background:rgba(183,255,0,.08);color:var(--lime,#b7ff00);
+          width:44px;height:44px;border:1px solid rgba(255,255,255,.14);border-radius:15px;
+          background:rgba(255,255,255,.04);color:#dce5d8;
         }
         .p50-bottom-link-ranking .p50-bottom-icon svg{width:25px;height:25px;stroke-width:2}
         .p50-bottom-link-ranking.active{
           color:#050705;border-color:var(--lime,#b7ff00);
-          background:linear-gradient(145deg,var(--lime,#b7ff00),#7ee500);
+          background:linear-gradient(145deg,var(--lime,#b7ff00),#71ff00);
           box-shadow:0 14px 31px rgba(0,0,0,.45);
         }
         .p50-bottom-link-ranking.active .p50-bottom-icon{border-color:rgba(5,7,5,.2);background:rgba(5,7,5,.12);color:#050705}
@@ -110,7 +111,7 @@
   function navHtml() {
     return `<nav class="p50-bottom-nav" aria-label="Menu principal mobile" data-contract="${CONTRACT}">
       <a class="p50-bottom-link ${isFeed ? 'active' : ''}" href="./mon-fil.html" data-p50-tab="feed" ${isFeed ? 'aria-current="page"' : ''}>${feedIcon()}<span>Mon fil</span></a>
-      <a class="p50-bottom-link ${isProno ? 'active' : ''}" href="./pronostics.html" data-p50-tab="prono" ${isProno ? 'aria-current="page"' : ''}>${pronoIcon()}<span>Pronos</span></a>
+      <a class="p50-bottom-link ${isProno ? 'active' : ''}" href="${PRONO_HREF}" data-p50-tab="prono" ${isProno ? 'aria-current="page"' : ''}>${pronoIcon()}<span>Pronos</span></a>
       <a class="p50-bottom-link p50-bottom-link-ranking ${isHome ? 'active' : ''}" href="./" data-p50-tab="ranking" ${isHome ? 'aria-current="page"' : ''}>${rankingIcon()}<span>Classement</span></a>
       <a class="p50-bottom-link" href="./?open=account" data-p50-tab="account">${accountIcon()}<span>Mon espace</span></a>
     </nav>`;
@@ -124,7 +125,7 @@
   function prefetchRoutes() {
     const targets = [];
     if (!isFeed) targets.push('./mon-fil.html');
-    if (!isProno) targets.push('./pronostics.html');
+    if (!isProno) targets.push(PRONO_HREF);
     if (!isHome) targets.push('./');
     targets.forEach((href) => {
       if (document.querySelector(`link[data-p50-prefetch="${href}"]`)) return;

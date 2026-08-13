@@ -406,7 +406,7 @@
         <a class="btn primary" href="./admin-pronostics.html">Ouvrir l’atelier Pronostics →</a>
         <button type="button" class="btn" data-admin-tab="members">Voir les membres inscrits</button>
         <a class="btn" href="./admin-membres.html">Page Membres dédiée →</a>
-        <a class="btn" href="./pronostics.html">Voir la page joueurs</a>
+        <a class="btn" href="./pronostics.html?v=83">Voir la page joueurs</a>
       </div>`;
   }
   function deThreshold(){return Number(DE.hub?.threshold||90);}
