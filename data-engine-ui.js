@@ -1,9 +1,9 @@
 (function(){
   window.majPass50Running=Boolean(window.majPass50Running);
   const fallbackRenderAdminPane=renderAdminPane;
-  const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,rankingLab:null,rankingLabPeriod:'2H',rankingLabLoading:false,rankingLabView:'current',rankingCalibration:null,rankingCalibrationLoading:false,rankingCalibrationRuns:24,rankingHealth:null,rankingHealthLoading:false,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
+  const DE={hub:null,intelligence:null,metricsDiagnostic:null,metricsDiagnosticLoading:false,rankingLab:null,rankingLabPeriod:'2H',rankingLabLoading:false,rankingLabView:'current',rankingCalibration:null,rankingCalibrationLoading:false,rankingCalibrationRuns:24,rankingHealth:null,rankingHealthLoading:false,members:null,membersLoading:false,membersQuery:'',membersTimer:null,loading:false,lastError:'',platforms:['Instagram','TikTok','Facebook','YouTube','Snapchat','X','Web'],socialProfileId:'',autoRunning:false,stopRequested:false,autoSeen:new Set(),autoTarget:0,autoMessage:'',majRunning:false,majStopRequested:false,majSeen:new Set(),majTarget:0,majStage:'',majMessage:'',majStartedAt:null,majLastResult:null};
   const ADMIN_ITEMS=[
-    ['adminhome','Accueil'],['todo','A faire !'],['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],
+    ['adminhome','Accueil'],['todo','A faire !'],['members','Membres'],['signals','Signaux'],['profiles','Influenceurs'],['media','Médias'],
     ['links','Liens officiels'],['news','Actualité'],['live','LIVE'],['pronostics','Pronostics'],['update','MAJ PASS50'],
     ['metricsdiag','Diagnostic métriques'],['intelligence','PASS50 Intelligence'],['hub','Data Hub'],
     ['quality','Contrôle qualité'],['rankinglab','Classement métrique'],['ranking','Classement'],['data','Maintenance']
@@ -11,6 +11,7 @@
   const ADMIN_DESCRIPTIONS={
     adminhome:'Vue d’ensemble et accès rapide à tous les outils administratifs.',
     todo:'Alertes cloche + push · clôtures, brouillons, médias, liens, LIVE…',
+    members:'Voir les inscriptions et attribuer un accès administration (rôle admin).',
     signals:'Valider les signaux et événements détectés.',profiles:'Créer et modifier les fiches des influenceurs.',
     media:'Contrôler les photos et couvertures proposées.',links:'Vérifier les comptes officiels des plateformes.',
     news:'Rechercher et valider les contenus déclencheurs.',live:'Superviser les directs et leur disponibilité.',
@@ -27,7 +28,7 @@
     renderAdminPane();
   };
 
-  renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='todo')return deRenderAdminTodo($('#adminPane'));if(ui.adminTab==='pronostics')return deRenderPronosticsAdmin($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='rankinglab')return deRenderRankingLab($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
+  renderAdminPane=function(){if(ui.adminTab==='adminhome')return deRenderAdminHome($('#adminPane'));if(ui.adminTab==='todo')return deRenderAdminTodo($('#adminPane'));if(ui.adminTab==='members')return deRenderMembersAdmin($('#adminPane'));if(ui.adminTab==='pronostics')return deRenderPronosticsAdmin($('#adminPane'));if(ui.adminTab==='update')return deRenderMajPass50($('#adminPane'));if(ui.adminTab==='metricsdiag')return deRenderMetricsDiagnostic($('#adminPane'));if(ui.adminTab==='rankinglab')return deRenderRankingLab($('#adminPane'));if(ui.adminTab==='intelligence')return deRenderIntelligence($('#adminPane'));if(ui.adminTab==='hub')return deRenderHub($('#adminPane'));if(ui.adminTab==='quality'&&typeof window.renderQualityPane==='function')return window.renderQualityPane();return fallbackRenderAdminPane();};
 
   function deEsc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function deTodoFmtTime(v){
@@ -116,6 +117,81 @@
       </div>
       <div class="de-admin-home-grid">${ADMIN_ITEMS.filter(([id])=>id!=='adminhome'&&id!=='todo').map(([id,label])=>`<button class="de-admin-home-card" data-admin-tab="${id}"><strong>${deEsc(label)}</strong><span>${deEsc(ADMIN_DESCRIPTIONS[id])}</span><i aria-hidden="true">Ouvrir →</i></button>`).join('')}</div>
     </div>`;
+  }
+  function deRoleLabel(role){
+    return {owner:'Propriétaire',admin:'Administrateur',editor:'Éditeur',verifier:'Vérificateur',member:'Membre'}[role]||role||'Membre';
+  }
+  function deFmtMemberDate(iso){
+    if(!iso) return '—';
+    const d=new Date(iso);
+    return Number.isNaN(d.getTime())?'—':d.toLocaleString('fr-FR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  function deRenderMembersAdmin(pane){
+    pane.innerHTML=`<div class="de-members">
+      <div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button>
+        <div class="section-title" style="margin-top:10px">MEMBRES</div>
+        <div class="muted">Inscriptions récentes en haut. Seul le <strong>propriétaire</strong> peut attribuer le rôle Administrateur (accès à l’admin).</div>
+      </div></div>
+      <div class="de-members-toolbar">
+        <input id="deMembersSearch" type="search" placeholder="Rechercher un nom ou un e-mail…" value="${deEsc(DE.membersQuery||'')}">
+        <button type="button" class="btn" id="deMembersRefresh">Actualiser</button>
+      </div>
+      <div id="deMembersBody"><div class="muted">Chargement des inscriptions…</div></div>
+    </div>`;
+    if(!document.getElementById('deMembersStyles')){
+      const style=document.createElement('style');style.id='deMembersStyles';
+      style.textContent=`.de-members-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.de-members-toolbar input{flex:1;min-width:180px;padding:10px 12px;border-radius:12px;border:1px solid #293129;background:#0a0d0a;color:#fff;font:inherit}.de-members-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:0 0 14px}.de-members-kpis div{border:1px solid var(--line);border-radius:14px;padding:12px;background:#0c100c}.de-members-kpis strong{display:block;font-size:22px;color:var(--lime)}.de-members-kpis span{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}.de-members-role{padding:8px 10px;border-radius:10px;border:1px solid #293129;background:#0a0d0a;color:#fff;font:inherit;min-width:150px}.de-members-role:disabled{opacity:.55}.de-members-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid #3a453a}.de-members-badge.ok{color:#b7ff00}.de-members-badge.wait{color:#ffc065}`;
+      document.head.appendChild(style);
+    }
+    deLoadMembers();
+  }
+  function deDrawMembersBody(){
+    const box=document.getElementById('deMembersBody');
+    if(!box||ui.adminTab!=='members')return;
+    if(DE.membersLoading&&!DE.members){box.innerHTML='<div class="muted">Chargement des inscriptions…</div>';return;}
+    const data=DE.members||{};
+    if(data.error){box.innerHTML=`<div class="de-error">${deEsc(data.error)}</div>`;return;}
+    const stats=data.stats||{};
+    const items=Array.isArray(data.items)?data.items:[];
+    const canAssign=Boolean(data.canAssignRoles);
+    const me=typeof currentUser==='function'?currentUser():null;
+    const myId=String(me?.id||'');
+    const kpis=[['Inscrits',stats.total??items.length],['7 derniers jours',stats.last7d??0],['E-mail confirmé',stats.confirmed??0],['Administrateurs',stats.admins??0]].map(([label,value])=>`<div><strong>${deEsc(value)}</strong><span>${deEsc(label)}</span></div>`).join('');
+    const rows=items.map(item=>{
+      const role=String(item.role||'member');
+      const isOwner=role==='owner';
+      const isMe=String(item.id)===myId;
+      const select=(!canAssign||isOwner||isMe)
+        ? `<span class="de-members-badge ${isOwner?'ok':''}">${deEsc(deRoleLabel(role))}</span>`
+        : `<select class="de-members-role" data-member-role="${deEsc(item.id)}" data-current="${deEsc(role)}">
+            <option value="member" ${role==='member'?'selected':''}>Membre</option>
+            <option value="admin" ${role==='admin'?'selected':''}>Administrateur</option>
+          </select>`;
+      return `<tr>
+        <td><strong>${deEsc(item.displayName||'—')}</strong><div class="muted" style="font-size:11px">${deEsc(item.email||'')}</div></td>
+        <td>${select}</td>
+        <td><span class="de-members-badge ${item.emailConfirmed?'ok':'wait'}">${item.emailConfirmed?'Confirmé':'En attente'}</span></td>
+        <td>${deEsc(deFmtMemberDate(item.createdAt))}</td>
+      </tr>`;
+    }).join('');
+    box.innerHTML=`<div class="de-members-kpis">${kpis}</div>
+      ${canAssign?'':'<p class="muted" style="margin:0 0 12px">Lecture seule : demande au propriétaire d’attribuer les rôles.</p>'}
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Personne</th><th>Rôle</th><th>Compte</th><th>Inscription</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="4">Aucun membre pour cette recherche.</td></tr>'}</tbody></table></div>`;
+  }
+  async function deLoadMembers(force=false){
+    if(DE.membersLoading&&!force)return;
+    DE.membersLoading=true;
+    deDrawMembersBody();
+    try{
+      const q=encodeURIComponent(DE.membersQuery||'');
+      DE.members=await apiFetch(`admin-users.php?limit=120&q=${q}`);
+    }catch(error){
+      DE.members={error:error.message||'Impossible de charger les membres'};
+    }finally{
+      DE.membersLoading=false;
+      deDrawMembersBody();
+    }
   }
   function deRenderAdminTodo(pane){
     const TODO_KEY='pass50_admin_todo_v1';
@@ -849,6 +925,7 @@
     try{
       if(e.target.id==='deMajPass50')await deRunMajPass50();
       if(e.target.id==='deReloadIntelligence')await deLoadIntelligence();
+      if(e.target.id==='deMembersRefresh'){DE.members=null;await deLoadMembers(true);}
       if(e.target.matches('.de-metrics-refresh')){DE.metricsDiagnostic=null;await deLoadMetricsDiagnostic(true);}
       if(e.target.matches('.de-ranking-refresh')){DE.rankingLab=null;DE.rankingCalibration=null;DE.rankingHealth=null;await Promise.all([deLoadRankingLab(true),deLoadRankingCalibration(true)]);}
       if(e.target.matches('.de-ranking-calculate'))await deCalculateRankingLab(e.target);
@@ -872,7 +949,31 @@
       if(e.target.matches('.de-reject-link')){if(!confirm('Rejeter ce lien officiel ?'))return;await apiFetch('social-links.php',{method:'POST',body:{action:'reject',profileId:e.target.dataset.profile,platform:e.target.dataset.platform}});await deOpenSocial(e.target.dataset.profile);toast('Lien rejeté');}
     }catch(err){console.error(err);toast(err.message||'Action impossible');}
   });
-  document.addEventListener('change',async e=>{if(e.target.id==='deSocialProfileSelect')await deOpenSocial(e.target.value);if(e.target.id==='deRankingLabPeriod'){DE.rankingLabPeriod=e.target.value;DE.rankingLab=null;DE.rankingCalibration=null;await deLoadRankingLab(true);if(DE.rankingLabView!=='current')await deLoadRankingCalibration(true);}if(e.target.id==='deRankingCalibrationRuns'){DE.rankingCalibrationRuns=Number(e.target.value)||24;DE.rankingCalibration=null;await deLoadRankingCalibration(true);}});
+  document.addEventListener('input',e=>{
+    if(e.target.id!=='deMembersSearch')return;
+    DE.membersQuery=e.target.value.trim();
+    clearTimeout(DE.membersTimer);
+    DE.membersTimer=setTimeout(()=>deLoadMembers(true),280);
+  });
+  document.addEventListener('change',async e=>{if(e.target.id==='deSocialProfileSelect')await deOpenSocial(e.target.value);if(e.target.id==='deRankingLabPeriod'){DE.rankingLabPeriod=e.target.value;DE.rankingLab=null;DE.rankingCalibration=null;await deLoadRankingLab(true);if(DE.rankingLabView!=='current')await deLoadRankingCalibration(true);}if(e.target.id==='deRankingCalibrationRuns'){DE.rankingCalibrationRuns=Number(e.target.value)||24;DE.rankingCalibration=null;await deLoadRankingCalibration(true);}
+    const roleSel=e.target.closest('[data-member-role]');
+    if(roleSel){
+      const userId=roleSel.getAttribute('data-member-role');
+      const previous=roleSel.getAttribute('data-current')||'member';
+      const role=roleSel.value;
+      if(role===previous)return;
+      const label=deRoleLabel(role);
+      if(!confirm(`Attribuer le rôle « ${label} » à ce compte ?`)){roleSel.value=previous;return;}
+      try{
+        await apiFetch('admin-users.php',{method:'POST',body:{userId,role}});
+        toast(role==='admin'?'Accès administration attribué':'Rôle membre restauré');
+        await deLoadMembers(true);
+      }catch(err){
+        roleSel.value=previous;
+        toast(err.message||'Rôle non modifié');
+      }
+    }
+  });
   document.addEventListener('submit',async e=>{
     if(e.target.id==='deBirthForm'){
       e.preventDefault();const form=e.target,fd=new FormData(form),button=form.querySelector('button[type=submit]');

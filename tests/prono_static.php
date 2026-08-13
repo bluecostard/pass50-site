@@ -20,6 +20,7 @@ $required = [
     'api/prono-admin-resolve.php',
     'api/prono-admin-list.php',
     'api/prono-admin-profiles.php',
+    'api/admin-users.php',
     'api/prono-daily.php',
     'api/prono-daily-core.php',
     'pronostics.html',
@@ -68,7 +69,7 @@ foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'prono-admin-profile
 }
 
 $de = file_get_contents($root.'/data-engine-ui.js');
-foreach (["['pronostics','Pronostics']", 'deRenderPronosticsAdmin', 'admin-pronostics.html'] as $needle) {
+foreach (["['pronostics','Pronostics']", "['members','Membres']", 'deRenderPronosticsAdmin', 'deRenderMembersAdmin', 'admin-users.php', 'admin-pronostics.html'] as $needle) {
     if (!str_contains($de, $needle)) {
         fwrite(STDERR, "DATA-ENGINE missing $needle\n");
         exit(1);
