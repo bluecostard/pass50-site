@@ -48,7 +48,7 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
 
     def test_duel_page_displays_three_audio_players_with_pseudo(self):
         for marker in (
-            "PASS50-DUEL-AUDIO-FEED-V1.1", "MAX_DUEL_AUDIOS=3",
+            "PASS50-DUEL-AUDIO-FEED-V1.2", "MAX_DUEL_AUDIOS=3",
             "Les 3 derniers audios du duel", "<audio controls",
             "item.authorPseudo", "pseudo public du compte PASS50",
             "fetchDuelAudios(true)",
@@ -75,12 +75,12 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
             "Audios de la communauté Les Coulés", "item.authorPseudo",
             "commente son vote pour",
             "Pseudo issu de son compte utilisateur PASS50",
-            "<audio controls", "PASS50-FOLLOW-FEED-PAGE-V2.19",
+            "<audio controls", "PASS50-FOLLOW-FEED-PAGE-V2.20",
         ):
             self.assertIn(marker, FEED)
         self.assertNotIn("profileIds: state.following.join(',')", FEED)
         self.assertNotIn("Identité non affichée", FEED)
-        self.assertIn("mon-fil.js?v=2.19", FEED_HTML)
+        self.assertIn("mon-fil.js?v=2.20", FEED_HTML)
 
     def test_no_ranking_or_public_state_write(self):
         combined = API + CLIENT + FEED
@@ -95,7 +95,7 @@ class DuelAudioFeedV1Tests(unittest.TestCase):
         self.assertIn("duel-audio-feed-v1.js?v=1.1", LOADER)
         self.assertIn("data-pass50-duel-audio-feed", LOADER)
         self.assertIn("duel-audio-feed-v1.js?v=1.1", SW)
-        self.assertIn("mon-fil.js?v=2.19", SW)
+        self.assertIn("mon-fil.js?v=2.20", SW)
         self.assertIn("pass50-v75-duel-audio-identity", SW)
 
 

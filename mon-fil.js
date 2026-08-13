@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.19';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.20';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -371,7 +371,7 @@
     }
     if (section) section.classList.remove('hidden');
     if (!state.pronoStatuses.length) {
-      strip.innerHTML = '<div class="prono-stories-empty">Aucun statut prono pour le moment · <a href="./pronostics.html" style="color:var(--lime);font-weight:900">Jouer</a></div>';
+      strip.innerHTML = '<div class="prono-stories-empty">Aucun statut prono pour le moment · <a href="./pronostics.html?v=83" style="color:var(--lime);font-weight:900">Jouer</a></div>';
       return;
     }
     strip.innerHTML = state.pronoStatuses.map((item, index) => {
@@ -688,12 +688,12 @@
       return;
     }
     if (!state.following.length && !state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Votre fil d’actualités est vide.</strong>Suis jusqu’à 5 influenceurs pour leurs actus. Les audios Les Coulés et les statuts prono restent visibles pour toute la communauté.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./?section=coules">Voir Les Coulés</a><a class="btn" href="./pronostics.html">Ouvrir Pronostics</a></div></div>';
+      list.innerHTML = '<div class="empty"><strong>Votre fil d’actualités est vide.</strong>Suis jusqu’à 5 influenceurs pour leurs actus. Les audios Les Coulés et les statuts prono restent visibles pour toute la communauté.<div style="margin-top:13px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><a class="btn primary" href="./?section=coules">Voir Les Coulés</a><a class="btn" href="./pronostics.html?v=83">Ouvrir Pronostics</a></div></div>';
       end.classList.add('hidden');
       return;
     }
     if (!state.news.length) {
-      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>Les statuts prono de la communauté sont au-dessus.<div style="margin-top:13px"><a class="btn primary" href="./pronostics.html">Voir les Pronostics</a></div></div>';
+      list.innerHTML = '<div class="empty"><strong>Aucune actualité ou audio récent.</strong>Les statuts prono de la communauté sont au-dessus.<div style="margin-top:13px"><a class="btn primary" href="./pronostics.html?v=83">Voir les Pronostics</a></div></div>';
       end.classList.remove('hidden');
       return;
     }

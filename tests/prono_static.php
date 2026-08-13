@@ -78,7 +78,7 @@ foreach (["['pronostics','Pronostics']", "['members','Membres']", 'deRenderProno
 }
 
 $fil = file_get_contents($root.'/mon-fil.js');
-foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'pronoStoriesStrip', 'openPronoDiapo', 'memberAvatarHtml', 'diapoLegIndex', 'PASS50-FOLLOW-FEED-PAGE-V2.19'] as $needle) {
+foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'pronoStoriesStrip', 'openPronoDiapo', 'memberAvatarHtml', 'diapoLegIndex', 'PASS50-FOLLOW-FEED-PAGE-V2.20'] as $needle) {
     if (!str_contains($fil, $needle)) {
         fwrite(STDERR, "MON-FIL missing $needle\n");
         exit(1);
@@ -86,7 +86,7 @@ foreach (['prono_status', 'prono-statuses-feed.php', 'prono-status-like.php', 'p
 }
 
 $filHtml = file_get_contents($root.'/mon-fil.html');
-foreach (['pronoStoriesStrip', 'pronoDiapo', 'pronoDiapoShare', 'pronoDiapoOdd', 'mon-fil.js?v=2.19'] as $needle) {
+foreach (['pronoStoriesStrip', 'pronoDiapo', 'pronoDiapoShare', 'pronoDiapoOdd', 'mon-fil.js?v=2.20'] as $needle) {
     if (!str_contains($filHtml, $needle)) {
         fwrite(STDERR, "MON-FIL-HTML missing $needle\n");
         exit(1);
@@ -94,8 +94,8 @@ foreach (['pronoStoriesStrip', 'pronoDiapo', 'pronoDiapoShare', 'pronoDiapoOdd',
 }
 
 $nav = file_get_contents($root.'/mobile-bottom-nav-v1.js');
-if (!str_contains($nav, 'pronostics.html')) {
-    fwrite(STDERR, "NAV missing pronostics entry\n");
+if (!str_contains($nav, 'pronostics.html?v=83')) {
+    fwrite(STDERR, "NAV missing versioned pronostics entry\n");
     exit(1);
 }
 
@@ -110,7 +110,7 @@ if (preg_match('/href="\.\/"[^>]*>\s*Classement\s*</u', $pronoHtml)) {
     fwrite(STDERR, "PRONO page still has Classement button\n");
     exit(1);
 }
-foreach (['Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'Publier le statut grille', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html', 'z-index:260', 'slip-open', 'data-publish-slip', 'Jeux de pronostics sans argent', '100.000 pts', 'stakeInput', 'stakePlus', 'slipToggle', 'data-remove-qid', 'is-collapsed', 'pub-context', 'pub-context-label', 'renderPronoContext', 'coverLightbox', 'pub-cover-btn', 'openCoverLightbox'] as $needle) {
+foreach (['qui-fait-quoi-v83', '--lime:#b7ff00', '--lime-soft:#71ff00', 'Statut prono', 'Qui fait quoi', 'prono-slip.php', 'Valider ma grille', 'Publier le statut prono', 'Publier le statut grille', 'statusStrip', 'prono-statuses-feed.php', 'mon-fil.html', 'z-index:260', 'slip-open', 'data-publish-slip', 'Jeux de pronostics sans argent', '100.000 pts', 'stakeInput', 'stakePlus', 'slipToggle', 'data-remove-qid', 'is-collapsed', 'pub-context', 'pub-context-label', 'renderPronoContext', 'coverLightbox', 'pub-cover-btn', 'openCoverLightbox'] as $needle) {
     if (!str_contains($pronoHtml, $needle)) {
         fwrite(STDERR, "PRONO-HTML missing $needle\n");
         exit(1);
