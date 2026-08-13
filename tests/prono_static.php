@@ -70,7 +70,7 @@ foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'prono-admin-profile
 }
 
 $de = file_get_contents($root.'/data-engine-ui.js');
-foreach (["['pronostics','Pronostics']", "['members','Membres']", 'deRenderPronosticsAdmin', 'deRenderMembersAdmin', 'admin-users.php', 'admin-pronostics.html'] as $needle) {
+foreach (["['pronostics','Pronostics']", "['members','Membres']", 'deRenderPronosticsAdmin', 'deRenderMembersAdmin', 'deLoadHomeMembers', 'MEMBRES INSCRITS', 'admin-users.php', 'admin-pronostics.html'] as $needle) {
     if (!str_contains($de, $needle)) {
         fwrite(STDERR, "DATA-ENGINE missing $needle\n");
         exit(1);
@@ -142,6 +142,14 @@ $feed = file_get_contents($root.'/api/prono-statuses-feed.php');
 foreach (['legs_json', 'vote_slip_id', 'slip:'] as $needle) {
     if (!str_contains($feed, $needle)) {
         fwrite(STDERR, "STATUSES-FEED missing $needle\n");
+        exit(1);
+    }
+}
+
+$index = file_get_contents($root.'/index.html');
+foreach (['adminMembersOpen', "adminOpen('members')"] as $needle) {
+    if (!str_contains($index, $needle)) {
+        fwrite(STDERR, "INDEX missing $needle\n");
         exit(1);
     }
 }

@@ -174,7 +174,7 @@ render();
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=18.18';
+    js.src='./data-engine-ui.js?v=18.19';
     js.dataset.pass50DataEngine='1';
     js.onload=function(){
       if(document.querySelector('script[data-pass50-admin-notifications]'))return;

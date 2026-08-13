@@ -4,7 +4,13 @@ declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 
 $user = auth_user();
-require_role($user, 'owner', 'admin');
+$viewerRole = (string)($user['role'] ?? '');
+if (!in_array($viewerRole, ['owner', 'admin'], true)) {
+    json_response([
+        'error' => 'Ce compte n’a pas accès à la liste des membres (rôle : '.($viewerRole !== '' ? $viewerRole : 'inconnu').'). Reconnecte-toi avec le compte propriétaire.',
+        'role' => $viewerRole,
+    ], 403);
+}
 
 $p50AdminUserRoles = ['member', 'admin', 'editor', 'verifier'];
 
@@ -65,6 +71,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'ok' => true,
         'canAssignRoles' => ($user['role'] ?? '') === 'owner',
         'assignableRoles' => $p50AdminUserRoles,
+        'viewer' => [
+            'id' => (string)($user['id'] ?? ''),
+            'email' => (string)($user['email'] ?? ''),
+            'displayName' => (string)($user['display_name'] ?? ''),
+            'role' => (string)($user['role'] ?? ''),
+        ],
         'stats' => [
             'total' => (int)($stats['total'] ?? count($items)),
             'admins' => (int)($stats['admins'] ?? 0),

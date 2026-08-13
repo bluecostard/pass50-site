@@ -70,6 +70,7 @@ jobs:
           put -O "$REMOTE_DIR" .deploy/mobile-bottom-nav-v1.js
           put -O "$REMOTE_DIR" .deploy/v9-tools.js
           put -O "$REMOTE_DIR" .deploy/v9-tools.css
+          put -O "$REMOTE_DIR" .deploy/data-engine-ui.js
           put -O "$REMOTE_DIR" .deploy/facebook-video-player-v1.js
           put -O "$REMOTE_DIR" .deploy/content-intelligence.js
           put -O "$REMOTE_DIR" .deploy/coules-share-simple-v1.js
