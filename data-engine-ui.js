@@ -347,6 +347,7 @@
       <div class="pref" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <p class="muted" style="margin:0;max-width:42rem;line-height:1.45">Dans l’atelier : crée les questions avec cotes pour <strong>People influenceurs</strong>, <strong>People Artiste/sportif</strong> et <strong>People Actualité</strong>, puis publie (open).</p>
         <a class="btn primary" href="./admin-pronostics.html">Ouvrir l’atelier Pronostics →</a>
+        <a class="btn" href="./admin-membres.html">Voir les membres inscrits</a>
         <a class="btn" href="./pronostics.html">Voir la page joueurs</a>
       </div>`;
   }

@@ -6,7 +6,7 @@ require __DIR__.'/bootstrap.php';
 $user = auth_user();
 require_role($user, 'owner', 'admin');
 
-const P50_ADMIN_USER_ROLES = ['member', 'admin', 'editor', 'verifier'];
+$p50AdminUserRoles = ['member', 'admin', 'editor', 'verifier'];
 
 function p50_admin_user_public(array $row): array {
     return [
@@ -28,33 +28,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $q = trim((string)($_GET['q'] ?? ''));
     $limit = max(1, min(200, (int)($_GET['limit'] ?? 80)));
     $pdo = db();
-    $sql = "SELECT id,email,display_name,role,email_confirmed_at,created_at,updated_at
-      FROM users WHERE deleted_at IS NULL";
-    $params = [];
-    if ($q !== '') {
-        $sql .= ' AND (email LIKE ? OR display_name LIKE ?)';
-        $like = '%'.$q.'%';
-        $params[] = $like;
-        $params[] = $like;
+    try {
+        $sql = "SELECT id,email,display_name,role,email_confirmed_at,created_at,updated_at
+          FROM users WHERE deleted_at IS NULL";
+        $params = [];
+        if ($q !== '') {
+            $sql .= ' AND (email LIKE ? OR display_name LIKE ?)';
+            $like = '%'.$q.'%';
+            $params[] = $like;
+            $params[] = $like;
+        }
+        $sql .= ' ORDER BY created_at DESC LIMIT '.$limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $items = array_map('p50_admin_user_public', $stmt->fetchAll() ?: []);
+    } catch (Throwable $e) {
+        error_log('admin-users list: '.$e->getMessage());
+        json_response(['error' => 'Impossible de lire les comptes inscrits.'], 500);
     }
-    $sql .= ' ORDER BY created_at DESC LIMIT '.$limit;
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $items = array_map('p50_admin_user_public', $stmt->fetchAll() ?: []);
 
-    $statsStmt = $pdo->query("SELECT
-        COUNT(*) AS total,
-        SUM(role='admin') AS admins,
-        SUM(role='owner') AS owners,
-        SUM(email_confirmed_at IS NOT NULL) AS confirmed,
-        SUM(created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)) AS last7d
-      FROM users WHERE deleted_at IS NULL");
-    $stats = $statsStmt ? ($statsStmt->fetch() ?: []) : [];
+    $stats = ['total' => count($items), 'admins' => 0, 'owners' => 0, 'confirmed' => 0, 'last7d' => 0];
+    try {
+        $statsStmt = $pdo->query("SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN role='admin' THEN 1 ELSE 0 END) AS admins,
+            SUM(CASE WHEN role='owner' THEN 1 ELSE 0 END) AS owners,
+            SUM(CASE WHEN email_confirmed_at IS NOT NULL THEN 1 ELSE 0 END) AS confirmed,
+            SUM(CASE WHEN created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS last7d
+          FROM users WHERE deleted_at IS NULL");
+        $stats = $statsStmt ? ($statsStmt->fetch() ?: $stats) : $stats;
+    } catch (Throwable $e) {
+        error_log('admin-users stats: '.$e->getMessage());
+    }
 
     json_response([
         'ok' => true,
         'canAssignRoles' => ($user['role'] ?? '') === 'owner',
-        'assignableRoles' => P50_ADMIN_USER_ROLES,
+        'assignableRoles' => $p50AdminUserRoles,
         'stats' => [
             'total' => (int)($stats['total'] ?? count($items)),
             'admins' => (int)($stats['admins'] ?? 0),
@@ -72,7 +82,7 @@ require_role($user, 'owner');
 $input = json_input();
 $targetId = trim((string)($input['userId'] ?? $input['id'] ?? ''));
 $role = trim((string)($input['role'] ?? ''));
-if ($targetId === '' || !in_array($role, P50_ADMIN_USER_ROLES, true)) {
+if ($targetId === '' || !in_array($role, $p50AdminUserRoles, true)) {
     json_response(['error' => 'Utilisateur ou rôle invalide. Rôles : member, admin.'], 422);
 }
 

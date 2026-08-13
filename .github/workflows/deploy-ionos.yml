@@ -75,6 +75,7 @@ jobs:
           put -O "$REMOTE_DIR" .deploy/coules-share-simple-v1.js
           put -O "$REMOTE_DIR" .deploy/share-center-v1.js
           put -O "$REMOTE_DIR" .deploy/admin-pronostics.html
+          put -O "$REMOTE_DIR" .deploy/admin-membres.html
           put -O "$REMOTE_DIR" .deploy/pronostics.html
           put -O "$REMOTE_DIR" .deploy/pronostics.js
           put -O "$REMOTE_DIR" .deploy/deployment-version.json
@@ -86,6 +87,8 @@ jobs:
           put -O "$REMOTE_DIR/api" .deploy/api/metrics-collector-facebook.php
           put -O "$REMOTE_DIR/api" .deploy/api/prono-core.php
           put -O "$REMOTE_DIR/api" .deploy/api/prono-admin-save.php
+          put -O "$REMOTE_DIR/api" .deploy/api/admin-users.php
+          put -O "$REMOTE_DIR/api" .deploy/api/prono-admin-profiles.php
           put -O "$REMOTE_DIR/api" .deploy/api/prono-daily.php
           put -O "$REMOTE_DIR/api" .deploy/api/prono-daily-core.php
           put -O "$REMOTE_DIR/api" .deploy/api/prono-history.php

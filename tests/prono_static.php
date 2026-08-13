@@ -26,6 +26,7 @@ $required = [
     'pronostics.html',
     'pronostics.js',
     'admin-pronostics.html',
+    'admin-membres.html',
 ];
 
 foreach ($required as $rel) {
@@ -61,7 +62,7 @@ foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sa
 }
 
 $admin = file_get_contents($root.'/admin-pronostics.html');
-foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'prono-admin-profiles.php', 'fiProfileList', 'loadFiProfiles', 'key|label|cote', 'stake', 'authGate', 'prono-daily.php', 'coverImageUrl', 'genDailyBtn', 'publishDailyBtn', 'people_influenceurs', 'data-theme-save', 'Les 3 thèmes'] as $needle) {
+foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'prono-admin-profiles.php', 'fiProfileList', 'loadFiProfiles', 'admin-membres.html', 'loadMembers', 'membersList', 'key|label|cote', 'stake', 'authGate', 'prono-daily.php', 'coverImageUrl', 'genDailyBtn', 'publishDailyBtn', 'people_influenceurs', 'data-theme-save', 'Les 3 thèmes'] as $needle) {
     if (!str_contains($admin, $needle)) {
         fwrite(STDERR, "ADMIN-UI missing $needle\n");
         exit(1);
