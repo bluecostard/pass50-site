@@ -39,6 +39,7 @@ button.ghost{background:#0a0d0a;color:#f6f8f4}
     <a href="./admin-pronostics.html">Pronostics</a>
   </div>
   <h1>Membres inscrits</h1>
+  <p class="muted" id="whoami">Vérification de la connexion…</p>
   <p class="muted">Les plus récents en haut. Choisis <strong>Administrateur</strong> pour donner l’accès à l’administration. Réservé au propriétaire.</p>
   <div class="card" id="authGate" style="display:none;border-color:#664;background:#1a1208">
     <strong>Connexion requise (owner / admin)</strong>
@@ -80,10 +81,23 @@ async function loadMembers(){
   msg.textContent='';
   msg.classList.remove('err');
   try{
+    const token=localStorage.getItem('pass50_api_token')||'';
+    const who=document.getElementById('whoami');
+    if(!token){
+      if(who) who.textContent='Pas de session API. Connecte-toi sur pass50.store avec le compte propriétaire, puis reviens ici.';
+      if(gate) gate.style.display='block';
+      box.innerHTML='';
+      msg.classList.add('err');
+      msg.textContent='Connexion requise.';
+      return;
+    }
     const q=document.getElementById('search').value.trim();
     const data=await api('admin-users.php?limit=150&q='+encodeURIComponent(q));
     if(gate) gate.style.display='none';
     canAssign=Boolean(data.canAssignRoles);
+    const viewer=data.viewer||{};
+    const who=document.getElementById('whoami');
+    if(who) who.textContent='Connecté : '+(viewer.displayName||viewer.email||'')+' · '+roleLabel(viewer.role)+(canAssign?' · tu peux changer les rôles':' · lecture seule');
     const stats=data.stats||{};
     document.getElementById('kpis').innerHTML=[
       ['Inscrits',stats.total??0],
@@ -118,6 +132,8 @@ async function loadMembers(){
     box.innerHTML='';
     msg.classList.add('err');
     msg.textContent=text;
+    const who=document.getElementById('whoami');
+    if(who) who.textContent=text;
     if(gate&&(/auth|connect|rôle|role|droit|owner|admin|403|401|insuffisant|non autor/i.test(text)||!(localStorage.getItem('pass50_api_token')||''))){
       gate.style.display='block';
     }

@@ -43,8 +43,9 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
   <p id="jsBoot" class="toast" style="margin-top:-6px;font-size:11px">JS…</p>
   <p class="muted">Crée <strong>toi-même</strong> les questions avec cotes dans les 3 thèmes. Image obligatoire (URL ou photo FI via Profile ID). Vote 6/12/24 h.</p>
   <p class="muted" style="margin-top:8px"><a href="./admin-membres.html" style="color:#b7ff00;font-weight:900">Voir les membres inscrits et attribuer un rôle admin →</a></p>
-  <div class="card" id="membersCard">
+  <div class="card" id="membersCard" style="border-color:rgba(183,255,0,.45)">
     <h2 style="margin-top:0">Membres inscrits</h2>
+    <p class="muted" id="membersWho" style="margin:0 0 10px">Vérification de la connexion…</p>
     <p class="muted" style="margin:0 0 10px">Les plus récents en haut. Passe un compte en <strong>Administrateur</strong> pour lui ouvrir l’administration.</p>
     <div class="row" style="margin-top:0">
       <div>
@@ -246,6 +247,9 @@ async function loadMembers(){
     const q=document.getElementById('membersSearch')?.value?.trim()||'';
     const data=await api('admin-users.php?limit=80&q='+encodeURIComponent(q));
     const canAssign=Boolean(data.canAssignRoles);
+    const viewer=data.viewer||{};
+    const who=document.getElementById('membersWho');
+    if(who) who.textContent='Connecté : '+(viewer.displayName||viewer.email||'')+' · '+roleLabel(viewer.role)+(canAssign?' · tu peux changer les rôles':' · lecture seule');
     const stats=data.stats||{};
     const items=Array.isArray(data.items)?data.items:[];
     const head=`<p class="muted" style="margin:0 0 8px">${Number(stats.total||items.length)} inscrit(s) · ${Number(stats.last7d||0)} sur 7 jours · ${Number(stats.admins||0)} admin(s)${canAssign?'':' · lecture seule'}</p>`;
@@ -271,6 +275,8 @@ async function loadMembers(){
   }catch(e){
     const text=String(e.message||'Erreur');
     box.innerHTML='';
+    const who=document.getElementById('membersWho');
+    if(who) who.textContent=text;
     if(msg){msg.classList.add('err');msg.textContent=text;}
     else box.textContent=text;
   }

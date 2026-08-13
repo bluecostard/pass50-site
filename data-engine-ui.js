@@ -23,7 +23,7 @@
   };
 
   renderAdmin=function(){
-    const menu=`<div class="admin-menu">${ADMIN_ITEMS.map(([id,label])=>`<button class="btn ${ui.adminTab===id?'primary':''}" data-admin-tab="${id}">${label}</button>`).join('')}</div>`;
+    const menu=`<div class="admin-menu">${ADMIN_ITEMS.map(([id,label])=>`<button class="btn ${ui.adminTab===id?'primary':''}" data-admin-tab="${id}"${id==='members'?' style="border-color:rgba(183,255,0,.55);color:var(--lime)"':''}>${label}</button>`).join('')}</div>`;
     $('#adminBody').innerHTML=`<div class="admin-grid">${menu}<div class="admin-pane" id="adminPane"></div></div>`;
     renderAdminPane();
   };
@@ -115,8 +115,22 @@
           <div class="muted">Pilotez les données, les fiches, les métriques et la publication de PASS50.</div>
         </div>
       </div>
+      <div class="de-home-members" id="deHomeMembersCard" style="border:1px solid rgba(183,255,0,.45);border-radius:16px;padding:16px;background:#0c100c">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div>
+            <div class="section-title" style="margin:0">MEMBRES INSCRITS</div>
+            <div class="muted" id="deHomeMembersWho">Les plus récents en haut. Passe un compte en Administrateur pour lui ouvrir l’admin.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn primary" data-admin-tab="members">Liste complète</button>
+            <a class="btn" href="./admin-membres.html">Page dédiée →</a>
+          </div>
+        </div>
+        <div id="deHomeMembersBody" class="muted" style="margin-top:12px">Chargement des inscriptions…</div>
+      </div>
       <div class="de-admin-home-grid">${ADMIN_ITEMS.filter(([id])=>id!=='adminhome'&&id!=='todo').map(([id,label])=>`<button class="de-admin-home-card" data-admin-tab="${id}"><strong>${deEsc(label)}</strong><span>${deEsc(ADMIN_DESCRIPTIONS[id])}</span><i aria-hidden="true">Ouvrir →</i></button>`).join('')}</div>
     </div>`;
+    deLoadHomeMembers();
   }
   function deRoleLabel(role){
     return {owner:'Propriétaire',admin:'Administrateur',editor:'Éditeur',verifier:'Vérificateur',member:'Membre'}[role]||role||'Membre';
@@ -126,37 +140,22 @@
     const d=new Date(iso);
     return Number.isNaN(d.getTime())?'—':d.toLocaleString('fr-FR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   }
-  function deRenderMembersAdmin(pane){
-    pane.innerHTML=`<div class="de-members">
-      <div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button>
-        <div class="section-title" style="margin-top:10px">MEMBRES</div>
-        <div class="muted">Inscriptions récentes en haut. Seul le <strong>propriétaire</strong> peut attribuer le rôle Administrateur (accès à l’admin).</div>
-      </div></div>
-      <div class="de-members-toolbar">
-        <input id="deMembersSearch" type="search" placeholder="Rechercher un nom ou un e-mail…" value="${deEsc(DE.membersQuery||'')}">
-        <button type="button" class="btn" id="deMembersRefresh">Actualiser</button>
-      </div>
-      <div id="deMembersBody"><div class="muted">Chargement des inscriptions…</div></div>
-    </div>`;
-    if(!document.getElementById('deMembersStyles')){
-      const style=document.createElement('style');style.id='deMembersStyles';
-      style.textContent=`.de-members-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.de-members-toolbar input{flex:1;min-width:180px;padding:10px 12px;border-radius:12px;border:1px solid #293129;background:#0a0d0a;color:#fff;font:inherit}.de-members-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:0 0 14px}.de-members-kpis div{border:1px solid var(--line);border-radius:14px;padding:12px;background:#0c100c}.de-members-kpis strong{display:block;font-size:22px;color:var(--lime)}.de-members-kpis span{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}.de-members-role{padding:8px 10px;border-radius:10px;border:1px solid #293129;background:#0a0d0a;color:#fff;font:inherit;min-width:150px}.de-members-role:disabled{opacity:.55}.de-members-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid #3a453a}.de-members-badge.ok{color:#b7ff00}.de-members-badge.wait{color:#ffc065}`;
-      document.head.appendChild(style);
-    }
-    deLoadMembers();
+  function deMembersViewerLine(data){
+    const me=typeof currentUser==='function'?currentUser():null;
+    const viewer=data?.viewer||{};
+    const name=viewer.displayName||me?.displayName||viewer.email||me?.email||'compte';
+    const role=deRoleLabel(viewer.role||me?.role);
+    const canAssign=Boolean(data?.canAssignRoles);
+    return `Connecté : ${name} · ${role}${canAssign?' · tu peux attribuer Administrateur':' · lecture seule'}`;
   }
-  function deDrawMembersBody(){
-    const box=document.getElementById('deMembersBody');
-    if(!box||ui.adminTab!=='members')return;
-    if(DE.membersLoading&&!DE.members){box.innerHTML='<div class="muted">Chargement des inscriptions…</div>';return;}
-    const data=DE.members||{};
-    if(data.error){box.innerHTML=`<div class="de-error">${deEsc(data.error)}</div>`;return;}
+  function deMembersTableHtml(data, limit){
     const stats=data.stats||{};
-    const items=Array.isArray(data.items)?data.items:[];
+    const all=Array.isArray(data.items)?data.items:[];
+    const items=limit?all.slice(0,limit):all;
     const canAssign=Boolean(data.canAssignRoles);
     const me=typeof currentUser==='function'?currentUser():null;
     const myId=String(me?.id||'');
-    const kpis=[['Inscrits',stats.total??items.length],['7 derniers jours',stats.last7d??0],['E-mail confirmé',stats.confirmed??0],['Administrateurs',stats.admins??0]].map(([label,value])=>`<div><strong>${deEsc(value)}</strong><span>${deEsc(label)}</span></div>`).join('');
+    const kpis=[['Inscrits',stats.total??all.length],['7 derniers jours',stats.last7d??0],['E-mail confirmé',stats.confirmed??0],['Administrateurs',stats.admins??0]].map(([label,value])=>`<div><strong>${deEsc(value)}</strong><span>${deEsc(label)}</span></div>`).join('');
     const rows=items.map(item=>{
       const role=String(item.role||'member');
       const isOwner=role==='owner';
@@ -174,10 +173,67 @@
         <td>${deEsc(deFmtMemberDate(item.createdAt))}</td>
       </tr>`;
     }).join('');
-    box.innerHTML=`<div class="de-members-kpis">${kpis}</div>
+    return `<div class="de-members-kpis">${kpis}</div>
       ${canAssign?'':'<p class="muted" style="margin:0 0 12px">Lecture seule : demande au propriétaire d’attribuer les rôles.</p>'}
       <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Personne</th><th>Rôle</th><th>Compte</th><th>Inscription</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="4">Aucun membre pour cette recherche.</td></tr>'}</tbody></table></div>`;
+      <tbody>${rows||'<tr><td colspan="4">Aucun membre pour cette recherche.</td></tr>'}</tbody></table></div>
+      ${limit&&all.length>items.length?`<p class="muted" style="margin:10px 0 0">+ ${all.length-items.length} autre(s) — ouvre la liste complète.</p>`:''}`;
+  }
+  function deEnsureMembersStyles(){
+    if(document.getElementById('deMembersStyles'))return;
+    const style=document.createElement('style');style.id='deMembersStyles';
+    style.textContent=`.de-members-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.de-members-toolbar input{flex:1;min-width:180px;padding:10px 12px;border-radius:12px;border:1px solid #293129;background:#0a0d0a;color:#fff;font:inherit}.de-members-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:0 0 14px}.de-members-kpis div{border:1px solid var(--line);border-radius:14px;padding:12px;background:#0c100c}.de-members-kpis strong{display:block;font-size:22px;color:var(--lime)}.de-members-kpis span{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}.de-members-role{padding:8px 10px;border-radius:10px;border:1px solid #293129;background:#0a0d0a;color:#fff;font:inherit;min-width:150px}.de-members-role:disabled{opacity:.55}.de-members-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid #3a453a}.de-members-badge.ok{color:#b7ff00}.de-members-badge.wait{color:#ffc065}`;
+    document.head.appendChild(style);
+  }
+  async function deLoadHomeMembers(){
+    deEnsureMembersStyles();
+    const box=document.getElementById('deHomeMembersBody');
+    const who=document.getElementById('deHomeMembersWho');
+    if(!box||ui.adminTab!=='adminhome')return;
+    const me=typeof currentUser==='function'?currentUser():null;
+    if(who) who.textContent=me?`Connecté : ${me.displayName||me.email||'compte'} · ${deRoleLabel(me.role)} · chargement…`:'Vérification de la connexion…';
+    if(typeof CLOUD!=='undefined'&&CLOUD.enabled&&!CLOUD.token){
+      if(who) who.textContent='Session API absente.';
+      box.innerHTML=`<div class="de-error">Tu es peut-être connecté en local, mais pas à la base PASS50. Déconnecte-toi, reconnecte-toi avec le compte propriétaire, puis rouvre Administration.</div>`;
+      return;
+    }
+    try{
+      const data=await apiFetch('admin-users.php?limit=40');
+      DE.members=data;
+      if(who) who.textContent=deMembersViewerLine(data)+' · les plus récents en haut.';
+      if(!(data.items||[]).length){
+        box.innerHTML='<p class="muted" style="margin:0">Aucun compte trouvé en base pour le moment.</p>';
+        return;
+      }
+      box.innerHTML=deMembersTableHtml(data,12);
+    }catch(error){
+      const text=String(error.message||'Impossible de charger les membres');
+      if(who) who.textContent=text;
+      box.innerHTML=`<div class="de-error">${deEsc(text)}<p style="margin:8px 0 0">Ouvre <a href="./admin-membres.html" style="color:var(--lime)">la page Membres</a> après t’être reconnecté sur pass50.store.</p></div>`;
+    }
+  }
+  function deRenderMembersAdmin(pane){
+    pane.innerHTML=`<div class="de-members">
+      <div class="section-head"><div><button type="button" class="btn admin-view-home" data-admin-tab="adminhome">← Accueil administration</button>
+        <div class="section-title" style="margin-top:10px">MEMBRES</div>
+        <div class="muted">Inscriptions récentes en haut. Seul le <strong>propriétaire</strong> peut attribuer le rôle Administrateur (accès à l’admin).</div>
+      </div></div>
+      <div class="de-members-toolbar">
+        <input id="deMembersSearch" type="search" placeholder="Rechercher un nom ou un e-mail…" value="${deEsc(DE.membersQuery||'')}">
+        <button type="button" class="btn" id="deMembersRefresh">Actualiser</button>
+      </div>
+      <div id="deMembersBody"><div class="muted">Chargement des inscriptions…</div></div>
+    </div>`;
+    deEnsureMembersStyles();
+    deLoadMembers();
+  }
+  function deDrawMembersBody(){
+    const box=document.getElementById('deMembersBody');
+    if(!box||ui.adminTab!=='members')return;
+    if(DE.membersLoading&&!DE.members){box.innerHTML='<div class="muted">Chargement des inscriptions…</div>';return;}
+    const data=DE.members||{};
+    if(data.error){box.innerHTML=`<div class="de-error">${deEsc(data.error)}</div>`;return;}
+    box.innerHTML=`<p class="muted" style="margin:0 0 12px">${deEsc(deMembersViewerLine(data))}</p>`+deMembersTableHtml(data);
   }
   async function deLoadMembers(force=false){
     if(DE.membersLoading&&!force)return;
@@ -191,6 +247,7 @@
     }finally{
       DE.membersLoading=false;
       deDrawMembersBody();
+      if(ui.adminTab==='adminhome')deLoadHomeMembers();
     }
   }
   function deRenderAdminTodo(pane){
@@ -347,7 +404,8 @@
       <div class="pref" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">
         <p class="muted" style="margin:0;max-width:42rem;line-height:1.45">Dans l’atelier : crée les questions avec cotes pour <strong>People influenceurs</strong>, <strong>People Artiste/sportif</strong> et <strong>People Actualité</strong>, puis publie (open).</p>
         <a class="btn primary" href="./admin-pronostics.html">Ouvrir l’atelier Pronostics →</a>
-        <a class="btn" href="./admin-membres.html">Voir les membres inscrits</a>
+        <button type="button" class="btn" data-admin-tab="members">Voir les membres inscrits</button>
+        <a class="btn" href="./admin-membres.html">Page Membres dédiée →</a>
         <a class="btn" href="./pronostics.html">Voir la page joueurs</a>
       </div>`;
   }
@@ -969,6 +1027,7 @@
         await apiFetch('admin-users.php',{method:'POST',body:{userId,role}});
         toast(role==='admin'?'Accès administration attribué':'Rôle membre restauré');
         await deLoadMembers(true);
+        if(ui.adminTab==='adminhome')await deLoadHomeMembers();
       }catch(err){
         roleSel.value=previous;
         toast(err.message||'Rôle non modifié');
