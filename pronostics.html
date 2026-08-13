@@ -116,7 +116,33 @@
     }
     .badge-up{color:var(--lime);font-size:11px;font-weight:800}
     .pub-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-top:12px}
-    .pub-card img.cover{width:100%;max-height:180px;object-fit:cover;object-position:center 18%;border-radius:14px;margin-bottom:10px}
+    .pub-cover-btn{
+      display:block;width:100%;padding:0;border:none;background:none;cursor:zoom-in;
+      position:relative;border-radius:14px;overflow:hidden;margin-bottom:10px;
+    }
+    .pub-cover-btn:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+    .pub-card img.cover{width:100%;max-height:180px;object-fit:cover;object-position:center 18%;border-radius:14px;margin-bottom:0;display:block}
+    .pub-cover-hint{
+      position:absolute;right:10px;bottom:10px;
+      background:rgba(5,7,5,.82);border:1px solid rgba(183,255,0,.35);
+      color:var(--lime);font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;
+      pointer-events:none;
+    }
+    .cover-lightbox{
+      position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.94);
+      display:none;align-items:center;justify-content:center;
+      padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+    }
+    .cover-lightbox.show{display:flex}
+    .cover-lightbox-inner{width:min(960px,100%);max-height:100%;display:flex;flex-direction:column;gap:10px}
+    .cover-lightbox img{
+      width:100%;max-height:calc(100vh - 120px);object-fit:contain;border-radius:12px;background:#0a0d0a;
+    }
+    .cover-lightbox-cap{margin:0;font-size:13px;font-weight:700;line-height:1.35;color:rgba(244,247,240,.88);text-align:center}
+    .cover-lightbox-close{
+      align-self:flex-end;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);
+      color:#fff;border-radius:12px;padding:8px 14px;font-weight:800;
+    }
     .pub-card h3{margin:0;font-size:16px;line-height:1.3}
     .pub-meta{margin-top:6px;font-size:12px;color:var(--muted)}
     .pub-context{
@@ -194,6 +220,7 @@
     .slip-stake-chips button.on{border-color:var(--lime);background:rgba(183,255,0,.12);color:var(--lime)}
     body.slip-open .shell{padding-bottom:calc(280px + env(safe-area-inset-bottom))}
     body.slip-open.slip-collapsed .shell{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+    body.cover-lightbox-open{overflow:hidden}
     .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;display:none;align-items:flex-end;justify-content:center;padding:16px}
     .modal-bg.show{display:flex}
     .modal-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px}
@@ -404,6 +431,15 @@
   </div>
 </div>
 
+<!-- Image prono plein écran -->
+<div class="cover-lightbox" id="coverLightbox" role="dialog" aria-modal="true" aria-label="Image du prono">
+  <div class="cover-lightbox-inner">
+    <button type="button" class="cover-lightbox-close" id="coverLightboxClose">Fermer</button>
+    <img id="coverLightboxImg" src="" alt="">
+    <p class="cover-lightbox-cap" id="coverLightboxCap"></p>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -481,6 +517,34 @@
     const text=String(context||'').trim();
     if(!text) return '';
     return `<div class="pub-context"><span class="pub-context-label">Contexte</span><p>${escHtml(text)}</p></div>`;
+  }
+  function renderPronoCover(item){
+    const src=String(item.coverPhoto||'').trim();
+    if(!src) return '';
+    const title=String(item.title||'Pronostic').trim();
+    return `<button type="button" class="pub-cover-btn" data-cover-src="${escHtml(src)}" data-cover-title="${escHtml(title)}" aria-label="Voir l'image en entier">
+      <img class="cover" src="${escHtml(src)}" alt="" loading="lazy">
+      <span class="pub-cover-hint">Agrandir</span>
+    </button>`;
+  }
+  function openCoverLightbox(src, title){
+    const box=document.getElementById('coverLightbox');
+    const img=document.getElementById('coverLightboxImg');
+    const cap=document.getElementById('coverLightboxCap');
+    if(!box||!img) return;
+    img.src=src;
+    img.alt=title||'Image du prono';
+    if(cap) cap.textContent=title||'';
+    box.classList.add('show');
+    document.body.classList.add('cover-lightbox-open');
+  }
+  function closeCoverLightbox(){
+    const box=document.getElementById('coverLightbox');
+    const img=document.getElementById('coverLightboxImg');
+    if(!box) return;
+    box.classList.remove('show');
+    document.body.classList.remove('cover-lightbox-open');
+    if(img){ img.removeAttribute('src'); img.alt=''; }
   }
   function maxStake(){
     return Math.max(STAKE_MIN, Math.floor(Math.max(0, Number(state.points) || 0) - Number(state.floor || BALANCE_FLOOR)));
@@ -675,7 +739,7 @@
               <span class="odd">${fmtOdd(o.odd)}</span>
             </button>`;
           }).join('');
-          const cover=item.coverPhoto?`<img class="cover" src="${escHtml(item.coverPhoto)}" alt="" loading="lazy">`:'';
+          const cover=renderPronoCover(item);
           let hint='Touche une cote pour l’ajouter à ta grille (pas encore validé)';
           if (voted && item.statusPublished) hint=isGrilleVote?'Grille validée · statut en ligne dans Mon fil':'Prono validé · Statut prono en ligne dans Mon fil';
           else if (voted) hint=isGrilleVote?'Grille validée · pas encore dans Mon fil':'Prono validé · pas encore dans Mon fil';
@@ -719,6 +783,11 @@
   }
 
   document.getElementById('pubsList')?.addEventListener('click',(e)=>{
+    const coverBtn=e.target.closest('[data-cover-src]');
+    if(coverBtn){
+      openCoverLightbox(coverBtn.getAttribute('data-cover-src'), coverBtn.getAttribute('data-cover-title'));
+      return;
+    }
     const pubSlip=e.target.closest('[data-publish-slip]');
     if(pubSlip){
       openStatusModal({ slipId: pubSlip.getAttribute('data-publish-slip'), questionIds: [] });
@@ -864,6 +933,14 @@
     }finally{
       btn.disabled=false;
     }
+  });
+
+  document.getElementById('coverLightboxClose')?.addEventListener('click', closeCoverLightbox);
+  document.getElementById('coverLightbox')?.addEventListener('click',(e)=>{
+    if(e.target.id==='coverLightbox') closeCoverLightbox();
+  });
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='Escape' && document.getElementById('coverLightbox')?.classList.contains('show')) closeCoverLightbox();
   });
 
   document.getElementById('statusStrip')?.addEventListener('click',(e)=>{
