@@ -4,7 +4,7 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/data-engine-core.php';
 
-const P50_LINKS_BATCH_OWNER_VERSION='OFFICIAL-LINKS-BATCH-OWNER-V1.2';
+const P50_LINKS_BATCH_OWNER_VERSION='OFFICIAL-LINKS-BATCH-OWNER-V1.3';
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $raw=file_get_contents('php://input');if($raw===false||strlen($raw)>32768)json_response(['error'=>'Corps invalide.'],413);
@@ -31,11 +31,7 @@ $fixed=[
     ],
 ];
 
-// Les liens de ces trois fiches sont saisis directement par le propriétaire PASS50.
-// On fige tous les liens non vides présents dans l'état public au moment du passage.
 $freezeCurrentNames=['zagbalerequin','zeinabbance','samosamo'];
-// Le Facebook de Zeinab a été fourni dans la capture propriétaire mais n'avait pas encore
-// atteint l'état serveur lors du premier gel. Il est donc injecté explicitement ici.
 $explicitFreeze=[
     'zeinabbance'=>[
         'Facebook'=>'https://www.facebook.com/p/Zeinab-BANCE-WRG-61568549139334/',
@@ -50,7 +46,8 @@ function p50_batch_profile_index(array $state,string $normalizedName): int {
 }
 function p50_batch_store(array &$profile,string $platform,string $url,string $source): array {
     $profileId=(string)$profile['id'];$normalized=p50_de_normalize_social_url($platform,$url);
-    if($normalized===''||!p50_platform_host_ok($platform,$normalized)||!p50_de_direct_social_path($platform,$normalized))throw new RuntimeException('Lien invalide pour '.($profile['name']??$profileId).' / '.$platform.'.');
+    $explicitOwner=$source==='owner_capture_explicit';
+    if($normalized===''||!p50_platform_host_ok($platform,$normalized)||(!$explicitOwner&&!p50_de_direct_social_path($platform,$normalized)))throw new RuntimeException('Lien invalide pour '.($profile['name']??$profileId).' / '.$platform.'.');
     $delete=db()->prepare("DELETE FROM p50_social_link_evidence WHERE profile_id=? AND platform=? AND source_type IN ('manual_owner','manual_admin')");$delete->execute([$profileId,$platform]);
     $validation=['ok'=>true,'status'=>'owner_verified','normalizedUrl'=>$normalized,'httpStatus'=>0,'nameScore'=>100,'message'=>'Compte officiel confirmé et figé par le propriétaire PASS50'];
     p50_de_add_social_evidence($profileId,$platform,$normalized,'manual_owner','Propriétaire PASS50','',100,$validation);
