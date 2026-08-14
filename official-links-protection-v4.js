@@ -4,6 +4,7 @@
   const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.2';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
   const OWNER_LOCK_KEY='pass50_owner_locked_profiles_v1';
+  const OFFICIAL_LINK_FIELDS=['TikTok','Instagram','Facebook','YouTube','X','Snapchat'];
   const OWNER_LOCK_EXACT={
     zagba:{
       TikTok:'https://tiktok.com/@zagbalerekin',
@@ -12,6 +13,7 @@
       YouTube:'https://youtube.com/channel/UCuSwqnO-AnSaZwk3JCHqyFg'
     },
     zeinab:{
+      TikTok:'https://www.tiktok.com/@cheffezeinabbance',
       Instagram:'https://www.instagram.com/zeinabbance/',
       Facebook:'https://www.facebook.com/p/Zeinab-BANCE-WRG-61568549139334/'
     }
@@ -112,6 +114,52 @@
     return result;
   }
 
+  function linkStateClass(status='pending'){
+    try{if(typeof p50v9StatusClass==='function')return p50v9StatusClass(status);}catch{}
+    return ['ok','owner_verified','manual_verified','blocked_but_exists'].includes(status)?'ok':status==='pending'?'pending':'bad';
+  }
+
+  function linkStateText(status='pending'){
+    try{if(typeof p50v9StatusText==='function')return p50v9StatusText(status);}catch{}
+    const labels={ok:'OFFICIEL',owner_verified:'OFFICIEL',manual_verified:'OFFICIEL',blocked_but_exists:'À CONFIRMER',pending:'NON TESTÉ',search_not_official:'RECHERCHE',generic_or_content:'LIEN GÉNÉRIQUE',wrong_platform:'MAUVAIS RÉSEAU',broken:'CASSÉ',invalid:'INVALIDE'};
+    return labels[status]||String(status||'NON TESTÉ').toUpperCase();
+  }
+
+  function ensureSixOfficialFields(){
+    const cards=[...document.querySelectorAll('#linksCards [data-link-profile]')];
+    cards.forEach(card=>{
+      const id=card.getAttribute('data-link-profile')||'';
+      let p=null;
+      try{p=typeof profile==='function'?profile(id):null;}catch{}
+      if(!p)return;
+      const grid=card.querySelector('.link-grid');
+      if(!grid)return;
+      const currentInputs=[...grid.querySelectorAll('[data-link-platform]')];
+      const currentOrder=currentInputs.map(input=>input.dataset.linkPlatform||'');
+      if(currentOrder.length===OFFICIAL_LINK_FIELDS.length&&currentOrder.every((value,index)=>value===OFFICIAL_LINK_FIELDS[index]))return;
+
+      const typedValues={};
+      currentInputs.forEach(input=>{typedValues[input.dataset.linkPlatform]=input.value;});
+      const fragment=document.createDocumentFragment();
+      OFFICIAL_LINK_FIELDS.forEach(platform=>{
+        const check=p.linkChecks?.[platform]||{status:'pending'};
+        const label=document.createElement('strong');
+        label.textContent=platform;
+        const input=document.createElement('input');
+        input.dataset.linkPlatform=platform;
+        input.value=Object.prototype.hasOwnProperty.call(typedValues,platform)?typedValues[platform]:(p.links?.[platform]||'');
+        input.placeholder='URL officielle exacte';
+        const state=document.createElement('span');
+        state.className='link-state '+linkStateClass(check.status);
+        state.title=String(check.message||'');
+        state.textContent=linkStateText(check.status);
+        fragment.append(label,input,state);
+      });
+      grid.replaceChildren(fragment);
+      card.dataset.sixOfficialFields='1';
+    });
+  }
+
   function applyOfficialLinksSearch(){
     const input=document.getElementById('linksProfileSearch');
     const cards=[...document.querySelectorAll('#linksCards [data-link-profile]')];
@@ -124,6 +172,7 @@
       try{p=typeof profile==='function'?profile(id):null;}catch{}
       const haystack=searchKey([
         p?.name,p?.handle,p?.id,p?.category,
+        ...OFFICIAL_LINK_FIELDS,
         ...(p?.platforms||[]),
         ...Object.keys(p?.links||{}),
         ...Object.values(p?.links||{})
@@ -148,6 +197,8 @@
         }
       }
     }catch(error){console.error('PASS50 recherche Liens officiels',error);}
+
+    ensureSixOfficialFields();
 
     let input=document.getElementById('linksProfileSearch');
     if(!input){
@@ -229,7 +280,7 @@
         if(!Object.keys(links).length)continue;
         const data=await apiFetch('official-links-bulk.php',{
           method:'POST',
-          body:{action:'save_profile',profileId:String(profile.id),links,confirmedOfficial:true,clientVersion:'4.2-owner-locks-search'}
+          body:{action:'save_profile',profileId:String(profile.id),links,confirmedOfficial:true,clientVersion:'4.2-six-fields'}
         });
         if(typeof CLOUD==='object'&&CLOUD&&Number.isFinite(Number(data.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
         pinned+=Number(data.linksProcessed||Object.keys(links).length||0);
@@ -253,7 +304,7 @@
     restoring=true;
     try{
       const pinned=await pinOwnerLockedProfiles(force);
-      const data=await apiFetch('official-links-bulk.php',{method:'POST',body:{action:'integrity_sync',profiles:[],clientVersion:'4.2'}});
+      const data=await apiFetch('official-links-bulk.php',{method:'POST',body:{action:'integrity_sync',profiles:[],clientVersion:'4.2-six-fields'}});
       if(typeof CLOUD==='object'&&CLOUD&&Number.isFinite(Number(data.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
       if(typeof loadCloudState==='function')await loadCloudState();
       const removed=sanitizeBrowser();
@@ -297,7 +348,7 @@
       if(window.__pass50CloudReady){clearInterval(readyTimer);ensureOfficialLinksSearch();restoreVerifiedLinks(true);}
     },500);
     setTimeout(()=>clearInterval(readyTimer),60000);
-    window.PASS50_OFFICIAL_LINKS_PROTECTION_V4={version:VERSION,sanitize:sanitizeBrowser,restore:restoreVerifiedLinks,pinOwnerLockedProfiles,ensureOfficialLinksSearch,applyOfficialLinksSearch};
+    window.PASS50_OFFICIAL_LINKS_PROTECTION_V4={version:VERSION,sanitize:sanitizeBrowser,restore:restoreVerifiedLinks,pinOwnerLockedProfiles,ensureOfficialLinksSearch,applyOfficialLinksSearch,ensureSixOfficialFields,fields:[...OFFICIAL_LINK_FIELDS]};
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
