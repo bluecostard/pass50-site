@@ -62,6 +62,14 @@ try {
         p50_prono_credit($pdo, (string)$row['user_id'], $delta, $liked ? 'status_like' : 'status_unlike', $statusId);
         $pdo->prepare('UPDATE p50_prono_statuses SET like_points_awarded=? WHERE id=?')->execute([$target, $statusId]);
     }
+    $likeMilestones = [1, 5, 10, 25, 50, 100, 200];
+    if ($liked && in_array($likeCount, $likeMilestones, true)) {
+        $pdo->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')->execute([
+            (string)$row['user_id'],
+            $likeCount === 1 ? 'Ton statut a reçu son premier like 💚' : 'Ton statut atteint '.$likeCount.' likes 💚',
+            'Ton statut prono compte maintenant '.$likeCount.' like'.($likeCount > 1 ? 's' : '').' et continue de te rapporter des points.'
+        ]);
+    }
     $pdo->commit();
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();

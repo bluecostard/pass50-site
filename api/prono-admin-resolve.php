@@ -71,11 +71,21 @@ try {
 
         if ((string)$vote['option_key'] !== $winningKey) {
             $losers++;
+            $pdo->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')->execute([
+                (string)$vote['user_id'],
+                'Résultat de ton pronostic',
+                'Ton pronostic « '.mb_substr((string)$question['title'], 0, 120).' » est terminé. Cette fois, ton choix n’était pas le bon.'
+            ]);
             continue; // mise déjà perdue au vote (plancher respecté)
         }
 
         $payout = p50_prono_payout($effectiveStake, $odd);
         p50_prono_credit($pdo, (string)$vote['user_id'], $payout, 'prono_correct', $questionId);
+        $pdo->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')->execute([
+            (string)$vote['user_id'],
+            'Pronostic gagné 🎯',
+            'Bravo ! Ton pronostic « '.mb_substr((string)$question['title'], 0, 120).' » est correct : +'.number_format($payout, 0, ',', ' ').' points.'
+        ]);
         $winners++;
         $pointsPaid += $payout;
     }

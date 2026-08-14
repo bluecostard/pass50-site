@@ -490,9 +490,19 @@ function p50_prono_settle_slips(PDO $pdo, array $slipIds): int {
             p50_prono_credit($pdo, (string)$slip['user_id'], $payout, 'prono_grille_win', $slipId);
             $pdo->prepare("UPDATE p50_prono_slips SET status='won', potential_payout=?, settled_at=UTC_TIMESTAMP() WHERE id=?")
                 ->execute([$payout, $slipId]);
+            $pdo->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')->execute([
+                (string)$slip['user_id'],
+                'Grille gagnée 🎯',
+                'Toute ta grille est correcte : +'.number_format($payout, 0, ',', ' ').' points.'
+            ]);
         } else {
             $pdo->prepare("UPDATE p50_prono_slips SET status='lost', settled_at=UTC_TIMESTAMP() WHERE id=?")
                 ->execute([$slipId]);
+            $pdo->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')->execute([
+                (string)$slip['user_id'],
+                'Résultat de ta grille',
+                'Ta grille est terminée. Au moins un choix n’était pas correct cette fois.'
+            ]);
         }
         $settled++;
     }
