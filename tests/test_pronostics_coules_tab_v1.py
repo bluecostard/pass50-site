@@ -1,3 +1,4 @@
+# Validation de l’intégration native des Coulés dans la page Pronostics.
 from pathlib import Path
 import unittest
 
