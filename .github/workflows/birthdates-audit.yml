@@ -1,0 +1,24 @@
+name: Audit dates de naissance manquantes
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/birthdates-audit.yml']
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lister les fiches incomplètes
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --location --fail-with-body --silent --show-error --max-time 60             -H 'Cache-Control: no-cache, no-store'             'https://www.pass50.store/api/state.php' > state.json
+          jq -c '
+            [.data.profiles[]
+             | select((.alive // true) == true)
+             | select((.birthDate // "") == "")
+             | {id,name,handle,category,region,platforms,links,birthYear,ageStatus}]
+          ' state.json | tee missing-birthdates.json
+          jq -r '"MISSING_COUNT=" + (length|tostring), .[] | [.id,.name,.handle] | @tsv' missing-birthdates.json
