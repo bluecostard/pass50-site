@@ -85,11 +85,15 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("'publicStateWrites'=>0", FRESH)
 
     def test_fast_cycle_runs_every_five_minutes(self):
-        self.assertIn("*/5 * * * *", FAST_WORKFLOW)
+        self.assertIn("cron: '17 */3 * * *'", FAST_WORKFLOW)
+        self.assertIn("cycles=36", FAST_WORKFLOW)
+        self.assertIn("next_tick", FAST_WORKFLOW)
+        self.assertIn("/ 300 + 1", FAST_WORKFLOW)
         self.assertIn("content-freshness-cron-v4.php", FAST_WORKFLOW)
         self.assertIn("CONTENT-FRESHNESS-V4.0", FAST_WORKFLOW)
         self.assertIn("FACEBOOK-COLLECTOR-V2.0", FAST_WORKFLOW)
         self.assertIn("bucketSeconds==300", FAST_WORKFLOW)
+        self.assertIn("resilience==\"V4.1\"", FAST_WORKFLOW)
         self.assertIn("pass50/content-freshness", FAST_WORKFLOW)
         self.assertIn("actions/upload-artifact@v4", FAST_WORKFLOW)
 
