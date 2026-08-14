@@ -15,8 +15,6 @@ if($_SERVER['REQUEST_METHOD']==='GET'){
     $stmt=db()->prepare('SELECT DISTINCT platform FROM p50_social_link_evidence WHERE profile_id=?');
     $stmt->execute([$profileId]);
     foreach($stmt->fetchAll(PDO::FETCH_COLUMN) as $existingPlatform)p50_de_rebuild_social_link($profileId,(string)$existingPlatform);
-    // Une simple lecture ne doit jamais réécrire app_state ni modifier sa révision.
-    // Cela évite qu'une ouverture de fiche écrase une sauvegarde administrative en cours.
     $state=p50_de_load_public_state();
     $history=!empty($_GET['history'])?p50_de_social_history($profileId,max(1,min(500,(int)($_GET['limit']??100)))):[];
     json_response([
@@ -35,11 +33,10 @@ if(!$profiles)json_response(['error'=>'Profil introuvable.'],404);
 $profile=$profiles[0];
 $previousUrl=p50_de_current_social_url($profileId,$platform);
 
-// Liens explicitement figés par le propriétaire PASS50.
-// Ils ne peuvent ni être supprimés, ni rejetés, ni remplacés par une autre URL.
 $lockedOfficialLinks=[
     'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     'census-observateur-ebene|facebook'=>'https://www.facebook.com/observateurofficiel/',
+    'census-observateur-ebene|x'=>'https://x.com/FlorentAMANY',
 ];
 $lockKey=strtolower($profileId).'|'.strtolower($platform);
 $lockedOfficialUrl=$lockedOfficialLinks[$lockKey]??'';
@@ -83,7 +80,6 @@ if($validation['normalizedUrl']==='')json_response(['error'=>$validation['messag
 if(in_array($validation['status'],['wrong_platform','generic_or_content','invalid'],true))json_response(['error'=>$validation['message'],'validation'=>$validation],422);
 $confirmed=!empty($in['confirmedOfficial']);
 if($confirmed){
-    // La confirmation explicite d'un propriétaire/admin prévaut sur les blocages anti-robots.
     $validation['normalizedUrl']=p50_de_normalize_social_url($platform,$url) ?: $validation['normalizedUrl'];
     $validation['ok']=true;
     $validation['status']=$user['role']==='owner'?'owner_verified':'manual_verified';
