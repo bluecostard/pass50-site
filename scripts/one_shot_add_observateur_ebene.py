@@ -126,10 +126,19 @@ def replace_once(path, old, new):
     path.write_text(text.replace(old, new), encoding='utf-8')
 
 
+def replace_all(path, old, new):
+    text = path.read_text(encoding='utf-8')
+    if old not in text:
+        if new in text:
+            return
+        raise RuntimeError(f'Marqueur attendu absent dans {path}: {old}')
+    path.write_text(text.replace(old, new), encoding='utf-8')
+
+
 def versions():
     replace_once(V9, "const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.11';", "const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.12';")
     replace_once(V9, "const CENSUS_VERSION='97-v28';", "const CENSUS_VERSION='98-v29';")
-    replace_once(INDEX, './v9-tools.js?v=15.9', './v9-tools.js?v=15.10')
+    replace_all(INDEX, './v9-tools.js?v=15.9', './v9-tools.js?v=15.10')
     replace_once(SW, './v9-tools.js?v=15.9', './v9-tools.js?v=15.10')
     replace_once(SW, './pass50_nouveaux_candidats_90_v19.json?v=22.11', './pass50_nouveaux_candidats_90_v19.json?v=22.12')
     for path in (ROOT / 'tests').glob('test_*.py'):
