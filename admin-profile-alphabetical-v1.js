@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.2';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.3';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
   let linksRendererInstalled=false;
@@ -102,13 +102,10 @@
   }
 
   function installOfficialLinksRenderer(){
-    if(linksRendererInstalled||typeof p50v9RenderLinks!=='function'||typeof p50v9LinkCard!=='function')return;
-    p50v9RenderLinks=function(){
-      const pane=document.querySelector('#adminPane');
-      if(!pane)return;
-      const profiles=alphabeticalProfiles();
-      pane.innerHTML=`<div class="media-hint"><strong>Objectif :</strong> seuls les profils officiels directs sont visibles au public. Les liens de recherche sont masqués.</div><div class="admin-toolbar"><button class="btn primary" id="checkTop10Links">Vérifier les liens du Top 10</button></div><div id="linksCards">${profiles.map(p50v9LinkCard).join('')}</div>`;
-    };
+    if(linksRendererInstalled)return;
+    // L’interface native affiche une seule fiche recherchée à la fois.
+    // Ne plus la remplacer par toutes les fiches : avec plus de 150 profils,
+    // cette ancienne surcharge créait près de 1 000 champs et bloquait la page.
     linksRendererInstalled=true;
   }
 
