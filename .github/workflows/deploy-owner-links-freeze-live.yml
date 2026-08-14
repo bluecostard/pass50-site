@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-owner-links-freeze-live.yml'
+      - 'api/official-links-batch-owner-cron-v1.php'
+      - 'api/social-links.php'
+      - 'owner-current-links-lock-v1.js'
+      - 'observateur-official-links-lock-v1.js'
   workflow_dispatch:
 
 permissions:
