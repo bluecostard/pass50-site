@@ -1,0 +1,37 @@
+name: Integrate Coules Into Pronostics
+
+on:
+  pull_request:
+    types: [opened]
+    paths:
+      - 'pronostics-coules-tab-v1.js'
+      - 'scripts/integrate_coules_into_pronostics.py'
+      - 'tests/test_pronostics_coules_tab_v1.py'
+      - '.github/workflows/one-shot-integrate-coules-pronostics.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: "${{ github.event.pull_request.title == 'Intégrer Vote des Coulés dans Pronostics' }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Appliquer l’intégration
+        run: python3 scripts/integrate_coules_into_pronostics.py
+      - name: Vérifier syntaxe et comportement
+        run: |
+          node --check pronostics-coules-tab-v1.js
+          node --check mobile-bottom-nav-v1.js
+          node --check sw.js
+          python3 -m unittest tests.test_pronostics_coules_tab_v1
+      - name: Publier sur la branche de la PR
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Intégrer Vote des Coulés dans Pronostics'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
