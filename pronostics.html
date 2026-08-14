@@ -102,6 +102,34 @@
     .score-row .streak{margin-left:auto;text-align:right}
     .score-row .streak-num{font-size:18px;font-weight:800}
     .score-row .streak-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+    button.score-row{width:100%;text-align:left;color:inherit;transition:border-color .18s,transform .18s var(--ease),background .18s}
+    button.score-row:hover{border-color:rgba(183,255,0,.48);background:#101610}
+    button.score-row:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+    button.score-row:active{transform:scale(.985)}
+    .score-row .open-hint{font-size:11px;font-weight:800;color:var(--lime);margin-top:3px}
+    .dashboard-modal{position:fixed;inset:0;z-index:280;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.78);padding:16px}
+    .dashboard-modal.show{display:flex}
+    .dashboard-card{width:min(620px,100%);max-height:min(84vh,760px);overflow:auto;background:#0c100c;border:1px solid rgba(183,255,0,.28);border-radius:22px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.65)}
+    .dashboard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+    .dashboard-head h2{font-family:"Archivo Black",Impact,sans-serif;font-size:23px;line-height:1;margin:0}
+    .dashboard-head p{font-size:12px;color:var(--muted);margin:6px 0 0}
+    .dashboard-close{width:38px;height:38px;flex:0 0 auto;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);font-size:21px;font-weight:800}
+    .dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .dashboard-stat{background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:13px}
+    .dashboard-stat strong{display:block;color:var(--lime);font-size:22px;line-height:1.1}
+    .dashboard-stat span{display:block;color:var(--muted);font-size:11px;font-weight:750;margin-top:5px}
+    .dashboard-section{margin-top:18px}
+    .dashboard-section h3{font-size:15px;margin:0 0 10px}
+    .dashboard-history{display:grid;gap:8px}
+    .dashboard-history-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:11px 12px}
+    .dashboard-history-title{font-size:12px;font-weight:800;line-height:1.35}
+    .dashboard-history-meta{font-size:11px;color:var(--muted);margin-top:4px}
+    .dashboard-history-result{font-size:12px;font-weight:900;text-align:right;color:var(--muted)}
+    .dashboard-history-result.won{color:var(--lime)}
+    .dashboard-history-result.lost{color:#ff7777}
+    .dashboard-empty{padding:16px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);font-size:12px;text-align:center}
+    body.dashboard-open{overflow:hidden}
+    @media (max-width:430px){.dashboard-grid{grid-template-columns:1fr 1fr}.dashboard-card{padding:16px}.dashboard-stat strong{font-size:19px}}
 
     /* ── Cards grille ── */
     .grille{display:flex;flex-direction:column;gap:12px;margin-top:20px}
@@ -339,16 +367,17 @@
   </header>
 
   <!-- Solde -->
-  <div class="score-row rise rise-1" id="scoreRow">
+  <button type="button" class="score-row rise rise-1" id="scoreRow" aria-haspopup="dialog" aria-controls="pointsDashboard">
     <div>
       <div class="pts" id="pts">1 000</div>
       <div class="pts-label">Points</div>
+      <div class="open-hint">Voir mon tableau de bord →</div>
     </div>
     <div class="streak">
       <div class="streak-num" id="streakNum">0</div>
       <div class="streak-label">Streak</div>
     </div>
-  </div>
+  </button>
 
 
   <!-- Statut prono (live) -->
@@ -415,6 +444,17 @@
       <button type="button" class="btn" id="slipClear">Vider</button>
       <button type="button" class="btn primary" id="slipValidate">Valider</button>
     </div>
+  </div>
+</div>
+
+<!-- Tableau de bord des points -->
+<div class="dashboard-modal" id="pointsDashboard" role="dialog" aria-modal="true" aria-labelledby="pointsDashboardTitle">
+  <div class="dashboard-card">
+    <div class="dashboard-head">
+      <div><h2 id="pointsDashboardTitle">Mes points</h2><p>Le détail de ton solde et de ton activité Pronostics.</p></div>
+      <button type="button" class="dashboard-close" id="pointsDashboardClose" aria-label="Fermer">×</button>
+    </div>
+    <div id="pointsDashboardContent"><div class="dashboard-empty">Chargement de ton tableau de bord…</div></div>
   </div>
 </div>
 
@@ -666,6 +706,69 @@
     document.getElementById('pts').textContent = Math.round(state.points).toLocaleString('fr-FR');
     document.getElementById('streakNum').textContent = state.streak;
     syncStakeUi();
+  }
+
+  function formatPoints(value){
+    const n=Number(value)||0;
+    return n.toLocaleString('fr-FR',{maximumFractionDigits:2});
+  }
+
+  function historyStatus(item){
+    if(item.playStatus==='won') return {label:'Gagné',cls:'won',points:'+'+formatPoints(item.pointsEarned)+' pts'};
+    if(item.playStatus==='lost') return {label:'Perdu',cls:'lost',points:'−'+formatPoints(item.stakeLost)+' pts'};
+    return {label:item.pendingPhase==='awaiting_measure'?'Résultat attendu':'En cours',cls:'',points:'Potentiel +'+formatPoints(item.potentialPayout)+' pts'};
+  }
+
+  function renderPointsDashboard(summary,history){
+    const box=document.getElementById('pointsDashboardContent');
+    if(!box) return;
+    const items=Array.isArray(history.items)?history.items:[];
+    const historyHtml=items.length?items.map(item=>{
+      const result=historyStatus(item);
+      const date=item.votedAt?new Date(item.votedAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):'';
+      return `<div class="dashboard-history-item">
+        <div><div class="dashboard-history-title">${escHtml(item.title||'Pronostic')}</div><div class="dashboard-history-meta">${escHtml(date)} · ${escHtml(result.label)}</div></div>
+        <div class="dashboard-history-result ${result.cls}">${escHtml(result.points)}</div>
+      </div>`;
+    }).join(''):'<div class="dashboard-empty">Aucun pronostic enregistré pour le moment.</div>';
+    box.innerHTML=`<div class="dashboard-grid">
+      <div class="dashboard-stat"><strong>${formatPoints(summary.balance?.balance??state.points)}</strong><span>Solde disponible</span></div>
+      <div class="dashboard-stat"><strong>+${formatPoints(summary.predictionPoints)}</strong><span>Gagnés sur les pronostics</span></div>
+      <div class="dashboard-stat"><strong>${formatPoints(summary.likesReceived)}</strong><span>Likes reçus sur tes statuts</span></div>
+      <div class="dashboard-stat"><strong>+${formatPoints(summary.likePoints)}</strong><span>Points gagnés grâce aux likes</span></div>
+      <div class="dashboard-stat"><strong>${formatPoints(summary.stakePoints)}</strong><span>Points engagés dans les pronostics</span></div>
+      <div class="dashboard-stat"><strong>+${formatPoints(summary.bonusPoints)}</strong><span>Autres bonus gagnés</span></div>
+    </div>
+    <section class="dashboard-section"><h3>Historique de mes pronostics</h3><div class="dashboard-history">${historyHtml}</div></section>`;
+  }
+
+  async function openPointsDashboard(){
+    const modal=document.getElementById('pointsDashboard');
+    const box=document.getElementById('pointsDashboardContent');
+    if(!modal||!box) return;
+    if(!localStorage.getItem('pass50_api_token')){showToast('Connecte-toi pour voir le détail de tes points');return;}
+    document.body.classList.add('dashboard-open');
+    modal.classList.add('show');
+    box.innerHTML='<div class="dashboard-empty">Chargement de ton tableau de bord…</div>';
+    try{
+      const [summaryResponse,historyResponse]=await Promise.all([
+        fetch('/api/prono-dashboard.php?_='+Date.now(),{headers:authHeaders()}),
+        fetch('/api/prono-history.php?filter=all&limit=30&_='+Date.now(),{headers:authHeaders()}),
+      ]);
+      const summary=await summaryResponse.json().catch(()=>({}));
+      const history=await historyResponse.json().catch(()=>({}));
+      if(!summaryResponse.ok) throw new Error(summary.error||'Tableau de bord indisponible');
+      if(!historyResponse.ok) throw new Error(history.error||'Historique indisponible');
+      if(summary.balance) applyBalance(summary);
+      renderPointsDashboard(summary,history);
+    }catch(error){
+      box.innerHTML=`<div class="dashboard-empty">${escHtml(error.message||'Impossible de charger le tableau de bord.')}</div>`;
+    }
+  }
+
+  function closePointsDashboard(){
+    document.body.classList.remove('dashboard-open');
+    document.getElementById('pointsDashboard')?.classList.remove('show');
   }
 
   function renderStatuses(){
@@ -949,6 +1052,10 @@
   document.getElementById('statusStrip')?.addEventListener('click',(e)=>{
     if(e.target.closest('[data-goto-fil]')) location.href='./mon-fil.html';
   });
+  document.getElementById('scoreRow')?.addEventListener('click',openPointsDashboard);
+  document.getElementById('pointsDashboardClose')?.addEventListener('click',closePointsDashboard);
+  document.getElementById('pointsDashboard')?.addEventListener('click',(e)=>{if(e.target.id==='pointsDashboard') closePointsDashboard();});
+  document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&document.getElementById('pointsDashboard')?.classList.contains('show')) closePointsDashboard();});
 
   loadPublications();
   loadStatuses();
