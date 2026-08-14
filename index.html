@@ -908,9 +908,27 @@ function restoreProfileOrigin(){
     }));
   }
 }
+function returnToFeedAfterProfile(){
+  try{
+    const url=new URL(location.href);
+    if(url.searchParams.get('return')!=='mon-fil')return false;
+    let target='./mon-fil.html?restore=1';
+    const context=JSON.parse(sessionStorage.getItem('pass50.feed.return.v1')||'null');
+    if(context&&context.url){
+      const candidate=new URL(context.url,location.href);
+      if(candidate.origin===location.origin&&candidate.pathname.endsWith('/mon-fil.html')){
+        candidate.searchParams.set('restore','1');
+        target=candidate.href;
+      }
+    }
+    location.assign(target);
+    return true;
+  }catch(_){location.assign('./mon-fil.html?restore=1');return true;}
+}
 function close(id){
   const modal=$('#'+id);if(!modal)return;
   if(id==='adminModal')return p50AdminGoHome();
+  if(id==='profileModal'&&returnToFeedAfterProfile())return;
   modal.classList.remove('show');
   if(id==='profileModal')restoreProfileOrigin();
   if(id==='voteShareModal')voteShareCleanup();

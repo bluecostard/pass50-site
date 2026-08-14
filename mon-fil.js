@@ -357,7 +357,7 @@
       const rank = rankFor(profile.id);
       const change = movement(profile);
       const label = String(profile.handle || profile.name || 'Influenceur').trim() || 'Influenceur';
-      return `<a class="follow-chip" href="./?profile=${encodeURIComponent(profile.id)}">${avatarHtml(profile)}<div><strong>${esc(label)}</strong><span class="rank">${rank ? `#${rank}` : 'À vérifier'} · Score ${Math.round(scoreFor(profile))}</span><span class="${change.className}">${esc(change.text)}</span></div></a>`;
+      return `<a class="follow-chip" href="./?profile=${encodeURIComponent(profile.id)}&return=mon-fil">${avatarHtml(profile)}<div><strong>${esc(label)}</strong><span class="rank">${rank ? `#${rank}` : 'À vérifier'} · Score ${Math.round(scoreFor(profile))}</span><span class="${change.className}">${esc(change.text)}</span></div></a>`;
     }).join('');
   }
 
@@ -662,7 +662,7 @@
     const matched = [profileA, profileB].filter(profile => state.following.includes(String(profile.id)));
     const because = matched.length ? `Parce que vous suivez ${matched.map(profile => profile.name).join(' et ')}` : 'Audios de la communauté Les Coulés';
     const author = String(item.authorPseudo || 'Membre PASS50').trim() || 'Membre PASS50';
-    return `<article class="feed-card duel-audio-feed-card"><div class="duel-audio-feed-head"><div class="duel-audio-avatars">${avatarHtml(profileA)}<span>VS</span>${avatarHtml(profileB)}</div><div><div class="duel-audio-kicker">🎙 LES COULÉS · ${esc(author)}</div><strong>${esc(profileA.name)} VS ${esc(profileB.name)}</strong><div class="feed-meta">${esc(because)} · ${esc(relativeDate(item.publishedAt))}</div></div></div><div class="duel-audio-feed-body"><h2>${esc(author)} commente son vote pour ${esc(selected.name)}</h2><div class="duel-audio-player"><span>${durationLabel(item.durationMs)}</span><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio de ${attr(author)}"></audio></div><div class="feed-meta">Pseudo issu de son compte utilisateur PASS50 · Audio publié volontairement lors du partage</div><div class="feed-actions"><a class="btn primary" href="./?section=coules">Voir le duel</a><a class="btn" href="./?profile=${encodeURIComponent(selected.id || '')}">Voir la fiche de ${esc(selected.name)}</a></div></div></article>`;
+    return `<article class="feed-card duel-audio-feed-card"><div class="duel-audio-feed-head"><div class="duel-audio-avatars">${avatarHtml(profileA)}<span>VS</span>${avatarHtml(profileB)}</div><div><div class="duel-audio-kicker">🎙 LES COULÉS · ${esc(author)}</div><strong>${esc(profileA.name)} VS ${esc(profileB.name)}</strong><div class="feed-meta">${esc(because)} · ${esc(relativeDate(item.publishedAt))}</div></div></div><div class="duel-audio-feed-body"><h2>${esc(author)} commente son vote pour ${esc(selected.name)}</h2><div class="duel-audio-player"><span>${durationLabel(item.durationMs)}</span><audio controls preload="metadata" src="${attr(item.audioUrl)}" aria-label="Commentaire audio de ${attr(author)}"></audio></div><div class="feed-meta">Pseudo issu de son compte utilisateur PASS50 · Audio publié volontairement lors du partage</div><div class="feed-actions"><a class="btn primary" href="./?section=coules">Voir le duel</a><a class="btn" href="./?profile=${encodeURIComponent(selected.id || '')}&return=mon-fil">Voir la fiche de ${esc(selected.name)}</a></div></div></article>`;
   }
 
   function feedCard(item) {
@@ -674,7 +674,7 @@
     const source = item.official ? 'SOURCE OFFICIELLE' : 'INFORMATION VALIDÉE';
     const meta = [item.platform || '', relativeDate(item.publishedAt), item.trendBadge || ''].filter(Boolean).join(' · ');
     const original = /^https?:\/\//i.test(String(item.url || '')) ? `<a class="btn primary" href="${attr(item.url)}" target="_blank" rel="noopener">Voir le contenu original ↗</a>` : '';
-    return `<article class="feed-card"><div class="feed-head">${avatarHtml(profile)}<div class="feed-person"><strong>${esc(profile.name || 'Influenceur')}</strong><span>${esc(profile.handle || '')}</span></div><div class="feed-position"><span class="${change.className}">${esc(change.text)}</span><br>${rank ? `#${rank}` : 'À vérifier'} · ${Math.round(scoreFor(profile))}/100</div></div><div class="feed-media ${cover ? '' : 'no-image'}">${cover ? `<img src="${attr(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add('no-image');this.remove()">` : '<span>📰</span>'}<div class="source-badge">${source}</div></div><div class="feed-body"><h2>${esc(item.title || `Actualité récente de ${profile.name}`)}</h2><div class="feed-meta">${esc(meta)}</div><div class="feed-actions">${original}<a class="btn" href="./?profile=${encodeURIComponent(profile.id)}">Voir sa fiche et son classement</a></div></div></article>`;
+    return `<article class="feed-card"><div class="feed-head">${avatarHtml(profile)}<div class="feed-person"><strong>${esc(profile.name || 'Influenceur')}</strong><span>${esc(profile.handle || '')}</span></div><div class="feed-position"><span class="${change.className}">${esc(change.text)}</span><br>${rank ? `#${rank}` : 'À vérifier'} · ${Math.round(scoreFor(profile))}/100</div></div><div class="feed-media ${cover ? '' : 'no-image'}">${cover ? `<img src="${attr(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add('no-image');this.remove()">` : '<span>📰</span>'}<div class="source-badge">${source}</div></div><div class="feed-body"><h2>${esc(item.title || `Actualité récente de ${profile.name}`)}</h2><div class="feed-meta">${esc(meta)}</div><div class="feed-actions">${original}<a class="btn" href="./?profile=${encodeURIComponent(profile.id)}&return=mon-fil">Voir sa fiche et son classement</a></div></div></article>`;
   }
 
   function renderFeed() {
@@ -764,6 +764,38 @@
     $('#feedLiveModal')?.classList.remove('show');
   }
 
+  const FEED_RETURN_KEY = 'pass50.feed.return.v1';
+
+  function rememberFeedOrigin(event) {
+    const link = event.target.closest('a[href*="?profile="]');
+    if (!link) return;
+    try {
+      sessionStorage.setItem(FEED_RETURN_KEY, JSON.stringify({
+        url: location.href,
+        scrollY: Math.max(0, Math.round(window.scrollY || 0)),
+        savedAt: Date.now()
+      }));
+    } catch (_) {}
+  }
+
+  function restoreFeedOrigin() {
+    let context = null;
+    try { context = JSON.parse(sessionStorage.getItem(FEED_RETURN_KEY) || 'null'); } catch (_) {}
+    const requested = new URL(location.href).searchParams.get('restore') === '1';
+    if (!requested && !context) return;
+    if (!context || Date.now() - Number(context.savedAt || 0) > 2 * 60 * 60 * 1000) {
+      try { sessionStorage.removeItem(FEED_RETURN_KEY); } catch (_) {}
+      return;
+    }
+    const url = new URL(location.href);
+    url.searchParams.delete('restore');
+    history.replaceState(history.state, '', url);
+    const y = Math.max(0, Number(context.scrollY || 0));
+    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: y, left: 0, behavior: 'auto' })));
+    setTimeout(() => window.scrollTo({ top: y, left: 0, behavior: 'auto' }), 180);
+    try { sessionStorage.removeItem(FEED_RETURN_KEY); } catch (_) {}
+  }
+
   function installEvents() {
     $('#periodFilters')?.addEventListener('click', async event => {
       const button = event.target.closest('[data-period]');
@@ -796,6 +828,7 @@
       if (event.key === 'ArrowRight') nextPronoDiapo();
       if (event.key === 'ArrowLeft') prevPronoDiapo();
     });
+    document.addEventListener('click', rememberFeedOrigin, true);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshFeed({ silent: true }); });
   }
 
@@ -806,6 +839,7 @@
     state.profiles = profiles;
     state.following = [...new Set(Array.isArray(user?.following) ? user.following.map(String) : [])].slice(0, MAX_FOLLOWED);
     await Promise.all([refreshFeed(), refreshRadar()]);
+    restoreFeedOrigin();
     setInterval(refreshRadar, 60000);
     setInterval(() => refreshFeed({ silent: true }), 60000);
     window.PASS50_FOLLOW_FEED_PAGE = Object.freeze({ contract: CONTRACT, maxFollowed: MAX_FOLLOWED, newsPerProfile: NEWS_PER_PROFILE, duelAudio: true });
