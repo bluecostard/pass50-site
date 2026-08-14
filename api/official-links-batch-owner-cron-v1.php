@@ -4,7 +4,7 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/data-engine-core.php';
 
-const P50_LINKS_BATCH_OWNER_VERSION='OFFICIAL-LINKS-BATCH-OWNER-V1.0';
+const P50_LINKS_BATCH_OWNER_VERSION='OFFICIAL-LINKS-BATCH-OWNER-V1.1';
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $raw=file_get_contents('php://input');if($raw===false||strlen($raw)>32768)json_response(['error'=>'Corps invalide.'],413);
@@ -31,6 +31,10 @@ $fixed=[
     ],
 ];
 
+// Les liens de ces trois fiches sont saisis directement par le propriétaire PASS50.
+// On fige volontairement tous les liens non vides présents dans l'état public au moment du passage.
+$freezeCurrentNames=['zagbalerequin','zeinabbance','samosamo'];
+
 function p50_batch_profile_index(array $state,string $normalizedName): int {
     foreach((array)($state['profiles']??[]) as $index=>$profile){
         if(p50_de_normalize_profile_name((string)($profile['name']??''))===$normalizedName)return (int)$index;
@@ -41,12 +45,12 @@ function p50_batch_store(array &$profile,string $platform,string $url,string $so
     $profileId=(string)$profile['id'];$normalized=p50_de_normalize_social_url($platform,$url);
     if($normalized===''||!p50_platform_host_ok($platform,$normalized)||!p50_de_direct_social_path($platform,$normalized))throw new RuntimeException('Lien invalide pour '.($profile['name']??$profileId).' / '.$platform.'.');
     $delete=db()->prepare("DELETE FROM p50_social_link_evidence WHERE profile_id=? AND platform=? AND source_type IN ('manual_owner','manual_admin')");$delete->execute([$profileId,$platform]);
-    $validation=['ok'=>true,'status'=>'owner_verified','normalizedUrl'=>$normalized,'httpStatus'=>0,'nameScore'=>100,'message'=>'Compte officiel confirmé par le propriétaire PASS50'];
+    $validation=['ok'=>true,'status'=>'owner_verified','normalizedUrl'=>$normalized,'httpStatus'=>0,'nameScore'=>100,'message'=>'Compte officiel confirmé et figé par le propriétaire PASS50'];
     p50_de_add_social_evidence($profileId,$platform,$normalized,'manual_owner','Propriétaire PASS50','',100,$validation);
-    p50_de_log_social_action($profileId,$platform,$source==='owner_capture'?'confirm':'restore',(string)($profile['links'][$platform]??''),$normalized,['id'=>null,'role'=>'owner','display_name'=>'Propriétaire PASS50'],['source'=>$source,'permanentValidation'=>true,'version'=>P50_LINKS_BATCH_OWNER_VERSION]);
-    $profile['links']=is_array($profile['links']??null)?$profile['links']:[];$profile['linkChecks']=is_array($profile['linkChecks']??null)?$profile['linkChecks']:[];$profile['platforms']=is_array($profile['platforms']??null)?$profile['platforms']:[];
-    $profile['links'][$platform]=$normalized;$profile['linkChecks'][$platform]=['status'=>'owner_verified','checkedAt'=>gmdate(DATE_ATOM),'message'=>'Compte officiel confirmé et protégé par le propriétaire PASS50','persistedServerSide'=>true,'protectedBy'=>'PASS50-STATE-LINK-PROTECTION-V4.1'];$profile['platforms']=array_values(array_unique(array_merge($profile['platforms'],[$platform])));
-    return ['profileId'=>$profileId,'name'=>(string)($profile['name']??$profileId),'platform'=>$platform,'url'=>$normalized,'source'=>$source];
+    p50_de_log_social_action($profileId,$platform,$source==='owner_capture'?'confirm':'confirm_locked',(string)($profile['links'][$platform]??''),$normalized,['id'=>null,'role'=>'owner','display_name'=>'Propriétaire PASS50'],['source'=>$source,'permanentValidation'=>true,'locked'=>true,'version'=>P50_LINKS_BATCH_OWNER_VERSION]);
+    $profile['links']=is_array($profile['links']??null)?$profile['links']:[];$profile['linkChecks']=is_array($profile['linkChecks']??null)?$profile['linkChecks']:[];$profile['platforms']=is_array($profile['platforms']??null)?$profile['platforms']:[];$profile['officialLinkLocks']=is_array($profile['officialLinkLocks']??null)?$profile['officialLinkLocks']:[];
+    $profile['links'][$platform]=$normalized;$profile['officialLinkLocks'][$platform]=$normalized;$profile['linkChecks'][$platform]=['status'=>'owner_verified','checkedAt'=>gmdate(DATE_ATOM),'message'=>'Compte officiel confirmé et figé par le propriétaire PASS50','locked'=>true,'persistedServerSide'=>true,'protectedBy'=>'PASS50-STATE-LINK-PROTECTION-V4.1'];$profile['platforms']=array_values(array_unique(array_merge($profile['platforms'],[$platform])));
+    return ['profileId'=>$profileId,'name'=>(string)($profile['name']??$profileId),'platform'=>$platform,'url'=>$normalized,'source'=>$source,'locked'=>true];
 }
 
 $pdo=db();p50_de_ensure_schema();$pdo->beginTransaction();
@@ -56,8 +60,28 @@ try{
         $index=p50_batch_profile_index($state,$name);if($index<0)throw new RuntimeException('Fiche introuvable : '.$name.'.');
         foreach($links as $platform=>$url)$validated[]=p50_batch_store($state['profiles'][$index],$platform,$url,'owner_capture');
     }
-    if(count($validated)!==13)throw new RuntimeException('Les treize comptes fournis n’ont pas tous été validés.');
-    $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$state['officialLinksBatchOwner']=['version'=>P50_LINKS_BATCH_OWNER_VERSION,'updatedAt'=>gmdate(DATE_ATOM),'validated'=>count($validated)];
+    if(count($validated)!==13)throw new RuntimeException('Les treize comptes historiques n’ont pas tous été validés.');
+
+    $targetProfiles=[];$targetLinks=[];
+    foreach($freezeCurrentNames as $normalizedName){
+        $index=p50_batch_profile_index($state,$normalizedName);
+        if($index<0)throw new RuntimeException('Fiche à figer introuvable : '.$normalizedName.'.');
+        $profile=&$state['profiles'][$index];
+        $links=(array)($profile['links']??[]);
+        $frozenForProfile=0;
+        foreach($links as $platform=>$url){
+            $url=trim((string)$url);
+            if($url==='')continue;
+            $item=p50_batch_store($profile,(string)$platform,$url,'owner_current_freeze');
+            $validated[]=$item;$targetLinks[]=$item;$frozenForProfile++;
+        }
+        if($frozenForProfile<1)throw new RuntimeException('Aucun lien à figer pour '.($profile['name']??$normalizedName).'.');
+        $targetProfiles[]=['profileId'=>(string)$profile['id'],'name'=>(string)($profile['name']??$normalizedName),'linksFrozen'=>$frozenForProfile];
+        unset($profile);
+    }
+    if(count($targetProfiles)!==3)throw new RuntimeException('Les trois fiches demandées n’ont pas toutes été figées.');
+
+    $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$state['officialLinksBatchOwner']=['version'=>P50_LINKS_BATCH_OWNER_VERSION,'updatedAt'=>gmdate(DATE_ATOM),'validated'=>count($validated),'targetFrozenProfiles'=>count($targetProfiles),'targetFrozenLinks'=>count($targetLinks)];
     p50_de_save_public_state($state,null,false);$pdo->commit();
-    json_response(['ok'=>true,'version'=>P50_LINKS_BATCH_OWNER_VERSION,'dispatchId'=>$dispatchId,'validated'=>$validated,'validatedCount'=>count($validated),'publicStateRevision'=>(int)$state['stateRevision'],'publicStateWrites'=>1]);
+    json_response(['ok'=>true,'version'=>P50_LINKS_BATCH_OWNER_VERSION,'dispatchId'=>$dispatchId,'validated'=>$validated,'validatedCount'=>count($validated),'targetFrozenProfiles'=>$targetProfiles,'targetFrozenProfileCount'=>count($targetProfiles),'targetFrozenLinks'=>$targetLinks,'targetFrozenLinkCount'=>count($targetLinks),'publicStateRevision'=>(int)$state['stateRevision'],'publicStateWrites'=>1]);
 }catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();json_response(['error'=>'Validation groupée interrompue.','detail'=>$error->getMessage()],500);}
