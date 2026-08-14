@@ -244,6 +244,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Liens officiels Observateur Ébène : YouTube/Facebook confirmés et figés + recherche étendue.
+(function () {
+  if (document.querySelector('script[data-pass50-observateur-link-locks]')) return;
+  var script = document.createElement('script');
+  script.src = './observateur-official-links-lock-v1.js?v=1.0';
+  script.dataset.pass50ObservateurLinkLocks = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Actualité automatique des fiches et Top 5 calculé à partir des captures métriques.
 (function () {
   if (document.querySelector('script[data-pass50-content-intelligence]')) return;
