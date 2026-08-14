@@ -2,11 +2,12 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.3';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.4';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
   let linksRendererInstalled=false;
   let redirectingSignalsTab=false;
+  let linksRenderToken=0;
 
   function label(value){
     return String(value||'').replace(/^[#\s\d.–—-]+/,'').trim();
@@ -102,10 +103,26 @@
   }
 
   function installOfficialLinksRenderer(){
-    if(linksRendererInstalled)return;
-    // L’interface native affiche une seule fiche recherchée à la fois.
-    // Ne plus la remplacer par toutes les fiches : avec plus de 150 profils,
-    // cette ancienne surcharge créait près de 1 000 champs et bloquait la page.
+    if(linksRendererInstalled||typeof p50v9RenderLinks!=='function'||typeof p50v9LinkCard!=='function')return;
+    p50v9RenderLinks=function(){
+      const pane=document.querySelector('#adminPane');
+      if(!pane)return;
+      const profiles=alphabeticalProfiles();
+      const token=++linksRenderToken;
+      pane.innerHTML=`<div class="media-hint">Renseignez uniquement les liens officiels confirmés. Ils seront utilisés par le radar LIVE et les fiches influenceurs.</div><div class="admin-toolbar"><button class="btn primary" id="checkTop10Links">Vérifier les liens du Top 10</button></div><div id="linksCards"></div>`;
+      const cards=document.getElementById('linksCards');
+      if(!cards)return;
+      cards.dataset.searchExpanded='1';
+      let index=0;
+      const appendChunk=()=>{
+        if(token!==linksRenderToken||!cards.isConnected||currentAdminTab()!=='links')return;
+        const next=profiles.slice(index,index+12);
+        if(next.length)cards.insertAdjacentHTML('beforeend',next.map(p50v9LinkCard).join(''));
+        index+=next.length;
+        if(index<profiles.length)requestAnimationFrame(appendChunk);
+      };
+      appendChunk();
+    };
     linksRendererInstalled=true;
   }
 
