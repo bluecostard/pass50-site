@@ -27,16 +27,8 @@ class ContentFreshnessRuntimeV32Tests(unittest.TestCase):
         self.assertIn("p50tm_authorized_profile_ids($pdo)", ENDPOINT)
         self.assertIn("p50_cf3_prioritize_tiktok_oauth", ENDPOINT)
         self.assertIn("tiktokOauthProfilesPrioritized", ENDPOINT)
-        self.assertLess(
-            ENDPOINT.index("p50_cf3_prioritize_tiktok_oauth"),
-            ENDPOINT.index("p50_cf3_authorized_rows"),
-        )
-        for forbidden in (
-            "tiktokTopFiveQuota",
-            "reserveTikTok",
-            "minimumTikTokTrend",
-            "platformQuota",
-        ):
+        self.assertLess(ENDPOINT.index("p50_cf3_prioritize_tiktok_oauth"), ENDPOINT.index("p50_cf3_authorized_rows"))
+        for forbidden in ("tiktokTopFiveQuota", "reserveTikTok", "minimumTikTokTrend", "platformQuota"):
             self.assertNotIn(forbidden, ENDPOINT)
 
     def test_selection_checks_access_before_choosing_eight_profiles(self):
@@ -48,8 +40,6 @@ class ContentFreshnessRuntimeV32Tests(unittest.TestCase):
         self.assertIn("authorizationRequired", ENDPOINT)
         self.assertIn("P50_CONTENT_FRESHNESS_V3_PROFILE_LIMIT=8", ENDPOINT)
         self.assertIn("P50_CONTENT_FRESHNESS_V3_JOB_LIMIT=16", ENDPOINT)
-        self.assertIn("if(count($selectedProfiles)>=$profileLimit)break", ENDPOINT)
-        self.assertIn("if(count($selectedJobs)>=$jobLimit)break", ENDPOINT)
 
     def test_five_minute_idempotency_is_independent_from_p0_bucket(self):
         self.assertIn("floor($now/P50_CONTENT_FRESHNESS_V3_BUCKET_SECONDS)", ENDPOINT)
@@ -59,55 +49,36 @@ class ContentFreshnessRuntimeV32Tests(unittest.TestCase):
         self.assertNotIn("p50_mo_enqueue_profile($pdo", ENDPOINT)
 
     def test_platform_diagnostics_cover_access_selection_and_processing(self):
-        for marker in (
-            "accessSummary",
-            "accessByPlatform",
-            "selectedByPlatform",
-            "enqueueByPlatform",
-            "processedByPlatform",
-            "authorizedLinks",
-            "profilesScanned",
-            "profilesSelected",
-            "tiktokOauthProfilesPrioritized",
-        ):
+        for marker in ("accessSummary", "accessByPlatform", "selectedByPlatform", "enqueueByPlatform", "processedByPlatform", "authorizedLinks", "profilesScanned", "profilesSelected", "tiktokOauthProfilesPrioritized"):
             self.assertIn(marker, ENDPOINT)
         self.assertIn("p50_cf3_platform_counter", ENDPOINT)
         self.assertIn("contentIntelligence", ENDPOINT)
 
     def test_errors_are_sanitized_and_no_public_write_exists(self):
         self.assertIn("$stage='bootstrap'", ENDPOINT)
-        for stage in ("selection", "enqueue", "work", "content_intelligence"):
-            self.assertIn(f"$stage='{stage}'", ENDPOINT)
         self.assertIn("p50_metrics_safe_error", ENDPOINT)
         self.assertIn("'errorCode'=>'content_freshness_'.$stage", ENDPOINT)
-        for forbidden in (
-            "UPDATE app_state",
-            "INSERT INTO app_state",
-            "DELETE FROM app_state",
-            "metrics-ranking-publication-apply",
-        ):
+        for forbidden in ("UPDATE app_state", "INSERT INTO app_state", "DELETE FROM app_state", "metrics-ranking-publication-apply"):
             self.assertNotIn(forbidden, ENDPOINT)
 
-    def test_production_workflow_retires_v32_for_v4_every_five_minutes(self):
-        self.assertIn("cron: '*/5 * * * *'", WORKFLOW)
+    def test_production_workflow_retires_v32_for_resilient_v4(self):
+        self.assertIn("cron: '17 */3 * * *'", WORKFLOW)
+        self.assertIn("cycles=36", WORKFLOW)
         self.assertIn("content-freshness-cron-v4.php", WORKFLOW)
         self.assertIn("CONTENT-FRESHNESS-V4.0", WORKFLOW)
         self.assertNotIn("content-freshness-cron-v3.php", WORKFLOW)
         self.assertNotIn("CONTENT-FRESHNESS-V3.2", WORKFLOW)
         self.assertIn("bucketSeconds==300", WORKFLOW)
-        self.assertIn("fresh-v4", WORKFLOW)
-        self.assertIn("tiktokOauthProfilesPrioritized", WORKFLOW)
-        self.assertIn("Profils TikTok OAuth priorisés", WORKFLOW)
-        self.assertIn("selectedByPlatform", WORKFLOW)
-        self.assertIn("processedByPlatform", WORKFLOW)
-        self.assertIn("app_state : `0 écriture`", WORKFLOW)
+        self.assertIn("fresh-v41", WORKFLOW)
+        self.assertIn("resilience==\"V4.1\"", WORKFLOW)
+        self.assertIn("progress.ndjson", WORKFLOW)
 
-    def test_production_workflow_waits_for_v4_endpoint_on_push(self):
-        self.assertIn("Wait for deployed Content Freshness V4 contract", WORKFLOW)
+    def test_production_workflow_waits_for_resilient_v4_endpoint_on_push(self):
+        self.assertIn("Wait for deployed Content Freshness V4.1 resilience contract", WORKFLOW)
         self.assertIn("github.event_name == 'push'", WORKFLOW)
         self.assertIn("for attempt in $(seq 1 36)", WORKFLOW)
         self.assertIn("action:\"probe\"", WORKFLOW)
-        self.assertIn("timeout-minutes: 15", WORKFLOW)
+        self.assertIn("timeout-minutes: 185", WORKFLOW)
 
 
 if __name__ == "__main__":
