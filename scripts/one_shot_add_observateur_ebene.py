@@ -17,6 +17,7 @@ CANDIDATE = {
     'entity_type': 'Personne',
     'zone': 'BOTH',
     'category': 'Humour / Acteur / Créateur digital / Influence / Divertissement',
+    'birth_date': '1989-07-04',
     'census_status': 'Recensé confirmé — compte TikTok fourni par le propriétaire PASS50',
     'verification_priority': 'P0',
     'eligible': False,
@@ -39,7 +40,7 @@ CANDIDATE = {
         'publisher': 'Paul Digital',
         'url': 'https://paul-digital.com/portfolio/observateur-ebene/'
     },
-    'notes': 'Ajout approuvé PASS50 le 14 août 2026. Observateur Ébène, également identifié publiquement comme Florent Amany / Kouakou Amani Florent, est un humoriste, acteur et créateur digital ivoirien. Le TikTok direct @observateur_ebene est fourni par le propriétaire PASS50. Son site officiel confirme son identité publique et son activité, tandis que Paul Digital confirme notamment Instagram @observateur_ebene. Profil non classable jusqu’à validation des métriques par le pipeline PASS50.',
+    'notes': 'Ajout approuvé PASS50 le 14 août 2026. Observateur Ébène, également identifié publiquement comme Florent Amany / Kouakou Amani Florent, est un humoriste, acteur et créateur digital ivoirien. Date de naissance recoupée : 4 juillet 1989. Le TikTok direct @observateur_ebene est fourni par le propriétaire PASS50. Son site officiel confirme son identité publique et son activité, tandis que Paul Digital confirme notamment Instagram @observateur_ebene. Profil non classable jusqu’à validation des métriques par le pipeline PASS50.',
     'curated_social_sources': {
         'TikTok': {
             'url': 'https://www.tiktok.com/@observateur_ebene',
@@ -66,6 +67,12 @@ CANDIDATE = {
             'source_name': 'Site officiel Observateur Ébène / Abidjan.net',
             'source_url': 'https://observateurebene.com/',
             'confidence': 96
+        },
+        'birth_date': {
+            'value': '4 juillet 1989',
+            'source_name': 'Famous Birthdays / Afrique-sur7',
+            'source_url': 'https://fr.famousbirthdays.com/people/florent.html',
+            'confidence': 94
         },
         'occupation': {
             'value': 'Humoriste, acteur et créateur digital ivoirien.',
@@ -136,7 +143,7 @@ def versions():
 
 
 def write_test():
-    TEST.write_text('''import json\nimport unittest\nfrom pathlib import Path\n\nROOT=Path(__file__).resolve().parents[1]\nCENSUS=json.loads((ROOT/'pass50_nouveaux_candidats_90_v19.json').read_text(encoding='utf-8'))\nV9=(ROOT/'v9-tools.js').read_text(encoding='utf-8')\n\nclass ObservateurEbeneCanonicalProfileTests(unittest.TestCase):\n    def profile(self):\n        matches=[x for x in CENSUS if x.get('id')=='census-observateur-ebene']\n        self.assertEqual(len(matches),1)\n        return matches[0]\n\n    def test_profile_identity_and_status(self):\n        p=self.profile()\n        self.assertEqual(p['name'],'Observateur Ébène')\n        self.assertEqual(p['zone'],'BOTH')\n        self.assertFalse(p['eligible'])\n        self.assertFalse(p['classable'])\n        self.assertEqual(p['verification_priority'],'P0')\n\n    def test_official_socials(self):\n        p=self.profile()\n        self.assertEqual(p['official_socials']['TikTok'],'https://www.tiktok.com/@observateur_ebene')\n        self.assertEqual(p['official_socials']['Instagram'],'https://www.instagram.com/observateur_ebene')\n        self.assertEqual(p['official_socials']['Snapchat'],'https://www.snapchat.com/add/obs_ebene')\n\n    def test_revision(self):\n        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.12",V9)\n        self.assertIn("CENSUS_VERSION='98-v29'",V9)\n\nif __name__=='__main__': unittest.main()\n''', encoding='utf-8')
+    TEST.write_text('''import json\nimport unittest\nfrom pathlib import Path\n\nROOT=Path(__file__).resolve().parents[1]\nCENSUS=json.loads((ROOT/'pass50_nouveaux_candidats_90_v19.json').read_text(encoding='utf-8'))\nV9=(ROOT/'v9-tools.js').read_text(encoding='utf-8')\n\nclass ObservateurEbeneCanonicalProfileTests(unittest.TestCase):\n    def profile(self):\n        matches=[x for x in CENSUS if x.get('id')=='census-observateur-ebene']\n        self.assertEqual(len(matches),1)\n        return matches[0]\n\n    def test_profile_identity_and_status(self):\n        p=self.profile()\n        self.assertEqual(p['name'],'Observateur Ébène')\n        self.assertEqual(p['zone'],'BOTH')\n        self.assertEqual(p['birth_date'],'1989-07-04')\n        self.assertFalse(p['eligible'])\n        self.assertFalse(p['classable'])\n        self.assertEqual(p['verification_priority'],'P0')\n\n    def test_official_socials(self):\n        p=self.profile()\n        self.assertEqual(p['official_socials']['TikTok'],'https://www.tiktok.com/@observateur_ebene')\n        self.assertEqual(p['official_socials']['Instagram'],'https://www.instagram.com/observateur_ebene')\n        self.assertEqual(p['official_socials']['Snapchat'],'https://www.snapchat.com/add/obs_ebene')\n\n    def test_revision(self):\n        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.12",V9)\n        self.assertIn("CENSUS_VERSION='98-v29'",V9)\n\nif __name__=='__main__': unittest.main()\n''', encoding='utf-8')
 
 
 def cleanup():
