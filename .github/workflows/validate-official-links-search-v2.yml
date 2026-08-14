@@ -1,0 +1,21 @@
+name: Validate Official Links Search V2
+
+on:
+  pull_request:
+    paths:
+      - 'official-links-search-v2.js'
+      - 'observateur-official-links-lock-v1.js'
+      - 'tests/test_observateur_locked_links_search.py'
+      - '.github/workflows/validate-official-links-search-v2.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: JavaScript valide
+        run: |
+          node --check official-links-search-v2.js
+          node --check observateur-official-links-lock-v1.js
+      - name: Tests de recherche et verrouillage
+        run: python3 -m unittest tests.test_observateur_locked_links_search
