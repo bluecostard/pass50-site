@@ -1,11 +1,10 @@
-name: Validate Coules Share Simple V1
+name: Validate Coules Share Simple V2
 
 on:
   pull_request:
     paths:
       - 'coules-share-simple-v1.js'
       - 'pronostics-coules-tab-v1.js'
-      - 'scripts/integrate_coules_into_pronostics.py'
       - 'mobile-bottom-nav-v1.js'
       - 'pronostics.html'
       - 'index.html'
@@ -17,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -26,37 +25,17 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
-          fetch-depth: 0
-      - name: Intégrer Vote des Coulés dans Pronostics
-        if: "${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') && github.event.pull_request.title == 'Intégrer Vote des Coulés dans Pronostics' }}"
-        run: |
-          if [ -f scripts/integrate_coules_into_pronostics.py ]; then
-            python3 scripts/integrate_coules_into_pronostics.py
-          fi
-          node --check pronostics-coules-tab-v1.js
-          node --check mobile-bottom-nav-v1.js
-          node --check sw.js
-          python3 -m unittest tests.test_pronostics_coules_tab_v1
-          find tests -type d -name '__pycache__' -prune -exec rm -rf {} +
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m 'Intégrer Vote des Coulés dans Pronostics'
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          fi
       - name: JavaScript syntax
-        if: "${{ !(github.event_name == 'pull_request' && github.event.pull_request.title == 'Intégrer Vote des Coulés dans Pronostics') }}"
         run: |
           node --check coules-share-simple-v1.js
+          node --check pronostics-coules-tab-v1.js
+          node --check mobile-bottom-nav-v1.js
           node --check app-config.js
           node --check sw.js
-      - name: Deterministic tests
-        if: "${{ !(github.event_name == 'pull_request' && github.event.pull_request.title == 'Intégrer Vote des Coulés dans Pronostics') }}"
-        run: python3 -m unittest tests/test_coules_share_simple_v1.py
-      - name: Diff check
-        if: "${{ github.event_name == 'pull_request' && github.event.pull_request.title != 'Intégrer Vote des Coulés dans Pronostics' }}"
+      - name: Tests Coulés et Pronostics
         run: |
-          git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
+          python3 -m unittest tests.test_coules_share_simple_v1
+          python3 -m unittest tests.test_pronostics_coules_tab_v1
+      - name: Diff check
+        if: "${{ github.event_name == 'pull_request' }}"
+        run: git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
