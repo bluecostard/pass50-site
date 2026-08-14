@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.5';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.6';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
   let linksRendererInstalled=false;
@@ -53,11 +53,12 @@
       if(node.classList.contains('de-admin-home-card')){
         const title=node.querySelector('strong');
         const description=node.querySelector('span');
-        if(title)title.textContent='Intelligence & Signaux';
-        if(description)description.textContent='Détecter, qualifier et valider les signaux dans un moteur unique.';
+        if(title&&title.textContent!=='Intelligence & Signaux')title.textContent='Intelligence & Signaux';
+        const nextDescription='Détecter, qualifier et valider les signaux dans un moteur unique.';
+        if(description&&description.textContent!==nextDescription)description.textContent=nextDescription;
       }else{
-        node.textContent='Intelligence & Signaux';
-        node.setAttribute('aria-label','Intelligence & Signaux');
+        if(node.textContent!=='Intelligence & Signaux')node.textContent='Intelligence & Signaux';
+        if(node.getAttribute('aria-label')!=='Intelligence & Signaux')node.setAttribute('aria-label','Intelligence & Signaux');
       }
     });
 

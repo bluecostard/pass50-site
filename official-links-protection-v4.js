@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.2';
+  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.3';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
   const OWNER_LOCK_KEY='pass50_owner_locked_profiles_v1';
   const OFFICIAL_LINK_FIELDS=['TikTok','Instagram','Facebook','YouTube','X','Snapchat'];
@@ -178,11 +178,13 @@
         ...Object.values(p?.links||{})
       ].filter(Boolean).join(' '));
       const match=!q||haystack.includes(q);
-      card.style.display=match?'':'none';
+      const nextDisplay=match?'':'none';
+      if(card.style.display!==nextDisplay)card.style.display=nextDisplay;
       if(match)visible++;
     });
     const count=document.getElementById('linksSearchCount');
-    if(count)count.textContent=q?`${visible} résultat${visible>1?'s':''}`:`${cards.length} fiches`;
+    const nextCount=q?`${visible} résultat${visible>1?'s':''}`:`${cards.length} fiches`;
+    if(count&&count.textContent!==nextCount)count.textContent=nextCount;
   }
 
   function ensureOfficialLinksSearch(){

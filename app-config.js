@@ -77,8 +77,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-public-copy]')) return;
   var script = document.createElement('script');
-  script.src = './public-copy-fixes.js?v=1.7';
-  script.dataset.pass50PublicCopy = '1.7';
+  script.src = './public-copy-fixes.js?v=1.8';
+  script.dataset.pass50PublicCopy = '1.8';
   document.head.appendChild(script);
 })();
 
