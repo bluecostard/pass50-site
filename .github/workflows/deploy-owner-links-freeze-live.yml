@@ -1,0 +1,68 @@
+name: Déployer le gel des liens propriétaire
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-owner-links-freeze-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier les syntaxes
+        run: |
+          set -euo pipefail
+          php -l api/official-links-batch-owner-cron-v1.php
+          php -l api/social-links.php
+          node --check owner-current-links-lock-v1.js
+          node --check observateur-official-links-lock-v1.js
+      - name: Installer SFTP
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+      - name: Publier les fichiers de gel
+        env:
+          HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          USER: ${{ secrets.IONOS_SFTP_USER }}
+          PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+        run: |
+          set -euo pipefail
+          test -n "${HOST:-}" && test -n "${USER:-}" && test -n "${PASSWORD:-}" && test -n "${REMOTE_DIR:-}"
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 20
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          put -O "$REMOTE_DIR" owner-current-links-lock-v1.js
+          put -O "$REMOTE_DIR" observateur-official-links-lock-v1.js
+          put -O "$REMOTE_DIR/api" api/social-links.php
+          put -O "$REMOTE_DIR/api" api/official-links-batch-owner-cron-v1.php
+          bye
+          LFTP
+      - name: Vérifier les fichiers réellement servis
+        run: |
+          set -euo pipefail
+          for site in https://pass50.store https://www.pass50.store; do
+            ready=false
+            for attempt in $(seq 1 24); do
+              owner="$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/owner-current-links-lock-v1.js?sha=$GITHUB_SHA&a=$attempt" || true)"
+              obs="$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/observateur-official-links-lock-v1.js?sha=$GITHUB_SHA&a=$attempt" || true)"
+              endpoint="$(curl -sSL --max-time 20 -o /tmp/p50-endpoint.txt -w '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$site/api/official-links-batch-owner-cron-v1.php?sha=$GITHUB_SHA&a=$attempt" || true)"
+              if grep -q 'PASS50_OWNER_CURRENT_LINK_LOCKS' <<<"$owner" \
+                && grep -q 'owner-current-links-lock-v1.js?v=1.0' <<<"$obs" \
+                && [ "$endpoint" != "404" ] && [ "$endpoint" != "000" ]; then
+                ready=true
+                echo "$site sert bien le gel multi-profils."
+                break
+              fi
+              sleep 5
+            done
+            test "$ready" = true
+          done
