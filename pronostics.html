@@ -128,6 +128,20 @@
     .dashboard-history-result.won{color:var(--lime)}
     .dashboard-history-result.lost{color:#ff7777}
     .dashboard-empty{padding:16px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);font-size:12px;text-align:center}
+    .gift-box{position:relative;background:linear-gradient(135deg,rgba(183,255,0,.09),rgba(113,255,0,.03));border:1px solid rgba(183,255,0,.3);border-radius:16px;padding:14px}
+    .gift-box p{margin:4px 0 12px;color:var(--muted);font-size:11px;line-height:1.4}
+    .gift-fields{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:8px}
+    .gift-field{position:relative}
+    .gift-field label{display:block;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+    .gift-field input{width:100%;height:42px;border:1px solid var(--line);border-radius:12px;background:#070a07;color:var(--ink);padding:0 11px;font-size:13px;font-weight:750;outline:none}
+    .gift-field input:focus{border-color:var(--lime)}
+    .gift-suggestions{position:absolute;z-index:5;top:calc(100% + 5px);left:0;right:0;display:none;background:#101610;border:1px solid rgba(183,255,0,.35);border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.55)}
+    .gift-suggestions.show{display:block}
+    .gift-suggestion{display:flex;width:100%;align-items:center;gap:9px;padding:10px 11px;text-align:left;border-bottom:1px solid var(--line);font-size:12px;font-weight:800}
+    .gift-suggestion:last-child{border-bottom:0}
+    .gift-suggestion:hover{background:rgba(183,255,0,.09);color:var(--lime)}
+    .gift-submit{width:100%;margin-top:10px}
+    .gift-help{margin-top:8px!important;color:rgba(244,247,240,.66)!important}
     body.dashboard-open{overflow:hidden}
     @media (max-width:430px){.dashboard-grid{grid-template-columns:1fr 1fr}.dashboard-card{padding:16px}.dashboard-stat strong{font-size:19px}}
 
@@ -739,7 +753,24 @@
       <div class="dashboard-stat"><strong>${formatPoints(summary.stakePoints)}</strong><span>Points engagés dans les pronostics</span></div>
       <div class="dashboard-stat"><strong>+${formatPoints(summary.bonusPoints)}</strong><span>Autres bonus gagnés</span></div>
     </div>
+    <section class="dashboard-section">
+      <div class="gift-box">
+        <h3>Offrir des points</h3>
+        <p>Recherche un membre par son pseudo, puis choisis le montant à lui offrir.</p>
+        <div class="gift-fields">
+          <div class="gift-field">
+            <label for="giftPseudo">Pseudo du destinataire</label>
+            <input id="giftPseudo" type="search" autocomplete="off" placeholder="Commence à taper son pseudo">
+            <div class="gift-suggestions" id="giftSuggestions" role="listbox"></div>
+          </div>
+          <div class="gift-field"><label for="giftAmount">Montant</label><input id="giftAmount" type="number" inputmode="numeric" min="1" max="1500" step="1" placeholder="0"></div>
+        </div>
+        <button type="button" class="btn primary gift-submit" id="giftSubmit" disabled>Offrir les points</button>
+        <p class="gift-help">Maximum 1 500 pts par transfert. Ton solde minimum de 100 pts reste protégé.</p>
+      </div>
+    </section>
     <section class="dashboard-section"><h3>Historique de mes pronostics</h3><div class="dashboard-history">${historyHtml}</div></section>`;
+    bindGiftForm();
   }
 
   async function openPointsDashboard(){
@@ -764,6 +795,55 @@
     }catch(error){
       box.innerHTML=`<div class="dashboard-empty">${escHtml(error.message||'Impossible de charger le tableau de bord.')}</div>`;
     }
+  }
+
+  let giftRecipient=null;
+  let giftSearchTimer=null;
+
+  function bindGiftForm(){
+    const input=document.getElementById('giftPseudo');
+    const amount=document.getElementById('giftAmount');
+    const submit=document.getElementById('giftSubmit');
+    const suggestions=document.getElementById('giftSuggestions');
+    if(!input||!amount||!submit||!suggestions)return;
+    const sync=()=>{submit.disabled=!giftRecipient||!(Number(amount.value)>=1&&Number(amount.value)<=1500);};
+    input.addEventListener('input',()=>{
+      giftRecipient=null;sync();clearTimeout(giftSearchTimer);
+      const q=input.value.trim();
+      if(q.length<2){suggestions.classList.remove('show');suggestions.innerHTML='';return;}
+      giftSearchTimer=setTimeout(async()=>{
+        try{
+          const response=await fetch('/api/prono-points-users.php?q='+encodeURIComponent(q),{headers:authHeaders()});
+          const data=await response.json().catch(()=>({}));
+          const users=Array.isArray(data.items)?data.items:[];
+          suggestions.innerHTML=users.length?users.map(user=>`<button type="button" class="gift-suggestion" data-gift-user="${escHtml(user.id)}" data-gift-name="${escHtml(user.pseudo)}">@${escHtml(user.pseudo)}</button>`).join(''):'<div class="dashboard-empty">Aucun pseudo trouvé.</div>';
+          suggestions.classList.add('show');
+        }catch(_){suggestions.classList.remove('show');}
+      },250);
+    });
+    suggestions.addEventListener('click',(event)=>{
+      const choice=event.target.closest('[data-gift-user]');if(!choice)return;
+      giftRecipient={id:choice.getAttribute('data-gift-user'),pseudo:choice.getAttribute('data-gift-name')};
+      input.value='@'+giftRecipient.pseudo;suggestions.classList.remove('show');sync();
+    });
+    amount.addEventListener('input',sync);
+    submit.addEventListener('click',async()=>{
+      const points=Math.floor(Number(amount.value));
+      if(!giftRecipient||points<1||points>1500)return;
+      submit.disabled=true;submit.textContent='Envoi…';
+      try{
+        const response=await fetch('/api/prono-points-transfer.php',{method:'POST',headers:authHeaders(true),body:JSON.stringify({recipientId:giftRecipient.id,amount:points})});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.error||'Transfert impossible');
+        showToast(`${formatPoints(points)} pts offerts à @${giftRecipient.pseudo}`);
+        if(data.balance)applyBalance(data);
+        const [summaryResponse,historyResponse]=await Promise.all([
+          fetch('/api/prono-dashboard.php?_='+Date.now(),{headers:authHeaders()}),
+          fetch('/api/prono-history.php?filter=all&limit=30&_='+Date.now(),{headers:authHeaders()}),
+        ]);
+        renderPointsDashboard(await summaryResponse.json(),await historyResponse.json());
+      }catch(error){showToast(error.message||'Transfert impossible');submit.disabled=false;submit.textContent='Offrir les points';}
+    });
   }
 
   function closePointsDashboard(){
