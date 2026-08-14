@@ -142,6 +142,18 @@
     .gift-suggestion:hover{background:rgba(183,255,0,.09);color:var(--lime)}
     .gift-submit{width:100%;margin-top:10px}
     .gift-help{margin-top:8px!important;color:rgba(244,247,240,.66)!important}
+    .balance-period{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px}
+    .balance-period label{display:block;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+    .balance-period input{width:100%;height:40px;border:1px solid var(--line);border-radius:11px;background:#070a07;color:var(--ink);padding:0 9px;font-size:12px;color-scheme:dark}
+    .balance-period .btn{height:40px;padding:0 12px}
+    .balance-history{display:grid;gap:7px}
+    .balance-entry{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+    .balance-entry-label{font-size:12px;font-weight:800}
+    .balance-entry-date{font-size:10px;color:var(--muted);margin-top:3px}
+    .balance-entry-delta{font-size:13px;font-weight:900}
+    .balance-entry-delta.positive{color:var(--lime)}
+    .balance-entry-delta.negative{color:#ff8a8a}
+    @media(max-width:430px){.balance-period{grid-template-columns:1fr 1fr}.balance-period .btn{grid-column:1/-1}}
     body.dashboard-open{overflow:hidden}
     @media (max-width:430px){.dashboard-grid{grid-template-columns:1fr 1fr}.dashboard-card{padding:16px}.dashboard-stat strong{font-size:19px}}
 
@@ -733,10 +745,19 @@
     return {label:item.pendingPhase==='awaiting_measure'?'Résultat attendu':'En cours',cls:'',points:'Potentiel +'+formatPoints(item.potentialPayout)+' pts'};
   }
 
-  function renderPointsDashboard(summary,history){
+  function renderPointsDashboard(summary,history,balanceHistory){
     const box=document.getElementById('pointsDashboardContent');
     if(!box) return;
     const items=Array.isArray(history.items)?history.items:[];
+    const transactions=Array.isArray(balanceHistory?.items)?balanceHistory.items:[];
+    const transactionHtml=transactions.length?transactions.map(entry=>{
+      const delta=Number(entry.delta)||0;
+      const sign=delta>0?'+':'';
+      const cls=delta>=0?'positive':'negative';
+      const date=entry.createdAt?new Date(entry.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):'';
+      return `<div class="balance-entry"><div><div class="balance-entry-label">${escHtml(entry.label||'Mouvement de points')}</div><div class="balance-entry-date">${escHtml(date)}</div></div><div class="balance-entry-delta ${cls}">${sign}${formatPoints(delta)} pts</div></div>`;
+    }).join(''):'<div class="dashboard-empty">Aucun mouvement sur cette période.</div>';
+    const period=balanceHistory?.period||{};
     const historyHtml=items.length?items.map(item=>{
       const result=historyStatus(item);
       const date=item.votedAt?new Date(item.votedAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):'';
@@ -753,6 +774,16 @@
       <div class="dashboard-stat"><strong>${formatPoints(summary.stakePoints)}</strong><span>Points engagés dans les pronostics</span></div>
       <div class="dashboard-stat"><strong>+${formatPoints(summary.bonusPoints)}</strong><span>Autres bonus gagnés</span></div>
     </div>
+    <section class="dashboard-section">
+      <h3>Historique de mon solde</h3>
+      <div class="balance-period">
+        <div><label for="balanceFrom">Du</label><input id="balanceFrom" type="date" value="${escHtml(period.from||'')}" min="${escHtml(period.min||'')}" max="${escHtml(period.to||'')}"></div>
+        <div><label for="balanceTo">Au</label><input id="balanceTo" type="date" value="${escHtml(period.to||'')}" min="${escHtml(period.min||'')}" max="${escHtml(period.max||'')}"></div>
+        <button type="button" class="btn" id="balancePeriodApply">Rechercher</button>
+      </div>
+      <div class="balance-history" id="balanceHistoryList">${transactionHtml}</div>
+      <p class="gift-help">Recherche limitée à 3 mois par période, sur les 12 derniers mois.</p>
+    </section>
     <section class="dashboard-section">
       <div class="gift-box">
         <h3>Offrir des points</h3>
@@ -771,6 +802,7 @@
     </section>
     <section class="dashboard-section"><h3>Historique de mes pronostics</h3><div class="dashboard-history">${historyHtml}</div></section>`;
     bindGiftForm();
+    bindBalancePeriod();
   }
 
   async function openPointsDashboard(){
@@ -782,19 +814,46 @@
     modal.classList.add('show');
     box.innerHTML='<div class="dashboard-empty">Chargement de ton tableau de bord…</div>';
     try{
-      const [summaryResponse,historyResponse]=await Promise.all([
+      const [summaryResponse,historyResponse,balanceHistoryResponse]=await Promise.all([
         fetch('/api/prono-dashboard.php?_='+Date.now(),{headers:authHeaders()}),
         fetch('/api/prono-history.php?filter=all&limit=30&_='+Date.now(),{headers:authHeaders()}),
+        fetch('/api/prono-points-history.php?_='+Date.now(),{headers:authHeaders()}),
       ]);
       const summary=await summaryResponse.json().catch(()=>({}));
       const history=await historyResponse.json().catch(()=>({}));
+      const balanceHistory=await balanceHistoryResponse.json().catch(()=>({}));
       if(!summaryResponse.ok) throw new Error(summary.error||'Tableau de bord indisponible');
       if(!historyResponse.ok) throw new Error(history.error||'Historique indisponible');
+      if(!balanceHistoryResponse.ok) throw new Error(balanceHistory.error||'Historique du solde indisponible');
       if(summary.balance) applyBalance(summary);
-      renderPointsDashboard(summary,history);
+      renderPointsDashboard(summary,history,balanceHistory);
     }catch(error){
       box.innerHTML=`<div class="dashboard-empty">${escHtml(error.message||'Impossible de charger le tableau de bord.')}</div>`;
     }
+  }
+
+  async function loadBalancePeriod(from,to){
+    const list=document.getElementById('balanceHistoryList');
+    if(list)list.innerHTML='<div class="dashboard-empty">Chargement…</div>';
+    try{
+      const response=await fetch('/api/prono-points-history.php?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to)+'&_='+Date.now(),{headers:authHeaders()});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||'Période invalide');
+      const transactions=Array.isArray(data.items)?data.items:[];
+      if(list)list.innerHTML=transactions.length?transactions.map(entry=>{
+        const delta=Number(entry.delta)||0;const sign=delta>0?'+':'';const cls=delta>=0?'positive':'negative';
+        const date=entry.createdAt?new Date(entry.createdAt).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):'';
+        return `<div class="balance-entry"><div><div class="balance-entry-label">${escHtml(entry.label||'Mouvement de points')}</div><div class="balance-entry-date">${escHtml(date)}</div></div><div class="balance-entry-delta ${cls}">${sign}${formatPoints(delta)} pts</div></div>`;
+      }).join(''):'<div class="dashboard-empty">Aucun mouvement sur cette période.</div>';
+    }catch(error){if(list)list.innerHTML=`<div class="dashboard-empty">${escHtml(error.message||'Recherche impossible')}</div>`;}
+  }
+
+  function bindBalancePeriod(){
+    document.getElementById('balancePeriodApply')?.addEventListener('click',()=>{
+      const from=document.getElementById('balanceFrom')?.value||'';
+      const to=document.getElementById('balanceTo')?.value||'';
+      loadBalancePeriod(from,to);
+    });
   }
 
   let giftRecipient=null;
@@ -837,11 +896,12 @@
         if(!response.ok)throw new Error(data.error||'Transfert impossible');
         showToast(`${formatPoints(points)} pts offerts à @${giftRecipient.pseudo}`);
         if(data.balance)applyBalance(data);
-        const [summaryResponse,historyResponse]=await Promise.all([
+        const [summaryResponse,historyResponse,balanceHistoryResponse]=await Promise.all([
           fetch('/api/prono-dashboard.php?_='+Date.now(),{headers:authHeaders()}),
           fetch('/api/prono-history.php?filter=all&limit=30&_='+Date.now(),{headers:authHeaders()}),
+          fetch('/api/prono-points-history.php?_='+Date.now(),{headers:authHeaders()}),
         ]);
-        renderPointsDashboard(await summaryResponse.json(),await historyResponse.json());
+        renderPointsDashboard(await summaryResponse.json(),await historyResponse.json(),await balanceHistoryResponse.json());
       }catch(error){showToast(error.message||'Transfert impossible');submit.disabled=false;submit.textContent='Offrir les points';}
     });
   }
