@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-ranking-publication-apply-core.php';
-const P50_BIRTH_APPLY_CONTRACT='P50-BIRTH-APPLY-V1.0';
+const P50_BIRTH_APPLY_CONTRACT='P50-BIRTH-APPLY-V1.1';
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $raw=file_get_contents('php://input');$cfg=p50_mrp_apply_config();$secret=(string)$cfg['cronSecret'];
