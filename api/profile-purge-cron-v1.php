@@ -27,13 +27,13 @@ function p50_purge_state_value(mixed $value,array $ids,string $context=''): mixe
   $clean=p50_purge_state_value($item,$ids,(string)$key);if($list)$result[]=$clean;else$result[$key]=$clean;
  }return $result;
 }
-$pdo=db();$pdo->beginTransaction();
+$pdo=db();$pdo->exec("CREATE TABLE IF NOT EXISTS p50_profile_purge_backups (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,dispatch_id VARCHAR(120) NOT NULL,removed_profiles_json LONGTEXT NOT NULL,state_json LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uq_p50_profile_purge_dispatch(dispatch_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");$pdo->beginTransaction();
 try{
  $stmt=$pdo->query("SELECT data FROM app_state WHERE id='public' LIMIT 1 FOR UPDATE");$rawState=$stmt->fetchColumn();
  $state=$rawState?json_decode((string)$rawState,true):null;if(!is_array($state))throw new RuntimeException('État public invalide.');
  $removed=[];foreach((array)($state['profiles']??[]) as $profile)if(is_array($profile)&&(!empty($profile['adminDeleted'])||(array_key_exists('alive',$profile)&&$profile['alive']===false))){$id=trim((string)($profile['id']??''));if($id!=='')$removed[$id]=(string)($profile['name']??$id);}
  if(!$removed){$pdo->commit();json_response(['ok'=>true,'contract'=>P50_PROFILE_PURGE_CONTRACT,'action'=>'purge','purgedCount'=>0,'purgedProfiles'=>[],'stateRevision'=>(int)($state['stateRevision']??0)]);}
- $pdo->exec("CREATE TABLE IF NOT EXISTS p50_profile_purge_backups (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,dispatch_id VARCHAR(120) NOT NULL,removed_profiles_json LONGTEXT NOT NULL,state_json LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uq_p50_profile_purge_dispatch(dispatch_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+ 
  $pdo->prepare('INSERT INTO p50_profile_purge_backups(dispatch_id,removed_profiles_json,state_json) VALUES(?,?,?)')->execute([$dispatchId,json_encode($removed,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$rawState]);
  $clean=p50_purge_state_value($state,array_fill_keys(array_keys($removed),true));$clean['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$clean['publishedAt']=gmdate('c');
  $pdo->prepare("UPDATE app_state SET data=?,updated_by=NULL,updated_at=NOW() WHERE id='public'")->execute([json_encode($clean,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
