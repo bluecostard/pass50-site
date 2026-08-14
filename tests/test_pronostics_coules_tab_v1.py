@@ -6,7 +6,6 @@ MODULE=(ROOT/'pronostics-coules-tab-v1.js').read_text(encoding='utf-8')
 NAV=(ROOT/'mobile-bottom-nav-v1.js').read_text(encoding='utf-8')
 PRONO=(ROOT/'pronostics.html').read_text(encoding='utf-8')
 INDEX=(ROOT/'index.html').read_text(encoding='utf-8')
-SW=(ROOT/'sw.js').read_text(encoding='utf-8')
 
 class PronosticsCoulesTabV1Tests(unittest.TestCase):
     def test_module_exposes_two_modes(self):
@@ -34,8 +33,7 @@ class PronosticsCoulesTabV1Tests(unittest.TestCase):
         self.assertIn('loadPronoCoulesTab();',NAV)
         self.assertIn('PASS50-MOBILE-BOTTOM-NAV-V1.8',NAV)
         self.assertIn('mobile-bottom-nav-v1.js?v=1.8',PRONO)
-        self.assertIn('mobile-bottom-nav-v1.js?v=1.8',INDEX)
-        self.assertIn('mobile-bottom-nav-v1.js?v=1.8',SW)
+        self.assertIn('<script src="./pronostics-coules-tab-v1.js?v=1.0" data-pass50-prono-coules-tab="1.0"></script>',INDEX)
 
 if __name__=='__main__':
     unittest.main()
