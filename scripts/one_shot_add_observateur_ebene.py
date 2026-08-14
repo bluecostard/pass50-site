@@ -69,11 +69,11 @@ def replace_all(path,old,new):
 def bump_versions():
  replace_once(V9,"const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.11';","const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.13';")
  replace_once(V9,"const CENSUS_VERSION='97-v28';","const CENSUS_VERSION='99-v30';")
- replace_all(SW,'./v9-tools.js?v=15.9','./v9-tools.js?v=15.11')
+ replace_all(SW,'./v9-tools.js?v=15.10','./v9-tools.js?v=15.11')
  replace_all(SW,'./pass50_nouveaux_candidats_90_v19.json?v=22.11','./pass50_nouveaux_candidats_90_v19.json?v=22.13')
  for path in (ROOT/'tests').glob('test_*.py'):
   text=path.read_text(encoding='utf-8')
-  new=text.replace('pass50_nouveaux_candidats_90_v19.json?v=22.11','pass50_nouveaux_candidats_90_v19.json?v=22.13').replace("CENSUS_VERSION='97-v28'","CENSUS_VERSION='99-v30'").replace('v9-tools.js?v=15.9','v9-tools.js?v=15.11').replace('"15.9"','"15.11"')
+  new=text.replace('pass50_nouveaux_candidats_90_v19.json?v=22.11','pass50_nouveaux_candidats_90_v19.json?v=22.13').replace("CENSUS_VERSION='97-v28'","CENSUS_VERSION='99-v30'").replace('v9-tools.js?v=15.10','v9-tools.js?v=15.11').replace('v9-tools.js?v=15.9','v9-tools.js?v=15.11').replace('"15.10"','"15.11"').replace('"15.9"','"15.11"')
   if new!=text:path.write_text(new,encoding='utf-8')
 
 
