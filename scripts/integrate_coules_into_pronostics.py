@@ -2,6 +2,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 NAV=ROOT/'mobile-bottom-nav-v1.js'
+INDEX=ROOT/'index.html'
 
 text=NAV.read_text(encoding='utf-8')
 if 'function loadPronoCoulesTab()' not in text:
@@ -35,4 +36,13 @@ for path in list(ROOT.glob('*.html'))+[ROOT/'sw.js']:
     if updated!=body:
         path.write_text(updated,encoding='utf-8')
 
-Path(__file__).unlink()
+# La page d'accueil ne charge pas directement mobile-bottom-nav-v1.js.
+# On charge donc le module explicitement afin que ?embed=coules fonctionne aussi sur index.html.
+index=INDEX.read_text(encoding='utf-8')
+tag='<script src="./pronostics-coules-tab-v1.js?v=1.0" data-pass50-prono-coules-tab="1.0"></script>'
+if tag not in index:
+    marker='</body>'
+    if marker not in index:
+        raise RuntimeError('Balise </body> introuvable dans index.html')
+    index=index.replace(marker,tag+'\n'+marker,1)
+    INDEX.write_text(index,encoding='utf-8')
