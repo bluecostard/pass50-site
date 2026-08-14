@@ -181,6 +181,26 @@ function p50_live_v4_sources(array $state): array {
             ];
         }
     }
+    // Lien officiel confirmé manuellement par PASS50 : El Profesor.
+    // Ce fallback évite qu'un retard de synchronisation du registre empêche le radar de sonder son TikTok.
+    $elProfesorId='census-el-profesor';$elProfesorName='El Profesor';
+    foreach((array)($state['profiles']??[]) as $profile){
+        if(!is_array($profile)||empty($profile['id']))continue;
+        $name=strtolower(trim((string)($profile['name']??'')));
+        $handle=strtolower(trim((string)($profile['handle']??'')));
+        $tt=strtolower(trim((string)(($profile['links']??[])['TikTok']??'')));
+        if($name==='el profesor'||str_contains($handle,'elprofesor_off')||str_contains($tt,'@elprofesor_off')){
+            $elProfesorId=(string)$profile['id'];$elProfesorName=(string)($profile['name']??'El Profesor');break;
+        }
+    }
+    $elProfesorKey='TikTok|'.$elProfesorId;
+    if(!isset($seen[$elProfesorKey])){
+        $seen[$elProfesorKey]=true;$out[]=[
+            'profile_id'=>$elProfesorId,'public_name'=>$elProfesorName,'handle'=>'@elprofesor_off',
+            'platform'=>'TikTok','url'=>'https://www.tiktok.com/@elprofesor_off','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
     $manual=p50_live_v4_manual_priority_ids($state);$automatic=p50_live_v4_active_auto_ids();$health=p50_live_v4_health_map();
     $platformOrder=['TikTok'=>0,'YouTube'=>1,'Instagram'=>2,'Facebook'=>3];
     foreach($out as &$source){
