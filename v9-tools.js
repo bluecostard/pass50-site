@@ -258,8 +258,24 @@ render();
     return oldDirect(platform,normalized||url);
   };
 
-  function p50RankMeta(p){const i=ranking().findIndex(x=>x.id===p.id);return {rank:i>=0?i+1:null,top50:i>=0&&i<50};}
-  function p50AllProfiles(){return [...db.profiles].sort((a,b)=>{const ra=p50RankMeta(a).rank??99999,rb=p50RankMeta(b).rank??99999;return ra-rb||a.name.localeCompare(b.name,'fr')});}
+  function p50BuildAdminRankMap(){
+    const rankById=new Map();
+    ranking().forEach((item,index)=>rankById.set(String(item.id),index+1));
+    PASS50_V9.adminRankMap=rankById;
+    return rankById;
+  }
+  function p50RankMeta(p){
+    const ranks=PASS50_V9.adminRankMap instanceof Map?PASS50_V9.adminRankMap:p50BuildAdminRankMap();
+    const rank=ranks.get(String(p?.id||''))||null;
+    return {rank,top50:rank!==null&&rank<=50};
+  }
+  function p50AllProfiles(){
+    const ranks=p50BuildAdminRankMap();
+    return [...db.profiles].sort((a,b)=>{
+      const ra=ranks.get(String(a.id))??99999,rb=ranks.get(String(b.id))??99999;
+      return ra-rb||String(a.name||'').localeCompare(String(b.name||''),'fr');
+    });
+  }
   function p50ProfileOption(p){const m=p50RankMeta(p);return `${m.top50?'TOP 50 · ':''}${m.rank?'#'+m.rank+' · ':''}${p.name}`;}
   async function p50HydrateOfficialLinks(profileId){
     const p=profile(profileId);if(!p||PASS50_V9.socialHydrated.has(profileId)||PASS50_V9.socialHydrating.has(profileId))return;
