@@ -3,14 +3,47 @@
 
   const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.1';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
+  const OWNER_LOCK_KEY='pass50_owner_locked_profiles_v1';
+  const OWNER_LOCK_EXACT={
+    zagba:{
+      TikTok:'https://tiktok.com/@zagbalerekin',
+      Instagram:'https://instagram.com/zagbalerequin',
+      Facebook:'https://facebook.com/ZagbaLeRequin',
+      YouTube:'https://youtube.com/channel/UCuSwqnO-AnSaZwk3JCHqyFg'
+    },
+    zeinab:{
+      Instagram:'https://www.instagram.com/zeinabbance/',
+      Facebook:'https://www.facebook.com/p/Zeinab-BANCE-WRG-61568549139334/'
+    }
+  };
   let installed=false;
   let restoring=false;
+  let pinning=false;
   let installAttempts=0;
 
   function normalize(value=''){
     const url=String(value||'').trim();
     if(!url)return '';
     return /^https?:\/\//i.test(url)?url:'https://'+url.replace(/^\/\//,'');
+  }
+
+  function fold(value=''){
+    return String(value||'')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g,'');
+  }
+
+  function ownerLockProfileKey(profile){
+    if(!profile||typeof profile!=='object')return '';
+    const values=[profile.id,profile.name,profile.displayName,profile.handle,profile.username,profile.slug]
+      .map(fold)
+      .filter(Boolean);
+    if(values.some(value=>['zagbalerequin','zagbalerekin'].includes(value)))return 'zagba';
+    if(values.some(value=>['zeinabbance','zeinabbancewrg'].includes(value)))return 'zeinab';
+    if(values.some(value=>value==='samosamo'||value.startsWith('samosamo')))return 'samo';
+    return '';
   }
 
   function isSearchLike(url=''){
@@ -59,6 +92,17 @@
     }catch{return false;}
   }
 
+  function ownerLockedLinks(profile,key){
+    const current=profile&&profile.links&&typeof profile.links==='object'?profile.links:{};
+    const source=key==='samo'?current:{...current,...(OWNER_LOCK_EXACT[key]||{})};
+    const result={};
+    Object.entries(source).forEach(([platform,url])=>{
+      const normalized=normalize(url);
+      if(normalized&&isDirect(platform,normalized))result[platform]=normalized;
+    });
+    return result;
+  }
+
   function sanitizeState(state){
     if(!state||!Array.isArray(state.profiles))return 0;
     let removed=0;
@@ -103,6 +147,48 @@
     return true;
   }
 
+  async function pinOwnerLockedProfiles(force=false){
+    if(pinning||typeof window.apiFetch!=='function'||!window.__pass50CloudReady)return 0;
+    let user=null;
+    try{user=typeof currentUser==='function'?currentUser():null;}catch{}
+    if(!user||!['owner','admin'].includes(String(user.role||'')))return 0;
+    if(typeof db!=='object'||!db||!Array.isArray(db.profiles))return 0;
+
+    let previous=0;
+    try{previous=Number(localStorage.getItem(OWNER_LOCK_KEY)||0);}catch{}
+    if(!force&&Date.now()-previous<5*60*1000)return 0;
+
+    pinning=true;
+    let pinned=0;
+    try{
+      for(const profile of db.profiles){
+        const key=ownerLockProfileKey(profile);
+        if(!key||!profile?.id)continue;
+        const links=ownerLockedLinks(profile,key);
+        if(!Object.keys(links).length)continue;
+        const data=await apiFetch('official-links-bulk.php',{
+          method:'POST',
+          body:{
+            action:'save_profile',
+            profileId:String(profile.id),
+            links,
+            confirmedOfficial:true,
+            clientVersion:'4.1-owner-locks'
+          }
+        });
+        if(typeof CLOUD==='object'&&CLOUD&&Number.isFinite(Number(data.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
+        pinned+=Number(data.linksProcessed||Object.keys(links).length||0);
+      }
+      try{localStorage.setItem(OWNER_LOCK_KEY,String(Date.now()));}catch{}
+      return pinned;
+    }catch(error){
+      console.error('PASS50 verrouillage propriétaire des liens officiels',error);
+      return pinned;
+    }finally{
+      pinning=false;
+    }
+  }
+
   async function restoreVerifiedLinks(force=false){
     if(restoring||typeof window.apiFetch!=='function'||!window.__pass50CloudReady)return;
     let user=null;
@@ -115,6 +201,7 @@
 
     restoring=true;
     try{
+      const pinned=await pinOwnerLockedProfiles(force);
       const data=await apiFetch('official-links-bulk.php',{
         method:'POST',
         body:{action:'integrity_sync',profiles:[],clientVersion:'4.1'}
@@ -125,7 +212,7 @@
       persistBrowser();
       if(typeof ui==='object'&&ui?.adminTab==='links'&&typeof p50v9RenderLinks==='function')p50v9RenderLinks();
       const restored=Number(data.restoredCount||0);
-      if((restored||removed)&&typeof toast==='function')toast(`✓ Liens protégés : ${restored} restauré(s), ${removed} recherche(s) retirée(s)`);
+      if((pinned||restored||removed)&&typeof toast==='function')toast(`✓ Liens protégés : ${pinned} figé(s), ${restored} restauré(s), ${removed} recherche(s) retirée(s)`);
       try{localStorage.setItem(RESTORE_KEY,String(Date.now()));}catch{}
     }catch(error){
       console.error('PASS50 protection des liens officiels',error);
@@ -164,7 +251,12 @@
     },500);
     setTimeout(()=>clearInterval(readyTimer),60000);
 
-    window.PASS50_OFFICIAL_LINKS_PROTECTION_V4={version:VERSION,sanitize:sanitizeBrowser,restore:restoreVerifiedLinks};
+    window.PASS50_OFFICIAL_LINKS_PROTECTION_V4={
+      version:VERSION,
+      sanitize:sanitizeBrowser,
+      restore:restoreVerifiedLinks,
+      pinOwnerLockedProfiles
+    };
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
