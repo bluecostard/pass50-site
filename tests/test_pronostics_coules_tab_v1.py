@@ -1,3 +1,4 @@
+# Déclenche le workflow actif d’intégration Pronostics / Les Coulés.
 from pathlib import Path
 import unittest
 
