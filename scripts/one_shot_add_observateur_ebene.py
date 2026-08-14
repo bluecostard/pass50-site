@@ -58,11 +58,19 @@ def replace_once(path,old,new):
  path.write_text(text.replace(old,new),encoding='utf-8')
 
 
+def replace_all(path,old,new):
+ text=path.read_text(encoding='utf-8')
+ if old not in text:
+  if new in text:return
+  raise RuntimeError(f'Marqueur absent dans {path}: {old}')
+ path.write_text(text.replace(old,new),encoding='utf-8')
+
+
 def bump_versions():
  replace_once(V9,"const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.11';","const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.13';")
  replace_once(V9,"const CENSUS_VERSION='97-v28';","const CENSUS_VERSION='99-v30';")
- replace_once(SW,'./v9-tools.js?v=15.9','./v9-tools.js?v=15.11')
- replace_once(SW,'./pass50_nouveaux_candidats_90_v19.json?v=22.11','./pass50_nouveaux_candidats_90_v19.json?v=22.13')
+ replace_all(SW,'./v9-tools.js?v=15.9','./v9-tools.js?v=15.11')
+ replace_all(SW,'./pass50_nouveaux_candidats_90_v19.json?v=22.11','./pass50_nouveaux_candidats_90_v19.json?v=22.13')
  for path in (ROOT/'tests').glob('test_*.py'):
   text=path.read_text(encoding='utf-8')
   new=text.replace('pass50_nouveaux_candidats_90_v19.json?v=22.11','pass50_nouveaux_candidats_90_v19.json?v=22.13').replace("CENSUS_VERSION='97-v28'","CENSUS_VERSION='99-v30'").replace('v9-tools.js?v=15.9','v9-tools.js?v=15.11').replace('"15.9"','"15.11"')
