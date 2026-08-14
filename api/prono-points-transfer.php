@@ -64,8 +64,7 @@ try {
 
     $notificationTitle = 'Tu as reçu '.number_format($amount, 0, ',', ' ').' points 🎁';
     $notificationBody = '@'.$senderPseudo.' t’a offert '.number_format($amount, 0, ',', ' ').' points dans Pronostics.';
-    $pdo->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')
-        ->execute([$recipientId, $notificationTitle, $notificationBody]);
+    p50_notification_create($pdo, $recipientId, $notificationTitle, $notificationBody, 'points_received', '/pronostics.html?dashboard=points');
 
     $pdo->commit();
 } catch (DomainException $e) {

@@ -1201,6 +1201,7 @@
 
   loadPublications();
   loadStatuses();
+  if(new URLSearchParams(location.search).get('dashboard')==='points')setTimeout(openPointsDashboard,250);
 })();
 </script>
 </body>

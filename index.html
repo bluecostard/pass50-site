@@ -1018,8 +1018,8 @@ function openTop50(){
   $('#top50Body').innerHTML=`<div class="top50-search"><input id="fullRankingSearch" placeholder="Rechercher dans le Top 50"><span class="top50-count" id="fullRankingCount">${r.length} profils</span></div><div class="top50-row top50-head"><span>#</span><span></span><span>Influenceur</span><span>Score</span><span>Mouvement</span><span>Statut</span></div>${rows}`;
   open('top50Modal');
 }
-function openNotifications(){if(!requireAuth())return;const u=currentUser(),notes=db.notifications.filter(n=>n.userId===u.id).sort((a,b)=>b.createdAt-a.createdAt);$('#notificationBody').innerHTML=`<div class="admin-toolbar"><button class="btn small" id="markAllRead">Tout marquer comme lu</button><button class="btn small" id="testNotification">Créer une alerte test</button></div><div class="notice-list">${notes.length?notes.map(n=>{const adminTodo=n.kind==='admin_todo';return `<div class="notice ${n.read?'':'unread'}${adminTodo?' admin-todo':''}" data-note="${n.id}"${adminTodo?` data-admin-todo="1" data-admin-tab="${safeAttr(n.adminTab||'todo')}"`:''}"><strong>${safeAttr(n.title)}</strong><div class="muted">${safeAttr(n.body)}</div><div class="muted" style="font-size:11px;margin-top:5px">${new Date(n.createdAt).toLocaleString('fr-FR')}</div>${adminTodo?`<button type="button" class="btn small notice-action" data-open-admin-todo="${safeAttr(n.adminTab||'todo')}">Ouvrir A faire ! →</button>`:''}</div>`}).join(''):'<div class="empty">Aucune notification.</div>'}</div>`;open('notificationModal');}
-function addNotification(userId,title,body,meta){const note={id:'n_'+Date.now()+Math.random(),userId,title,body,read:false,createdAt:Date.now(),...(meta&&typeof meta==='object'?meta:{})};db.notifications.push(note);const u=db.users.find(x=>x.id===userId);if(u?.notificationMode==='instant'&&'Notification'in window&&Notification.permission==='granted'){const push=new Notification(title,{body,tag:note.kind==='admin_todo'?'pass50-admin-todo':undefined});if(note.kind==='admin_todo'){push.onclick=()=>{window.focus();if(typeof adminOpen==='function')adminOpen(note.adminTab||'todo');push.close();};}}save();renderHeader();}
+function openNotifications(){if(!requireAuth())return;const u=currentUser(),notes=db.notifications.filter(n=>n.userId===u.id).sort((a,b)=>b.createdAt-a.createdAt);$('#notificationBody').innerHTML=`<div class="admin-toolbar"><button class="btn small" id="markAllRead">Tout marquer comme lu</button><button class="btn small" id="testNotification">Créer une alerte test</button></div><div class="notice-list">${notes.length?notes.map(n=>{const adminTodo=n.kind==='admin_todo',actionable=Boolean(n.actionUrl)||adminTodo;return `<div class="notice ${n.read?'':'unread'}${adminTodo?' admin-todo':''}" data-note="${safeAttr(n.id)}"${n.actionUrl?` data-note-action="${safeAttr(n.actionUrl)}"`:''}${adminTodo?` data-admin-todo="1" data-admin-tab="${safeAttr(n.adminTab||'todo')}"`:''} style="${actionable?'cursor:pointer':''}"><strong>${safeAttr(n.title)}</strong><div class="muted">${safeAttr(n.body)}</div><div class="muted" style="font-size:11px;margin-top:5px">${new Date(n.createdAt).toLocaleString('fr-FR')}</div>${actionable?`<div class="up" style="font-size:11px;margin-top:7px">Ouvrir →</div>`:''}</div>`}).join(''):'<div class="empty">Aucune notification.</div>'}</div>`;open('notificationModal');}
+function addNotification(userId,title,body,meta){const note={id:'n_'+Date.now()+Math.random(),userId,title,body,read:false,createdAt:Date.now(),...(meta&&typeof meta==='object'?meta:{})};db.notifications.push(note);const u=db.users.find(x=>x.id===userId);if(u?.notificationMode==='instant'&&'Notification'in window&&Notification.permission==='granted'){const push=new Notification(title,{body,tag:note.kind==='admin_todo'?'pass50-admin-todo':undefined});push.onclick=()=>{window.focus();if(note.kind==='admin_todo'&&typeof adminOpen==='function')adminOpen(note.adminTab||'todo');else if(note.actionUrl)openNotificationTarget(note.actionUrl);push.close();};}save();renderHeader();}
 function followAlertStorageKey(userId){return 'pass50_follow_context_v2_'+String(userId||'guest')}
 function loadFollowAlertState(userId){try{return JSON.parse(localStorage.getItem(followAlertStorageKey(userId))||'{}')||{}}catch(_){return {}}}
 function saveFollowAlertState(userId,state){try{localStorage.setItem(followAlertStorageKey(userId),JSON.stringify(state||{}))}catch(_){}}
@@ -1034,13 +1034,13 @@ function syncFollowContextAlerts(){
     for(const id of u.following){
       if(u.followAlerts?.[id]===false)continue;
       const p=profile(id),rank=ranked.findIndex(row=>String(row.id)===String(id))+1,key=period+':'+id;
-      if(rank>0){nextRanks[key]=rank;const previous=Number(state.ranks[key]||0);if(previous>0&&rank<previous&&emitted<3){addNotification(u.id,`${p?.name||'Un influenceur suivi'} progresse ↗`,`${p?.name||'Cet influenceur'} gagne ${previous-rank} place${previous-rank>1?'s':''} sur ${periodLabels[period]} et atteint le rang #${rank}.`);emitted++;}}
+      if(rank>0){nextRanks[key]=rank;const previous=Number(state.ranks[key]||0);if(previous>0&&rank<previous&&emitted<3){addNotification(u.id,`${p?.name||'Un influenceur suivi'} progresse ↗`,`${p?.name||'Cet influenceur'} gagne ${previous-rank} place${previous-rank>1?'s':''} sur ${periodLabels[period]} et atteint le rang #${rank}.`,{kind:'follow_rank',actionUrl:'/?profile='+encodeURIComponent(id)+'&period='+encodeURIComponent(period)});emitted++;}}
     }
   }
   for(const live of activeLives()){
     const id=String(live.profileId||''),p=profile(id);if(!u.following.some(x=>String(x)===id)||u.followAlerts?.[id]===false)continue;
     const liveKey=String(live.id||id+':'+(live.startedAt||live.lastConfirmedAt||''));nextLives[liveKey]=true;
-    if(!state.lives[liveKey]&&emitted<3){addNotification(u.id,`${p?.name||'Un influenceur suivi'} est en LIVE 🔴`,String(live.title||'Un nouveau direct vient de commencer.'));emitted++;}
+    if(!state.lives[liveKey]&&emitted<3){addNotification(u.id,`${p?.name||'Un influenceur suivi'} est en LIVE 🔴`,String(live.title||'Un nouveau direct vient de commencer.'),{kind:'follow_live',actionUrl:'/?open=live&profile='+encodeURIComponent(id)});emitted++;}
   }
   saveFollowAlertState(u.id,{ranks:nextRanks,lives:{...state.lives,...nextLives},updatedAt:Date.now()});
 }
@@ -1171,7 +1171,7 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('#soundToggle')){const u=userPrefs();u.soundEnabled=!u.soundEnabled;save();openUser();if(u.soundEnabled)playUiSound('live');toast(u.soundEnabled?'Effets sonores activés':'Effets sonores désactivés')}
   if(e.target.id==='markAllRead'){const u=currentUser();db.notifications.filter(n=>n.userId===u.id).forEach(n=>n.read=true);save();await markCloudNotification('mark_all_read');openNotifications();renderHeader();}
   if(e.target.id==='testNotification'){const u=currentUser();addNotification(u.id,'Alerte test','Emma Lohoues entre dans le Top 3 sur 24 h.');openNotifications();}
-  const note=e.target.closest('[data-note]');if(note&&!e.target.closest('[data-open-admin-todo]')){const n=db.notifications.find(x=>x.id===note.dataset.note);if(n){n.read=true;save();await markCloudNotification('mark_read',String(n.id));note.classList.remove('unread');renderHeader();if(note.dataset.adminTodo==='1')adminOpen(note.dataset.adminTab||'todo');}}
+  const note=e.target.closest('[data-note]');if(note&&!e.target.closest('[data-open-admin-todo]')){const n=db.notifications.find(x=>String(x.id)===String(note.dataset.note));if(n){n.read=true;save();await markCloudNotification('mark_read',String(n.id));note.classList.remove('unread');renderHeader();if(note.dataset.adminTodo==='1')adminOpen(note.dataset.adminTab||'todo');else if(n.actionUrl||note.dataset.noteAction)openNotificationTarget(n.actionUrl||note.dataset.noteAction);}}
 });
 document.addEventListener('change',async e=>{
   if(e.target.id==='memberAvatarInput'&&e.target.files?.[0]){await uploadMemberAvatar(e.target.files[0]);return;}
@@ -1357,6 +1357,9 @@ async function markCloudNotification(action,id=''){
   if(!CLOUD.token)return;
   try{await apiFetch('notifications.php',{method:'POST',body:{action,id}})}catch(err){console.warn('Notification non synchronisée',err)}
 }
+function openNotificationTarget(actionUrl){
+  try{const target=new URL(String(actionUrl||''),location.origin);if(target.origin!==location.origin)return;location.assign(target.pathname+target.search+target.hash)}catch(_){ }
+}
 async function loadCloudCoulesPoll(){if(!CLOUD.enabled)return;const key=coulesPollKey();try{const data=await apiFetch('coules.php?poll='+encodeURIComponent(key),{auth:Boolean(CLOUD.token)});const next=data.totals||{},previous=CLOUD.coulesTotals[key]||{};if(Object.keys(previous).length&&JSON.stringify(previous)!==JSON.stringify(next))snapshotCoulesShares();CLOUD.coulesTotals[key]=next;if(data.myVote)CLOUD.coulesMyVotes[key]=data.myVote;else delete CLOUD.coulesMyVotes[key];renderSunk()}catch(err){console.warn('Duel cloud indisponible, mode local conservé',err)}}
 async function loadCloudCoulesHistory(){
   if(!CLOUD.enabled)return;
@@ -1374,9 +1377,9 @@ async function loadCloudCoulesHistory(){
 }
 
 async function castCloudCoulesVote(pollKey,profileId){if(!CLOUD.token)return;await apiFetch('coules.php',{method:'POST',body:{pollKey,profileId}})}
-async function addCloudNotification(userId,title,body){if(!CLOUD.token)return;try{await apiFetch('notifications.php',{method:'POST',body:{userId,title,body}})}catch(err){console.warn(err)}}
+async function addCloudNotification(userId,title,body,meta){if(!CLOUD.token)return;try{await apiFetch('notifications.php',{method:'POST',body:{userId,title,body,kind:meta?.kind||'',actionUrl:meta?.actionUrl||''}})}catch(err){console.warn(err)}}
 const localAddNotification=addNotification;
-addNotification=function(userId,title,body,meta){localAddNotification(userId,title,body,meta);addCloudNotification(userId,title,body);};
+addNotification=function(userId,title,body,meta){localAddNotification(userId,title,body,meta);addCloudNotification(userId,title,body,meta);};
 async function uploadMediaFile(file,kind,id){
   if(!CLOUD.enabled||!CLOUD.token)return compressImage(file,kind);
   const u=currentUser();if(!u||!['owner','admin'].includes(u.role))throw new Error('Droits insuffisants');
@@ -1385,8 +1388,10 @@ async function uploadMediaFile(file,kind,id){
 }
 async function deleteCloudProfile(){if(!CLOUD.token)return;await apiFetch('delete-account.php',{method:'POST',body:{}});CLOUD.token='';localStorage.removeItem('pass50_api_token');}
 function openCampaignProfile(){
-  const params=new URLSearchParams(location.search),id=params.get('profile');
-  if(id&&params.get('source')==='vote_share'&&profile(id))requestAnimationFrame(()=>openProfile(id));
+  const params=new URLSearchParams(location.search),id=params.get('profile'),period=params.get('period');
+  if(period&&periods.includes(period))ui.period=period;
+  if(params.get('open')==='live'){requestAnimationFrame(()=>openLives());return;}
+  if(id&&profile(id))requestAnimationFrame(()=>openProfile(id));
 }
 async function initCloud(){
   if(!CLOUD.enabled){setCloudStatus('',false);render();openCampaignProfile();return;}
