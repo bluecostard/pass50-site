@@ -155,6 +155,7 @@ $best=null;$bestCompare=null;
 foreach($candidates as $candidate){$comparison=p50_claim_compare($platform,$expected,$candidate);if($best===null||$comparison['exact']){$best=$candidate;$bestCompare=$comparison;}if($comparison['exact'])break;}
 $claimId=uuid_v4();$existing=db()->prepare('SELECT id,status FROM p50_profile_claims WHERE user_id=? AND profile_id=?');
 $existing->execute([(string)$user['id'],$profileId]);$old=$existing->fetch();if($old)$claimId=(string)$old['id'];
+if($old&&$old['status']==='approved')json_response(['error'=>'Cette fiche vous est déjà attribuée.','code'=>'already_approved'],409);
 $evidence=['provider'=>'oauth','platform'=>$platform,'connectedAt'=>$best['connected_at']??null,'comparison'=>$bestCompare];
 $stmt=db()->prepare("INSERT INTO p50_profile_claims(id,user_id,profile_id,platform,network_account_id,network_username,network_profile_url,expected_url,match_status,match_reason,status,evidence_json,submitted_at,reviewed_by,reviewed_at,review_note)
  VALUES(?,?,?,?,?,?,?,?,?,?, 'pending',?,NOW(),NULL,NULL,NULL)
