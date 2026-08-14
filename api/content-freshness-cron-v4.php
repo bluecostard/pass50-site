@@ -40,14 +40,17 @@ if($action==='probe')json_response([
     'xFastCycle'=>p50_cf4_x_policy(),'publicStateWrites'=>0,
 ]);
 
-set_time_limit(280);
+// Résilience V4.1 : chaque appel doit rester nettement sous un bucket de 5 minutes.
+set_time_limit(95);
 $result=p50_cf4_execute(db(),$dispatchId,[
     'mode'=>'cycle',
     'profileLimit'=>P50_CONTENT_FRESHNESS_V4_PROFILE_LIMIT,
     'jobLimit'=>P50_CONTENT_FRESHNESS_V4_JOB_LIMIT,
-    'maxIterations'=>P50_CONTENT_FRESHNESS_V4_WORK_ITERATIONS,
+    'maxIterations'=>10,
+    'timeBudgetMs'=>70000,
     'forceTopN'=>P50_CONTENT_FRESHNESS_V4_TOP_RANK_FORCE,
 ]);
 if(empty($result['ok']))json_response($result,500);
 $result['action']='refresh';
+$result['resilience']='V4.1';
 json_response($result);
