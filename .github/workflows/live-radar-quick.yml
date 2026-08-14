@@ -19,6 +19,20 @@ jobs:
     env:
       ENDPOINT: https://pass50.store/api/live-status-v4.php
     steps:
+      - name: Sonder prioritairement Oustaz Diané
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
+            "${ENDPOINT}?mode=profile&profileId=oustaz-diane&force=1&batch=4&t=$(date +%s)")"
+          printf '%s' "$response" | python3 -c '
+          import json,sys
+          data=json.load(sys.stdin)
+          radar=data.get("radar") or {}
+          streams=data.get("liveStreams") or []
+          detected=any(str(s.get("profileId") or "")=="oustaz-diane" and str(s.get("platform") or "")=="TikTok" for s in streams)
+          print(f"Oustaz Diané : {radar.get(chr(115)+chr(111)+chr(117)+chr(114)+chr(99)+chr(101)+chr(115)+chr(83)+chr(99)+chr(97)+chr(110)+chr(110)+chr(101)+chr(100)+chr(84)+chr(104)+chr(105)+chr(115)+chr(80)+chr(97)+chr(115)+chr(115),0)} source(s) sondée(s) · live TikTok publié={detected}")
+          '
+
       - name: Reconfirmer les directs et découvrir de nouveaux LIVE
         run: |
           set -euo pipefail
