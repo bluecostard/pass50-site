@@ -7,21 +7,28 @@ async function call(path,options){if(typeof apiFetch==='function')return apiFetc
 function notice(message){if(typeof toast==='function')toast(message);else alert(message);}
 function ensure(){
  if(document.getElementById('p50ClaimModal'))return;
- var style=document.createElement('style');style.textContent='.p50-claim-box{display:grid;gap:12px}.p50-claim-intro{padding:14px;border:1px solid #334033;border-radius:14px;background:#0d120d}.p50-claim-networks{display:flex;gap:8px;flex-wrap:wrap}.p50-claim-state{padding:10px 12px;border-radius:12px;background:#182018;color:#dce8d8}.p50-claim-state.ok{border:1px solid #b7ff00}.p50-claim-state.warn{border:1px solid #e7a91a}.p50-claim-admin-card{padding:14px;border:1px solid #303a30;border-radius:14px;margin-bottom:10px;background:#0b100b}.p50-claim-proof{font-size:12px;color:#aeb8aa;word-break:break-word}.p50-claimed-badge{display:inline-flex;align-items:center;gap:6px;color:#b7ff00;font-weight:900;font-size:12px;margin-top:10px}';
+ var style=document.createElement('style');style.textContent='.p50-claim-box{display:grid;gap:12px}.p50-claim-intro{padding:14px;border:1px solid #334033;border-radius:14px;background:#0d120d}.p50-claim-networks{display:flex;gap:8px;flex-wrap:wrap}.p50-claim-state{padding:10px 12px;border-radius:12px;background:#182018;color:#dce8d8}.p50-claim-state.ok{border:1px solid #b7ff00}.p50-claim-state.warn{border:1px solid #e7a91a}.p50-claim-admin-card{padding:14px;border:1px solid #303a30;border-radius:14px;margin-bottom:10px;background:#0b100b}.p50-claim-proof{font-size:12px;color:#aeb8aa;word-break:break-word}.p50-claim-account{display:grid;gap:10px;width:100%}.p50-claim-account select{width:100%;padding:11px 12px;border:1px solid #334033;border-radius:12px;background:#0b100b;color:#f6f8f4;font:inherit}.p50-claimed-badge{display:inline-flex;align-items:center;gap:6px;color:#b7ff00;font-weight:900;font-size:12px;margin-top:10px}';
  document.head.appendChild(style);
  var modal=document.createElement('div');modal.className='modal';modal.id='p50ClaimModal';modal.innerHTML='<div class="modal-box" style="width:min(680px,96vw)"><div class="modal-head"><strong>REVENDIQUER CETTE FICHE</strong><button class="close" data-p50-claim-close>×</button></div><div class="modal-body" id="p50ClaimBody"></div></div>';document.body.appendChild(modal);
  modal.addEventListener('click',function(e){if(e.target.hasAttribute('data-p50-claim-close')||e.target===modal)modal.classList.remove('show');});
 }
-async function publicStatus(profileId,host){
- try{var data=await call('profile-claims.php?profileId='+encodeURIComponent(profileId));if(data.claimed){host.innerHTML='<span class="p50-claimed-badge">✓ Profil revendiqué · '+esc(data.platform)+'</span>';return true;}}catch(_){}
- return false;
+function claimableProfiles(){
+ var items=[];
+ try{
+  if(typeof completeRanking==='function')items=completeRanking();
+  else if(typeof db!=='undefined'&&Array.isArray(db.profiles))items=db.profiles;
+ }catch(_){}
+ return items.filter(function(p){return p&&p.id&&p.alive!==false;}).slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'fr');});
 }
-function injectProfile(){
- ensure();var body=document.getElementById('profileBody');if(!body||!body.children.length||body.querySelector('[data-p50-claim-host]'))return;
- var marker=body.querySelector('.fav[data-id],.follow[data-id]');var profileId=marker&&marker.getAttribute('data-id');if(!profileId)return;
- var host=document.createElement('div');host.setAttribute('data-p50-claim-host','1');host.style.marginTop='14px';
- host.innerHTML='<button type="button" class="btn small" data-p50-claim="'+esc(profileId)+'">Revendiquer cette fiche</button><div class="muted" style="font-size:12px;margin-top:6px">Réservé au propriétaire de ses comptes officiels.</div>';
- var actions=body.querySelector('.card-actions')||body;actions.appendChild(host);publicStatus(profileId,host);
+function injectAccount(){
+ ensure();
+ var panel=document.querySelector('#userBody [data-user-fold="account"] .user-panel');
+ if(!panel||panel.querySelector('[data-p50-claim-account]'))return;
+ var profiles=claimableProfiles();
+ var host=document.createElement('div');host.className='pref';host.setAttribute('data-p50-claim-account','1');
+ host.innerHTML='<div class="p50-claim-account"><div><strong>Revendiquer une fiche</strong><div class="muted">Sélectionnez votre nom pour vérifier un compte officiel.</div></div><select data-p50-claim-select aria-label="Nom de l’influenceur"><option value="">Choisir une fiche…</option>'+profiles.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.name||p.handle||p.id)+'</option>';}).join('')+'</select><button type="button" class="btn primary" data-p50-claim-account-open disabled>Continuer</button></div>';
+ var legal=panel.querySelector('.account-legal-links');
+ panel.insertBefore(host,legal?legal.previousElementSibling:null);
 }
 async function openClaim(profileId){
  if(!connected()){if(typeof requireAuth==='function')requireAuth();return notice('Connectez-vous d’abord à PASS50.');}
@@ -62,12 +69,18 @@ function injectAdmin(){
  var menu=document.querySelector('#adminModal .admin-menu');if(!menu||menu.querySelector('[data-p50-claims-admin]'))return;
  var b=document.createElement('button');b.className='btn';b.textContent='Revendications';b.setAttribute('data-p50-claims-admin','1');menu.appendChild(b);
 }
+document.addEventListener('change',function(e){
+ if(e.target.matches('[data-p50-claim-select]')){
+  var button=document.querySelector('[data-p50-claim-account-open]');
+  if(button)button.disabled=!e.target.value;
+ }
+});
 document.addEventListener('click',function(e){
- var claim=e.target.closest('[data-p50-claim]');if(claim){openClaim(claim.getAttribute('data-p50-claim'));return;}
+ var accountClaim=e.target.closest('[data-p50-claim-account-open]');if(accountClaim){var select=document.querySelector('[data-p50-claim-select]');if(select&&select.value)openClaim(select.value);return;}
  var platform=e.target.closest('[data-p50-claim-platform]');if(platform){var body=document.getElementById('p50ClaimBody');submit(body.dataset.profileId,platform.getAttribute('data-p50-claim-platform'),true);return;}
  var admin=e.target.closest('[data-p50-claims-admin]');if(admin){document.querySelectorAll('#adminModal .admin-menu .btn').forEach(function(x){x.classList.remove('primary');});admin.classList.add('primary');renderAdmin();return;}
  var review=e.target.closest('[data-p50-review]');if(review){var decision=review.getAttribute('data-p50-review');var note='';if(decision==='reject'||!review.closest('.p50-claim-admin-card').textContent.includes('CORRESPONDANCE EXACTE'))note=prompt('Motif de la décision :')||'';call('profile-claims.php',{method:'POST',body:{action:'review',claimId:review.getAttribute('data-id'),decision:decision,note:note}}).then(function(){notice('Décision enregistrée');renderAdmin();}).catch(function(err){notice(err.message||err);});}
 });
-new MutationObserver(function(){injectProfile();injectAdmin();}).observe(document.documentElement,{childList:true,subtree:true});
+new MutationObserver(function(){injectAccount();injectAdmin();}).observe(document.documentElement,{childList:true,subtree:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){ensure();resume();});else{ensure();resume();}
 })();
