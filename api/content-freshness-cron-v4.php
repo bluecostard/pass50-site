@@ -36,7 +36,7 @@ if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',
 
 if($action==='probe')json_response([
     'ok'=>true,'action'=>'probe','dispatchId'=>$dispatchId,'version'=>P50_CONTENT_FRESHNESS_V4_VERSION,
-    'bucketSeconds'=>P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS,'facebookCollectorVersion'=>P50_FACEBOOK_COLLECTOR_VERSION,
+    'resilience'=>'V4.1','bucketSeconds'=>P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS,'facebookCollectorVersion'=>P50_FACEBOOK_COLLECTOR_VERSION,
     'xFastCycle'=>p50_cf4_x_policy(),'publicStateWrites'=>0,
 ]);
 
