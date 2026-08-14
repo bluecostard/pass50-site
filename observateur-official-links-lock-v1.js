@@ -1,11 +1,12 @@
 (function(){
 'use strict';
 
-const VERSION='1.0';
+const VERSION='1.1';
 const PROFILE_ID='census-observateur-ebene';
 const LOCKS={
   YouTube:'https://www.youtube.com/@Observateur',
-  Facebook:'https://www.facebook.com/observateurofficiel/'
+  Facebook:'https://www.facebook.com/observateurofficiel/',
+  X:'https://x.com/FlorentAMANY'
 };
 let serverSeeded=false;
 let renderWrapped=false;
