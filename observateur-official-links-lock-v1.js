@@ -1,7 +1,14 @@
 (function(){
 'use strict';
 
-const VERSION='1.1';
+if(!document.querySelector('script[data-pass50-official-links-search-v2]')){
+  const searchScript=document.createElement('script');
+  searchScript.src='./official-links-search-v2.js?v=2.0';
+  searchScript.dataset.pass50OfficialLinksSearchV2='2.0';
+  document.head.appendChild(searchScript);
+}
+
+const VERSION='1.2';
 const PROFILE_ID='census-observateur-ebene';
 const LOCKS={
   YouTube:'https://www.youtube.com/@Observateur',
