@@ -40,6 +40,21 @@ $lockedOfficialLinks=[
 ];
 $lockKey=strtolower($profileId).'|'.strtolower($platform);
 $lockedOfficialUrl=$lockedOfficialLinks[$lockKey]??'';
+
+// Pour Zagba, Zeinab Bancé et Samo Samo, tout lien confirmé par le propriétaire
+// est figé dynamiquement. Cela évite de dépendre d'un ID interne supposé pour Zeinab.
+$ownerLockedNames=['zagbalerequin','zeinabbance','samosamo'];
+$normalizedProfileName=p50_de_normalize_profile_name((string)($profile['public_name']??''));
+if($lockedOfficialUrl===''&&in_array($normalizedProfileName,$ownerLockedNames,true)){
+    $stmt=db()->prepare('SELECT normalized_url,status,source_types FROM p50_social_links WHERE profile_id=? AND platform=? LIMIT 1');
+    $stmt->execute([$profileId,$platform]);
+    $lockedRow=$stmt->fetch();
+    if($lockedRow&&((string)($lockedRow['status']??''))==='verified'){
+        $types=json_decode((string)($lockedRow['source_types']??'[]'),true);
+        if(is_array($types)&&in_array('manual_owner',$types,true))$lockedOfficialUrl=(string)($lockedRow['normalized_url']??'');
+    }
+}
+
 if($lockedOfficialUrl!==''&&in_array($action,['delete','reject'],true)){
     json_response([
         'error'=>'Ce compte officiel est figé par le propriétaire PASS50.',
