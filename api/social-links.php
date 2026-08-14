@@ -34,6 +34,22 @@ $profiles=p50_de_registry_profiles($profileId,1,0);
 if(!$profiles)json_response(['error'=>'Profil introuvable.'],404);
 $profile=$profiles[0];
 $previousUrl=p50_de_current_social_url($profileId,$platform);
+
+// Liens explicitement figés par le propriétaire PASS50.
+// Ils ne peuvent ni être supprimés, ni rejetés, ni remplacés par une autre URL.
+$lockedOfficialLinks=[
+    'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
+    'census-observateur-ebene|facebook'=>'https://www.facebook.com/observateurofficiel/',
+];
+$lockKey=strtolower($profileId).'|'.strtolower($platform);
+$lockedOfficialUrl=$lockedOfficialLinks[$lockKey]??'';
+if($lockedOfficialUrl!==''&&in_array($action,['delete','reject'],true)){
+    json_response([
+        'error'=>'Ce compte officiel est figé par le propriétaire PASS50.',
+        'locked'=>true,'profileId'=>$profileId,'platform'=>$platform,'url'=>$lockedOfficialUrl,
+    ],409);
+}
+
 if($action==='reject'){
     $stmt=db()->prepare("UPDATE p50_social_links SET status='rejected',confidence=0,verified_at=NULL,updated_at=NOW() WHERE profile_id=? AND platform=?");
     $stmt->execute([$profileId,$platform]);
@@ -56,6 +72,11 @@ if($action==='delete'){
     json_response(['ok'=>true,'deleted'=>true,'links'=>p50_de_social_links($profileId,false)]);
 }
 $url=trim((string)($in['url']??''));
+if($lockedOfficialUrl!==''){
+    $url=$lockedOfficialUrl;
+    $in['confirmedOfficial']=true;
+    $in['replaceExisting']=true;
+}
 if($url==='')json_response(['error'=>'URL requise.'],422);
 $validation=p50_de_validate_social_url($platform,$url,(string)$profile['public_name'],(string)$profile['handle']);
 if($validation['normalizedUrl']==='')json_response(['error'=>$validation['message']??'URL invalide.','validation'=>$validation],422);
@@ -66,7 +87,9 @@ if($confirmed){
     $validation['normalizedUrl']=p50_de_normalize_social_url($platform,$url) ?: $validation['normalizedUrl'];
     $validation['ok']=true;
     $validation['status']=$user['role']==='owner'?'owner_verified':'manual_verified';
-    $validation['message']=$user['role']==='owner'?'Compte officiel confirmé par le propriétaire PASS50':'Compte officiel confirmé par un administrateur PASS50';
+    $validation['message']=$lockedOfficialUrl!==''
+        ?'Compte officiel confirmé et figé par le propriétaire PASS50'
+        :($user['role']==='owner'?'Compte officiel confirmé par le propriétaire PASS50':'Compte officiel confirmé par un administrateur PASS50');
 }
 $sourceType=$confirmed?($user['role']==='owner'?'manual_owner':'manual_admin'):'manual_candidate';
 $weight=$confirmed?($user['role']==='owner'?100:98):75;
@@ -77,10 +100,10 @@ if($confirmed&&!empty($in['replaceExisting'])){
     $stmt->execute(array_merge([$profileId,$platform],$types));
 }
 p50_de_add_social_evidence($profileId,$platform,$validation['normalizedUrl'],$sourceType,$user['display_name']??$user['email'],'',$weight,$validation);
-p50_de_log_social_action($profileId,$platform,$confirmed?'confirm':'save',$previousUrl,$validation['normalizedUrl'],$user,['confirmed'=>$confirmed,'validationStatus'=>$validation['status']??'']);
+p50_de_log_social_action($profileId,$platform,$lockedOfficialUrl!==''?'confirm_locked':($confirmed?'confirm':'save'),$previousUrl,$validation['normalizedUrl'],$user,['confirmed'=>$confirmed,'locked'=>$lockedOfficialUrl!=='','validationStatus'=>$validation['status']??'']);
 p50_de_publish_profile($profileId,$user['id']);
 $state=p50_de_load_public_state();
 json_response([
-    'ok'=>true,'confirmed'=>$confirmed,'validation'=>$validation,'links'=>p50_de_social_links($profileId,false),
+    'ok'=>true,'confirmed'=>$confirmed,'locked'=>$lockedOfficialUrl!=='','validation'=>$validation,'links'=>p50_de_social_links($profileId,false),
     'history'=>p50_de_social_history($profileId,20),'stateRevision'=>(int)($state['stateRevision']??0),
 ]);
