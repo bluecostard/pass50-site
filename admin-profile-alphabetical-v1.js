@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.4';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.5';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
   let linksRendererInstalled=false;
@@ -109,7 +109,7 @@
       if(!pane)return;
       const profiles=alphabeticalProfiles();
       const token=++linksRenderToken;
-      pane.innerHTML=`<div class="media-hint">Renseignez uniquement les liens officiels confirmés. Ils seront utilisés par le radar LIVE et les fiches influenceurs.</div><div class="admin-toolbar"><button class="btn primary" id="checkTop10Links">Vérifier les liens du Top 10</button></div><div id="linksCards"></div>`;
+      pane.innerHTML=`<div class="media-hint"><strong>Objectif :</strong> seuls les profils officiels directs sont visibles au public. Les liens de recherche sont masqués.</div><div class="admin-toolbar"><button class="btn primary" id="checkTop10Links">Vérifier les liens du Top 10</button></div><div id="linksCards"></div>`;
       const cards=document.getElementById('linksCards');
       if(!cards)return;
       cards.dataset.searchExpanded='1';
