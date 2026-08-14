@@ -25,6 +25,9 @@ if ($recipientId === $senderId) {
 }
 
 $pdo = db();
+$senderPseudo = ltrim(trim((string)($sender['display_name'] ?? '')), '@');
+if ($senderPseudo === '') $senderPseudo = 'Un membre PASS50';
+
 $recipientStmt = $pdo->prepare("SELECT id,display_name FROM users WHERE id=? AND deleted_at IS NULL LIMIT 1");
 $recipientStmt->execute([$recipientId]);
 $recipient = $recipientStmt->fetch();
@@ -58,6 +61,11 @@ try {
     $ledger = $pdo->prepare('INSERT INTO p50_prono_points_ledger(id,user_id,delta,reason,ref_id) VALUES(?,?,?,?,?)');
     $ledger->execute([p50_prono_uuid(), $senderId, -$amount, 'points_gift_sent', $transferId]);
     $ledger->execute([p50_prono_uuid(), $recipientId, $amount, 'points_gift_received', $transferId]);
+
+    $notificationTitle = 'Tu as reçu '.number_format($amount, 0, ',', ' ').' points 🎁';
+    $notificationBody = '@'.$senderPseudo.' t’a offert '.number_format($amount, 0, ',', ' ').' points dans Pronostics.';
+    $pdo->prepare('INSERT INTO notifications(user_id,title,body) VALUES(?,?,?)')
+        ->execute([$recipientId, $notificationTitle, $notificationBody]);
 
     $pdo->commit();
 } catch (DomainException $e) {

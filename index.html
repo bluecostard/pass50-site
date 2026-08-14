@@ -1018,7 +1018,7 @@ function openTop50(){
   $('#top50Body').innerHTML=`<div class="top50-search"><input id="fullRankingSearch" placeholder="Rechercher dans le Top 50"><span class="top50-count" id="fullRankingCount">${r.length} profils</span></div><div class="top50-row top50-head"><span>#</span><span></span><span>Influenceur</span><span>Score</span><span>Mouvement</span><span>Statut</span></div>${rows}`;
   open('top50Modal');
 }
-function openNotifications(){if(!requireAuth())return;const u=currentUser(),notes=db.notifications.filter(n=>n.userId===u.id).sort((a,b)=>b.createdAt-a.createdAt);$('#notificationBody').innerHTML=`<div class="admin-toolbar"><button class="btn small" id="markAllRead">Tout marquer comme lu</button><button class="btn small" id="testNotification">Créer une alerte test</button></div><div class="notice-list">${notes.length?notes.map(n=>{const adminTodo=n.kind==='admin_todo';return `<div class="notice ${n.read?'':'unread'}${adminTodo?' admin-todo':''}" data-note="${n.id}"${adminTodo?` data-admin-todo="1" data-admin-tab="${safeAttr(n.adminTab||'todo')}"`:''}"><strong>${n.title}</strong><div class="muted">${n.body}</div><div class="muted" style="font-size:11px;margin-top:5px">${new Date(n.createdAt).toLocaleString('fr-FR')}</div>${adminTodo?`<button type="button" class="btn small notice-action" data-open-admin-todo="${safeAttr(n.adminTab||'todo')}">Ouvrir A faire ! →</button>`:''}</div>`}).join(''):'<div class="empty">Aucune notification.</div>'}</div>`;open('notificationModal');}
+function openNotifications(){if(!requireAuth())return;const u=currentUser(),notes=db.notifications.filter(n=>n.userId===u.id).sort((a,b)=>b.createdAt-a.createdAt);$('#notificationBody').innerHTML=`<div class="admin-toolbar"><button class="btn small" id="markAllRead">Tout marquer comme lu</button><button class="btn small" id="testNotification">Créer une alerte test</button></div><div class="notice-list">${notes.length?notes.map(n=>{const adminTodo=n.kind==='admin_todo';return `<div class="notice ${n.read?'':'unread'}${adminTodo?' admin-todo':''}" data-note="${n.id}"${adminTodo?` data-admin-todo="1" data-admin-tab="${safeAttr(n.adminTab||'todo')}"`:''}"><strong>${safeAttr(n.title)}</strong><div class="muted">${safeAttr(n.body)}</div><div class="muted" style="font-size:11px;margin-top:5px">${new Date(n.createdAt).toLocaleString('fr-FR')}</div>${adminTodo?`<button type="button" class="btn small notice-action" data-open-admin-todo="${safeAttr(n.adminTab||'todo')}">Ouvrir A faire ! →</button>`:''}</div>`}).join(''):'<div class="empty">Aucune notification.</div>'}</div>`;open('notificationModal');}
 function addNotification(userId,title,body,meta){const note={id:'n_'+Date.now()+Math.random(),userId,title,body,read:false,createdAt:Date.now(),...(meta&&typeof meta==='object'?meta:{})};db.notifications.push(note);const u=db.users.find(x=>x.id===userId);if(u?.notificationMode==='instant'&&'Notification'in window&&Notification.permission==='granted'){const push=new Notification(title,{body,tag:note.kind==='admin_todo'?'pass50-admin-todo':undefined});if(note.kind==='admin_todo'){push.onclick=()=>{window.focus();if(typeof adminOpen==='function')adminOpen(note.adminTab||'todo');push.close();};}}save();renderHeader();}
 function generateAlerts(){db.users.forEach(u=>{const followed=u.following||[];followed.slice(0,3).forEach((id,i)=>{const p=profile(id);addNotification(u.id,`${p.name} progresse`,`${p.name} gagne ${Math.max(1,p.delta)} place(s) sur ${periodLabels[ui.period]}.`)});});}
 function askNotifications(){if(!('Notification'in window))return toast('Notifications non prises en charge');Notification.requestPermission().then(x=>toast(x==='granted'?'Notifications activées':'Autorisation refusée'))}
@@ -1145,9 +1145,9 @@ document.addEventListener('click',async e=>{
   if(e.target.matches('.alert-toggle')){const u=userPrefs(),id=e.target.dataset.id;u.followAlerts[id]=u.followAlerts[id]===false;save();openUser();}
   if(e.target.closest('#notificationModes button')){const u=userPrefs();u.notificationMode=e.target.dataset.mode;save();openUser();toast('Préférence enregistrée')}
   if(e.target.closest('#soundToggle')){const u=userPrefs();u.soundEnabled=!u.soundEnabled;save();openUser();if(u.soundEnabled)playUiSound('live');toast(u.soundEnabled?'Effets sonores activés':'Effets sonores désactivés')}
-  if(e.target.id==='markAllRead'){const u=currentUser();db.notifications.filter(n=>n.userId===u.id).forEach(n=>n.read=true);save();openNotifications();renderHeader();}
+  if(e.target.id==='markAllRead'){const u=currentUser();db.notifications.filter(n=>n.userId===u.id).forEach(n=>n.read=true);save();await markCloudNotification('mark_all_read');openNotifications();renderHeader();}
   if(e.target.id==='testNotification'){const u=currentUser();addNotification(u.id,'Alerte test','Emma Lohoues entre dans le Top 3 sur 24 h.');openNotifications();}
-  const note=e.target.closest('[data-note]');if(note&&!e.target.closest('[data-open-admin-todo]')){const n=db.notifications.find(x=>x.id===note.dataset.note);if(n){n.read=true;save();note.classList.remove('unread');renderHeader();if(note.dataset.adminTodo==='1')adminOpen(note.dataset.adminTab||'todo');}}
+  const note=e.target.closest('[data-note]');if(note&&!e.target.closest('[data-open-admin-todo]')){const n=db.notifications.find(x=>x.id===note.dataset.note);if(n){n.read=true;save();await markCloudNotification('mark_read',String(n.id));note.classList.remove('unread');renderHeader();if(note.dataset.adminTodo==='1')adminOpen(note.dataset.adminTab||'todo');}}
 });
 document.addEventListener('change',async e=>{
   if(e.target.id==='memberAvatarInput'&&e.target.files?.[0]){await uploadMemberAvatar(e.target.files[0]);return;}
@@ -1312,6 +1312,27 @@ async function loadCloudNotifications(){
   if(!CLOUD.token)return [];
   try{return (await apiFetch('notifications.php')).items||[]}catch{return []}
 }
+async function refreshCloudNotifications(announce=true){
+  if(!CLOUD.token)return;
+  const u=currentUser();if(!u)return;
+  const previous=db.notifications.filter(n=>n.userId===u.id);
+  const previousIds=new Set(previous.map(n=>String(n.id)));
+  const notes=await loadCloudNotifications();
+  const fresh=notes.filter(n=>!previousIds.has(String(n.id))&&!previous.some(old=>String(old.title)===String(n.title)&&String(old.body)===String(n.body)&&Math.abs(Number(old.createdAt)-Number(n.createdAt))<120000));
+  db.notifications=db.notifications.filter(n=>n.userId!==u.id).concat(notes);
+  save();renderHeader();
+  if(document.getElementById('notificationModal')?.classList.contains('show'))openNotifications();
+  if(!announce||u.notificationMode!=='instant'||!('Notification'in window)||Notification.permission!=='granted'||!fresh.length)return;
+  const today=new Date().toISOString().slice(0,10),key='pass50_browser_notif_daily_v1';
+  let quota={date:today,count:0};try{quota=JSON.parse(localStorage.getItem(key)||'null')||quota}catch(_){ }
+  if(quota.date!==today)quota={date:today,count:0};
+  for(const note of fresh.slice(0,Math.max(0,3-quota.count))){new Notification(note.title,{body:note.body,tag:'pass50-note-'+note.id});quota.count++;}
+  localStorage.setItem(key,JSON.stringify(quota));
+}
+async function markCloudNotification(action,id=''){
+  if(!CLOUD.token)return;
+  try{await apiFetch('notifications.php',{method:'POST',body:{action,id}})}catch(err){console.warn('Notification non synchronisée',err)}
+}
 async function loadCloudCoulesPoll(){if(!CLOUD.enabled)return;const key=coulesPollKey();try{const data=await apiFetch('coules.php?poll='+encodeURIComponent(key),{auth:Boolean(CLOUD.token)});const next=data.totals||{},previous=CLOUD.coulesTotals[key]||{};if(Object.keys(previous).length&&JSON.stringify(previous)!==JSON.stringify(next))snapshotCoulesShares();CLOUD.coulesTotals[key]=next;if(data.myVote)CLOUD.coulesMyVotes[key]=data.myVote;else delete CLOUD.coulesMyVotes[key];renderSunk()}catch(err){console.warn('Duel cloud indisponible, mode local conservé',err)}}
 async function loadCloudCoulesHistory(){
   if(!CLOUD.enabled)return;
@@ -1353,7 +1374,7 @@ async function initCloud(){
     }
     await loadCloudCoulesHistory();
     await loadCloudCoulesPoll();
-    CLOUD.ready=true;window.__pass50CloudReady=true;clearInterval(CLOUD.coulesTimer);clearInterval(CLOUD.coulesHistoryTimer);CLOUD.coulesTimer=setInterval(loadCloudCoulesPoll,15000);CLOUD.coulesHistoryTimer=setInterval(loadCloudCoulesHistory,3600000);setCloudStatus('',true);render();openCampaignProfile();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
+    CLOUD.ready=true;window.__pass50CloudReady=true;clearInterval(CLOUD.coulesTimer);clearInterval(CLOUD.coulesHistoryTimer);CLOUD.coulesTimer=setInterval(loadCloudCoulesPoll,15000);CLOUD.coulesHistoryTimer=setInterval(loadCloudCoulesHistory,3600000);clearInterval(CLOUD.notificationTimer);CLOUD.notificationTimer=setInterval(()=>refreshCloudNotifications(true),30000);setCloudStatus('',true);render();openCampaignProfile();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
   }catch(err){console.error(err);setCloudStatus('',false);render();}
 }
 initCloud();

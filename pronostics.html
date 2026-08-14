@@ -141,6 +141,8 @@
     .gift-suggestion:last-child{border-bottom:0}
     .gift-suggestion:hover{background:rgba(183,255,0,.09);color:var(--lime)}
     .gift-submit{width:100%;margin-top:10px}
+    .gift-success{display:none;margin-top:10px;padding:12px;border-radius:13px;background:rgba(183,255,0,.14);border:1px solid rgba(183,255,0,.5);color:var(--lime);font-size:13px;font-weight:900;line-height:1.4;text-align:center}
+    .gift-success.show{display:block}
     .gift-help{margin-top:8px!important;color:rgba(244,247,240,.66)!important}
     .balance-period{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px}
     .balance-period label{display:block;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
@@ -348,7 +350,7 @@
       transform:translateX(-50%) translateY(10px);
       background:var(--panel);border:1px solid var(--line);border-radius:14px;
       padding:10px 18px;font-size:13px;font-weight:700;
-      white-space:nowrap;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:50;
+      white-space:nowrap;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:400;
     }
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -797,6 +799,7 @@
           <div class="gift-field"><label for="giftAmount">Montant</label><input id="giftAmount" type="number" inputmode="numeric" min="1" max="1500" step="1" placeholder="0"></div>
         </div>
         <button type="button" class="btn primary gift-submit" id="giftSubmit" disabled>Offrir les points</button>
+        <div class="gift-success" id="giftSuccess" role="status" aria-live="polite"></div>
         <p class="gift-help">Maximum 1 500 pts par transfert. Ton solde minimum de 100 pts reste protégé.</p>
       </div>
     </section>
@@ -894,14 +897,13 @@
         const response=await fetch('/api/prono-points-transfer.php',{method:'POST',headers:authHeaders(true),body:JSON.stringify({recipientId:giftRecipient.id,amount:points})});
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.error||'Transfert impossible');
-        showToast(`${formatPoints(points)} pts offerts à @${giftRecipient.pseudo}`);
         if(data.balance)applyBalance(data);
-        const [summaryResponse,historyResponse,balanceHistoryResponse]=await Promise.all([
-          fetch('/api/prono-dashboard.php?_='+Date.now(),{headers:authHeaders()}),
-          fetch('/api/prono-history.php?filter=all&limit=30&_='+Date.now(),{headers:authHeaders()}),
-          fetch('/api/prono-points-history.php?_='+Date.now(),{headers:authHeaders()}),
-        ]);
-        renderPointsDashboard(await summaryResponse.json(),await historyResponse.json(),await balanceHistoryResponse.json());
+        input.disabled=true;amount.disabled=true;submit.disabled=true;submit.textContent='Envoi effectué ✓';
+        const success=document.getElementById('giftSuccess');
+        if(success){success.textContent=`${formatPoints(points)} points ont bien été envoyés à @${giftRecipient.pseudo}. Son solde a été crédité et une notification lui a été envoyée.`;success.classList.add('show');}
+        const from=document.getElementById('balanceFrom')?.value||'';
+        const to=document.getElementById('balanceTo')?.value||'';
+        await loadBalancePeriod(from,to);
       }catch(error){showToast(error.message||'Transfert impossible');submit.disabled=false;submit.textContent='Offrir les points';}
     });
   }
