@@ -1115,10 +1115,12 @@ function stopLive(id){const l=db.liveStreams.find(x=>x.id===id);if(l)l.status='e
 function adminProfileRows(list){return list.map(p=>{const removed=!p.alive||p.adminDeleted;return `<tr data-admin-profile-name="${safeAttr(String(p.name||'').toLowerCase())}" class="${removed?'is-removed':''}"><td>${p.name}${removed?' <span class="muted">(retiré)</span>':''}</td><td>${p.region}</td><td>${score(p)}</td><td>${p.eligible&&p.alive?'Oui':'Non'}</td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small edit-profile" data-id="${p.id}">Modifier</button>${removed?`<button class="btn small restore-profile" data-id="${p.id}">Restaurer</button>`:`<button class="btn small danger delete-profile" data-id="${p.id}">Supprimer</button>`}</td></tr>`}).join('')}
 function deleteAdminProfile(id){
   const p=profile(id);if(!p)return;
-  if(!confirm(`Supprimer « ${p.name} » du site et du classement ?\n\nLe profil est retiré du public (radar, classement, fiches). Tu pourras le restaurer plus tard.`))return;
-  p.alive=false;p.eligible=false;p.classable=false;p.adminDeleted=true;p.deletedAt=new Date().toISOString();
-  (db.liveStreams||[]).forEach(live=>{if(String(live.profileId||'')===String(id)&&live.status==='live'){live.status='ended';live.endedAt=new Date().toISOString();}});
-  save();render();ui.adminTab='profiles';renderAdmin();toast('Profil supprimé du site');
+  if(!confirm(`Supprimer définitivement « ${p.name} » de PASS50 ?\n\nSa fiche et ses contenus associés seront retirés de toutes les rubriques. Cette action n’est pas restaurable depuis l’administration.`))return;
+  const sameProfile=item=>String(item?.profileId||item?.profile_id||item?.influencerId||'')===String(id);
+  db.profiles=(db.profiles||[]).filter(item=>String(item?.id||'')!==String(id));
+  ['content','events','signals','liveStreams'].forEach(key=>{if(Array.isArray(db[key]))db[key]=db[key].filter(item=>!sameProfile(item));});
+  (db.users||[]).forEach(user=>{if(Array.isArray(user.favorites))user.favorites=user.favorites.filter(value=>String(value)!==String(id));if(Array.isArray(user.following))user.following=user.following.filter(value=>String(value)!==String(id));if(user.followAlerts&&typeof user.followAlerts==='object')delete user.followAlerts[id];});
+  save();render();ui.adminTab='profiles';renderAdmin();toast('Profil supprimé définitivement');
 }
 function restoreAdminProfile(id){
   const p=profile(id);if(!p)return;
@@ -1410,6 +1412,6 @@ initCloud();
 
 </script>
   <script src="./public-ui-sanitizer-v1.js?v=1.0"></script>
-<script src="./v9-tools.js?v=15.12"></script>
+<script src="./v9-tools.js?v=15.13"></script>
 </body>
 </html>
