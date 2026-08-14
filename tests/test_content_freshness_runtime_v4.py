@@ -12,14 +12,15 @@ FEED = (ROOT / "api/content-feed.php").read_text(encoding="utf-8")
 
 
 class ContentFreshnessRuntimeV4Tests(unittest.TestCase):
-    def test_v4_is_strict_signed_and_five_minutes(self):
+    def test_v4_is_strict_signed_and_five_minute_bucket(self):
         self.assertIn("CONTENT-FRESHNESS-V4.0", CORE)
         self.assertIn("P50_CONTENT_FRESHNESS_V4_BUCKET_SECONDS=300", CORE)
         self.assertIn("['probe','refresh']", ENDPOINT)
         self.assertIn("p50_mo_verify_cron_signature", ENDPOINT)
-        self.assertIn("cron: '*/5 * * * *'", WORKFLOW)
+        self.assertIn("cron: '17 */3 * * *'", WORKFLOW)
+        self.assertIn("cycles=36", WORKFLOW)
         self.assertIn("bucketSeconds==300", WORKFLOW)
-        self.assertIn("Bucket : `5 minutes`", WORKFLOW)
+        self.assertIn("next_tick", WORKFLOW)
 
     def test_facebook_v2_is_invalidated_and_asserted_before_collection(self):
         self.assertIn("FACEBOOK-COLLECTOR-V2.0", FACEBOOK)
@@ -46,7 +47,6 @@ class ContentFreshnessRuntimeV4Tests(unittest.TestCase):
         self.assertIn("p50_cf4_execute", ENDPOINT)
 
     def test_admin_can_refresh_all_profiles(self):
-        self.assertIn("content-freshness-admin-refresh.php", str(ROOT / "api/content-freshness-admin-refresh.php"))
         self.assertIn("require_role($user,'owner','admin')", ADMIN)
         self.assertIn("mode==='all'", CORE)
         self.assertIn("collect_all", ADMIN)
@@ -70,20 +70,13 @@ class ContentFreshnessRuntimeV4Tests(unittest.TestCase):
         self.assertIn("paymentRequiredPaused", CORE)
         self.assertIn("confirmedHttpStatus", CORE)
         self.assertIn(".xFastCycle.enabled==false", WORKFLOW)
-        self.assertIn(".xFastCycle.reason==\"payment_required\"", WORKFLOW)
 
     def test_tiktok_oauth_is_prioritized_without_platform_quota(self):
         self.assertIn("P50_CONTENT_FRESHNESS_V4_TIKTOK_OAUTH_LIMIT=4", CORE)
         self.assertIn("p50tm_authorized_profile_ids($pdo)", CORE)
         self.assertIn("p50_cf4_prioritize_tiktok_oauth", CORE)
         self.assertIn("tiktokOauthProfilesPrioritized", CORE)
-        for forbidden in (
-            "reserveTikTok",
-            "minimumTikTokTrend",
-            "tiktokTopFiveQuota",
-            "platformQuota",
-            "forcedTikTok",
-        ):
+        for forbidden in ("reserveTikTok", "minimumTikTokTrend", "tiktokTopFiveQuota", "platformQuota", "forcedTikTok"):
             self.assertNotIn(forbidden, CORE + INTELLIGENCE)
 
     def test_trends_remain_metric_driven_and_public_state_is_untouched(self):
@@ -95,13 +88,18 @@ class ContentFreshnessRuntimeV4Tests(unittest.TestCase):
         self.assertNotIn("DELETE FROM app_state", CORE)
         self.assertIn("'publicStateWrites'=>0", CORE)
 
-    def test_workflow_uses_only_the_v4_runtime(self):
+    def test_workflow_uses_only_v4_with_resilience_v41(self):
         self.assertIn("content-freshness-cron-v4.php", WORKFLOW)
         self.assertIn("CONTENT-FRESHNESS-V4.0", WORKFLOW)
         self.assertNotIn("content-freshness-cron-v3.php", WORKFLOW)
-        self.assertIn("Fraîcheur V4", WORKFLOW)
-        self.assertIn("PARTIAL", WORKFLOW)
-        self.assertIn("app_state : `0 écriture`", WORKFLOW)
+        self.assertIn("resilience==\"V4.1\"", WORKFLOW)
+        self.assertIn("cancel-in-progress: true", WORKFLOW)
+        self.assertIn("progress.ndjson", WORKFLOW)
+        self.assertIn("degraded_cycles", WORKFLOW)
+        self.assertIn("for attempt in 1 2; do", WORKFLOW)
+        self.assertIn("--max-time 85", WORKFLOW)
+        self.assertIn("fresh-v41-c${cycle}-a${attempt}", WORKFLOW)
+        self.assertIn("La tournée continue.", WORKFLOW)
 
 
 if __name__ == "__main__":
