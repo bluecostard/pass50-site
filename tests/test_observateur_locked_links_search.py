@@ -4,13 +4,14 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 APP = (ROOT / 'app-config.js').read_text(encoding='utf-8')
 LOCK = (ROOT / 'observateur-official-links-lock-v1.js').read_text(encoding='utf-8')
+SEARCH = (ROOT / 'official-links-search-v2.js').read_text(encoding='utf-8')
 API = (ROOT / 'api' / 'social-links.php').read_text(encoding='utf-8')
 V9 = (ROOT / 'v9-tools.js').read_text(encoding='utf-8')
 
 
 class ObservateurLockedLinksSearchTests(unittest.TestCase):
     def test_observateur_official_links_are_frozen(self):
-        self.assertIn("VERSION='1.1'", LOCK)
+        self.assertIn("VERSION='1.2'", LOCK)
         self.assertIn("PROFILE_ID='census-observateur-ebene'", LOCK)
         self.assertIn("YouTube:'https://www.youtube.com/@Observateur'", LOCK)
         self.assertIn("Facebook:'https://www.facebook.com/observateurofficiel/'", LOCK)
@@ -31,12 +32,19 @@ class ObservateurLockedLinksSearchTests(unittest.TestCase):
     def test_patch_is_loaded_publicly(self):
         self.assertIn("observateur-official-links-lock-v1.js?v=1.0", APP)
         self.assertIn("data-pass50-observateur-link-locks", APP)
+        self.assertIn("official-links-search-v2.js?v=2.0", LOCK)
+        self.assertIn("data-pass50-official-links-search-v2", LOCK)
 
-    def test_official_links_search_exists_and_is_extended(self):
+    def test_official_links_search_exists_and_is_persistent(self):
+        self.assertIn('linksOfficialSearchBoxV2', SEARCH)
+        self.assertIn('linksOfficialSearchV2', SEARCH)
+        self.assertIn('Nom, pseudo, @identifiant ou URL sociale', SEARCH)
+        self.assertIn('MutationObserver', SEARCH)
+        self.assertIn('setInterval(ensureSearch,2500)', SEARCH)
+        self.assertIn("e.target?.dataset?.adminTab==='links'", SEARCH)
+        self.assertIn('...Object.values(p?.links||{})', SEARCH)
+        self.assertIn('links-search-result-v2', SEARCH)
         self.assertIn('id="linksProfileSearch"', V9)
-        self.assertIn("e.target.id==='linksProfileSearch'", V9)
-        self.assertIn("Rechercher par nom, pseudo, identifiant ou URL sociale", LOCK)
-        self.assertIn("...Object.values(p?.links||{})", LOCK)
 
 
 if __name__ == '__main__':
