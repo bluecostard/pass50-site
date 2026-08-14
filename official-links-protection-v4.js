@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.1';
+  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.2';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
   const OWNER_LOCK_KEY='pass50_owner_locked_profiles_v1';
   const OWNER_LOCK_EXACT={
@@ -33,6 +33,15 @@
       .replace(/[\u0300-\u036f]/g,'')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g,'');
+  }
+
+  function searchKey(value=''){
+    return String(value||'')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase()
+      .replace(/[^a-z0-9@._-]+/g,' ')
+      .trim();
   }
 
   function ownerLockProfileKey(profile){
@@ -103,6 +112,60 @@
     return result;
   }
 
+  function applyOfficialLinksSearch(){
+    const input=document.getElementById('linksProfileSearch');
+    const cards=[...document.querySelectorAll('#linksCards [data-link-profile]')];
+    if(!input||!cards.length)return;
+    const q=searchKey(input.value);
+    let visible=0;
+    cards.forEach(card=>{
+      const id=card.getAttribute('data-link-profile')||'';
+      let p=null;
+      try{p=typeof profile==='function'?profile(id):null;}catch{}
+      const haystack=searchKey([
+        p?.name,p?.handle,p?.id,p?.category,
+        ...(p?.platforms||[]),
+        ...Object.keys(p?.links||{}),
+        ...Object.values(p?.links||{})
+      ].filter(Boolean).join(' '));
+      const match=!q||haystack.includes(q);
+      card.style.display=match?'':'none';
+      if(match)visible++;
+    });
+    const count=document.getElementById('linksSearchCount');
+    if(count)count.textContent=q?`${visible} résultat${visible>1?'s':''}`:`${cards.length} fiches`;
+  }
+
+  function ensureOfficialLinksSearch(){
+    const cards=document.getElementById('linksCards');
+    if(!cards)return false;
+    try{
+      if(typeof ranking==='function'&&typeof p50v9LinkCard==='function'&&!cards.dataset.searchExpanded){
+        const all=ranking();
+        if(Array.isArray(all)&&all.length){
+          cards.innerHTML=all.map(p50v9LinkCard).join('');
+          cards.dataset.searchExpanded='1';
+        }
+      }
+    }catch(error){console.error('PASS50 recherche Liens officiels',error);}
+
+    let input=document.getElementById('linksProfileSearch');
+    if(!input){
+      const box=document.createElement('div');
+      box.className='media-search-box links-search-box';
+      box.setAttribute('data-pass50-links-search','v1');
+      box.innerHTML='<input id="linksProfileSearch" type="search" autocomplete="off" placeholder="Rechercher un influenceur par nom, pseudo ou réseau…"><span id="linksSearchCount"></span>';
+      const toolbar=cards.parentElement?.querySelector('.admin-toolbar');
+      if(toolbar)toolbar.insertAdjacentElement('beforebegin',box);
+      else cards.insertAdjacentElement('beforebegin',box);
+      input=box.querySelector('#linksProfileSearch');
+      input?.addEventListener('input',applyOfficialLinksSearch);
+      input?.addEventListener('search',applyOfficialLinksSearch);
+    }
+    applyOfficialLinksSearch();
+    return true;
+  }
+
   function sanitizeState(state){
     if(!state||!Array.isArray(state.profiles))return 0;
     let removed=0;
@@ -153,11 +216,9 @@
     try{user=typeof currentUser==='function'?currentUser():null;}catch{}
     if(!user||!['owner','admin'].includes(String(user.role||'')))return 0;
     if(typeof db!=='object'||!db||!Array.isArray(db.profiles))return 0;
-
     let previous=0;
     try{previous=Number(localStorage.getItem(OWNER_LOCK_KEY)||0);}catch{}
     if(!force&&Date.now()-previous<5*60*1000)return 0;
-
     pinning=true;
     let pinned=0;
     try{
@@ -168,13 +229,7 @@
         if(!Object.keys(links).length)continue;
         const data=await apiFetch('official-links-bulk.php',{
           method:'POST',
-          body:{
-            action:'save_profile',
-            profileId:String(profile.id),
-            links,
-            confirmedOfficial:true,
-            clientVersion:'4.1-owner-locks'
-          }
+          body:{action:'save_profile',profileId:String(profile.id),links,confirmedOfficial:true,clientVersion:'4.2-owner-locks-search'}
         });
         if(typeof CLOUD==='object'&&CLOUD&&Number.isFinite(Number(data.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
         pinned+=Number(data.linksProcessed||Object.keys(links).length||0);
@@ -184,9 +239,7 @@
     }catch(error){
       console.error('PASS50 verrouillage propriétaire des liens officiels',error);
       return pinned;
-    }finally{
-      pinning=false;
-    }
+    }finally{pinning=false;}
   }
 
   async function restoreVerifiedLinks(force=false){
@@ -194,31 +247,24 @@
     let user=null;
     try{user=typeof currentUser==='function'?currentUser():null;}catch{}
     if(!user||!['owner','admin'].includes(String(user.role||'')))return;
-
     let previous=0;
     try{previous=Number(localStorage.getItem(RESTORE_KEY)||0);}catch{}
     if(!force&&Date.now()-previous<10*60*1000)return;
-
     restoring=true;
     try{
       const pinned=await pinOwnerLockedProfiles(force);
-      const data=await apiFetch('official-links-bulk.php',{
-        method:'POST',
-        body:{action:'integrity_sync',profiles:[],clientVersion:'4.1'}
-      });
+      const data=await apiFetch('official-links-bulk.php',{method:'POST',body:{action:'integrity_sync',profiles:[],clientVersion:'4.2'}});
       if(typeof CLOUD==='object'&&CLOUD&&Number.isFinite(Number(data.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
       if(typeof loadCloudState==='function')await loadCloudState();
       const removed=sanitizeBrowser();
       persistBrowser();
       if(typeof ui==='object'&&ui?.adminTab==='links'&&typeof p50v9RenderLinks==='function')p50v9RenderLinks();
+      setTimeout(ensureOfficialLinksSearch,0);
       const restored=Number(data.restoredCount||0);
       if((pinned||restored||removed)&&typeof toast==='function')toast(`✓ Liens protégés : ${pinned} figé(s), ${restored} restauré(s), ${removed} recherche(s) retirée(s)`);
       try{localStorage.setItem(RESTORE_KEY,String(Date.now()));}catch{}
-    }catch(error){
-      console.error('PASS50 protection des liens officiels',error);
-    }finally{
-      restoring=false;
-    }
+    }catch(error){console.error('PASS50 protection des liens officiels',error);}
+    finally{restoring=false;}
   }
 
   function install(){
@@ -228,30 +274,30 @@
       if(installAttempts<160)setTimeout(install,250);
       return;
     }
-
     wrapGlobal('save',original=>function(){sanitizeBrowser();return original.apply(this,arguments);});
     wrapGlobal('cloudSafeState',original=>function(){const copy=original.apply(this,arguments);sanitizeState(copy);return copy;});
     wrapGlobal('loadCloudState',original=>async function(){const result=await original.apply(this,arguments);sanitizeBrowser();return result;});
-
     installed=true;
     const removed=sanitizeBrowser();
     if(removed)persistBrowser();
-
     document.addEventListener('click',event=>{
-      if(event.target.closest('[data-admin-tab="links"],#adminOpen'))setTimeout(()=>restoreVerifiedLinks(true),350);
+      if(event.target.closest('[data-admin-tab="links"],#adminOpen')){
+        setTimeout(ensureOfficialLinksSearch,60);
+        setTimeout(()=>restoreVerifiedLinks(true),350);
+      }
     },true);
-
     const observer=new MutationObserver(()=>{
-      if(document.querySelector('#linksCards,.links-v2'))restoreVerifiedLinks(false);
+      if(document.getElementById('linksCards')){
+        ensureOfficialLinksSearch();
+        restoreVerifiedLinks(false);
+      }
     });
     observer.observe(document.documentElement,{childList:true,subtree:true});
-
     const readyTimer=setInterval(()=>{
-      if(window.__pass50CloudReady){clearInterval(readyTimer);restoreVerifiedLinks(true);}
+      if(window.__pass50CloudReady){clearInterval(readyTimer);ensureOfficialLinksSearch();restoreVerifiedLinks(true);}
     },500);
     setTimeout(()=>clearInterval(readyTimer),60000);
-
-    window.PASS50_OFFICIAL_LINKS_PROTECTION_V4={version:VERSION,sanitize:sanitizeBrowser,restore:restoreVerifiedLinks,pinOwnerLockedProfiles};
+    window.PASS50_OFFICIAL_LINKS_PROTECTION_V4={version:VERSION,sanitize:sanitizeBrowser,restore:restoreVerifiedLinks,pinOwnerLockedProfiles,ensureOfficialLinksSearch,applyOfficialLinksSearch};
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
