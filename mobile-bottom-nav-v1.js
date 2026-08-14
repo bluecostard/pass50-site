@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.7';
+  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.8';
   const PRONO_HREF = './pronostics.html?v=83';
   const LEGACY_CONTEXT_SHARE_ASSET = './context-share-v1.js?v=1.0';
   const path = location.pathname || '';
@@ -160,6 +160,15 @@
     script.async = false;
     script.dataset.pass50ContextShare = '2.0';
     script.dataset.pass50ContextShareV2 = '2.0';
+    document.head.appendChild(script);
+  }
+
+  function loadPronoCoulesTab() {
+    if (window.__pass50PronosticsCoulesTabV1 || document.querySelector('script[data-pass50-prono-coules-tab]')) return;
+    const script = document.createElement('script');
+    script.src = './pronostics-coules-tab-v1.js?v=1.0';
+    script.async = false;
+    script.dataset.pass50PronoCoulesTab = '1.0';
     document.head.appendChild(script);
   }
 
@@ -329,6 +338,7 @@
     injectStyles();
     injectNav();
     loadContextShare();
+    loadPronoCoulesTab();
     installEvents();
     prefetchRoutes();
     watchOverlays();
