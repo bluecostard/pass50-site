@@ -36,7 +36,7 @@ try{
  $pdo->exec("CREATE TABLE IF NOT EXISTS p50_profile_purge_backups (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,dispatch_id VARCHAR(120) NOT NULL,removed_profiles_json LONGTEXT NOT NULL,state_json LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE KEY uq_p50_profile_purge_dispatch(dispatch_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
  $pdo->prepare('INSERT INTO p50_profile_purge_backups(dispatch_id,removed_profiles_json,state_json) VALUES(?,?,?)')->execute([$dispatchId,json_encode($removed,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$rawState]);
  $clean=p50_purge_state_value($state,array_fill_keys(array_keys($removed),true));$clean['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$clean['publishedAt']=gmdate('c');
- $pdo->prepare("UPDATE app_state SET data=?,updated_by=?,updated_at=NOW() WHERE id='public'")->execute([json_encode($clean,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'profile-purge:'.$dispatchId]);
+ $pdo->prepare("UPDATE app_state SET data=?,updated_by=NULL,updated_at=NOW() WHERE id='public'")->execute([json_encode($clean,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
  $pdo->commit();$items=[];foreach($removed as $id=>$name)$items[]=['id'=>$id,'name'=>$name];
  json_response(['ok'=>true,'contract'=>P50_PROFILE_PURGE_CONTRACT,'action'=>'purge','purgedCount'=>count($items),'purgedProfiles'=>$items,'stateRevision'=>$clean['stateRevision']]);
-}catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();error_log('profile purge: '.$error->getMessage());json_response(['error'=>'La purge des profils a échoué.'],500);}
+}catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();error_log('profile purge: '.$error->getMessage());json_response(['error'=>'La purge des profils a échoué.','detail'=>mb_substr($error->getMessage(),0,300)],500);}
