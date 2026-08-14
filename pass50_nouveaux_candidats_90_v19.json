@@ -2655,5 +2655,108 @@
       "\"influamenta1\" Awao officiel TikTok",
       "\"Awao_officiel\" vidéos récentes vues abonnés"
     ]
+  },
+  {
+    "id": "census-observateur-ebene",
+    "name": "Observateur Ébène",
+    "known_alias": "Florent Amany / Kouakou Amani Florent / Observateur / @observateur_ebene",
+    "entity_type": "Personne",
+    "zone": "BOTH",
+    "category": "Humour / Acteur / Créateur digital / Influence / Divertissement",
+    "birth_date": "1989-07-04",
+    "census_status": "Recensé confirmé — compte TikTok fourni par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@observateur_ebene",
+      "Instagram": "https://www.instagram.com/observateur_ebene",
+      "Snapchat": "https://www.snapchat.com/add/obs_ebene"
+    },
+    "source": {
+      "publisher": "Compte TikTok direct fourni par le propriétaire PASS50",
+      "date": "2026-08-14",
+      "url": "https://www.tiktok.com/@observateur_ebene"
+    },
+    "source_secondary": {
+      "publisher": "Site officiel Observateur Ébène",
+      "url": "https://observateurebene.com/"
+    },
+    "source_tertiary": {
+      "publisher": "Paul Digital",
+      "url": "https://paul-digital.com/portfolio/observateur-ebene/"
+    },
+    "notes": "Ajout approuvé PASS50 le 14 août 2026. Observateur Ébène, également identifié publiquement comme Florent Amany / Kouakou Amani Florent, est un humoriste, acteur et créateur digital ivoirien. Date de naissance recoupée : 4 juillet 1989. Profil non classable jusqu’à validation des métriques.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@observateur_ebene",
+        "source_name": "Compte TikTok direct fourni par le propriétaire PASS50",
+        "source_url": "https://www.tiktok.com/@observateur_ebene",
+        "confidence": 100
+      },
+      "Instagram": {
+        "url": "https://www.instagram.com/observateur_ebene",
+        "source_name": "Paul Digital",
+        "source_url": "https://paul-digital.com/portfolio/observateur-ebene/",
+        "confidence": 96
+      },
+      "Snapchat": {
+        "url": "https://www.snapchat.com/add/obs_ebene",
+        "source_name": "Site officiel Observateur Ébène",
+        "source_url": "https://observateurebene.com/",
+        "confidence": 98
+      }
+    },
+    "curated_facts": {
+      "identity": {
+        "value": "Florent Amany / Kouakou Amani Florent, alias Observateur Ébène.",
+        "source_name": "Site officiel Observateur Ébène / Abidjan.net",
+        "source_url": "https://observateurebene.com/",
+        "confidence": 96
+      },
+      "birth_date": {
+        "value": "4 juillet 1989",
+        "source_name": "Famous Birthdays / Afrique-sur7",
+        "source_url": "https://fr.famousbirthdays.com/people/florent.html",
+        "confidence": 94
+      }
+    },
+    "research_queries": [
+      "\"observateur_ebene\" TikTok Instagram officiel",
+      "\"Observateur Ébène\" YouTube Facebook officiel"
+    ]
+  },
+  {
+    "id": "census-el-profesor",
+    "name": "El Profesor",
+    "known_alias": "El Profesor / @elprofesor_off",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "TikTok / Live / Influence / Divertissement",
+    "census_status": "Recensé confirmé — compte TikTok fourni en direct par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@elprofesor_off"
+    },
+    "source": {
+      "publisher": "Compte TikTok direct fourni par le propriétaire PASS50",
+      "date": "2026-08-14",
+      "url": "https://www.tiktok.com/@elprofesor_off"
+    },
+    "notes": "Lien TikTok officiel confirmé le 14 août 2026 alors que le compte était en direct. Le radar LIVE doit surveiller @elprofesor_off lors des prochains balayages. Profil non classable jusqu’à validation des métriques.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@elprofesor_off",
+        "source_name": "Compte TikTok direct fourni par le propriétaire PASS50",
+        "source_url": "https://www.tiktok.com/@elprofesor_off",
+        "confidence": 100
+      }
+    },
+    "research_queries": [
+      "\"elprofesor_off\" TikTok officiel",
+      "\"El Profesor\" influenceur ivoirien réseaux sociaux"
+    ]
   }
 ]

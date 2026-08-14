@@ -44,10 +44,10 @@ class AwaoCanonicalProfileTests(unittest.TestCase):
         self.assertIn('2,8 M',p['curated_facts']['tiktok_snapshot']['value'])
 
     def test_versions(self):
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.11",self.v9)
-        self.assertIn("CENSUS_VERSION='97-v28'",self.v9)
-        self.assertIn('v9-tools.js?v=15.9',self.index)
-        self.assertIn('v9-tools.js?v=15.9',self.sw)
-        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.11',self.sw)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.13",self.v9)
+        self.assertIn("CENSUS_VERSION='99-v30'",self.v9)
+        self.assertIn('v9-tools.js?v=15.13',self.index)
+        self.assertIn('v9-tools.js?v=15.13',self.sw)
+        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.13',self.sw)
 
 if __name__=='__main__': unittest.main()
