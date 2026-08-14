@@ -42,6 +42,7 @@ a.btn{display:inline-block;margin-top:18px;padding:12px 18px;border-radius:14px;
   <p><?=p50_fi_h($description)?></p>
   <a class="btn" href="/">Retour au classement</a>
 </main>
+  <script src="./public-ui-sanitizer-v1.js?v=1.0"></script>
 </body>
 </html><?php
     exit;
@@ -312,7 +313,7 @@ footer a:hover{color:var(--lime)}
 
   <footer>
     <p><a href="/">PASS50</a> · <a href="/pronostics.html">Pronostics</a> · <a href="/informations-legales.html">Informations légales</a></p>
-    <p class="muted">Page publique indexable · données issues du classement PASS50</p>
+    <p class="muted">Classement et actualité sur PASS50</p>
   </footer>
 </div>
 </body>
