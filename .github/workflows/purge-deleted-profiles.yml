@@ -25,7 +25,7 @@ jobs:
           set -euo pipefail
           PURGE_URL="${CRON_URL%/metrics-cron.php}/profile-purge-cron-v1.php"
           for attempt in $(seq 1 36); do
-            code="$(curl -sS -o /dev/null -w '%{http_code}' "$PURGE_URL" || true)"
+            code="$(curl -L -sS -o /dev/null -w '%{http_code}' "$PURGE_URL" || true)"
             [ "$code" = "405" ] && exit 0
             sleep 10
           done
@@ -39,5 +39,5 @@ jobs:
           body="$(jq -nc --arg dispatchId "$dispatch_id" '{action:"purge",dispatchId:$dispatchId}')"
           timestamp="$(date +%s)"
           signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
-          curl --fail-with-body -sS --max-time 120 -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$PURGE_URL" | tee purge-result.json
+          curl --location --post301 --post302 --fail-with-body -sS --max-time 120 -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$PURGE_URL" | tee purge-result.json
           jq -e '.ok == true and .action == "purge"' purge-result.json >/dev/null
