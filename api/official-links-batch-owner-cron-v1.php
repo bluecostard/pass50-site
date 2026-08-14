@@ -4,7 +4,7 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/data-engine-core.php';
 
-const P50_LINKS_BATCH_OWNER_VERSION='OFFICIAL-LINKS-BATCH-OWNER-V1.1';
+const P50_LINKS_BATCH_OWNER_VERSION='OFFICIAL-LINKS-BATCH-OWNER-V1.2';
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $raw=file_get_contents('php://input');if($raw===false||strlen($raw)>32768)json_response(['error'=>'Corps invalide.'],413);
@@ -32,8 +32,15 @@ $fixed=[
 ];
 
 // Les liens de ces trois fiches sont saisis directement par le propriétaire PASS50.
-// On fige volontairement tous les liens non vides présents dans l'état public au moment du passage.
+// On fige tous les liens non vides présents dans l'état public au moment du passage.
 $freezeCurrentNames=['zagbalerequin','zeinabbance','samosamo'];
+// Le Facebook de Zeinab a été fourni dans la capture propriétaire mais n'avait pas encore
+// atteint l'état serveur lors du premier gel. Il est donc injecté explicitement ici.
+$explicitFreeze=[
+    'zeinabbance'=>[
+        'Facebook'=>'https://www.facebook.com/p/Zeinab-BANCE-WRG-61568549139334/',
+    ],
+];
 
 function p50_batch_profile_index(array $state,string $normalizedName): int {
     foreach((array)($state['profiles']??[]) as $index=>$profile){
@@ -68,11 +75,13 @@ try{
         if($index<0)throw new RuntimeException('Fiche à figer introuvable : '.$normalizedName.'.');
         $profile=&$state['profiles'][$index];
         $links=(array)($profile['links']??[]);
+        if(isset($explicitFreeze[$normalizedName]))$links=array_merge($links,$explicitFreeze[$normalizedName]);
         $frozenForProfile=0;
         foreach($links as $platform=>$url){
             $url=trim((string)$url);
             if($url==='')continue;
-            $item=p50_batch_store($profile,(string)$platform,$url,'owner_current_freeze');
+            $source=isset($explicitFreeze[$normalizedName][$platform])?'owner_capture_explicit':'owner_current_freeze';
+            $item=p50_batch_store($profile,(string)$platform,$url,$source);
             $validated[]=$item;$targetLinks[]=$item;$frozenForProfile++;
         }
         if($frozenForProfile<1)throw new RuntimeException('Aucun lien à figer pour '.($profile['name']??$normalizedName).'.');
