@@ -315,7 +315,7 @@ render();
     const pane=$('#adminPane'),profiles=p50AllProfiles();
     if(!PASS50_V9.linksProfileId||!profile(PASS50_V9.linksProfileId))PASS50_V9.linksProfileId=profiles[0]?.id||'';
     const p=profile(PASS50_V9.linksProfileId),m=p?p50RankMeta(p):{};
-    pane.innerHTML=`<div class="links-v2"><div class="media-hint"><strong>Sauvegarde renforcée :</strong> chaque lien direct est maintenant enregistré côté serveur dès que tu cliques sur Enregistrer. La confirmation le rend officiel et prioritaire.</div><div class="links-recovery-actions"><button class="btn" id="recoverProfileLinks">Récupérer cette FI</button><button class="btn primary" id="recoverAllLinks">Récupérer toutes mes saisies</button></div><div class="links-v2-toolbar"><label>FI à modifier<select id="linksProfileSelect">${profiles.map(x=>`<option value="${x.id}" ${x.id===PASS50_V9.linksProfileId?'selected':''}>${safeAttr(p50ProfileOption(x))}</option>`).join('')}</select></label></div>${p?`<article class="link-card focused" data-link-profile="${p.id}"><div class="link-card-head"><div><strong>${p.name}</strong>${m.top50?'<span class="top50-marker">TOP 50</span>':''}<div class="muted">${m.rank?'#'+m.rank+' · ':''}${p.handle}</div></div><div class="tool-actions"><button class="btn save-links" data-id="${p.id}">Enregistrer</button><button class="btn primary check-links" data-id="${p.id}">Vérifier</button></div></div>${p50v9LinkGrid(p)}<label class="tool-check"><input type="checkbox" class="confirm-all-links"> Je confirme que les liens renseignés correspondent aux comptes officiels de cette FI.</label></article><div id="linkHistoryBox" class="link-history-box"><div class="tool-loading">Chargement de l’historique…</div></div>`:'<div class="tool-empty">Aucune FI.</div>'}</div>`;
+    pane.innerHTML=`<div class="links-v2"><div class="media-hint"><strong>Sauvegarde renforcée :</strong> chaque lien direct est maintenant enregistré côté serveur dès que tu cliques sur Enregistrer. La confirmation le rend officiel et prioritaire.</div><div class="links-recovery-actions"><button class="btn" id="recoverProfileLinks">Récupérer cette FI</button><button class="btn primary" id="recoverAllLinks">Récupérer toutes mes saisies</button></div><section class="news-search-box" style="margin-bottom:14px"><div class="section-title" style="margin-bottom:10px">Rechercher une fiche</div><div class="links-v2-toolbar"><label>Nom, pseudo ou identifiant<input id="linksProfileSearch" type="search" autocomplete="off" value="${safeAttr(PASS50_V9.linksSearch||'')}" placeholder="Ex. KS Bloom, @pseudo…"></label><label>FI à modifier<select id="linksProfileSelect">${profiles.map(x=>`<option value="${x.id}" ${x.id===PASS50_V9.linksProfileId?'selected':''}>${safeAttr(p50ProfileOption(x))}</option>`).join('')}</select></label></div><div class="muted" id="linksSearchCount" style="margin-top:8px">${profiles.length} fiche${profiles.length>1?'s':''}</div></section>${p?`<article class="link-card focused" data-link-profile="${p.id}"><div class="link-card-head"><div><strong>${p.name}</strong>${m.top50?'<span class="top50-marker">TOP 50</span>':''}<div class="muted">${m.rank?'#'+m.rank+' · ':''}${p.handle}</div></div><div class="tool-actions"><button class="btn save-links" data-id="${p.id}">Enregistrer</button><button class="btn primary check-links" data-id="${p.id}">Vérifier</button></div></div>${p50v9LinkGrid(p)}<label class="tool-check"><input type="checkbox" class="confirm-all-links"> Je confirme que les liens renseignés correspondent aux comptes officiels de cette FI.</label></article><div id="linkHistoryBox" class="link-history-box"><div class="tool-loading">Chargement de l’historique…</div></div>`:'<div class="tool-empty">Aucune FI.</div>'}</div>`;
     if(p){p50HydrateOfficialLinks(p.id);p50LoadLinkHistory(p.id);}
   };
   function p50v9LinkGrid(p){
@@ -401,7 +401,19 @@ render();
   });
   document.addEventListener('submit',e=>{if(e.target.id==='newsTriggerForm'){e.preventDefault();p50ValidateTriggerForm(e.target)}});
   document.addEventListener('click',e=>{if(e.target.matches('.reject-trigger'))p50RejectTrigger(e.target.dataset.profile);if(e.target.id==='recoverProfileLinks')p50RecoverOfficialLinks('profile');if(e.target.id==='recoverAllLinks')p50RecoverOfficialLinks('all');});
-  document.addEventListener('input',e=>{if(e.target.id==='profileSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#profileAdminRows tr').forEach(r=>r.style.display=(r.dataset.adminProfileName||'').includes(q)?'':'none')}});
+  document.addEventListener('input',e=>{
+    if(e.target.id==='profileSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#profileAdminRows tr').forEach(r=>r.style.display=(r.dataset.adminProfileName||'').includes(q)?'':'none')}
+    if(e.target.id==='linksProfileSearch'){
+      const q=e.target.value.trim().toLocaleLowerCase('fr');PASS50_V9.linksSearch=e.target.value;
+      const matches=p50AllProfiles().filter(p=>[p.name,p.handle,p.id,p.category].filter(Boolean).join(' ').toLocaleLowerCase('fr').includes(q));
+      const select=document.getElementById('linksProfileSelect'),count=document.getElementById('linksSearchCount');
+      if(select){
+        select.innerHTML=matches.length?matches.map(p=>`<option value="${safeAttr(p.id)}" ${p.id===PASS50_V9.linksProfileId?'selected':''}>${safeAttr(p50ProfileOption(p))}</option>`).join(''):'<option value="">Aucune fiche trouvée</option>';
+        if(matches.length&&!matches.some(p=>p.id===PASS50_V9.linksProfileId)){PASS50_V9.linksProfileId=matches[0].id;select.value=matches[0].id;}
+      }
+      if(count)count.textContent=matches.length+' fiche'+(matches.length>1?'s':'')+' trouvée'+(matches.length>1?'s':'');
+    }
+  });
 
   p50v9SaveLinks=async function(id,card){
     const p=profile(id);if(!p||!card)return;
