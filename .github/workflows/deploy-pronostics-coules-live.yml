@@ -1,0 +1,77 @@
+name: Déployer Pronostics + Coulés sur IONOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pronostics.html'
+      - 'pronostics-coules-tab-v1.js'
+      - 'mobile-bottom-nav-v1.js'
+      - 'index.html'
+      - '.github/workflows/deploy-pronostics-coules-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pass50-pronostics-coules-live
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer SFTP
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Publier explicitement Pronostics et Coulés
+        env:
+          HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          USER: ${{ secrets.IONOS_SFTP_USER }}
+          PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          REMOTE_DIR: ${{ secrets.IONOS_REMOTE_DIR }}
+        run: |
+          set -euo pipefail
+          test -n "${HOST:-}" && test -n "${USER:-}" && test -n "${PASSWORD:-}" && test -n "${REMOTE_DIR:-}"
+          lftp <<LFTP
+          set cmd:fail-exit yes
+          set net:max-retries 3
+          set net:timeout 20
+          set sftp:auto-confirm yes
+          open -u "$USER","$PASSWORD" sftp://$HOST:22
+          put -O "$REMOTE_DIR" pronostics.html
+          put -O "$REMOTE_DIR" pronostics-coules-tab-v1.js
+          put -O "$REMOTE_DIR" mobile-bottom-nav-v1.js
+          put -O "$REMOTE_DIR" index.html
+          bye
+          LFTP
+
+      - name: Vérifier le site réellement servi
+        shell: bash
+        run: |
+          set -euo pipefail
+          for site in https://pass50.store https://www.pass50.store; do
+            ok=false
+            for attempt in $(seq 1 24); do
+              module="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/pronostics-coules-tab-v1.js?sha=$GITHUB_SHA&n=$attempt" || true)"
+              prono="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/pronostics.html?sha=$GITHUB_SHA&n=$attempt" || true)"
+              nav="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/mobile-bottom-nav-v1.js?sha=$GITHUB_SHA&n=$attempt" || true)"
+              if grep -q 'Vote des Coulés</button>' <<<"$module" \
+                && grep -q 'pronostics-coules-tab-v1.js?v=1.0' <<<"$nav" \
+                && grep -q 'mobile-bottom-nav-v1.js?v=1.8' <<<"$prono"; then
+                ok=true
+                echo "$site : onglet Vote des Coulés présent et module chargé."
+                break
+              fi
+              sleep 5
+            done
+            if [ "$ok" != true ]; then
+              echo "::error::$site ne sert pas encore l’intégration Vote des Coulés dans Pronostics."
+              exit 1
+            fi
+          done
