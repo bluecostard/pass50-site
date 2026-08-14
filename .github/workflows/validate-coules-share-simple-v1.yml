@@ -28,7 +28,7 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
           fetch-depth: 0
       - name: Intégrer Vote des Coulés dans Pronostics
-        if: "${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.event.pull_request.title == 'Intégrer Vote des Coulés dans Pronostics' }}"
+        if: "${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') && github.event.pull_request.title == 'Intégrer Vote des Coulés dans Pronostics' }}"
         run: |
           python3 scripts/integrate_coules_into_pronostics.py
           node --check pronostics-coules-tab-v1.js
