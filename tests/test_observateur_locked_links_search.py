@@ -30,7 +30,7 @@ class ObservateurLockedLinksSearchTests(unittest.TestCase):
         self.assertIn("data-pass50-observateur-link-locks", APP)
 
     def test_official_links_search_exists_and_is_extended(self):
-        self.assertIn('id=\\"linksProfileSearch\\"', V9)
+        self.assertIn('id="linksProfileSearch"', V9)
         self.assertIn("e.target.id==='linksProfileSearch'", V9)
         self.assertIn("Rechercher par nom, pseudo, identifiant ou URL sociale", LOCK)
         self.assertIn("...Object.values(p?.links||{})", LOCK)
