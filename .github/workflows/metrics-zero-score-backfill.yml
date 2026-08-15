@@ -46,7 +46,7 @@ jobs:
           }
           deployed=false
           for attempt in $(seq 1 36); do
-            if call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"probe",dispatchId:$id}')" probe.json && jq -e '.version == "ZERO-SCORE-BACKFILL-V1.1"' probe.json >/dev/null; then deployed=true; break; fi
+            if call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"probe",dispatchId:$id}')" probe.json && jq -e '.version == "ZERO-SCORE-BACKFILL-V1.2"' probe.json >/dev/null; then deployed=true; break; fi
             sleep 10
           done
           [ "$deployed" = true ] || { echo "::error::Le correctif de rattrapage n'est pas déployé."; exit 1; }
@@ -72,8 +72,10 @@ jobs:
               idle=0
             fi
           done
-          echo "Recalcul des scores admissibles..."
-          call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"calculate",dispatchId:$id}')" calculate.json 300
+          echo "Recalcul des scores admissibles, période par période..."
+          for period in 2H 24H 48H 7J 15J; do
+            call_backfill "$(jq -nc --arg id "$dispatch_id" --arg period "$period" '{action:"calculate",dispatchId:$id,period:$period}')" "calculate-${period}.json" 55
+          done
           echo "Application ciblée aux seules valeurs nulles ou à zéro..."
           call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"apply",dispatchId:$id,confirm:true}')" apply.json 120
           {
@@ -97,7 +99,7 @@ jobs:
             probe.json
             dispatch.json
             work.json
-            calculate.json
+            calculate-*.json
             apply.json
           if-no-files-found: ignore
           retention-days: 14
