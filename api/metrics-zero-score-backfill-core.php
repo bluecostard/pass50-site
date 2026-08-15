@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-ranking-publication-apply-core.php';
 
-const P50_MZB_VERSION='ZERO-SCORE-BACKFILL-V1.1';
+const P50_MZB_VERSION='ZERO-SCORE-BACKFILL-V1.2';
 const P50_MZB_LOCK='pass50_zero_score_backfill_v1';
 const P50_MZB_PERIODS=['2H','24H','48H','7J','15J'];
 
@@ -78,9 +78,10 @@ function p50_mzb_work(PDO $pdo,string $dispatchId): array {
     return ['ok'=>true,'version'=>P50_MZB_VERSION,'dispatchId'=>$dispatchId,'work'=>$work,'remaining'=>p50_mzb_remaining($pdo,$dispatchId),'publicStateWrites'=>0];
 }
 
-function p50_mzb_calculate(PDO $pdo,string $dispatchId): array {
-    $result=p50_mr_calculate($pdo,P50_MZB_PERIODS,'zero_score_backfill',['dispatchId'=>$dispatchId]);
-    return ['ok'=>true,'version'=>P50_MZB_VERSION,'dispatchId'=>$dispatchId,'ranking'=>$result,'publicStateWrites'=>0];
+function p50_mzb_calculate(PDO $pdo,string $dispatchId,string $period): array {
+    if(!in_array($period,P50_MZB_PERIODS,true))throw new InvalidArgumentException('Période invalide.');
+    $result=p50_mr_calculate($pdo,[$period],'zero_score_backfill',['dispatchId'=>$dispatchId,'period'=>$period]);
+    return ['ok'=>true,'version'=>P50_MZB_VERSION,'dispatchId'=>$dispatchId,'period'=>$period,'ranking'=>$result,'publicStateWrites'=>0];
 }
 
 function p50_mzb_positive_map(array $state): array {
