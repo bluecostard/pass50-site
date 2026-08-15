@@ -254,8 +254,8 @@ footer a:hover{color:var(--lime)}
           <?php if ($rank !== null): ?>
           <div class="stat"><strong>#<?=(int)$rank?></strong><span>Rang 24 h</span></div>
           <?php endif; ?>
-          <div class="stat"><strong><?=p50_fi_h(number_format($score24, 0, ',', ' '))?></strong><span>Score 24 h</span></div>
-          <div class="stat"><strong><?=p50_fi_h(number_format($score7, 0, ',', ' '))?></strong><span>Score 7 j</span></div>
+          <div class="stat"><strong><?=p50_fi_h($score24 > 0 ? number_format($score24, 0, ',', ' ') : 'À calculer')?></strong><span>Score 24 h</span></div>
+          <div class="stat"><strong><?=p50_fi_h($score7 > 0 ? number_format($score7, 0, ',', ' ') : 'À calculer')?></strong><span>Score 7 j</span></div>
         </div>
         <div class="cta">
           <a class="btn primary" href="<?=p50_fi_h($spaUrl)?>">Voir sur PASS50</a>

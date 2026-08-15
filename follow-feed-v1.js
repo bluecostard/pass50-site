@@ -41,6 +41,11 @@
     return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
   }
 
+  function scoreLabel(profileItem, period = currentPeriod()) {
+    const value = scoreFor(profileItem, period);
+    return value > 0 ? String(Math.round(value)) : 'À calculer';
+  }
+
   function rankingSnapshot() {
     try {
       if (typeof completeRanking === 'function') return completeRanking();
@@ -194,7 +199,7 @@
       <div class="p50-follow-card-head">
         ${avatar(profileItem)}
         <div class="p50-follow-identity"><div class="p50-follow-rank">${esc(rankText)} · ${esc(profileItem.category || 'Influenceur')}</div><h3>${esc(profileItem.name)}</h3><span>${esc(profileItem.handle || '')}</span></div>
-        <div class="p50-follow-score"><strong>${Math.round(scoreFor(profileItem, periodKey))}</strong><span>Trend Score · ${esc(PERIOD_LABELS[periodKey] || periodKey)}</span><b class="${movement.className}">${esc(movement.text)}</b></div>
+        <div class="p50-follow-score"><strong>${esc(scoreLabel(profileItem, periodKey))}</strong><span>Trend Score · ${esc(PERIOD_LABELS[periodKey] || periodKey)}</span><b class="${movement.className}">${esc(movement.text)}</b></div>
       </div>
       ${liveHtml(live, profileItem)}
       <div class="p50-follow-information">${newsHtml(news, profileItem)}${reasonHtml(profileItem, rank)}</div>

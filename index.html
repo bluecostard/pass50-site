@@ -822,7 +822,7 @@ async function shareVoteWhatsapp(){
 }
 function downloadVoteShare(){if(!VOTE_SHARE.mediaFile)return;const a=document.createElement('a');a.href=VOTE_SHARE.mediaUrl;a.download=VOTE_SHARE.mediaFile.name;a.click();voteShareAnalytics('download')}
 async function copyVoteShareLink(){try{await navigator.clipboard.writeText(voteShareMessage(VOTE_SHARE.card));voteShareAnalytics('link_copied');toast('Message copié')}catch{toast('Copie impossible')}}
-function formatTrendScore(s){return `${Math.round(Number(s)||0)}/100`}
+function formatTrendScore(s){const value=Number(s);return Number.isFinite(value)&&value>0?`${Math.round(value)}/100`:'À calculer'}
 function arrow(p){return p.delta>0?`<span class="motion-up">↑</span> +${p.delta}`:p.delta<0?`<span class="motion-down">↓</span> ${p.delta}`:'—';}
 function arrowClass(p){return p.delta>0?'up':p.delta<0?'down':'flat'}
 function badgeHtml(b,profileId=''){const cls={VIRAL:'viral',HOT:'hot',LIVE:'live-badge',NEW:'new',RECORD:'record',UP:'hot'}[b]||'new';const icon={VIRAL:'✦',HOT:'🔥',LIVE:'●',NEW:'✦',RECORD:'★',UP:'↗'}[b]||'✦';const liveAttrs=b==='LIVE'&&profileId?` data-live-clickable="1" data-live-profile="${safeAttr(profileId)}" role="link" tabindex="0" title="Regarder le live"`:'';return `<span class="badge ${cls}"${liveAttrs}><span class="badge-icon">${icon}</span> ${b}</span>`}
