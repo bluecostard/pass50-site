@@ -30,6 +30,12 @@ jobs:
             */metrics-cron.php) BACKFILL_URL="${CRON_URL%/metrics-cron.php}/metrics-zero-score-backfill-cron-v1.php" ;;
             *) BACKFILL_URL="${CRON_URL%/*}/metrics-zero-score-backfill-cron-v1.php" ;;
           esac
+          case "$BACKFILL_URL" in
+            http://*) BACKFILL_URL="https://${BACKFILL_URL#http://}" ;;
+          esac
+          case "$BACKFILL_URL" in
+            https://www.pass50.store/*) BACKFILL_URL="https://pass50.store/${BACKFILL_URL#https://www.pass50.store/}" ;;
+          esac
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-zero-score"
           call_backfill() {
             local body="$1" output="$2" timestamp signature code
