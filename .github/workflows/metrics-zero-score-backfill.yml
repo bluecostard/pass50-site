@@ -72,8 +72,10 @@ jobs:
               idle=0
             fi
           done
-          call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"calculate",dispatchId:$id}')" calculate.json
-          call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"apply",dispatchId:$id,confirm:true}')" apply.json
+          echo "Recalcul des scores admissibles..."
+          call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"calculate",dispatchId:$id}')" calculate.json 300
+          echo "Application ciblée aux seules valeurs nulles ou à zéro..."
+          call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"apply",dispatchId:$id,confirm:true}')" apply.json 120
           {
             echo '### Rattrapage ciblé des scores à 0'
             echo "- Profils à 0 détectés : $(jq -r '.summary.zeroProfiles // 0' dispatch.json)"
@@ -94,6 +96,7 @@ jobs:
           path: |
             probe.json
             dispatch.json
+            work.json
             calculate.json
             apply.json
           if-no-files-found: ignore
