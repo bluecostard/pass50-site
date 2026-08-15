@@ -11,7 +11,7 @@ if(!$cfg['enabled']||strlen($secret)<32)json_response(['error'=>'Cron métrique 
 $timestamp=trim((string)($_SERVER['HTTP_X_P50_TIMESTAMP']??''));$signature=strtolower(trim((string)($_SERVER['HTTP_X_P50_SIGNATURE']??'')));
 if(!p50_mo_verify_cron_signature($secret,$timestamp,$raw,$signature))json_response(['error'=>'Signature refusée.'],401);
 $input=json_decode($raw,true);if(!is_array($input))json_response(['error'=>'JSON invalide.'],422);
-if(array_diff(array_keys($input),['action','dispatchId','iteration','confirm']))json_response(['error'=>'Paramètre interdit.'],422);
+if(array_diff(array_keys($input),['action','dispatchId','iteration','confirm','period']))json_response(['error'=>'Paramètre interdit.'],422);
 $action=(string)($input['action']??'');$dispatchId=substr(trim((string)($input['dispatchId']??'')),0,120);
 if($dispatchId===''||!preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))json_response(['error'=>'dispatchId invalide.'],422);
 try{
@@ -20,7 +20,7 @@ try{
       'probe'=>['ok'=>true,'version'=>P50_MZB_VERSION,'dispatchId'=>$dispatchId,'zeroProfiles'=>count(p50_mzb_zero_profile_ids(p50_mzb_state($pdo))),'publicStateWrites'=>0],
       'dispatch'=>p50_mzb_dispatch($pdo,$dispatchId),
       'work'=>p50_mzb_work($pdo,$dispatchId),
-      'calculate'=>p50_mzb_calculate($pdo,$dispatchId),
+      'calculate'=>p50_mzb_calculate($pdo,$dispatchId,(string)($input['period']??'')),
       'apply'=>!empty($input['confirm'])?p50_mzb_apply($pdo,$dispatchId):throw new InvalidArgumentException('Confirmation requise.'),
       default=>throw new InvalidArgumentException('Action inconnue.'),
     };
