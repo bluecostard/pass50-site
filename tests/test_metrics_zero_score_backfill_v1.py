@@ -24,7 +24,7 @@ class ZeroScoreBackfillTests(unittest.TestCase):
 
     def test_workflow_reports_preserved_scores(self):
         self.assertIn('Scores positifs préservés', WORKFLOW)
-        self.assertIn('ZERO-SCORE-BACKFILL-V1.0', WORKFLOW)
+        self.assertIn('ZERO-SCORE-BACKFILL-V1.1', WORKFLOW)
         self.assertIn('https://www.pass50.store/*', WORKFLOW)
         self.assertIn('https://pass50.store/', WORKFLOW)
 

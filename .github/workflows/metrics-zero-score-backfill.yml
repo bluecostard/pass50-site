@@ -38,15 +38,15 @@ jobs:
           esac
           dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-zero-score"
           call_backfill() {
-            local body="$1" output="$2" timestamp signature code
+            local body="$1" output="$2" max_time="${3:-55}" timestamp signature code
             timestamp="$(date +%s)"
             signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
-            code="$(curl --silent --show-error --max-time 55 --output "$output" --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$BACKFILL_URL")"
+            code="$(curl --silent --show-error --max-time "$max_time" --output "$output" --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$BACKFILL_URL")"
             [ "$code" = 200 ] && jq -e '.ok == true' "$output" >/dev/null
           }
           deployed=false
           for attempt in $(seq 1 36); do
-            if call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"probe",dispatchId:$id}')" probe.json && jq -e '.version == "ZERO-SCORE-BACKFILL-V1.0"' probe.json >/dev/null; then deployed=true; break; fi
+            if call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"probe",dispatchId:$id}')" probe.json && jq -e '.version == "ZERO-SCORE-BACKFILL-V1.1"' probe.json >/dev/null; then deployed=true; break; fi
             sleep 10
           done
           [ "$deployed" = true ] || { echo "::error::Le correctif de rattrapage n'est pas déployé."; exit 1; }
@@ -54,9 +54,13 @@ jobs:
           remaining="$(jq -r '.remaining // 0' dispatch.json)"
           processed=0
           idle=0
+          work_errors=0
           for iteration in $(seq 1 480); do
             [ "$remaining" -eq 0 ] && break
-            call_backfill "$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",dispatchId:$id,iteration:$iteration}')" work.json
+            if ! call_backfill "$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",dispatchId:$id,iteration:$iteration}')" work.json 75; then
+              work_errors=$((work_errors + 1))
+              break
+            fi
             worked="$(jq -r '.work.processed // 0' work.json)"
             processed=$((processed + worked))
             remaining="$(jq -r '.remaining // 0' work.json)"
@@ -75,6 +79,8 @@ jobs:
             echo "- Profils à 0 détectés : $(jq -r '.summary.zeroProfiles // 0' dispatch.json)"
             echo "- Profils avec source opérationnelle : $(jq -r '.summary.operationalProfiles // 0' dispatch.json)"
             echo "- Tâches collectées : $processed"
+            echo "- Réseaux sans réponse durant ce passage : $work_errors"
+            echo "- Tâches différées : $remaining"
             echo "- Profils complétés : $(jq -r '.profilesUpdated // 0' apply.json)"
             echo "- Scores écrits : $(jq -r '.scoresWritten // 0' apply.json)"
             echo "- Scores positifs préservés : $(jq -r '.positiveScoresPreserved // 0' apply.json)"

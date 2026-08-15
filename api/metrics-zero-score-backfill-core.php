@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-ranking-publication-apply-core.php';
 
-const P50_MZB_VERSION='ZERO-SCORE-BACKFILL-V1.0';
+const P50_MZB_VERSION='ZERO-SCORE-BACKFILL-V1.1';
 const P50_MZB_LOCK='pass50_zero_score_backfill_v1';
 const P50_MZB_PERIODS=['2H','24H','48H','7J','15J'];
 
@@ -54,6 +54,9 @@ function p50_mzb_dispatch(PDO $pdo,string $dispatchId): array {
         if(empty($access['configured'])){$summary['skippedConfiguration']++;continue;}
         if(empty($access['authorized'])){$summary['skippedAuthorization']++;continue;}
         $operational[$profileId]=true;$summary['operationalLinks']++;
+        $active=$pdo->prepare("SELECT COUNT(*) FROM p50_metric_jobs WHERE scope_type='profile' AND scope_id=? AND platform=? AND status IN ('pending','running','retry_wait')");
+        $active->execute([$profileId,$platform]);
+        if((int)$active->fetchColumn()>0){$summary['duplicateJobs']++;continue;}
         $job=p50_mo_enqueue_profile($pdo,$profileId,$platform,'p0',[
             'reason'=>'zero_score_backfill_'.$dispatchId,'priorityOverride'=>5,'contentLimit'=>5,
             'dispatchId'=>$dispatchId,'now'=>gmdate('c'),
