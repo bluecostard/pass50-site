@@ -1,0 +1,80 @@
+name: Metrics Zero Score Backfill
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'api/metrics-zero-score-backfill-core.php'
+      - 'api/metrics-zero-score-backfill-cron-v1.php'
+      - '.github/workflows/metrics-zero-score-backfill.yml'
+
+concurrency:
+  group: pass50-metrics-zero-score-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CRON_URL: ${{ secrets.PASS50_METRICS_CRON_URL }}
+      CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - name: Collect, calculate and fill only zero scores
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then echo "::error::Secrets métriques absents."; exit 1; fi
+          case "$CRON_URL" in
+            */metrics-cron.php) BACKFILL_URL="${CRON_URL%/metrics-cron.php}/metrics-zero-score-backfill-cron-v1.php" ;;
+            *) BACKFILL_URL="${CRON_URL%/*}/metrics-zero-score-backfill-cron-v1.php" ;;
+          esac
+          dispatch_id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-zero-score"
+          call_backfill() {
+            local body="$1" output="$2" timestamp signature code
+            timestamp="$(date +%s)"
+            signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
+            code="$(curl --silent --show-error --max-time 55 --output "$output" --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$BACKFILL_URL")"
+            [ "$code" = 200 ] && jq -e '.ok == true' "$output" >/dev/null
+          }
+          deployed=false
+          for attempt in $(seq 1 36); do
+            if call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"probe",dispatchId:$id}')" probe.json && jq -e '.version == "ZERO-SCORE-BACKFILL-V1.0"' probe.json >/dev/null; then deployed=true; break; fi
+            sleep 10
+          done
+          [ "$deployed" = true ] || { echo "::error::Le correctif de rattrapage n'est pas déployé."; exit 1; }
+          call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"dispatch",dispatchId:$id}')" dispatch.json
+          remaining="$(jq -r '.remaining // 0' dispatch.json)"
+          processed=0
+          for iteration in $(seq 1 480); do
+            [ "$remaining" -eq 0 ] && break
+            call_backfill "$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",dispatchId:$id,iteration:$iteration}')" work.json
+            processed=$((processed + $(jq -r '.work.processed // 0' work.json)))
+            remaining="$(jq -r '.remaining // 0' work.json)"
+            if [ "$(jq -r '.work.processed // 0' work.json)" -eq 0 ] && [ "$remaining" -gt 0 ]; then sleep 5; fi
+          done
+          call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"calculate",dispatchId:$id}')" calculate.json
+          call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"apply",dispatchId:$id,confirm:true}')" apply.json
+          {
+            echo '### Rattrapage ciblé des scores à 0'
+            echo "- Profils à 0 détectés : $(jq -r '.summary.zeroProfiles // 0' dispatch.json)"
+            echo "- Profils avec source opérationnelle : $(jq -r '.summary.operationalProfiles // 0' dispatch.json)"
+            echo "- Tâches collectées : $processed"
+            echo "- Profils complétés : $(jq -r '.profilesUpdated // 0' apply.json)"
+            echo "- Scores écrits : $(jq -r '.scoresWritten // 0' apply.json)"
+            echo "- Scores positifs préservés : $(jq -r '.positiveScoresPreserved // 0' apply.json)"
+            echo "- Écritures app_state : $(jq -r '.publicStateWrites // 0' apply.json)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive the recovery report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-score-backfill-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            probe.json
+            dispatch.json
+            calculate.json
+            apply.json
+          if-no-files-found: ignore
+          retention-days: 14
