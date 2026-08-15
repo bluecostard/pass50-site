@@ -11,7 +11,7 @@ on:
 
 concurrency:
   group: pass50-metrics-zero-score-backfill
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   backfill:
@@ -53,12 +53,20 @@ jobs:
           call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"dispatch",dispatchId:$id}')" dispatch.json
           remaining="$(jq -r '.remaining // 0' dispatch.json)"
           processed=0
+          idle=0
           for iteration in $(seq 1 480); do
             [ "$remaining" -eq 0 ] && break
             call_backfill "$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",dispatchId:$id,iteration:$iteration}')" work.json
-            processed=$((processed + $(jq -r '.work.processed // 0' work.json)))
+            worked="$(jq -r '.work.processed // 0' work.json)"
+            processed=$((processed + worked))
             remaining="$(jq -r '.remaining // 0' work.json)"
-            if [ "$(jq -r '.work.processed // 0' work.json)" -eq 0 ] && [ "$remaining" -gt 0 ]; then sleep 5; fi
+            if [ "$worked" -eq 0 ] && [ "$remaining" -gt 0 ]; then
+              idle=$((idle + 1))
+              [ "$idle" -ge 12 ] && break
+              sleep 5
+            else
+              idle=0
+            fi
           done
           call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"calculate",dispatchId:$id}')" calculate.json
           call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"apply",dispatchId:$id,confirm:true}')" apply.json
