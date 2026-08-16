@@ -100,8 +100,9 @@ function p50v9ApplyPatch(){
   db.content.forEach(c=>{const ev=primaryEvent(c.profileId);if(ev&&p50v9ExactContentLink(ev.url)&&!p50v9ExactContentLink(c.url))c.url=ev.url;});
   db.version=Math.max(Number(db.version||0),9);
 }
-p50v9ApplyPatch();save();render();
-const p50v9CloudPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50v9ApplyPatch();save();render();clearInterval(p50v9CloudPatchTimer)}},500);
+p50v9ApplyPatch();save();
+if(typeof scheduleRender==='function')scheduleRender();else if(typeof render==='function')render();
+const p50v9CloudPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50v9ApplyPatch();save();if(typeof scheduleRender==='function')scheduleRender();else render();clearInterval(p50v9CloudPatchTimer)}},500);
 setTimeout(()=>clearInterval(p50v9CloudPatchTimer),20000);
 
 function p50v9OpenTool(title,html){$('#toolTitle').textContent=title;$('#toolBody').innerHTML=html;open('toolModal')}
@@ -161,7 +162,7 @@ document.addEventListener('click',async e=>{
   if(e.target.id==='searchNewsBtn')await p50v9SearchNews();if(e.target.matches('.use-news'))p50v9UseNews(Number(e.target.dataset.index));
 });
 
-render();
+if(typeof scheduleRender==='function')scheduleRender();else render();
 
 // PASS50 Data Engine UI loader — preserves the current homepage layout.
 (function(){
@@ -246,7 +247,7 @@ render();
     const results=await Promise.allSettled(Object.entries(links).map(([platform,url])=>apiFetch('social-links.php',{method:'POST',body:{action:'save',profileId:p.id,platform,url,confirmedOfficial:true,replaceExisting:true}})));
     if(results.every(x=>x.status==='fulfilled'))localStorage.setItem(key,'1');
   }
-  const adminPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50AdminPatchProfiles();p50SeedNoLimitOfficialLinks().catch(()=>null);p50BackupConfirmedLinksFromBrowser().catch(()=>null);render();clearInterval(adminPatchTimer)}},500);
+  const adminPatchTimer=setInterval(()=>{if(window.__pass50CloudReady){p50AdminPatchProfiles();p50SeedNoLimitOfficialLinks().catch(()=>null);p50BackupConfirmedLinksFromBrowser().catch(()=>null);if(typeof scheduleRender==='function')scheduleRender();else render();clearInterval(adminPatchTimer)}},500);
   setTimeout(()=>clearInterval(adminPatchTimer),20000);
 
   const oldDirect=p50v9IsDirectPlatformLink;
