@@ -13,6 +13,18 @@
     [/\bno_recent_activity\b/gi,'Aucune activité récente mesurée'],
     [/\bno_measurable_content\b/gi,'Aucun contenu récent mesurable']
   ];
+  const PUBLIC_REWRITES=[
+    [/Administration\s*→\s*Actualité/gi,'PASS50'],
+    [/validée? par le propriétaire(?: PASS50)?/gi,'confirmé par PASS50'],
+    [/Confirmé(?:e)? par le propriétaire(?: PASS50)?/gi,'Confirmé par PASS50'],
+    [/figé par le propriétaire(?: PASS50)?/gi,'confirmé'],
+    [/publié par le propriétaire/gi,'confirmé'],
+    [/Configuration IONOS incomplète/gi,'Configuration temporairement indisponible'],
+    [/Bac à sable/gi,'Connexion'],
+    [/\bIONOS\b/g,'PASS50'],
+    [/\bBrevo\b/g,'e-mail'],
+    [/\bMySQL\b/gi,'']
+  ];
 
   function isAdmin(node){
     const element=node.nodeType===Node.ELEMENT_NODE?node:node.parentElement;
@@ -28,6 +40,7 @@
     }
     let value=original;
     FRIENDLY_REASONS.forEach(([rule,replacement])=>{value=value.replace(rule,replacement);});
+    PUBLIC_REWRITES.forEach(([rule,replacement])=>{value=value.replace(rule,replacement);});
     value=value
       .replace(/(?:\s*[·|]\s*)?(?:app_state|MR-V\d+(?:\.\d+)?|collector\s*P1|collecteur\s*P1)\b/gi,'')
       .replace(/\s*·\s*·\s*/g,' · ')

@@ -1,10 +1,22 @@
 (function(){
   'use strict';
 
-  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V91';
+  const PASS50_PUBLIC_RUNTIME='PASS50-PUBLIC-RUNTIME-V92';
   const DUEL_SHARE_HOTFIX='PASS50-DUEL-AUDIO-SHARE-HOTFIX-V1';
-  const INTERNAL_TEXT='Lien original à valider dans Administration → Actualité';
-  const PUBLIC_TEXT='Source en cours de validation';
+  const INTERNAL_COPY=[
+    ['Lien original à valider dans Administration → Actualité','Source en cours de validation'],
+    ['Aucun lien original n’a encore été sélectionné dans Administration → Actualité.','Les nouvelles publications apparaîtront ici dès qu’elles seront disponibles.'],
+    ['Actualise ou valide un nouveau lien dans Administration → Actualité.','Les anciennes informations ont été retirées de cette fiche.'],
+    ['Lien original confirmé dans Administration → Actualité.','Source originale confirmée par PASS50.'],
+    ['validée par le propriétaire.','confirmée par PASS50.'],
+    ['validé par le propriétaire.','confirmé par PASS50.'],
+    ['validé par le propriétaire PASS50.','confirmé par PASS50.'],
+    ['validée par le propriétaire PASS50.','confirmée par PASS50.'],
+    ['Compte officiel confirmé par le propriétaire PASS50','Compte officiel confirmé'],
+    ['Compte officiel confirmé et figé par le propriétaire PASS50','Compte officiel confirmé'],
+    ['Compte officiel confirmé et publié par le propriétaire','Compte officiel confirmé'],
+    ['Validé par le propriétaire','Confirmé par PASS50'],
+  ];
   const LEGACY_CONTEXT_SHARE_DISABLED='./context-share-v1.js?v=1.0';
   const FACEBOOK_VIEWER_DEPLOY_TRIGGER='V1.2-20260805';
   void PASS50_PUBLIC_RUNTIME;
@@ -16,9 +28,11 @@
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
     while(walker.nextNode())nodes.push(walker.currentNode);
     nodes.forEach(node=>{
-      if(node.nodeValue&&node.nodeValue.includes(INTERNAL_TEXT)){
-        node.nodeValue=node.nodeValue.replace(INTERNAL_TEXT,PUBLIC_TEXT);
-      }
+      if(!node.nodeValue)return;
+      if(node.parentElement&&node.parentElement.closest('#adminModal,#adminPane,[data-admin]'))return;
+      let value=node.nodeValue;
+      INTERNAL_COPY.forEach(([from,to])=>{if(value.includes(from))value=value.split(from).join(to);});
+      if(value!==node.nodeValue)node.nodeValue=value;
     });
   }
 
@@ -154,8 +168,8 @@
   loadScript('script[data-pass50-youtube-oauth-ui]','./youtube-oauth-ui-v1.js?v=1.0','pass50YoutubeOauthUi','1.0');
   loadScript('script[data-pass50-youtube-click-hotfix-v3]','./youtube-oauth-click-hotfix-v2.js?v=3.0','pass50YoutubeClickHotfixV3','3.0');
   loadScript('script[data-pass50-youtube-analytics-ui]','./youtube-analytics-ui-v1.js?v=1.0','pass50YoutubeAnalyticsUi','1.0');
-  loadScript('script[data-pass50-meta-oauth-ui]','./meta-oauth-ui-v1.js?v=1.6','pass50MetaOauthUi','1.6');
-  loadScript('script[data-pass50-tiktok-oauth-ui]','./tiktok-oauth-ui-v1.js?v=1.0','pass50TiktokOauthUi','1.0');
+  loadScript('script[data-pass50-meta-oauth-ui]','./meta-oauth-ui-v1.js?v=1.7','pass50MetaOauthUi','1.7');
+  loadScript('script[data-pass50-tiktok-oauth-ui]','./tiktok-oauth-ui-v1.js?v=1.1','pass50TiktokOauthUi','1.1');
   loadScript('script[data-pass50-live-trust-gate]','./live-trust-gate-v1.js?v=1.2','pass50LiveTrustGate','1.2');
   loadScript('script[data-pass50-live-experience-v41]','./live-experience-v4-1.js?v=1.7','pass50LiveExperienceV41','1.7');
   loadScript('script[data-pass50-live-dismiss-ui]','./live-dismiss-ui-v1.js?v=1.0','pass50LiveDismissUi','1.0');

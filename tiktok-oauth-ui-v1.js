@@ -121,7 +121,7 @@
     }
     if (!currentStatus?.connected) {
       section.innerHTML = `
-        <div class="user-title"><span>♪ TikTok</span><span class="muted">Lecture seule · Bac à sable</span></div>
+        <div class="user-title"><span>♪ TikTok</span><span class="muted">Lecture seule</span></div>
         <div class="p50-tt-card"><div class="p50-tt-head">
           <div class="p50-tt-main"><div class="p50-tt-logo">♪</div><div class="p50-tt-copy">
             <div class="p50-tt-title">Connecter mon compte TikTok</div>
@@ -147,7 +147,7 @@
       return `<a class="p50-tt-video" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${cover}<span>${formatNumber(video.viewCount)} vues</span></a>`;
     }).filter(Boolean).join('');
     section.innerHTML = `
-      <div class="user-title"><span>♪ TikTok</span><span class="muted">Lecture seule · ${escapeHtml(currentStatus.environment || 'sandbox')}</span></div>
+      <div class="user-title"><span>♪ TikTok</span><span class="muted">Lecture seule</span></div>
       <div class="p50-tt-card">
         <div class="p50-tt-head">
           <div class="p50-tt-main">${avatar}<div class="p50-tt-copy">
