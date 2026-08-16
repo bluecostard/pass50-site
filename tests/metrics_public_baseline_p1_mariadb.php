@@ -10,7 +10,7 @@ function baseline_must(bool $condition,string $message): void {if(!$condition)th
 
 $config=['data_engine'=>['confidence_threshold'=>90],'metrics'=>[
   'PASS50_YOUTUBE_API_KEY'=>hash('sha256','baseline-youtube-fixture'),'orchestrator_enabled'=>true,
-  'cron_secret'=>hash('sha256','baseline-cron-fixture'),'p1_max_profiles'=>100,'p1_max_rank'=>70,
+  'cron_secret'=>hash('sha256','baseline-cron-fixture'),'p1_max_profiles'=>200,'p1_max_rank'=>200,
   'p1_min_freshness_minutes'=>90,'p0_min_freshness_minutes'=>12,'p2_min_freshness_minutes'=>600,
 ]];
 foreach(['p50_metric_captures','p50_metric_contents','p50_metric_jobs','p50_metric_runs','p50_metric_accounts','p50_metric_schema_migrations','p50_ranking_snapshots','p50_live_streams','p50_social_links','p50_profile_registry','app_state'] as $table)$pdo->exec("DROP TABLE IF EXISTS `$table`");

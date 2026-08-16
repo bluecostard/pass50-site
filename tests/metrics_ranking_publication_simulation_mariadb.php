@@ -31,7 +31,7 @@ foreach([
     [P50_MR_ALGORITHM_VERSION,'2H','B','11111111-1111-4111-8111-111111111111',1,88,85,80,1,'[]'],
     [P50_MR_ALGORITHM_VERSION,'2H','D','11111111-1111-4111-8111-111111111111',2,85,82,78,1,'[]'],
     [P50_MR_ALGORITHM_VERSION,'2H','A','11111111-1111-4111-8111-111111111111',3,82,80,75,1,'[]'],
-    [P50_MR_ALGORITHM_VERSION,'2H','C','11111111-1111-4111-8111-111111111111',null,65,40,35,0,'[\"coverage_below_45\"]'],
+    [P50_MR_ALGORITHM_VERSION,'2H','C','11111111-1111-4111-8111-111111111111',null,65,40,35,0,'[\"coverage_below_30\"]'],
 ] as $row)$stmt->execute($row);
 
 $before=(string)$pdo->query("SELECT data FROM app_state WHERE id='public'")->fetchColumn();

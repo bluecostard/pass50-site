@@ -13,8 +13,8 @@ function p50_mo_config(): array {
     return [
       'enabled'=>(bool)($m['orchestrator_enabled']??false),'cronSecret'=>$secret,
       'p0Max'=>max(1,min(100,(int)($m['p0_max_profiles']??20))),
-      'p1Max'=>max(1,min(500,(int)($m['p1_max_profiles']??100))),
-      'p1Rank'=>max(50,min(200,(int)($m['p1_max_rank']??70))),
+      'p1Max'=>max(1,min(500,(int)($m['p1_max_profiles']??200))),
+      'p1Rank'=>max(50,min(500,(int)($m['p1_max_rank']??200))),
       'p2Max'=>max(1,min(1000,(int)($m['p2_max_profiles']??500))),
       'priorityIds'=>array_values(array_unique(array_filter(array_map('strval',(array)($m['priority_profile_ids']??[]))))),
       'fresh'=>['p0'=>max(1,(int)($m['p0_min_freshness_minutes']??12)),'p1'=>max(1,(int)($m['p1_min_freshness_minutes']??90)),'p2'=>max(1,(int)($m['p2_min_freshness_minutes']??600))],

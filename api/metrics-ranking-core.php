@@ -12,8 +12,8 @@ function p50_mr_periods(): array {
 
 function p50_mr_weights(): array {
     return [
-        'audience'=>0.07,'reach'=>0.28,'engagementVolume'=>0.18,
-        'engagementRate'=>0.16,'velocity'=>0.16,'acceleration'=>0.12,'live'=>0.03,
+        'audience'=>0.05,'reach'=>0.28,'engagementVolume'=>0.18,
+        'engagementRate'=>0.16,'velocity'=>0.18,'acceleration'=>0.12,'live'=>0.03,
     ];
 }
 
@@ -22,7 +22,7 @@ function p50_mr_freshness_hours(): array { return ['2H'=>6,'24H'=>6,'48H'=>8,'7J
 
 function p50_mr_window_hours(string $periodKey,int $hours): int { return $periodKey==='2H'?3:$hours; }
 function p50_mr_classability_thresholds(string $periodKey): array {
-    return $periodKey==='2H'?['coverage'=>5.0,'confidence'=>35.0]:['coverage'=>45.0,'confidence'=>55.0];
+    return $periodKey==='2H'?['coverage'=>5.0,'confidence'=>35.0]:['coverage'=>30.0,'confidence'=>40.0];
 }
 
 
@@ -149,7 +149,7 @@ function p50_mr_median(array $values): ?float {
 
 function p50_mr_period_summary(array $rows): array {
     $profiles=count($rows);$classable=0;$scores=[];$confidence=[];$coverage=[];$exclusions=[];
-    $thresholdExcluded=0;$hardExcluded=0;$otherExcluded=0;$thresholdReasons=['coverage_below_45'=>true,'confidence_below_55'=>true,'coverage_below_5'=>true,'confidence_below_35'=>true];
+    $thresholdExcluded=0;$hardExcluded=0;$otherExcluded=0;$thresholdReasons=['coverage_below_30'=>true,'confidence_below_40'=>true,'coverage_below_5'=>true,'confidence_below_35'=>true];
     foreach($rows as $row){
         $confidence[]=(float)($row['confidence']??0);$coverage[]=(float)($row['coverage']??0);
         if(!empty($row['classable'])){$classable++;if(($row['score']??null)!==null)$scores[]=(float)$row['score'];continue;}
@@ -333,7 +333,7 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
         $latest=null;$reachRaw=0.0;foreach($platforms as $platform){$candidate=$platform['raw']['latestCaptureAt'];if($candidate&&($latest===null||$candidate>$latest))$latest=$candidate;$reachRaw+=(float)($platform['raw']['reachRaw']??0);}
         $official=count(array_filter($accountsByProfile[$profileId]??[],fn($account)=>p50_mr_is_official_account($account)))>0;
         $recentActivity=p50_mr_has_recent_activity($platforms);
-        $reasons=[];if(!(bool)$profile['editorial_eligible']||!(bool)$profile['alive'])$reasons[]='editorial_not_eligible';if(!$official)$reasons[]='no_official_metric_account';if($periodKey==='2H'&&!$recentActivity)$reasons[]='no_recent_activity';elseif($contentCount<1)$reasons[]='no_measurable_content';if($coverage<$thresholds['coverage'])$reasons[]=$periodKey==='2H'?'coverage_below_5':'coverage_below_45';if($confidence<$thresholds['confidence'])$reasons[]=$periodKey==='2H'?'confidence_below_35':'confidence_below_55';
+        $reasons=[];if(!(bool)$profile['editorial_eligible']||!(bool)$profile['alive'])$reasons[]='editorial_not_eligible';if(!$official)$reasons[]='no_official_metric_account';if($periodKey==='2H'&&!$recentActivity)$reasons[]='no_recent_activity';elseif($contentCount<1)$reasons[]='no_measurable_content';if($coverage<$thresholds['coverage'])$reasons[]=$periodKey==='2H'?'coverage_below_5':'coverage_below_30';if($confidence<$thresholds['confidence'])$reasons[]=$periodKey==='2H'?'confidence_below_35':'confidence_below_40';
         $age=$latest?($now->getTimestamp()-(new DateTimeImmutable($latest,new DateTimeZone('UTC')))->getTimestamp())/3600:INF;if($age>$freshLimit)$reasons[]='stale_captures';
         $classable=$score!==null&&count($reasons)===0;
         $rows[]=['profile'=>$profile,'profileId'=>$profileId,'score'=>$score,'baseScore'=>$base,'confidence'=>$confidence,'coverage'=>$coverage,'classable'=>$classable,'editorialEligible'=>(bool)$profile['editorial_eligible'],'platformCount'=>count($platforms),'contentCount'=>$contentCount,'captureCount'=>$captureCount,'latestCaptureAt'=>$latest,'components'=>$platforms,'rawFeatures'=>array_map(fn($p)=>['platform'=>$p['platform'],'features'=>$p['raw']['features'],'availability'=>$p['raw']['availability'],'reachRaw'=>$p['raw']['reachRaw'],'publishedInsideWindowFallback'=>$p['raw']['publishedInsideWindowFallback']],$platforms),'exclusionReasons'=>array_values(array_unique($reasons)),'reachRaw'=>$reachRaw,'previousRank'=>$previousRanks[$profileId]??null,'rank'=>null,'rankDelta'=>null];

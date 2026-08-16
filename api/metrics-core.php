@@ -416,7 +416,7 @@ function p50m_publish_scores_to_state(array $results): int {
         $profile['measuredCoverage']=$coverage;
         $profile['algorithmVersion']='15C-v1';
         $profile['lastMetricCalculationAt']=gmdate('c');
-        if($coverage>=60&&$confidence>=65){$profile['classable']=true;$profile['eligible']=true;}
+        if($coverage>=25&&$confidence>=40){$profile['classable']=true;$profile['eligible']=true;}
         $count++;
     }
     unset($profile);

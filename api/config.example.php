@@ -92,8 +92,9 @@ return [
         // 1er passage : autorise un fort turnover entrées/sorties pour débloquer un classement figé.
         'ranking_publication_bootstrap_allowed' => filter_var(getenv('PASS50_RANKING_BOOTSTRAP_ALLOWED') ?: 'true', FILTER_VALIDATE_BOOLEAN),
         'p0_max_profiles' => 20,
-        'p1_max_profiles' => 100,
-        'p1_max_rank' => 70,
+        'p1_max_profiles' => 200,
+        // Couvrir toute la base recensée (~157+) : l’ancien plafond 70 créait un plafond ~80 classables.
+        'p1_max_rank' => 200,
         'p2_max_profiles' => 500,
         'priority_profile_ids' => [],
         'p0_min_freshness_minutes' => 12,

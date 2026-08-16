@@ -1,8 +1,8 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.4';
-  const METRIC_SOURCE = /(?:^|\b)MR-V1\.0(?:\b|$)/i;
+  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.5';
+  const METRIC_SOURCE = /(?:^|\b)MR-V1\.\d+(?:\b|$)/i;
   const PUBLISHED_MR_STATUS = 'published_mr_v1';
   const VERIFIED_LINK_STATUSES = new Set(['owner_verified', 'manual_verified', 'ok', 'verified']);
   const MIN_VERIFIED_LINKS = 1;

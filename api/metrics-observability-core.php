@@ -123,12 +123,12 @@ function p50_obs_profile_health(array $events, array $linkConfidences, int $thre
     $confidence=(int)round((.5*$available+.3*$freshWeight+.2*($sourceConfidence/100))*100);
     $reasons=[];
     if(!$hasRecentMetrics)$reasons[]='noRecentMetrics';
-    if($confidence<65)$reasons[]='insufficientConfidence';
-    if($coverage<60)$reasons[]='insufficientCoverage';
-    if($criteria<6)$reasons[]='fewerThanSixCriteria';
+    if($confidence<40)$reasons[]='insufficientConfidence';
+    if($coverage<25)$reasons[]='insufficientCoverage';
+    if($criteria<4)$reasons[]='fewerThanMinCriteria';
     return [
         'measurable'=>$hasRecentMetrics,
-        'classable'=>$confidence>=65&&$coverage>=60&&$criteria>=6,
+        'classable'=>$confidence>=40&&$coverage>=25&&$criteria>=4,
         'confidence'=>$confidence,
         'coverage'=>$coverage,
         'measuredCriteria'=>$criteria,
@@ -286,7 +286,7 @@ function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
     ksort($platforms);
 
     $classification=['totalProfiles'=>count($profileIds),'measurableProfiles'=>0,'classableProfiles'=>0,'nonClassableProfiles'=>0];
-    $reasonCounts=['insufficientConfidence'=>0,'insufficientCoverage'=>0,'fewerThanSixCriteria'=>0,'noRecentMetrics'=>0];
+    $reasonCounts=['insufficientConfidence'=>0,'insufficientCoverage'=>0,'fewerThanMinCriteria'=>0,'noRecentMetrics'=>0];
     foreach($profileIds as $profileId){
         $health=p50_obs_profile_health($eventsByProfile[$profileId]??[],$linksByProfile[$profileId]??[],$threshold);
         if($health['measurable'])$classification['measurableProfiles']++;
@@ -332,7 +332,7 @@ function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
         'known'=>[
             ['name'=>'PASS50 Live Radar Sweep','schedule'=>'*/10 * * * *','scope'=>'live uniquement','publishesScores'=>false],
             ['name'=>'Metrics Priority P0','schedule'=>'*/15 * * * * UTC','scope'=>'collecte métrique prioritaire','publishesScores'=>false],
-            ['name'=>'Metrics Top 50 P1','schedule'=>'7 */2 * * * UTC','scope'=>'rangs 1 à 70','publishesScores'=>false],
+            ['name'=>'Metrics Top 50 P1','schedule'=>'7 */2 * * * UTC','scope'=>'rangs 1 à 200','publishesScores'=>false],
             ['name'=>'Metrics Census P2','schedule'=>'23 */12 * * * UTC','scope'=>'recensement des profils actifs','publishesScores'=>false],
             ['name'=>'data-cron.php','schedule'=>null,'scope'=>'ancien moteur historique','publishesScores'=>true],
             ['name'=>'Bouton MAJ PASS50','schedule'=>null,'scope'=>'collecte complète pilotée par navigateur','publishesScores'=>true],

@@ -17,7 +17,7 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.3'", CORE)
         for key, hours in (("2H", 2), ("24H", 24), ("48H", 48), ("7J", 168), ("15J", 360)):
             self.assertIn(f"'{key}'=>{hours}", CORE)
-        weights = [0.07, 0.28, 0.18, 0.16, 0.16, 0.12, 0.03]
+        weights = [0.05, 0.28, 0.18, 0.16, 0.18, 0.12, 0.03]
         self.assertEqual(sum(weights), 1.0)
         for value in weights:
             self.assertIn(f"=>{value}", CORE)
@@ -78,8 +78,8 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
             "no_official_metric_account",
             "no_measurable_content",
             "no_recent_activity",
-            "coverage_below_45",
-            "confidence_below_55",
+            "coverage_below_30",
+            "confidence_below_40",
             "stale_captures",
         ):
             self.assertIn(code, period)
@@ -99,7 +99,7 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$periodKey==='2H'&&!$recentActivity", period)
         self.assertNotIn("$shortFallback", period)
 
-    def test_audience_never_expands_beyond_seven_percent(self):
+    def test_audience_never_expands_beyond_five_percent(self):
         period = self._function("p50_mr_period_rows")
         self.assertIn("if($feature==='audience')continue", period)
         self.assertIn("$dynamicWeighted/$dynamicWeightSum", period)
@@ -107,6 +107,9 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$audiencePercentile*$weights['audience']", period)
         self.assertIn("if($dynamicWeightSum<=0)continue", period)
         self.assertNotIn("$weighted/$weightSum", period)
+        self.assertIn("'audience'=>0.05", CORE)
+        self.assertIn("'velocity'=>0.18", CORE)
+        self.assertNotIn("'audience'=>0.07", CORE)
 
     def test_transaction_lock_and_experimental_tables(self):
         self.assertIn("pass50_metrics_ranking_experimental_v1", CORE)
