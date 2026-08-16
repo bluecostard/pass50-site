@@ -178,7 +178,7 @@ jobs:
               grep -Eq "scheduleRender|is-booting" <<<"$page" || ok=false
               if [ "$ok" = true ]; then
                 ready=true
-                echo "$site sert bien l’interface V82, le runtime V91, le partage V2.6 et le lecteur Facebook V1.2."
+                echo "$site sert bien l’interface V82, le runtime public, le partage V2.6 et le lecteur Facebook V1.2."
                 break
               fi
               echo "Propagation V82 en attente pour $site ($attempt/30)."
@@ -188,7 +188,7 @@ jobs:
               echo "::error::$site : vérification V82/share/Facebook échouée après propagation."
               echo "marker=$marker"
               echo "sw_has_disabled=$(grep -c 'pass50-v81-service-worker-disabled' <<<"$worker" || true)"
-              echo "runtime_v91=$(grep -c 'PASS50-PUBLIC-RUNTIME-V91' <<<"$runtime" || true)"
+              echo "runtime_public=$(grep -cE 'PASS50-PUBLIC-RUNTIME-V9[0-9]+' <<<"$runtime" || true)"
               echo "runtime_share_v26=$(grep -c 'context-share-v2.js?v=2.6' <<<"$runtime" || true)"
               echo "facebook_v12=$(grep -c 'PASS50-FACEBOOK-VIDEO-PLAYER-V1.2' <<<"$facebook_viewer" || true)"
               exit 1
@@ -198,7 +198,8 @@ jobs:
             echo '### Déploiement PASS50 V82'
             echo "- Commit vérifié : \`$GITHUB_SHA\`"
             echo '- Interface : `V82 share-v2-only`'
-            echo '- Runtime public : `PASS50-PUBLIC-RUNTIME-V91`'
+            echo '- Runtime public : `PASS50-PUBLIC-RUNTIME-V92+`'
+            echo '- Stabilité Top : `scheduleRender` / boot sans clignotement'
             echo '- Partage contexte : `context-share-v2.js?v=2.6`'
             echo '- Lecteur Facebook : `V1.2`, toutes les publications consultables dans Pass50'
             echo '- Vidéos reconnues : bouton `Lire la vidéo`'
