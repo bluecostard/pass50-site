@@ -175,6 +175,7 @@ jobs:
               grep -q "Voir dans Pass50" <<<"$facebook_viewer" || ok=false
               grep -q "plugins/\${plugin}.php" <<<"$facebook_viewer" || ok=false
               grep -q "PASS50" <<<"$page" || ok=false
+              grep -Eq "scheduleRender|is-booting" <<<"$page" || ok=false
               if [ "$ok" = true ]; then
                 ready=true
                 echo "$site sert bien l’interface V82, le runtime V91, le partage V2.6 et le lecteur Facebook V1.2."
