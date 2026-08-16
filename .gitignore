@@ -1,10 +1,11 @@
-# Secrets et configuration propres au serveur
+
 /api/config.php
 /api/*.local.php
+.DS_Store
 .env
 .env.*
-
 # Fichiers temporaires
 *.log
+# Secrets et configuration propres au serveur
+tests/__pycache__/
 *.tmp
-.DS_Store
