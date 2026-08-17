@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
 
-const P50_TRIGGER_SYNC_VERSION = 'PASS50-TRIGGER-SYNC-V1.1';
+const P50_TRIGGER_SYNC_VERSION = 'PASS50-TRIGGER-SYNC-V1.2';
 const P50_TRIGGER_AUTO_MAX_AGE_SECONDS = 168 * 3600;
 const P50_TRIGGER_MANUAL_MAX_AGE_SECONDS = 7 * 86400;
 
@@ -67,6 +67,21 @@ function p50_trigger_ranked_profile_ids(array $state, int $limit = 10): array {
         if (count($ids) >= $limit) {
             break;
         }
+    }
+
+    return $ids;
+}
+
+function p50_trigger_syncable_profile_ids(array $state): array {
+    $ids = [];
+    foreach ((array) ($state['profiles'] ?? []) as $profile) {
+        if (!is_array($profile) || empty($profile['id'])) {
+            continue;
+        }
+        if (!($profile['alive'] ?? true) || !empty($profile['adminDeleted'])) {
+            continue;
+        }
+        $ids[] = (string) $profile['id'];
     }
 
     return $ids;
@@ -258,7 +273,7 @@ function p50_trigger_build_event(string $profileId, array $newsRow, array $profi
         'platforms' => [$platform],
         'metric' => 'Contenu officiel détecté',
         'publishedLabel' => p50_trigger_relative_label($publishedAt),
-        'reason' => 'Ce contenu récent explique la progression de cette fiche dans le Top 10.',
+        'reason' => 'Ce contenu récent met en avant l’actualité de cette fiche.',
         'url' => $url,
         'submittedUrl' => $url,
         'resolvedUrl' => $url,
@@ -329,7 +344,7 @@ function p50_trigger_sync_content_entry(array &$state, string $profileId, string
     $state['content'][$foundIndex]['time'] = 'Récent';
 }
 
-function p50_trigger_sync_top10(PDO $pdo): array {
+function p50_trigger_sync_profiles(PDO $pdo): array {
     if (!p50_metrics_table_exists($pdo, 'p50_news_items') || !p50_metrics_table_exists($pdo, 'app_state')) {
         return ['ok' => false, 'version' => P50_TRIGGER_SYNC_VERSION, 'writes' => 0, 'reason' => 'tables_missing'];
     }
@@ -351,12 +366,12 @@ function p50_trigger_sync_top10(PDO $pdo): array {
         }
 
         $events = array_values(array_filter((array) ($state['events'] ?? []), 'is_array'));
-        $topIds = p50_trigger_ranked_profile_ids($state, 10);
+        $profileIds = p50_trigger_syncable_profile_ids($state);
         $updated = 0;
         $skipped = 0;
         $cleared = 0;
 
-        foreach ($topIds as $profileId) {
+        foreach ($profileIds as $profileId) {
             $newsRow = p50_trigger_latest_content($pdo, $profileId);
             $eventIndex = p50_trigger_find_event_index($events, $profileId);
             $existing = $eventIndex !== null ? $events[$eventIndex] : null;
@@ -410,7 +425,7 @@ function p50_trigger_sync_top10(PDO $pdo): array {
             'updated' => $updated,
             'cleared' => $cleared,
             'skipped' => $skipped,
-            'topProfiles' => count($topIds),
+            'profileCount' => count($profileIds),
         ];
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) {
@@ -425,4 +440,9 @@ function p50_trigger_sync_top10(PDO $pdo): array {
             'error' => substr($error->getMessage(), 0, 220),
         ];
     }
+}
+
+/** @deprecated Use p50_trigger_sync_profiles() — kept for backward compatibility. */
+function p50_trigger_sync_top10(PDO $pdo): array {
+    return p50_trigger_sync_profiles($pdo);
 }

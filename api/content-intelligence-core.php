@@ -345,7 +345,7 @@ function p50_ci_refresh(PDO $pdo): array {
     require_once __DIR__.'/trigger-sync-core.php';
     $news=p50_ci_sync_official_news($pdo);
     $trends=p50_ci_calculate_trends($pdo);
-    $triggerSync=p50_trigger_sync_top10($pdo);
+    $triggerSync=p50_trigger_sync_profiles($pdo);
     $writes=(int)($triggerSync['writes']??0);
     return ['ok'=>true,'version'=>P50_CONTENT_INTELLIGENCE_VERSION,'news'=>$news,'trends'=>$trends,'triggerSync'=>$triggerSync,'publicStateWrites'=>$writes];
 }

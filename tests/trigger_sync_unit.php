@@ -50,6 +50,12 @@ if ($top !== ['fi-a', 'fi-b']) {
     $failed++;
 }
 
+$all = p50_trigger_syncable_profile_ids($state);
+if ($all !== ['fi-a', 'fi-b', 'fi-c']) {
+    echo "FAIL syncable ids\n";
+    $failed++;
+}
+
 $existing = [
     'manualDataValidated' => true,
     'originalLinkValidatedAt' => gmdate('c'),
