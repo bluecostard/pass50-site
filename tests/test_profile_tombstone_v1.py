@@ -13,6 +13,7 @@ TOMBSTONE_IDS = [
     "census-epouse-gnahore",
     "census-le-brouteur",
     "census-oustaz-diakite-yaya",
+    "census-reine-a",
 ]
 KEPT_IDS = ["census-henri-michel", "census-aissa-amara", "obre-marie-pascale"]
 
@@ -40,7 +41,9 @@ class ProfileTombstoneV1Tests(unittest.TestCase):
         js_block = self.index.split("const P50_TOMBSTONE_PROFILE_IDS=", 1)[1].split("];", 1)[0]
         js_ids = re.findall(r"'census-[a-z0-9-]+'", js_block)
         self.assertEqual(php_ids, js_ids)
-        self.assertEqual(len(php_ids), 7)
+        self.assertEqual(len(php_ids), 8)
+        self.assertIn("'census-reine-a'", php_ids)
+        self.assertIn("'census-sheisthecode'", php_ids)
         self.assertNotIn("'census-henri-michel'", php_ids)
 
     def test_admin_delete_and_census_import_honor_tombstones(self):
@@ -48,8 +51,10 @@ class ProfileTombstoneV1Tests(unittest.TestCase):
         self.assertIn("p50ApplyProfileTombstones()", self.index)
         self.assertIn("p50_apply_profile_tombstones($data)", self.state)
         self.assertIn("p50IsDeletedProfileId(id)||p50IsDeletedProfileId(candidate?.id)", self.v9)
-        self.assertIn("PROFILE-CLEANUP-V2.0", self.cleanup)
+        self.assertIn("PROFILE-CLEANUP-V2.1", self.cleanup)
         self.assertNotIn("census-henri-michel", self.cleanup)
+        self.assertNotIn("census-reine-a", self.cleanup)
+        self.assertNotIn("cacaoispoppin", self.cleanup)
 
     def test_obre_overlay_does_not_resurrect_a_tombstone(self):
         self.assertIn("p50IsDeletedProfileId(PROFILE_ID)", self.overlay)

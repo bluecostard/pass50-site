@@ -5,7 +5,7 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/data-engine-core.php';
 
-const P50_PROFILE_CLEANUP_VERSION='PROFILE-CLEANUP-V2.0';
+const P50_PROFILE_CLEANUP_VERSION='PROFILE-CLEANUP-V2.1';
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $raw=file_get_contents('php://input');
@@ -20,25 +20,11 @@ $input=json_decode($raw,true);if(!is_array($input))json_response(['error'=>'JSON
 $dispatchId=trim((string)($input['dispatchId']??''));
 if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))json_response(['error'=>'dispatchId invalide.'],422);
 
-$keepId='census-reine-a';
-$reineInstagram='https://www.instagram.com/cacaoispoppin/';
-
 $pdo=db();p50_de_ensure_schema();
 $pdo->beginTransaction();
 try{
     $state=p50_de_load_public_state_for_update();if(!$state)throw new RuntimeException('État public introuvable.');
     $removed=p50_apply_profile_tombstones($state);
-    $keptUpdated=false;
-    foreach($state['profiles'] as &$profile){
-        if((string)($profile['id']??'')!==$keepId)continue;
-        $profile['links']=is_array($profile['links']??null)?$profile['links']:[];
-        $profile['linkChecks']=is_array($profile['linkChecks']??null)?$profile['linkChecks']:[];
-        $profile['links']['Instagram']=$reineInstagram;
-        $profile['linkChecks']['Instagram']=['status'=>'owner_verified','checkedAt'=>gmdate(DATE_ATOM),'message'=>'Compte public identifié : @cacaoispoppin','persistedServerSide'=>true];
-        $profile['platforms']=array_values(array_unique(array_merge((array)($profile['platforms']??[]),['Instagram'])));
-        $keptUpdated=true;
-    }
-    unset($profile);
     $remainingDeleted=0;
     $tombstoneIds=p50_tombstone_ids($state);
     $tombstoneMap=array_fill_keys($tombstoneIds,true);
@@ -57,7 +43,6 @@ try{
         'updatedAt'=>gmdate(DATE_ATOM),
         'deleted'=>$removed,
         'tombstoneIds'=>$tombstoneIds,
-        'keptAndCompleted'=>['id'=>$keepId,'name'=>'Reine A.','Instagram'=>$reineInstagram],
     ];
     p50_de_save_public_state($state,null,false);
     $pdo->commit();
@@ -70,8 +55,6 @@ try{
         'tombstoneCount'=>count($tombstoneIds),
         'tombstoneIds'=>$tombstoneIds,
         'remainingDeletedCount'=>$remainingDeleted,
-        'keptUpdated'=>$keptUpdated,
-        'kept'=>['id'=>$keepId,'name'=>'Reine A.','Instagram'=>$reineInstagram],
         'profilesRemaining'=>count($state['profiles']),
         'publicStateWrites'=>1,
     ]);

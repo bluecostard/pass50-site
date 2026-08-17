@@ -536,25 +536,6 @@
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
   },
   {
-    "id": "census-reine-a",
-    "name": "Reine A.",
-    "known_alias": "@cacaoispoppin",
-    "entity_type": "Personne",
-    "zone": "DIASPORA",
-    "category": "Instagram / Lifestyle",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2023-10-09",
-      "url": "https://www.pulse.ci/article/decouvrez-les-laureats-de-ledition-2023-des-pulse-influencer-awards-2024090512323480803"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
     "id": "census-wilfried-assi",
     "name": "Wilfried Assi",
     "known_alias": "",
