@@ -135,7 +135,20 @@ if ($_SERVER['REQUEST_METHOD']==='GET') {
     $row=$stmt->fetch();
     $data=$row?json_decode((string)$row['data'],true):null;
     $protection=['removed'=>0,'restored'=>0,'protected'=>0];
-    if(is_array($data))$protection=p50_state_v4_protect_links($data,$data);
+    $classabilityRestored=0;
+    if(is_array($data)){
+        $protection=p50_state_v4_protect_links($data,$data);
+        $classabilityRestored=p50_de_restore_scored_classability($data);
+        if($classabilityRestored>0){
+            try{
+                $data['stateRevision']=max(0,(int)($data['stateRevision']??0))+1;
+                $write=db()->prepare("UPDATE app_state SET data=?,updated_at=NOW() WHERE id='public'");
+                $write->execute([json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
+            }catch(Throwable $error){
+                error_log('PASS50 scored classability restore: '.$error->getMessage());
+            }
+        }
+    }
     json_response([
         'ok'=>true,
         'data'=>$data,
@@ -143,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD']==='GET') {
         'updatedAt'=>$row['updated_at']??null,
         'linkProtectionVersion'=>P50_STATE_LINK_PROTECTION_VERSION,
         'linkProtection'=>$protection,
+        'scoredClassabilityRestored'=>$classabilityRestored,
     ]);
 }
 

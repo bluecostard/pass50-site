@@ -198,7 +198,8 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("PASS50_CLASSABILITY_DIAGNOSTIC", SYNC)
 
     def test_public_rule_binding_is_replaced_directly(self):
-        self.assertIn("function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false&&hasPeriodScore(p);}", INDEX)
+        self.assertIn("function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&hasPeriodScore(p);}", INDEX)
+        self.assertNotIn("function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false&&hasPeriodScore(p);}", INDEX)
         self.assertIn("const scoreCell=hasScore||classable?formatTrendScore(score(p)):'À vérifier'", INDEX)
         self.assertIn("isClassableProfile = authoritativeIsClassableProfile", SYNC)
         self.assertIn("window.isClassableProfile = authoritativeIsClassableProfile", SYNC)

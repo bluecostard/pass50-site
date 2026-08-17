@@ -28,7 +28,8 @@ class Classability15cThresholdsV1Tests(unittest.TestCase):
 
     def test_published_score_restores_classability(self):
         self.assertIn("function p50_de_profile_has_published_score", CORE)
-        self.assertIn("afficher « Non classé »", CORE)
+        self.assertIn("function p50_de_restore_scored_classability", CORE)
+        self.assertIn("p50_de_restore_scored_classability($data)", (ROOT / "api/state.php").read_text(encoding="utf-8"))
 
     def test_audience_weight_moved_to_velocity(self):
         self.assertIn("'audience'=>0.05", MR)
