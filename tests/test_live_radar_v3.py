@@ -97,7 +97,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertNotIn("$stateValue==='probable'&&!empty($result['live'])){\n                p50_live_v4_store_live", ENDPOINT)
 
     def test_quick_scan_reserves_discovery_capacity(self):
-        self.assertIn('$discoveryFloor=min(8,max(5,(int)floor(($batch*2)/3)))', ENDPOINT)
+        self.assertIn('$discoveryFloor=min(6,max(4,(int)floor(($batch*2)/3)))', ENDPOINT)
         self.assertIn('$reconfirmCap=max(0,$batch-$discoveryFloor)', ENDPOINT)
         self.assertIn('$reconfirm', ENDPOINT)
         self.assertIn("'discoveryQuota'=>$discoveryQuota", ENDPOINT)
@@ -116,9 +116,11 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('function p50_live_v4_coverage_stats', source)
         self.assertIn("$source['last_state']=(string)($health[$key]['last_state']??'never_checked')", source)
         self.assertIn('function p50_live_v4_discovery_rank', source)
+        self.assertIn('function p50_live_v4_is_warm_watch', source)
+        self.assertIn('function p50_live_v4_needs_tiktok_rescan', source)
         self.assertIn('function p50_live_v4_is_graph_fresh', source)
         self.assertIn("return [0,$meta,'']", source)
-        self.assertIn("return [1,$meta,$checked]", source)
+        self.assertIn("return [1,0,$checked]", source)
         self.assertIn("new DateTimeZone('UTC')", source)
         self.assertIn("'meta_graph'", source)
         contract = (ROOT / 'api' / 'live-radar-contract.php').read_text(encoding='utf-8')

@@ -208,6 +208,7 @@ function p50_live_v4_sources(array $state): array {
         $source['source_key']=$key;
         $source['priority']=isset($manual[$id])?0:(isset($automatic[$key])?1:(in_array($status,['owner_verified','manual_verified','verified'],true)?2:3));
         $source['last_checked_at']=(string)($health[$key]['last_checked_at']??'');
+        $source['last_live_at']=(string)($health[$key]['last_live_at']??'');
         $source['last_state']=(string)($health[$key]['last_state']??'never_checked');
         $metaJson=json_decode((string)($health[$key]['metadata']??''),true);
         $probe='';
@@ -231,15 +232,45 @@ function p50_live_v4_sources(array $state): array {
     return $out;
 }
 
-/** Ordre de découverte : never_checked → unknown Meta → unknown → plus ancien. */
+function p50_live_v4_health_ts(?string $mysql): int {
+    $value=trim((string)$mysql);
+    if($value==='')return 0;
+    try{return (new DateTimeImmutable($value,new DateTimeZone('UTC')))->getTimestamp();}
+    catch(Throwable){return strtotime($value.' UTC')?:0;}
+}
+
+function p50_live_v4_is_verified_tiktok(array $source): bool {
+    if((string)($source['platform']??'')!=='TikTok')return false;
+    return in_array((string)($source['verification_status']??''),['owner_verified','manual_verified','verified'],true);
+}
+
+/** TikTok vérifié : rescanner si offline depuis >20 min (évite les trous de 2 h). */
+function p50_live_v4_needs_tiktok_rescan(array $source,int $minStaleSeconds=1200): bool {
+    if(!p50_live_v4_is_verified_tiktok($source))return false;
+    $state=strtolower(trim((string)($source['last_state']??'')));
+    if($state==='live')return true;
+    $checkedTs=p50_live_v4_health_ts((string)($source['last_checked_at']??''));
+    return $checkedTs<=0||(time()-$checkedTs)>=$minStaleSeconds;
+}
+
+/** Compte live récemment (72 h) : rescan prioritaire même si marqué offline. */
+function p50_live_v4_is_warm_watch(array $source,int $maxAgeSeconds=259200): bool {
+    if(!p50_live_v4_is_verified_tiktok($source))return false;
+    $lastLiveTs=p50_live_v4_health_ts((string)($source['last_live_at']??''));
+    return $lastLiveTs>0&&(time()-$lastLiveTs)<=$maxAgeSeconds;
+}
+
+/** Ordre de découverte : never_checked → TikTok vérifié / warm → unknown → offline générique. */
 function p50_live_v4_discovery_rank(array $source): array {
     $state=strtolower(trim((string)($source['last_state']??'never_checked')));
     $checked=(string)($source['last_checked_at']??'');
     $platform=(string)($source['platform']??'');
     $meta=in_array($platform,['Instagram','Facebook'],true)?0:1;
     if($checked===''||$state===''||$state==='never_checked')return [0,$meta,''];
-    if($state==='unknown')return [1,$meta,$checked];
-    return [2,$meta,$checked];
+    if(p50_live_v4_is_warm_watch($source)||p50_live_v4_needs_tiktok_rescan($source))return [1,0,$checked];
+    if($state==='unknown')return [2,$meta,$checked];
+    if(p50_live_v4_is_verified_tiktok($source))return [3,0,$checked];
+    return [4,$meta,$checked];
 }
 
 /** Source Meta déjà classifiée récemment via Graph OAuth — inutile de rescraper. */

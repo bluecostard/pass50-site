@@ -123,4 +123,10 @@ must($instagram['state']==='live','Signal Instagram actif explicite.');
 $facebook=p50_live_v4_parse_facebook(['profile_id'=>'fb','public_name'=>'FB','platform'=>'Facebook','url'=>'https://www.facebook.com/test'],['live'=>response('{"is_live_streaming":true,"video_id":"123456789"} https://www.facebook.com/test/videos/123456789')]);
 must($facebook['state']==='live','Signal Facebook actif et vidéo spécifique.');
 
-echo json_encode(['ok'=>true,'cases'=>24],JSON_UNESCAPED_SLASHES).PHP_EOL;
+$verifiedOffline=['profile_id'=>'apoutchou','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-7200),'last_live_at'=>gmdate('Y-m-d H:i:s',time()-86400)];
+$genericOffline=['profile_id'=>'other','platform'=>'TikTok','verification_status'=>'verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-300)];
+must(p50_live_v4_needs_tiktok_rescan($verifiedOffline),'Un TikTok vérifié offline depuis 2 h doit être rescané.');
+must(!p50_live_v4_needs_tiktok_rescan($genericOffline),'Un TikTok vérifié contrôlé il y a 5 min ne doit pas saturer le rescan.');
+must(p50_live_v4_discovery_rank($verifiedOffline)<p50_live_v4_discovery_rank($genericOffline),'Le TikTok vérifié stale doit passer avant un offline récent non prioritaire.');
+
+echo json_encode(['ok'=>true,'cases'=>27],JSON_UNESCAPED_SLASHES).PHP_EOL;
