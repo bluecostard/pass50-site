@@ -105,9 +105,14 @@
       section.id = SECTION_ID;
       section.className = 'user-section full';
       section.innerHTML = '<div class="user-title"><span>▶ YouTube Analytics</span><span class="muted">Lecture seule</span></div><div class="p50-yt-loading">Vérification de la connexion YouTube…</div>';
-      const accountSection = [...grid.querySelectorAll('.user-section')].find((node) => node.textContent.includes('Mon compte'));
-      if (accountSection) grid.insertBefore(section, accountSection);
-      else grid.appendChild(section);
+      if (typeof window.p50MesComptesMount === 'function') window.p50MesComptesMount(section);
+      else {
+        const accountSection = [...grid.querySelectorAll('.user-section')].find((node) => node.matches('[data-user-fold="account"], [data-user-fold="legal"]'));
+        if (accountSection) grid.insertBefore(section, accountSection);
+        else grid.appendChild(section);
+      }
+    } else if (typeof window.p50MesComptesMount === 'function' && section.parentElement?.id !== 'p50MesComptesPanel') {
+      window.p50MesComptesMount(section);
     }
     return section;
   }

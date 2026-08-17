@@ -104,9 +104,14 @@
       section.id = SECTION_ID;
       section.className = 'user-section full';
       section.innerHTML = '<div class="user-title"><span>♪ TikTok</span><span class="muted">Lecture seule</span></div><div class="p50-tt-loading">Vérification de la connexion TikTok…</div>';
-      const account = [...grid.querySelectorAll('.user-section')].find(node => node.textContent.includes('Mon compte'));
-      if (account) grid.insertBefore(section, account);
-      else grid.appendChild(section);
+      if (typeof window.p50MesComptesMount === 'function') window.p50MesComptesMount(section);
+      else {
+        const account = grid.querySelector('[data-user-fold="account"], [data-user-fold="legal"]');
+        if (account) grid.insertBefore(section, account);
+        else grid.appendChild(section);
+      }
+    } else if (typeof window.p50MesComptesMount === 'function' && section.parentElement?.id !== 'p50MesComptesPanel') {
+      window.p50MesComptesMount(section);
     }
     return section;
   }

@@ -74,7 +74,7 @@ function p50_obs_metric_count(array $metrics): int {
 function p50_obs_profile_health(array $events, array $linkConfidences, int $threshold): array {
     $now=time();$views=$likes=$comments=$shares=$saves=0.0;$followers=0.0;
     $latest=0;$eventWeight=0.0;$freshWeight=0.0;$platforms=[];$confidences=$linkConfidences;
-    $velocities=[];$hasRecentMetrics=false;
+    $velocities=[];$followerSamples=[];$liveWeight=0.0;$hasRecentMetrics=false;
     foreach($events as $event){
         $metrics=p50_de_normalize_score_metrics(decode_json_column($event['metrics']??null,[]));
         $timestamp=strtotime((string)($event['published_at']?:$event['collected_at']))?:0;
@@ -88,31 +88,18 @@ function p50_obs_profile_health(array $events, array $linkConfidences, int $thre
         $comments+=(float)($metrics['comments']??0)*$weight;
         $shares+=(float)($metrics['shares']??0)*$weight;
         $saves+=(float)($metrics['saves']??0)*$weight;
-        $followers=max($followers,(float)($metrics['followers']??0)*$weight);
+        $rawFollowers=(float)($metrics['followers']??0);
+        $followers=max($followers,$rawFollowers*$weight);
+        if($rawFollowers>0&&$timestamp>0)$followerSamples[]=['v'=>$rawFollowers,'t'=>$timestamp];
         $latest=max($latest,$timestamp);$eventWeight+=$weight;$freshWeight=max($freshWeight,$weight);
         if($weightedViews>0)$velocities[]=$weightedViews/max(1,$ageHours);
         $platform=(string)$event['platform'];$platforms[$platform]=max((float)($platforms[$platform]??0),$weight);
         $confidences[]=(int)$event['confidence'];
+        if(p50_15c_is_live_event_type((string)($event['event_type']??'')))$liveWeight+=$weight;
     }
-    $engagement=$views>0?($likes+3*$comments+5*$shares+4*$saves)/$views:null;
-    $shareRate=$views>0?($shares+$saves)/$views:null;
-    $velocity=$velocities?array_sum($velocities)/count($velocities):null;
-    $raw=[
-        'c1'=>$followers>0?log10(1+$followers):null,
-        'c2'=>$views>0?log10(1+$views):null,
-        'c3'=>null,
-        'c4'=>$engagement,
-        'c5'=>$shareRate,
-        'c6'=>$comments>0?log10(1+$comments):null,
-        'c7'=>$velocity!==null?log10(1+$velocity):null,
-        'c8'=>$platforms?array_sum($platforms):null,
-        'c9'=>$shares>0?log10(1+$shares):null,
-        'c10'=>null,'c11'=>null,'c12'=>null,
-        'c13'=>$eventWeight>0?$eventWeight:null,
-        'c14'=>($views>0&&($likes+$comments+$shares)>0)?1:null,
-        'c15'=>$shares>0?log10(1+$shares):null,
-    ];
-    $weights=['c1'=>.06,'c2'=>.08,'c3'=>.07,'c4'=>.08,'c5'=>.09,'c6'=>.05,'c7'=>.10,'c8'=>.08,'c9'=>.06,'c10'=>.06,'c11'=>.05,'c12'=>.04,'c13'=>.04,'c14'=>.07,'c15'=>.07];
+    $platformSum=$platforms?array_sum($platforms):null;
+    $raw=p50_15c_build_raw($followers,$views,$likes,$comments,$shares,$saves,$platformSum,$eventWeight,$velocities,$followerSamples,$liveWeight);
+    $weights=p50_15c_weights();
     $available=0.0;$criteria=0;
     foreach($raw as $key=>$value){
         if($value===null||!is_finite((float)$value))continue;

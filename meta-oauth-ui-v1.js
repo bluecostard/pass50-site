@@ -53,7 +53,7 @@
   function ensure(){
     if(!isStaff()){document.getElementById(SECTION_ID)?.remove();return null;}
     const body=document.getElementById('userBody');if(!body||!body.innerHTML.trim())return null;const grid=body.querySelector('.user-grid');if(!grid)return null;
-    let section=document.getElementById(SECTION_ID);if(!section){section=document.createElement('section');section.id=SECTION_ID;section.className='user-section full';const youtube=document.getElementById('p50YoutubeOauthSection');if(youtube?.parentNode===grid)youtube.insertAdjacentElement('afterend',section);else grid.appendChild(section);}return section;
+    let section=document.getElementById(SECTION_ID);if(!section){section=document.createElement('section');section.id=SECTION_ID;section.className='user-section full';if(typeof window.p50MesComptesMount==='function')window.p50MesComptesMount(section);else{const youtube=document.getElementById('p50YoutubeOauthSection');if(youtube?.parentNode===grid)youtube.insertAdjacentElement('afterend',section);else grid.appendChild(section);}}else if(typeof window.p50MesComptesMount==='function'&&section.parentElement?.id!=='p50MesComptesPanel')window.p50MesComptesMount(section);return section;
   }
   function configurationWarning(){const configuration=status?.configuration;if(!configuration||configuration.ready!==false)return '';const missing=Array.isArray(configuration.missing)?configuration.missing.join(', '):'réglages Meta';return `<div class="p50-meta-message warn" role="status">Configuration temporairement indisponible : ${esc(missing)}.</div>`;}
   function discoveryWarning(){return status?.discoveryWarning?`<div class="p50-meta-message warn" role="status"><strong>Pages Meta :</strong> ${esc(status.discoveryWarning)}</div>`:'';}
