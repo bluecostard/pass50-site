@@ -1331,7 +1331,7 @@ async function apiFetch(path,{method='GET',body=null,formData=null,auth=true}={}
   if(body!==null)headers['Content-Type']='application/json';
   const res=await fetch(CLOUD.baseUrl+'/'+path.replace(/^\//,''),{method,headers,body:formData|| (body!==null?JSON.stringify(body):undefined),cache:'no-store'});
   let data={};try{data=await res.json()}catch{}
-  if(!res.ok)throw new Error(data.error||'Erreur serveur');
+  if(!res.ok)throw new Error(data.error||data.message||(res.status?`Erreur serveur (${res.status})`:'Erreur serveur'));
   return data;
 }
 function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};copy.liveStreams=(copy.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});return copy;}

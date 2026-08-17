@@ -259,6 +259,18 @@ class PipelineSourceContractTests(unittest.TestCase):
         self.assertIn("window.majPass50Running=false", UI)
         self.assertNotIn("publishVerified:true", UI)
 
+    def test_maj_collects_one_profile_per_request_with_retry_and_resume(self):
+        self.assertIn("const body={limit:1,deep:true,excludeIds:[...DE.majSeen],includeHub:false,syncRegistry:false};", UI)
+        self.assertNotIn("{limit:5,deep:true,excludeIds:[...DE.majSeen]}", UI)
+        self.assertIn("preview:true,limit:1", UI)
+        self.assertIn("attempt<=3", UI)
+        self.assertIn("function deMajCanResume", UI)
+        self.assertIn("processedIds:[...DE.majSeen]", UI)
+        self.assertIn("REPRENDRE LA MAJ PASS50", UI)
+        self.assertIn("'hub'=>$includeHub?p50_de_hub_payload():null", COLLECT)
+        self.assertIn("if($preview)", COLLECT)
+        self.assertIn("Erreur serveur (${res.status})", INDEX)
+
     def test_stale_frontend_state_cannot_overwrite_newer_state(self):
         current = {"profiles": [{"id": "a", "scores": {"2H": 80}}]}
         stale = {"profiles": [{"id": "a", "scores": {"2H": 20}}]}
