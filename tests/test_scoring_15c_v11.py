@@ -26,7 +26,8 @@ class Scoring15cV11Tests(unittest.TestCase):
 
     def test_weights_sum_to_one(self):
         self.assertIn("'c2' => .09", SCORING)
-        self.assertIn("'c7' => .11", SCORING)
+        self.assertIn("'c8' => .07", SCORING)
+        self.assertIn("'c12' => .06", SCORING)
         self.assertIn("p50_15c_weights()", OBS)
 
     def test_data_engine_uses_shared_scoring(self):
