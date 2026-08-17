@@ -161,6 +161,24 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
             }
             api.repairProfile(publishedMr13);
             if (publishedMr13.classable !== false) throw new Error('published MR-V1.3 decision was overwritten');
+
+            const scoredButFlaggedFalse = {
+              eligible: false,
+              alive: true,
+              classable: false,
+              scores: { '24H': 71.5, '2H': 73.4 },
+              dataEngine: { algorithmVersion: 'MR-V1.3', scoreStatus: 'published_mr_v1' }
+            };
+            if (!api.hasAnyPublishedScore(scoredButFlaggedFalse)) {
+              throw new Error('published score was not detected');
+            }
+            api.repairProfile(scoredButFlaggedFalse);
+            if (scoredButFlaggedFalse.classable !== true || scoredButFlaggedFalse.eligible !== true) {
+              throw new Error('scored profile remained Non classé');
+            }
+            if (!api.authoritativeIsClassableProfile(scoredButFlaggedFalse)) {
+              throw new Error('scored profile still hidden from ranking');
+            }
             """
         )
         subprocess.run(
@@ -181,6 +199,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
 
     def test_public_rule_binding_is_replaced_directly(self):
         self.assertIn("function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false&&hasPeriodScore(p);}", INDEX)
+        self.assertIn("const scoreCell=hasScore||classable?formatTrendScore(score(p)):'À vérifier'", INDEX)
         self.assertIn("isClassableProfile = authoritativeIsClassableProfile", SYNC)
         self.assertIn("window.isClassableProfile = authoritativeIsClassableProfile", SYNC)
         self.assertIn("function authoritativeIsClassableProfile", SYNC)
@@ -190,10 +209,10 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("published_mr_v1", SYNC)
 
     def test_loader_and_cache_are_versioned(self):
-        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.5", SYNC)
-        self.assertIn("classability-sync-v1.js?v=1.5", LOADER)
+        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.6", SYNC)
+        self.assertIn("classability-sync-v1.js?v=1.6", LOADER)
         self.assertIn("data-pass50-classability-sync", LOADER)
-        self.assertIn("classability-sync-v1.js?v=1.5", SW)
+        self.assertIn("classability-sync-v1.js?v=1.6", SW)
         self.assertIn("pass50-v73-keep-official-links", SW)
         self.assertIn("PASS50_LINK_SAVE_RUNNING", SYNC)
         self.assertNotIn("repairAll({ forceRender: true }), 80", SYNC)

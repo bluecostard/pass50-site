@@ -64,9 +64,6 @@ function applyProfile(){
       region:patch.region,
       category:profile.category||patch.category,
       alive:true,
-      eligible:false,
-      classable:false,
-      verifiedPass50:false,
       censusStatus:patch.censusStatus,
       verificationPriority:patch.verificationPriority
     };

@@ -314,9 +314,14 @@ function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): 
                     if($score>=82)$badges[]='UP';
                     $state['profiles'][$i]['badges']=array_values(array_unique($badges));
                 }else{
-                    // Sortie 2H : ne plus classer sur le score principal, conserver l’historique des autres périodes.
+                    // Sortie 2H : retirer le score principal, conserver l’historique des autres périodes.
+                    // Ne pas renvoyer la fiche « Non classé / à recenser » tant qu’un score 24H+ existe.
                     unset($state['profiles'][$i]['score']);
-                    $state['profiles'][$i]['classable']=false;
+                    $hasOtherScore=false;
+                    foreach($scores as $value){
+                        if((float)$value>0){$hasOtherScore=true;break;}
+                    }
+                    if(!$hasOtherScore)$state['profiles'][$i]['classable']=false;
                 }
             }
             $engine=is_array($state['profiles'][$i]['dataEngine']??null)?$state['profiles'][$i]['dataEngine']:[];

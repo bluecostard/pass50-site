@@ -1,11 +1,12 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.5';
+  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.6';
   const METRIC_SOURCE = /(?:^|\b)MR-V1\.\d+(?:\b|$)/i;
   const PUBLISHED_MR_STATUS = 'published_mr_v1';
   const VERIFIED_LINK_STATUSES = new Set(['owner_verified', 'manual_verified', 'ok', 'verified']);
   const MIN_VERIFIED_LINKS = 1;
+  const PERIODS = ['2H', '24H', '48H', '7J', '15J'];
   let syncing = false;
 
   function profiles() {
@@ -44,10 +45,62 @@
     return count;
   }
 
+  function selectedPeriod() {
+    try {
+      if (typeof ui !== 'undefined' && ui && typeof ui.period === 'string' && ui.period) return ui.period;
+    } catch (_) {}
+    return '24H';
+  }
+
+  function periodScoreValue(profileItem, period) {
+    const scores = profileItem?.scores;
+    if (!scores || typeof scores !== 'object') return 0;
+    const value = Number(scores[period]);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function hasSelectedPeriodScore(profileItem, period = selectedPeriod()) {
+    try {
+      if (typeof hasPeriodScore === 'function' && hasPeriodScore !== hasSelectedPeriodScore) {
+        return Boolean(hasPeriodScore(profileItem, period));
+      }
+    } catch (_) {}
+    const scores = profileItem?.scores;
+    if (!scores || typeof scores !== 'object') return false;
+    if (!Object.prototype.hasOwnProperty.call(scores, period)) return false;
+    return periodScoreValue(profileItem, period) > 0;
+  }
+
+  function hasAnyPublishedScore(profileItem) {
+    const scores = profileItem?.scores;
+    if (!scores || typeof scores !== 'object') return false;
+    if (PERIODS.some(period => periodScoreValue(profileItem, period) > 0)) return true;
+    return Object.values(scores).some(value => Number(value) > 0);
+  }
+
+  function restorePublishedScoreClassability(profileItem) {
+    if (!profileItem || typeof profileItem !== 'object' || profileItem.alive === false) return false;
+    if (!hasAnyPublishedScore(profileItem)) return false;
+    let changed = false;
+    if (profileItem.eligible !== true) {
+      profileItem.eligible = true;
+      changed = true;
+    }
+    if (profileItem.classable !== true) {
+      profileItem.classable = true;
+      changed = true;
+    }
+    if (changed) {
+      profileItem.classabilitySource = 'published_period_score';
+      profileItem.classabilityUpdatedAt = new Date().toISOString();
+    }
+    return changed;
+  }
+
   function promoteFromVerifiedLinks(profileItem) {
     if (!profileItem || typeof profileItem !== 'object' || profileItem.alive === false) return false;
-    // Ne pas écraser une exclusion MR publiée.
-    if (metricsControlsClassability(profileItem) && profileItem.classable === false) return false;
+    // Ne pas écraser une exclusion MR sans score. Un score déjà publié n'est pas un recensement.
+    if (metricsControlsClassability(profileItem) && profileItem.classable === false && !hasAnyPublishedScore(profileItem)) return false;
     if (verifiedOfficialLinkCount(profileItem) < MIN_VERIFIED_LINKS) return false;
     let changed = false;
     if (profileItem.eligible !== true) {
@@ -71,7 +124,11 @@
   }
 
   function authoritativeIsClassableProfile(profileItem) {
-    if (!profileItem || profileItem.alive === false || profileItem.eligible !== true) return false;
+    if (!profileItem || profileItem.alive === false) return false;
+    // Un score publié pour la période affichée doit apparaître dans le classement,
+    // même si un overlay « à recenser » a forcé classable=false.
+    if (hasSelectedPeriodScore(profileItem)) return true;
+    if (profileItem.eligible !== true) return false;
     if (metricsControlsClassability(profileItem)) return profileItem.classable !== false;
     // Tant qu'aucune publication MR-V1.0 n'a réellement été appliquée à cette
     // fiche, la décision administrative Vivant + Éligible reste autoritaire.
@@ -94,7 +151,8 @@
   function repairProfile(profileItem, { adminSave = false } = {}) {
     if (!profileItem || typeof profileItem !== 'object') return false;
 
-    let changed = promoteFromVerifiedLinks(profileItem);
+    let changed = restorePublishedScoreClassability(profileItem);
+    changed = promoteFromVerifiedLinks(profileItem) || changed;
 
     const metricsControlled = metricsControlsClassability(profileItem);
     const editorialEligible = Boolean(profileItem.eligible === true && profileItem.alive !== false);
@@ -268,6 +326,7 @@
       authoritativeIsClassableProfile,
       verifiedOfficialLinkCount,
       promoteFromVerifiedLinks,
+      hasAnyPublishedScore,
       installAuthoritativeRule,
     });
   }

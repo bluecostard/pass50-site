@@ -26,6 +26,10 @@ class Classability15cThresholdsV1Tests(unittest.TestCase):
         self.assertIn("'p1_max_profiles']??200)", ORCH)
         self.assertIn("'p1_max_rank' => 200", CONFIG)
 
+    def test_published_score_restores_classability(self):
+        self.assertIn("function p50_de_profile_has_published_score", CORE)
+        self.assertIn("afficher « Non classé »", CORE)
+
     def test_audience_weight_moved_to_velocity(self):
         self.assertIn("'audience'=>0.05", MR)
         self.assertIn("'velocity'=>0.18", MR)

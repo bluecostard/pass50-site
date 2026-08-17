@@ -24,6 +24,13 @@ function p50_de_threshold(): int {
     return max(60, min(P50_DATA_CONFIDENCE_THRESHOLD, (int)($config['data_engine']['confidence_threshold'] ?? P50_DATA_CONFIDENCE_THRESHOLD)));
 }
 
+function p50_de_profile_has_published_score(array $profile): bool {
+    foreach ((array)($profile['scores'] ?? []) as $value) {
+        if ((float)$value > 0) return true;
+    }
+    return (float)($profile['score'] ?? 0) > 0;
+}
+
 /**
  * Décide si un résultat 15C peut être publié comme score classable.
  * Les liens officiels vérifiés débloquent l’entrée au classement dès qu’un
@@ -1619,6 +1626,14 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
             if($trend['score']>=88)$badges[]='HOT';if($trend['score']>=82)$badges[]='UP';if(($trend['events7']??0)>=3)$badges[]='VIRAL';
             $p['badges']=array_values(array_unique($badges));
             $changed=true;
+        } elseif (p50_de_profile_has_published_score($p) && (!array_key_exists('alive', $p) || !empty($p['alive']))) {
+            // Score déjà public : ne pas laisser un overlay recensement ou une sortie 2H
+            // afficher « Non classé » / masquer le score dans le classement.
+            if (empty($p['eligible']) || ($p['classable'] ?? true) === false) {
+                $p['eligible'] = true;
+                $p['classable'] = true;
+                $changed = true;
+            }
         }
         $p['lastCollectedAt']=gmdate('c');
         $p['dataEngine']=[
