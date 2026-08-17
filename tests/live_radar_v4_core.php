@@ -124,13 +124,15 @@ $facebook=p50_live_v4_parse_facebook(['profile_id'=>'fb','public_name'=>'FB','pl
 must($facebook['state']==='live','Signal Facebook actif et vidéo spécifique.');
 
 $verifiedOffline=['profile_id'=>'apoutchou','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-7200),'last_live_at'=>gmdate('Y-m-d H:i:s',time()-86400)];
-$genericOffline=['profile_id'=>'other','platform'=>'TikTok','verification_status'=>'verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-300)];
+$genericOffline=['profile_id'=>'other','platform'=>'TikTok','verification_status'=>'verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-120)];
 must(p50_live_v4_needs_tiktok_rescan($verifiedOffline),'Un TikTok vérifié offline depuis 2 h doit être rescané.');
-must(!p50_live_v4_needs_tiktok_rescan($genericOffline),'Un TikTok vérifié contrôlé il y a 5 min ne doit pas saturer le rescan.');
+must(!p50_live_v4_needs_tiktok_rescan($genericOffline),'Un TikTok vérifié contrôlé il y a 2 min ne doit pas saturer le rescan.');
 must(p50_live_v4_discovery_rank($verifiedOffline)<p50_live_v4_discovery_rank($genericOffline),'Le TikTok vérifié stale doit passer avant un offline récent non prioritaire.');
 
-$p0Stale=['profile_id'=>'general-camille-makosso','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-200)];
+$p0Stale=['profile_id'=>'general-camille-makosso','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($p0Stale),'Général Makosso doit être en watchlist P0 TikTok.');
-must(p50_live_v4_needs_tiktok_rescan($p0Stale),'Un P0 TikTok offline depuis 200 s doit être rescané.');
+must(p50_live_v4_needs_tiktok_rescan($p0Stale),'Un P0 TikTok offline depuis 130 s doit être rescané.');
+$p0Fresh=['profile_id'=>'general-camille-makosso','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-60)];
+must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 60 s ne doit pas être resondé.');
 
 echo json_encode(['ok'=>true,'cases'=>29],JSON_UNESCAPED_SLASHES).PHP_EOL;

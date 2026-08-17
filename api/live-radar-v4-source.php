@@ -6,8 +6,11 @@ const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verif
 /** Couverture rolling (scan récent) — distincte du trust gate anti-ghost. */
 const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-3';
 const P50_LIVE_V4_COVERAGE_WINDOW_SECONDS = 7200;
-/** TikTok vérifiés très actifs en live : rescan toutes les ~3 min max. */
+/** TikTok vérifiés très actifs en live : rescan toutes les ~2 min max. */
 const P50_LIVE_V4_P0_TIKTOK = ['apoutchou', 'general-camille-makosso'];
+/** Délai minimum entre deux sondes TikTok vérifié (secondes). */
+const P50_LIVE_V4_P0_RESCAN_SECONDS = 120;
+const P50_LIVE_V4_VERIFIED_RESCAN_SECONDS = 300;
 /** @deprecated Utiliser p50_live_v4_reconfirm_grace_map() — conservé pour compat tests/clients. */
 const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>12,'YouTube'=>18,'Instagram'=>15,'Facebook'=>15];
 const P50_LIVE_V4_CANDIDATE_TTL_MINUTES = 30;
@@ -251,12 +254,12 @@ function p50_live_v4_is_p0_tiktok(array $source): bool {
         && in_array((string)($source['profile_id']??''),P50_LIVE_V4_P0_TIKTOK,true);
 }
 
-/** TikTok vérifié : rescanner si offline depuis >10 min (P0 : >3 min). */
+/** TikTok vérifié : rescanner si offline depuis >5 min (P0 : >2 min). */
 function p50_live_v4_needs_tiktok_rescan(array $source,?int $minStaleSeconds=null): bool {
     if(!p50_live_v4_is_verified_tiktok($source))return false;
     $state=strtolower(trim((string)($source['last_state']??'')));
     if($state==='live')return true;
-    $stale=$minStaleSeconds??(p50_live_v4_is_p0_tiktok($source)?180:600);
+    $stale=$minStaleSeconds??(p50_live_v4_is_p0_tiktok($source)?P50_LIVE_V4_P0_RESCAN_SECONDS:P50_LIVE_V4_VERIFIED_RESCAN_SECONDS);
     $checkedTs=p50_live_v4_health_ts((string)($source['last_checked_at']??''));
     return $checkedTs<=0||(time()-$checkedTs)>=$stale;
 }

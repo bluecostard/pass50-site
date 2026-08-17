@@ -84,7 +84,7 @@ if($mode==='full'){
         if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
         if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);
     });
-    $discoveryFloor=min(6,max(4,(int)floor(($batch*2)/3)));
+    $discoveryFloor=min(5,max(4,(int)floor(($batch*2)/3)));
     $reconfirmCap=max(0,$batch-$discoveryFloor);
     $reconfirm=array_slice($reconfirm,0,$reconfirmCap);
     $discoveryQuota=min($discoveryFloor,max(0,$batch-count($reconfirm)));

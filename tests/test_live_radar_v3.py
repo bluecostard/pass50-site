@@ -97,7 +97,9 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertNotIn("$stateValue==='probable'&&!empty($result['live'])){\n                p50_live_v4_store_live", ENDPOINT)
 
     def test_quick_scan_reserves_discovery_capacity(self):
-        self.assertIn('$discoveryFloor=min(6,max(4,(int)floor(($batch*2)/3)))', ENDPOINT)
+        self.assertIn('$discoveryFloor=min(5,max(4,(int)floor(($batch*2)/3)))', ENDPOINT)
+        self.assertIn('P50_LIVE_V4_P0_RESCAN_SECONDS', SOURCE)
+        self.assertIn('P50_LIVE_V4_VERIFIED_RESCAN_SECONDS', SOURCE)
         self.assertIn('$reconfirmCap=max(0,$batch-$discoveryFloor)', ENDPOINT)
         self.assertIn('$reconfirm', ENDPOINT)
         self.assertIn("'discoveryQuota'=>$discoveryQuota", ENDPOINT)
