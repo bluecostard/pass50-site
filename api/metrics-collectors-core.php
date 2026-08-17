@@ -181,20 +181,35 @@ function p50_mc_youtube(PDO $pdo,array $official,int $limit,string $observedAt,s
     }
 }
 
+function p50_mc_youtube_public_subscribers(string $html): ?int {
+    if(preg_match('/"subscriberCount"\s*:\s*"(\d+)"/',$html,$match))return (int)$match[1];
+    if(preg_match('/"subscriberCount"\s*:\s*(\d+)/',$html,$match))return (int)$match[1];
+    return null;
+}
+
 function p50_mc_youtube_fallback(PDO $pdo,array $official,string $kind,string $identifier,int $limit,string $observedAt,string $runUuid,callable $fetch,array &$result): void {
     $channelId=$kind==='id'?$identifier:'';
+    $html='';
     if($channelId===''){
         $page=p50_mc_request($fetch,$official['normalized_url'],[],$result);
-        if(preg_match('/(?:channelId|externalId)["\':\s]+(UC[A-Za-z0-9_-]+)/',(string)$page['body'],$m))$channelId=$m[1];
+        $html=(string)$page['body'];
+        if(preg_match('/(?:channelId|externalId)["\':\s]+(UC[A-Za-z0-9_-]+)/',$html,$m))$channelId=$m[1];
+    }else{
+        $page=p50_mc_request($fetch,'https://www.youtube.com/channel/'.rawurlencode($channelId),[],$result);
+        $html=(string)($page['body']??'');
     }
     if($channelId===''){$result['status']='unavailable_or_blocked';return;}
     $prov=p50_mc_provenance('YouTube','youtube_public_feed','YouTube Atom feed',$official,gmdate('c'),200,$runUuid,'public_fallback');
     $account=p50_metrics_upsert_account($pdo,['profileId'=>$official['profile_id'],'platform'=>'YouTube','platformAccountId'=>$channelId,'handle'=>$kind==='handle'?$identifier:null,'canonicalUrl'=>$official['normalized_url'],'confidence'=>$official['confidence'],'sourceType'=>'youtube_public_feed','observedAt'=>$observedAt,'provenance'=>$prov]);
-    $result['accountFound']=true;$feed=p50_mc_request($fetch,'https://www.youtube.com/feeds/videos.xml?channel_id='.rawurlencode($channelId),[],$result);
+    $result['accountFound']=true;
+    $subscribers=p50_mc_youtube_public_subscribers($html);
+    if($subscribers!==null){
+        p50_mc_capture($pdo,$result,['accountId'=>$account['id'],'collector'=>'youtube_v1','sourceType'=>'youtube_public_feed','sourceReference'=>$official['normalized_url'],'observedAt'=>$observedAt,'followers'=>$subscribers,'qualityStatus'=>'usable','confidence'=>80,'runUuid'=>$runUuid,'rawPayloadHash'=>hash('sha256',$html),'provenance'=>$prov]);
+    }else $result['unavailableMetrics']++;
+    $feed=p50_mc_request($fetch,'https://www.youtube.com/feeds/videos.xml?channel_id='.rawurlencode($channelId),[],$result);
     if((int)$feed['status']<200||(int)$feed['status']>=300)return;
     preg_match_all('#<entry>.*?<yt:videoId>([^<]+)</yt:videoId>.*?<title>(.*?)</title>.*?<published>([^<]+)</published>.*?</entry>#s',(string)$feed['body'],$matches,PREG_SET_ORDER);
     foreach(array_slice($matches,0,$limit) as $match){p50_metrics_upsert_content($pdo,['accountId'=>$account['id'],'platformContentId'=>html_entity_decode($match[1]),'contentType'=>'video','canonicalUrl'=>'https://www.youtube.com/watch?v='.html_entity_decode($match[1]),'title'=>html_entity_decode(strip_tags($match[2])),'publishedAt'=>$match[3],'confidence'=>90,'sourceType'=>'youtube_public_feed','observedAt'=>$observedAt,'provenance'=>$prov]);$result['contentsFound']++;}
-    $result['unavailableMetrics']++;
 }
 
 function p50_mc_x_handle(string $url): string {

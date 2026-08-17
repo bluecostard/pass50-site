@@ -24,6 +24,7 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("p50_de_load_public_state_for_update", core)
         self.assertIn("p50_mrp_apply_mutate_state", core)
         self.assertIn("if(!$hasOtherScore)$state['profiles'][$i]['classable']=false", core)
+        self.assertNotIn("['profileId'=>$profileId,'period'=>$period,'action'=>'clear'", core)
         self.assertIn("p50_mrp_apply_health", core)
         self.assertIn("'health'=>p50_mrp_apply_health", core)
         # Backup d’état : rédaction au lieu d’un rejet dur (sinon 0 écriture si un profil a token=…).

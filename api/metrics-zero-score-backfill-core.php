@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-ranking-publication-apply-core.php';
 
-const P50_MZB_VERSION='ZERO-SCORE-BACKFILL-V1.2';
+const P50_MZB_VERSION='ZERO-SCORE-BACKFILL-V1.3';
 const P50_MZB_LOCK='pass50_zero_score_backfill_v1';
 const P50_MZB_PERIODS=['2H','24H','48H','7J','15J'];
 
@@ -127,7 +127,7 @@ function p50_mzb_apply(PDO $pdo,string $dispatchId): array {
         $pdo->beginTransaction();$state=p50_mzb_state($pdo,true);$backup=$state;
         $zeroIds=array_fill_keys(p50_mzb_zero_profile_ids($state),true);$positiveBefore=p50_mzb_positive_map($state);
         $stmt=$pdo->prepare("SELECT profile_id,period_key,score,latest_capture_at FROM p50_metric_ranking_current
-          WHERE algorithm_version=? AND classable=1 AND score IS NOT NULL AND score>0 AND period_key IN ('2H','24H','48H','7J','15J')");
+          WHERE algorithm_version=? AND score IS NOT NULL AND score>0 AND period_key IN ('2H','24H','48H','7J','15J')");
         $stmt->execute([P50_MR_ALGORITHM_VERSION]);$candidates=[];
         foreach($stmt->fetchAll() as $row)$candidates[(string)$row['profile_id']][(string)$row['period_key']]=$row;
         $profilesUpdated=[];$scoresWritten=0;

@@ -171,8 +171,8 @@ function p50_mrp_apply_plan_period(PDO $pdo,string $period,bool $bootstrap,?Date
         if($profileId==='')continue;
         $type=(string)($movement['type']??'');
         if($type==='exit'){
-            $mutations[]=['profileId'=>$profileId,'period'=>$period,'action'=>'clear','score'=>null];
             $exits++;
+            continue;
         }elseif(in_array($type,['entry','up','down','stable'],true)&&isset($movement['candidateScore'])&&is_numeric($movement['candidateScore'])){
             $mutations[]=['profileId'=>$profileId,'period'=>$period,'action'=>'set','score'=>p50_mrp_apply_public_score((float)$movement['candidateScore'])];
             if($type==='entry')$entries++;else $updates++;

@@ -43,7 +43,7 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertGreaterEqual(load.count("quality_status='usable'"), 3)
         self.assertGreaterEqual(load.count("confidence>=70"), 3)
         self.assertNotIn("quarantined", load)
-        self.assertIn("MAX(observed_at)", load)
+        self.assertIn("MAX(captured_at)", load)
         self.assertIn("GROUP BY account_id,COALESCE(content_id,0)", load)
 
     def test_platform_percentiles_and_acceleration(self):
@@ -85,6 +85,8 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
             self.assertIn(code, period)
         self.assertIn("$coverage<$thresholds[\'coverage\']", period)
         self.assertIn("$confidence<$thresholds[\'confidence\']", period)
+        self.assertIn("$classable=$score!==null&&(bool)$profile['alive']&&$official", period)
+        self.assertNotIn("$classable=$score!==null&&count($reasons)===0", period)
         self.assertIn("$row['previousRank']-$row['rank']", period)
         self.assertIn("[0.70,0.20,0.10]", CORE)
 
@@ -105,7 +107,9 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$dynamicWeighted/$dynamicWeightSum", period)
         self.assertIn("$dynamicBase*(1-$weights['audience'])", period)
         self.assertIn("$audiencePercentile*$weights['audience']", period)
-        self.assertIn("if($dynamicWeightSum<=0)continue", period)
+        self.assertIn("if($dynamicWeightSum<=0)", period)
+        self.assertNotIn("if($dynamicWeightSum<=0)continue", period)
+        self.assertIn("if($audiencePercentile===null)continue", period)
         self.assertNotIn("$weighted/$weightSum", period)
         self.assertIn("'audience'=>0.05", CORE)
         self.assertIn("'velocity'=>0.18", CORE)

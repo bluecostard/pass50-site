@@ -46,7 +46,7 @@ jobs:
           }
           deployed=false
           for attempt in $(seq 1 36); do
-            if call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"probe",dispatchId:$id}')" probe.json && jq -e '.version == "ZERO-SCORE-BACKFILL-V1.2"' probe.json >/dev/null; then deployed=true; break; fi
+            if call_backfill "$(jq -nc --arg id "$dispatch_id" '{action:"probe",dispatchId:$id}')" probe.json && jq -e '.version == "ZERO-SCORE-BACKFILL-V1.3"' probe.json >/dev/null; then deployed=true; break; fi
             sleep 10
           done
           [ "$deployed" = true ] || { echo "::error::Le correctif de rattrapage n'est pas déployé."; exit 1; }

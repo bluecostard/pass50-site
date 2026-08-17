@@ -46,10 +46,9 @@ function p50_mrp_public_rows(array $state,string $period): array {
     $period=p50_mrp_period($period);$profileIndex=p50_mrp_public_profile_index($state);$rankable=[];
     foreach($profileIndex['profiles'] as $profileId=>$profile){
         if(array_key_exists('alive',$profile)&&empty($profile['alive']))continue;
-        if(empty($profile['eligible']))continue;
-        if(array_key_exists('classable',$profile)&&$profile['classable']===false)continue;
         $score=$profile['scores'][$period]??null;
         if(!is_int($score)&&!is_float($score)&&!is_numeric($score))continue;
+        if((float)$score<=0)continue;
         $rankable[]=[
             'profileId'=>$profileId,'name'=>(string)($profile['name']??$profileId),
             'handle'=>(string)($profile['handle']??''),'region'=>(string)($profile['region']??''),
@@ -123,8 +122,19 @@ function p50_mrp_spearman(array $pairs): ?float {
 }
 
 function p50_mrp_compare(array $publicRows,array $experimentalRows): array {
-    $candidateRows=array_values(array_filter($experimentalRows,static fn($row)=>!empty($row['classable'])&&$row['rank']!==null&&$row['score']!==null));
-    usort($candidateRows,static fn($a,$b)=>(int)$a['rank']<=>(int)$b['rank']?:strcmp((string)$a['profileId'],(string)$b['profileId']));
+    $candidateRows=array_values(array_filter($experimentalRows,static function($row){
+        $score=$row['score']??null;
+        return (is_int($score)||is_float($score)||is_numeric($score))&&(float)$score>0;
+    }));
+    usort($candidateRows,static function($a,$b){
+        $ar=$a['rank']??null;$br=$b['rank']??null;
+        if($ar!==null&&$br!==null)return (int)$ar<=>(int)$br?:strcmp((string)$a['profileId'],(string)$b['profileId']);
+        if($ar!==null)return -1;
+        if($br!==null)return 1;
+        return ((float)$b['score']<=>(float)$a['score'])?:strcmp((string)$a['profileId'],(string)$b['profileId']);
+    });
+    foreach($candidateRows as $index=>&$row)$row['rank']=$index+1;
+    unset($row);
     $public=[];foreach($publicRows as $row)$public[(string)$row['profileId']]=$row;
     $candidate=[];foreach($candidateRows as $row)$candidate[(string)$row['profileId']]=$row;
     $profileIds=array_values(array_unique([...array_keys($public),...array_keys($candidate)]));
@@ -218,7 +228,7 @@ function p50_mrp_simulate(PDO $pdo,string $period='2H',int $limit=200,?DateTimeI
         ],
         'scope'=>[
             'selectedPeriodOnly'=>true,'publicProfileMetadataChanges'=>0,'publicStateWrites'=>0,
-            'candidateDerivedOnlyFromClassableExperimentalRows'=>true,
+            'candidateDerivedFromScoredExperimentalRows'=>true,
         ],
         'summary'=>array_diff_key($comparison,['movements'=>true,'candidateRows'=>true]),
         'gates'=>$gates,'orphanCandidateProfileIds'=>$orphans,
