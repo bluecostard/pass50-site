@@ -55,13 +55,13 @@ mr_must($byId['A']['captureCount']===3,'A compte une capture de compte et deux e
 $aComponents=json_decode((string)p50_metrics_value($pdo,"SELECT components_json FROM p50_metric_ranking_current WHERE period_key='24H' AND profile_id='A'"),true);
 mr_must(abs((float)$aComponents[0]['raw']['quality']-86.6666666667)<0.001,'La qualité de A moyenne trois captures uniques sans duplication');
 mr_must($byId['C']['score']!==null&&!in_array('no_measurable_content',$byId['C']['exclusionReasons'],true),'C conserve son zéro mesuré avec deux extrémités distinctes');
-mr_must(!$byId['D']['classable']&&in_array('no_measurable_content',$byId['D']['exclusionReasons'],true),'D reste sans contenu mesurable');
+mr_must($byId['D']['score']!==null&&$byId['D']['classable']&&$byId['D']['rank']!==null&&in_array('no_measurable_content',$byId['D']['exclusionReasons'],true),'D entre au classement avec un score audience malgré l’absence de contenu mesurable');
 $eRaw=(string)p50_metrics_value($pdo,"SELECT raw_features_json FROM p50_metric_ranking_current WHERE period_key='24H' AND profile_id='E'");
 mr_must(str_contains($eRaw,'"publishedInsideWindowFallback":true'),'E utilise le fallback de publication');
 $fRaw=(string)p50_metrics_value($pdo,"SELECT raw_features_json FROM p50_metric_ranking_current WHERE period_key='24H' AND profile_id='F'");
-mr_must(!$byId['F']['classable']&&in_array('no_measurable_content',$byId['F']['exclusionReasons'],true)&&!str_contains($fRaw,'999999'),'Les valeurs quarantined de F ne contribuent jamais');
-mr_must(!$byId['G']['classable']&&$byId['G']['rank']===null&&$byId['G']['score']!==null,'G a un score expérimental sans rang');
-mr_must(!$byId['H']['classable']&&$byId['H']['rank']===null&&in_array('no_measurable_content',$byId['H']['exclusionReasons'],true),'H ne transforme pas une capture antérieure unique en zéro mesuré');
+mr_must($byId['F']['classable']&&in_array('no_measurable_content',$byId['F']['exclusionReasons'],true)&&!str_contains($fRaw,'999999'),'Les valeurs quarantined de F ne contribuent jamais, le score audience reste classable');
+mr_must($byId['G']['classable']&&$byId['G']['rank']!==null&&$byId['G']['score']!==null&&in_array('editorial_not_eligible',$byId['G']['exclusionReasons'],true),'G garde un rang public même si l’exclusion éditoriale est enregistrée');
+mr_must($byId['H']['classable']&&$byId['H']['rank']!==null&&in_array('no_measurable_content',$byId['H']['exclusionReasons'],true),'H entre au classement avec un score audience sans transformer une capture unique en zéro mesuré');
 $limited=p50_mr_read($pdo,'24H',2);
 mr_must(count($limited['rows'])<=2&&$limited['summary']['classable']+$limited['summary']['excluded']===8,'La limite ne réduit pas les KPI globaux');
 mr_must(($limited['exclusionSummary']['no_measurable_content']??0)>=3&&($limited['exclusionSummary']['editorial_not_eligible']??0)>=1,'Les exclusions de D, F, G et H restent agrégées hors limite');

@@ -12,6 +12,7 @@ class ZeroScoreBackfillTests(unittest.TestCase):
         self.assertIn("p50_mzb_score_missing($scores[$period]??null)", CORE)
         self.assertIn("p50_mzb_assert_preserved($positiveBefore,$positiveAfter)", CORE)
         self.assertIn("score IS NOT NULL AND score>0", CORE)
+        self.assertNotIn("classable=1 AND score IS NOT NULL AND score>0", CORE)
 
     def test_existing_positive_scores_are_audited(self):
         self.assertIn('positive_scores_preserved', CORE)
@@ -24,7 +25,7 @@ class ZeroScoreBackfillTests(unittest.TestCase):
 
     def test_workflow_reports_preserved_scores(self):
         self.assertIn('Scores positifs préservés', WORKFLOW)
-        self.assertIn('ZERO-SCORE-BACKFILL-V1.1', WORKFLOW)
+        self.assertIn('ZERO-SCORE-BACKFILL-V1.3', WORKFLOW)
         self.assertIn('https://www.pass50.store/*', WORKFLOW)
         self.assertIn('https://pass50.store/', WORKFLOW)
 
