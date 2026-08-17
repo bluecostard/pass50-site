@@ -44,10 +44,10 @@ $assert($result['publication']['publicationEnabled']===false,'La publication doi
 $assert($result['publication']['appStateWriteAttempted']===false,'Aucune tentative d’écriture ne doit être déclarée.');
 $assert($result['source']['publicStateRevision']===7,'La révision publique doit être capturée.');
 $assert($result['summary']['counts']['entries']===1,'Une entrée attendue.');
-$assert($result['summary']['counts']['exits']===1,'Une sortie attendue.');
+$assert($result['summary']['counts']['exits']===0,'Aucune sortie : un score expérimental reste candidat.');
 $assert($result['summary']['counts']['up']===1,'Une hausse attendue.');
-$assert($result['summary']['counts']['down']===1,'Une baisse attendue.');
-$assert($result['summary']['candidateCount']===3,'Trois profils candidats attendus.');
+$assert($result['summary']['counts']['down']===2,'Deux baisses attendues.');
+$assert($result['summary']['candidateCount']===4,'Quatre profils candidats attendus, y compris le score non classable.');
 $assert($result['orphanCandidateProfileIds']===[],'Aucun profil candidat orphelin attendu.');
 $assert(strlen($result['source']['publicFingerprint'])===64,'Empreinte publique invalide.');
 $assert(strlen($result['source']['candidateFingerprint'])===64,'Empreinte candidate invalide.');

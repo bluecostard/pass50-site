@@ -85,12 +85,12 @@ class MetricsRankingPublicationSimulationV1Tests(unittest.TestCase):
         self.assertIn("$experimental['runUuids'][0]===($latestRun['runUuid']??null)", simulate)
         self.assertIn("$blocked?'blocked':($warnings?'review':'ready')", simulate)
 
-    def test_candidate_uses_only_classable_experimental_rows(self):
+    def test_candidate_uses_scored_experimental_rows(self):
         compare = function(CORE, "p50_mrp_compare")
-        self.assertIn("!empty($row['classable'])", compare)
-        self.assertIn("$row['rank']!==null", compare)
-        self.assertIn("$row['score']!==null", compare)
-        self.assertIn("candidateDerivedOnlyFromClassableExperimentalRows", CORE)
+        self.assertNotIn("!empty($row['classable'])", compare)
+        self.assertIn("(float)$score>0", compare)
+        self.assertIn("candidateDerivedFromScoredExperimentalRows", CORE)
+        self.assertNotIn("candidateDerivedOnlyFromClassableExperimentalRows", CORE)
 
     def test_period_and_output_are_bounded(self):
         simulate = function(CORE, "p50_mrp_simulate")

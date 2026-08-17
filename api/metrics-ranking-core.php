@@ -314,9 +314,14 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
             if($feature==='audience')continue;
             $dynamicWeightSum+=$weights[$feature];$dynamicWeighted+=$percentile*$weights[$feature];
         }
-        if($dynamicWeightSum<=0)continue;
-        $dynamicBase=$dynamicWeighted/$dynamicWeightSum;$audiencePercentile=$available['audience']??null;
-        $base=$dynamicBase*(1-$weights['audience'])+($audiencePercentile===null?0.0:$audiencePercentile*$weights['audience']);
+        $audiencePercentile=$available['audience']??null;
+        if($dynamicWeightSum<=0){
+            if($audiencePercentile===null)continue;
+            $base=$audiencePercentile*$weights['audience'];
+        }else{
+            $dynamicBase=$dynamicWeighted/$dynamicWeightSum;
+            $base=$dynamicBase*(1-$weights['audience'])+($audiencePercentile===null?0.0:$audiencePercentile*$weights['audience']);
+        }
         $coverage=$weightSum*100;$quality=max(0,min(100,$item['raw']['quality']));
         $latest=$item['raw']['latestCaptureAt'];$age=$latest?max(0,($now->getTimestamp()-(new DateTimeImmutable($latest,new DateTimeZone('UTC')))->getTimestamp())/3600):INF;
         $freshness=is_finite($age)?max(0,min(100,100*(1-$age/$freshLimit))):0;
@@ -335,7 +340,7 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
         $recentActivity=p50_mr_has_recent_activity($platforms);
         $reasons=[];if(!(bool)$profile['editorial_eligible']||!(bool)$profile['alive'])$reasons[]='editorial_not_eligible';if(!$official)$reasons[]='no_official_metric_account';if($periodKey==='2H'&&!$recentActivity)$reasons[]='no_recent_activity';elseif($contentCount<1)$reasons[]='no_measurable_content';if($coverage<$thresholds['coverage'])$reasons[]=$periodKey==='2H'?'coverage_below_5':'coverage_below_30';if($confidence<$thresholds['confidence'])$reasons[]=$periodKey==='2H'?'confidence_below_35':'confidence_below_40';
         $age=$latest?($now->getTimestamp()-(new DateTimeImmutable($latest,new DateTimeZone('UTC')))->getTimestamp())/3600:INF;if($age>$freshLimit)$reasons[]='stale_captures';
-        $classable=$score!==null&&count($reasons)===0;
+        $classable=$score!==null&&(bool)$profile['alive']&&$official;
         $rows[]=['profile'=>$profile,'profileId'=>$profileId,'score'=>$score,'baseScore'=>$base,'confidence'=>$confidence,'coverage'=>$coverage,'classable'=>$classable,'editorialEligible'=>(bool)$profile['editorial_eligible'],'platformCount'=>count($platforms),'contentCount'=>$contentCount,'captureCount'=>$captureCount,'latestCaptureAt'=>$latest,'components'=>$platforms,'rawFeatures'=>array_map(fn($p)=>['platform'=>$p['platform'],'features'=>$p['raw']['features'],'availability'=>$p['raw']['availability'],'reachRaw'=>$p['raw']['reachRaw'],'publishedInsideWindowFallback'=>$p['raw']['publishedInsideWindowFallback']],$platforms),'exclusionReasons'=>array_values(array_unique($reasons)),'reachRaw'=>$reachRaw,'previousRank'=>$previousRanks[$profileId]??null,'rank'=>null,'rankDelta'=>null];
     }
     $classable=array_values(array_filter($rows,fn($row)=>$row['classable']));
