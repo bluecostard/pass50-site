@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__.'/scoring-15c-core.php';
+
 function p50m_ensure_schema(): void {
     static $done=false;
     if($done)return;
@@ -302,19 +304,19 @@ function p50m_derive_raw(string $profileId,string $period): array {
     $likes=array_sum(array_map(fn($r)=>(int)($r['likes']??0),$contents));
     $comments=array_sum(array_map(fn($r)=>(int)($r['comments']??0),$contents));
     $shares=array_sum(array_map(fn($r)=>(int)($r['shares']??0)+(int)($r['reposts']??0)+(int)($r['quotes']??0),$contents));
-    $engagement=$views>0?($likes+3*$comments+5*$shares)/$views:0;
-    $shareRate=$views>0?$shares/$views:0;
+    $saves=array_sum(array_map(fn($r)=>(int)($r['saves']??0),$contents));
 
-    $growth=null;
+    $followerSamples=[];
     foreach(array_unique(array_column($accounts,'platform')) as $platform){
         $platformRows=array_values(array_filter($accounts,fn($r)=>$r['platform']===$platform&&$r['followers']!==null));
-        if(count($platformRows)>=2){
-            $first=(int)$platformRows[0]['followers'];$last=(int)$platformRows[count($platformRows)-1]['followers'];
-            if($first>0)$growth=($growth??0)+(($last-$first)/$first);
+        foreach($platformRows as $r){
+            $ts=strtotime((string)$r['captured_at'])?:0;
+            $f=(float)$r['followers'];
+            if($f>0&&$ts>0)$followerSamples[]=['v'=>$f,'t'=>$ts];
         }
     }
 
-    $velocity=0;
+    $velocity=0.0;$velocities=[];
     $byContent=[];
     foreach($contents as $r)$byContent[$r['platform'].'|'.$r['content_id']][]=$r;
     foreach($byContent as $series){
@@ -322,25 +324,34 @@ function p50m_derive_raw(string $profileId,string $period): array {
         $a=$series[0];$b=$series[count($series)-1];
         $dt=max(1,strtotime($b['captured_at'])-strtotime($a['captured_at']));
         $dv=max(0,(int)$b['views']-(int)$a['views']);
-        $velocity+=$dv/($dt/3600);
+        $vel=$dv/($dt/3600);
+        $velocity+=$vel;
+        if($vel>0)$velocities[]=$vel;
     }
 
-    $verifiedPlatforms=(int)db()->prepare("SELECT COUNT(*) FROM p50_social_links WHERE profile_id=? AND status='verified'");
     $s=db()->prepare("SELECT COUNT(*) FROM p50_social_links WHERE profile_id=? AND status='verified'");
     $s->execute([$profileId]);$platformCount=(int)$s->fetchColumn();
 
-    return [
-        'c1'=>$followers>0?log10(1+$followers):null,
-        'c2'=>$views>0?$views:null,
-        'c3'=>$growth,
-        'c4'=>$engagement>0?$engagement:null,
-        'c5'=>$shareRate>0?$shareRate:null,
-        'c6'=>$comments>0?log10(1+$comments):null,
-        'c7'=>$velocity>0?$velocity:null,
-        'c8'=>$platformCount>0?$platformCount:null,
-        'c13'=>count($contents)>0?count($contents):null,
-        'c14'=>($views>0&&$followers>0)?p50m_clamp(100-abs(log10(max($views/$followers,0.001)))*15):null,
-    ];
+    $liveWeight=0.0;
+    foreach($contents as $r){
+        $type=strtolower((string)($r['content_type']??''));
+        if($type==='live'||str_contains($type,'live'))$liveWeight+=1;
+    }
+
+    $eventWeight=count($contents)>0?(float)count($contents):0.0;
+    return p50_15c_build_raw(
+        (float)$followers,
+        (float)$views,
+        (float)$likes,
+        (float)$comments,
+        (float)$shares,
+        (float)$saves,
+        $platformCount>0?(float)$platformCount:null,
+        $eventWeight,
+        $velocities,
+        $followerSamples,
+        $liveWeight
+    );
 }
 
 function p50m_reference_values(string $criterion,string $period): array {
@@ -364,7 +375,7 @@ function p50m_history_values(string $profileId,string $criterion,string $period)
 }
 
 function p50m_calculate_profile(string $profileId): array {
-    $weights=['c1'=>.06,'c2'=>.08,'c3'=>.07,'c4'=>.08,'c5'=>.09,'c6'=>.05,'c7'=>.10,'c8'=>.08,'c9'=>.06,'c10'=>.06,'c11'=>.05,'c12'=>.04,'c13'=>.04,'c14'=>.07,'c15'=>.07];
+    $weights=p50_15c_weights();
     $periodScores=[];$details=[];
     foreach(['2H','24H','48H','7J','15J'] as $period){
         $raw=p50m_derive_raw($profileId,$period);$scores=[];$sum=0;$availableWeight=0;
@@ -373,6 +384,7 @@ function p50m_calculate_profile(string $profileId): array {
             $refs=p50m_reference_values($key,$period);
             $history=p50m_history_values($profileId,$key,$period);
             $score=p50m_score_raw((float)$raw[$key],$history,$refs,$refs);
+            if($score<=0&&is_finite((float)$raw[$key]))$score=p50_15c_normalize_score($key,(float)$raw[$key]);
             $scores[$key]=$score;$sum+=$score*$weight;$availableWeight+=$weight;
         }
         $base=$availableWeight>0?$sum/$availableWeight:0;
@@ -414,13 +426,13 @@ function p50m_publish_scores_to_state(array $results): int {
         $confidence=(float)($r['details']['24H']['confidence']??0);
         $profile['dataConfidence']=$confidence;
         $profile['measuredCoverage']=$coverage;
-        $profile['algorithmVersion']='15C-v1';
+        $profile['algorithmVersion']=P50_15C_ALGORITHM_VERSION;
         $profile['lastMetricCalculationAt']=gmdate('c');
         if($coverage>=25&&$confidence>=40){$profile['classable']=true;$profile['eligible']=true;}
         $count++;
     }
     unset($profile);
-    $state['metricEngine']=['version'=>'15C-v1','publishedAt'=>gmdate('c'),'profilesUpdated'=>$count];
+    $state['metricEngine']=['version'=>P50_15C_ALGORITHM_VERSION,'publishedAt'=>gmdate('c'),'profilesUpdated'=>$count];
     db()->prepare("UPDATE app_state SET state_json=?,updated_at=NOW() WHERE id=1")
       ->execute([json_encode($state,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
     return $count;

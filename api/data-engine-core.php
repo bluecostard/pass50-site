@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/http-tools.php';
 require_once __DIR__ . '/profile-tombstone-core.php';
+require_once __DIR__ . '/scoring-15c-core.php';
 
 const P50_DATA_CONFIDENCE_THRESHOLD = 80;
 /** Seuils 15C pour publier un score classable (assouplis : ne plus bloquer ~la moitié de la base). */
@@ -1394,7 +1395,7 @@ function p50_de_15c_window(string $profileId,int $hours): array {
     $windowHours=max(1,min(168,$hours));
     $stmt=db()->prepare("SELECT id,profile_id,platform,event_type,url,published_at,collected_at,metrics,confidence FROM p50_activity_events WHERE profile_id=? AND status='verified' AND confidence>=? AND COALESCE(published_at,collected_at)>=DATE_SUB(NOW(),INTERVAL ? HOUR) ORDER BY COALESCE(published_at,collected_at) ASC");
     $stmt->execute([$profileId,p50_de_threshold(),$windowHours]);$events=p50_de_unique_activity_rows($stmt->fetchAll());$links=p50_de_social_links($profileId,true);
-    $views=$likes=$comments=$shares=$saves=0.0;$latest=0;$platforms=[];$conf=[];$velocities=[];$now=time();$eventWeight=0.0;$freshWeight=0.0;
+    $views=$likes=$comments=$shares=$saves=0.0;$latest=0;$platforms=[];$conf=[];$velocities=[];$followerSamples=[];$liveWeight=0.0;$now=time();$eventWeight=0.0;$freshWeight=0.0;
     foreach($events as $e){
         $m=p50_de_normalize_score_metrics(decode_json_column($e['metrics']??null,[]));
         $ts=strtotime((string)($e['published_at']?:$e['collected_at']))?:0;
@@ -1409,6 +1410,9 @@ function p50_de_15c_window(string $profileId,int $hours): array {
         $extraPlatforms=max(0,(int)($m['platformCount']??0)-1);
         for($i=0;$i<$extraPlatforms;$i++)$platforms['signal_'.$e['id'].'_'.$i]=$timeWeight;
         $conf[]=(int)$e['confidence'];
+        $rawFollowers=(float)($m['followers']??0);
+        if($rawFollowers>0&&$ts>0)$followerSamples[]=['v'=>$rawFollowers,'t'=>$ts];
+        if(p50_15c_is_live_event_type((string)($e['event_type']??'')))$liveWeight+=$timeWeight;
     }
     foreach($links as $l){
         $conf[]=(int)$l['confidence'];
@@ -1425,29 +1429,12 @@ function p50_de_15c_window(string $profileId,int $hours): array {
         $weight=$ts?p50_de_time_weight(max(0,($now-$ts)/3600)):0;
         $followers=max($followers,(float)($m['followers']??0)*$weight);
     }
-    $engagement=$views>0?($likes+3*$comments+5*$shares+4*$saves)/$views:null;
-    $shareRate=$views>0?($shares+$saves)/$views:null;
-    $velocity=$velocities?array_sum($velocities)/count($velocities):null;
     $freshHours=$latest?max(0,($now-$latest)/3600):null;
-    $raw=[
-      'c1'=>$followers>0?log10(1+$followers):null,
-      'c2'=>$views>0?log10(1+$views):null,
-      'c3'=>null,
-      'c4'=>$engagement,
-      'c5'=>$shareRate,
-      'c6'=>$comments>0?log10(1+$comments):null,
-      'c7'=>$velocity!==null?log10(1+$velocity):null,
-      'c8'=>$platforms?array_sum($platforms):null,
-      'c9'=>$shares>0?log10(1+$shares):null,
-      'c10'=>null,'c11'=>null,'c12'=>null,
-      'c13'=>$eventWeight>0?$eventWeight:null,
-      'c14'=>($views>0&&($likes+$comments+$shares)>0)?max(0,min(100,70+min(25,log10(1+$views)*3)-min(20,abs(($likes+$comments+$shares)/max(1,$views)-0.08)*100))):null,
-      'c15'=>$shares>0?log10(1+$shares):null,
-    ];
-    $weights=['c1'=>.06,'c2'=>.08,'c3'=>.07,'c4'=>.08,'c5'=>.09,'c6'=>.05,'c7'=>.10,'c8'=>.08,'c9'=>.06,'c10'=>.06,'c11'=>.05,'c12'=>.04,'c13'=>.04,'c14'=>.07,'c15'=>.07];
-    $scores=[];$sum=0.0;$available=0.0;
-    foreach($raw as $k=>$v){if($v===null||!is_finite((float)$v))continue;$x=(float)$v;$score=match($k){'c2','c6','c7','c9','c15'=>max(0,min(100,20+$x*16)),'c4'=>max(0,min(100,$x*500)),'c5'=>max(0,min(100,$x*1000)),'c8'=>max(0,min(100,$x*20)),'c13'=>max(0,min(100,$x*8)),'c14'=>max(0,min(100,$x)),default=>max(0,min(100,50+$x*10))};$scores[$k]=round($score,2);$sum+=$score*$weights[$k];$available+=$weights[$k];}
-    $base=$available>0?$sum/$available:0;$coverage=$available*100;$confidenceSource=$conf?(array_sum($conf)/count($conf)):0;$fresh=$freshWeight*100;$confidence=.5*($coverage/100)+.3*($fresh/100)+.2*($confidenceSource/100);$score=max(0,min(100,$base*(.75+.25*$confidence)));
+    $platformSum=$platforms?array_sum($platforms):null;
+    $raw=p50_15c_build_raw($followers,$views,$likes,$comments,$shares,$saves,$platformSum,$eventWeight,$velocities,$followerSamples,$liveWeight);
+    $scored=p50_15c_score_raw($raw);
+    $scores=$scored['scores'];$base=$scored['base'];$coverage=$scored['coverage'];
+    $confidenceSource=$conf?(array_sum($conf)/count($conf)):0;$fresh=$freshWeight*100;$confidence=.5*($coverage/100)+.3*($fresh/100)+.2*($confidenceSource/100);$score=max(0,min(100,$base*(.75+.25*$confidence)));
     arsort($scores);$top=array_slice(array_keys($scores),0,3);
     return ['score'=>(int)round($score),'baseScore'=>round($base,2),'confidence'=>(int)round($confidence*100),'coverage'=>round($coverage,2),'criteria'=>$scores,'raw'=>$raw,'measuredCriteria'=>count($scores),'topCriteria'=>$top,'events'=>count($events),'platforms'=>array_keys($platforms),'latestAt'=>$latest?gmdate('c',$latest):null,'freshHours'=>$freshHours,'freshWeight'=>$freshWeight];
 }
@@ -1672,7 +1659,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
             'autoBioValue'=>$autoBioValue,
             'autoCategoryValue'=>$autoCategoryValue,
             'autoScore'=>(bool)$trend['classable'],'scoreStatus'=>$trend['classable']?'recalculated':'not_recalculated','scoresPreserved'=>!$trend['classable'],'scoreUpdated'=>$scoreUpdated,'previousScores'=>$previousScores,
-            'trend'=>$trend,'algorithmVersion'=>'15C-v1','dataConfidence'=>(int)($trend['confidence']??0),'measuredCoverage'=>(float)($trend['coverage']??0),'measuredCriteria'=>(int)($trend['measuredCriteria']??0),
+            'trend'=>$trend,'algorithmVersion'=>P50_15C_ALGORITHM_VERSION,'dataConfidence'=>(int)($trend['confidence']??0),'measuredCoverage'=>(float)($trend['coverage']??0),'measuredCriteria'=>(int)($trend['measuredCriteria']??0),
             'priorityWave'=>p50_de_is_priority_profile($profileId)?'V22-16':'',
         ];
         $changed=true;
