@@ -29,8 +29,8 @@ class ProfilePhotoChartV1Tests(unittest.TestCase):
         self.assertIn("p50BarGrow", INDEX)
 
     def test_loader_cache_is_bumped(self):
-        self.assertIn("v9-tools.js?v=15.19", INDEX)
-        self.assertIn("v9-tools.js?v=15.19", SW)
+        self.assertIn("v9-tools.js?v=15.20", INDEX)
+        self.assertIn("v9-tools.js?v=15.20", SW)
 
 
 if __name__ == "__main__":
