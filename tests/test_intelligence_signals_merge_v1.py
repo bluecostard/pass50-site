@@ -52,7 +52,8 @@ class IntelligenceSignalsMergeV1Test(unittest.TestCase):
         self.assertNotIn("metrics-ranking-publication", CORE)
         self.assertIn("source_type='activity' AND reviewed_at IS NULL", CORE)
         self.assertIn("'status'=>'pending'", CORE)
-        self.assertIn("p50_is_import_live_streams", CORE)
+        self.assertIn("p50_is_profile_public_score", CORE)
+        self.assertIn("official_socials", CORE)
         self.assertIn("Classement public", UI)
 
     def test_unranked_activity_does_not_invent_buzz(self):

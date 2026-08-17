@@ -24,6 +24,14 @@ observed_must(($ranking['census-african-ryou']['rank'] ?? 0) === 1, 'African Ryo
 observed_must(($ranking['census-ahou-lafricaine']['rank'] ?? 0) === 2, 'Ahou L’Africaine doit être 2e sur le score public.');
 observed_must(!isset($ranking['census-axel-tresor']), 'Axel Trésor à 0 ne doit pas entrer au classement Intelligence.');
 
+$lower = p50_is_public_ranking_index([
+    'profiles' => [['id' => 'census-ahou-lafricaine', 'name' => "Ahou L’Africaine", 'alive' => true, 'scores' => ['24h' => 71]]],
+], '24H');
+observed_must(($lower['census-ahou-lafricaine']['score'] ?? 0) === 71.0, 'Le score public 24h doit aussi être lu.');
+
+$officialOnly = p50_is_profile_official_platforms(['official_socials' => ['TikTok' => 'https://www.tiktok.com/@axel'], 'links' => []]);
+observed_must(in_array('TikTok', $officialOnly, true), 'Les comptes officiels recensés doivent apparaître même sans links.');
+
 $empty = ['fresh' => true, 'sufficientData' => false, 'buzzIndex' => 0, 'growthIndex' => 0, 'globalVariation' => 0.0];
 $scraped = [[
     'status' => 'validated', 'platforms' => ['TikTok'], 'signalScore' => 59,

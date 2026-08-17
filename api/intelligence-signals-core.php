@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__.'/intelligence-core.php';
 require_once __DIR__.'/intelligence-dashboard-v2.php';
 
-const P50_INTELLIGENCE_SIGNALS_V1='PASS50-INTELLIGENCE-SIGNALS-V1.1';
+const P50_INTELLIGENCE_SIGNALS_V1='PASS50-INTELLIGENCE-SIGNALS-V1.2';
 
 function p50_is_ensure_schema(): void {
     static $done=false;
@@ -243,6 +243,22 @@ function p50_is_import_live_streams(array $currentIds,int $days=7): int {
     return $count;
 }
 
+function p50_is_profile_public_score(array $profile,string $period='24H'): array {
+    $wanted=['2H','24H','48H','7J','15J'];
+    if(!in_array($period,$wanted,true))$period='24H';
+    $scores=is_array($profile['scores']??null)?$profile['scores']:[];
+    $aliases=[$period,strtolower($period),str_replace('J','d',$period),strtolower(str_replace('J','d',$period))];
+    foreach($aliases as $key){
+        if(!array_key_exists($key,$scores))continue;
+        if(!is_numeric($scores[$key])||(float)$scores[$key]<=0)continue;
+        return ['score'=>(float)$scores[$key],'period'=>$period];
+    }
+    if(is_numeric($profile['score']??null)&&(float)$profile['score']>0){
+        return ['score'=>(float)$profile['score'],'period'=>$period];
+    }
+    return ['score'=>0.0,'period'=>$period];
+}
+
 function p50_is_public_ranking_index(array $state,string $period='24H'): array {
     $wanted=['2H','24H','48H','7J','15J'];
     if(!in_array($period,$wanted,true))$period='24H';
@@ -252,9 +268,9 @@ function p50_is_public_ranking_index(array $state,string $period='24H'): array {
         $profileId=trim((string)($profile['id']??''));
         if($profileId==='')continue;
         if(array_key_exists('alive',$profile)&&empty($profile['alive']))continue;
-        $score=$profile['scores'][$period]??null;
-        if(!is_numeric($score)||(float)$score<=0)continue;
-        $scored[]=['profileId'=>$profileId,'name'=>(string)($profile['name']??$profileId),'score'=>(float)$score,'period'=>$period];
+        $resolved=p50_is_profile_public_score($profile,$period);
+        if($resolved['score']<=0)continue;
+        $scored[]=['profileId'=>$profileId,'name'=>(string)($profile['name']??$profileId),'score'=>$resolved['score'],'period'=>$resolved['period']];
     }
     usort($scored,static fn($a,$b)=>$b['score']<=>$a['score']?:strcmp($a['name'],$b['name'])?:strcmp($a['profileId'],$b['profileId']));
     $index=[];
@@ -264,10 +280,17 @@ function p50_is_public_ranking_index(array $state,string $period='24H'): array {
 
 function p50_is_profile_official_platforms(array $profile): array {
     $out=[];
-    foreach((array)($profile['links']??[]) as $platform=>$url){
-        if(trim((string)$url)==='')continue;
-        $name=trim((string)$platform);
-        if($name!=='')$out[$name]=true;
+    foreach(['links','official_socials','socials'] as $field){
+        foreach((array)($profile[$field]??[]) as $platform=>$url){
+            if(is_int($platform)||is_numeric($platform)){
+                $name=trim((string)$url);
+                if($name!=='')$out[$name]=true;
+                continue;
+            }
+            if(trim((string)$url)==='')continue;
+            $name=trim((string)$platform);
+            if($name!=='')$out[$name]=true;
+        }
     }
     foreach((array)($profile['platforms']??[]) as $platform){
         $name=trim((string)$platform);
@@ -288,7 +311,7 @@ function p50_is_official_platforms_map(array $state): array {
         return $map;
     }
     try{
-        $stmt=db()->query("SELECT profile_id,platform FROM p50_social_links WHERE status IN ('verified','ok','manual_verified','owner_verified') AND platform<>'' LIMIT 4000");
+        $stmt=db()->query("SELECT profile_id,platform FROM p50_social_links WHERE status IN ('verified','ok','manual_verified','owner_verified','confirmed','locked') AND platform<>'' LIMIT 4000");
         foreach($stmt->fetchAll() as $row){
             $id=(string)($row['profile_id']??'');
             $platform=trim((string)($row['platform']??''));
@@ -393,14 +416,14 @@ function p50_is_profile_aggregate(array $profile,array $signals,array $context=[
         $isActivity=$source==='activity';
         $isManual=in_array($source,['manual_state','manual_admin'],true);
         $isValidated=($signal['status']??'')==='validated';
-        foreach((array)($signal['platforms']??[]) as $platform){
-            $name=trim((string)$platform);
-            if($name!=='')$platforms[$name]=true;
-        }
         $timestamp=strtotime((string)($signal['occurredAt']??''));
         if($timestamp!==false&&$timestamp>=time()-86400)$recent++;
         $countsForFusion=$isLive||($isManual&&$isValidated)||($isActivity&&$isValidated&&($ranked||$hasLive));
         if(!$countsForFusion)continue;
+        foreach((array)($signal['platforms']??[]) as $platform){
+            $name=trim((string)$platform);
+            if($name!=='')$platforms[$name]=true;
+        }
         if($isValidated)$validated++;
         $scores[]=(int)($signal['signalScore']??0);
         $displaySignals[]=$signal;

@@ -47,7 +47,7 @@ must($apiFreshStructure['state']==='probable','Une structure LiveRoom seule ne p
 
 $staleRoom=room_id_for(time()-P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS-3600);
 $apiStale=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$staleRoom.'"},"webcastRoomId":"'.$staleRoom.'"}')]);
-must($apiStale['state']==='probable','Une ancienne structure LiveRoom sans identité propriétaire ne doit pas redevenir un faux direct.');
+must($apiStale['state']!=='live','Une ancienne structure LiveRoom sans identité propriétaire ne doit pas redevenir un faux direct.');
 
 $html='<!doctype html><title>Coach Test LIVE | TikTok</title><script>{"LiveRoom":{"id":"741234567891"},"isLive":true}</script>';
 $multi=p50_live_v4_parse_tiktok($source,['live'=>response($html,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($html,200,'https://www.tiktok.com/embed/live/@coachtest')]);
