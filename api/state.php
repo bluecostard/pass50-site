@@ -136,10 +136,14 @@ if ($_SERVER['REQUEST_METHOD']==='GET') {
     $data=$row?json_decode((string)$row['data'],true):null;
     $protection=['removed'=>0,'restored'=>0,'protected'=>0];
     $classabilityRestored=0;
+    $tombstonesApplied=0;
     if(is_array($data)){
         $protection=p50_state_v4_protect_links($data,$data);
         $classabilityRestored=p50_de_restore_scored_classability($data);
-        if($classabilityRestored>0){
+        $beforeTombstones=json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        $tombstonesApplied=count(p50_apply_profile_tombstones($data));
+        $afterTombstones=json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        if($classabilityRestored>0||$beforeTombstones!==$afterTombstones){
             try{
                 $data['stateRevision']=max(0,(int)($data['stateRevision']??0))+1;
                 $write=db()->prepare("UPDATE app_state SET data=?,updated_at=NOW() WHERE id='public'");
@@ -157,6 +161,7 @@ if ($_SERVER['REQUEST_METHOD']==='GET') {
         'linkProtectionVersion'=>P50_STATE_LINK_PROTECTION_VERSION,
         'linkProtection'=>$protection,
         'scoredClassabilityRestored'=>$classabilityRestored,
+        'tombstonesApplied'=>$tombstonesApplied,
     ]);
 }
 
@@ -186,6 +191,11 @@ try {
     }
 
     $protection=p50_state_v4_protect_links($data,$current);
+    $data['deletedProfileIds']=array_values(array_merge(
+        (array)($current['deletedProfileIds']??[]),
+        (array)($data['deletedProfileIds']??[])
+    ));
+    p50_apply_profile_tombstones($data);
     $incoming=$data;
     $incoming['stateRevision']=$currentRevision;
     $currentComparable=$current;

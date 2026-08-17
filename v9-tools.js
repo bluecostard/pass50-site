@@ -410,7 +410,7 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
   };
 
   const oldAdminRows=adminProfileRows;
-  adminProfileRows=function(list){return list.filter(p=>p.alive!==false&&!p.adminDeleted).map(p=>{const m=p50RankMeta(p);const removed=!p.alive||p.adminDeleted;return `<tr data-admin-profile-name="${safeAttr(p.name.toLowerCase())}" class="${removed?'is-removed':''}"><td><div class="admin-profile-name"><strong>${p.name}</strong>${m.top50?'<span class="top50-marker">TOP 50</span>':''}${removed?' <span class="muted">(retiré)</span>':''}</div><div class="muted">${m.rank?'#'+m.rank+' · ':''}${p.handle}</div></td><td>${p.region}</td><td>${score(p)}</td><td>${p.eligible&&p.alive?'Oui':'Non'}</td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small edit-profile" data-id="${p.id}">Modifier</button>${removed?`<button class="btn small restore-profile" data-id="${p.id}">Restaurer</button>`:`<button class="btn small danger delete-profile" data-id="${p.id}">Supprimer</button>`}</td></tr>`}).join('')};
+  adminProfileRows=function(list){return list.filter(p=>p.alive!==false&&!p.adminDeleted&&(typeof p50IsDeletedProfileId!=='function'||!p50IsDeletedProfileId(p.id))).map(p=>{const m=p50RankMeta(p);const removed=!p.alive||p.adminDeleted;return `<tr data-admin-profile-name="${safeAttr(p.name.toLowerCase())}" class="${removed?'is-removed':''}"><td><div class="admin-profile-name"><strong>${p.name}</strong>${m.top50?'<span class="top50-marker">TOP 50</span>':''}${removed?' <span class="muted">(retiré)</span>':''}</div><div class="muted">${m.rank?'#'+m.rank+' · ':''}${p.handle}</div></td><td>${p.region}</td><td>${score(p)}</td><td>${p.eligible&&p.alive?'Oui':'Non'}</td><td style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small edit-profile" data-id="${p.id}">Modifier</button>${removed?`<button class="btn small restore-profile" data-id="${p.id}">Restaurer</button>`:`<button class="btn small danger delete-profile" data-id="${p.id}">Supprimer</button>`}</td></tr>`}).join('')};
 
   document.addEventListener('change',e=>{
     if(e.target.id==='linksProfileSelect'){PASS50_V9.linksProfileId=e.target.value;p50v9RenderLinks();}
@@ -523,8 +523,8 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.13';
-  const CENSUS_VERSION='99-v30';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.14';
+  const CENSUS_VERSION='99-v31';
   let importing=false;
 
   function p50CensusNormalize(value=''){
@@ -601,6 +601,7 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
   function p50CensusMerge(candidates){
     if(!Array.isArray(candidates))throw new Error('Format du recensement invalide');
     db.profiles=Array.isArray(db.profiles)?db.profiles:[];
+    if(typeof p50ApplyProfileTombstones==='function')p50ApplyProfileTombstones();
 
     // Correction définitive de l'identité Cadic dans les anciennes bases locales/cloud.
     db.profiles.forEach(profileItem=>{
@@ -623,6 +624,10 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
       const name=p50CensusNormalize(candidate?.name);
       const handle=p50CensusNormalize(p50CensusHandle(candidate));
       const aliases=String(candidate?.known_alias||'').split(/[\/·,;|]/).map(p50CensusNormalize).filter(Boolean);
+      if(typeof p50IsDeletedProfileId==='function'&&(p50IsDeletedProfileId(id)||p50IsDeletedProfileId(candidate?.id))){
+        skipped++;
+        return;
+      }
       const aliasConflict=aliases.some(alias=>existingNames.has(alias)||existingHandles.has(alias));
       if((id&&existingIds.has(id))||(name&&existingNames.has(name))||(handle&&existingHandles.has(handle))||aliasConflict){
         const current=db.profiles.find(p=>

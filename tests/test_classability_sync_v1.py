@@ -198,7 +198,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("PASS50_CLASSABILITY_DIAGNOSTIC", SYNC)
 
     def test_public_rule_binding_is_replaced_directly(self):
-        self.assertIn("function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&hasPeriodScore(p);}", INDEX)
+        self.assertIn("function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&!p50IsDeletedProfileId(p&&p.id)&&hasPeriodScore(p);}", INDEX)
         self.assertNotIn("function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false&&hasPeriodScore(p);}", INDEX)
         self.assertIn("const scoreCell=hasScore||classable?formatTrendScore(score(p)):'À vérifier'", INDEX)
         self.assertIn("isClassableProfile = authoritativeIsClassableProfile", SYNC)
@@ -210,10 +210,10 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("published_mr_v1", SYNC)
 
     def test_loader_and_cache_are_versioned(self):
-        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.6", SYNC)
-        self.assertIn("classability-sync-v1.js?v=1.6", LOADER)
+        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.7", SYNC)
+        self.assertIn("classability-sync-v1.js?v=1.7", LOADER)
         self.assertIn("data-pass50-classability-sync", LOADER)
-        self.assertIn("classability-sync-v1.js?v=1.6", SW)
+        self.assertIn("classability-sync-v1.js?v=1.7", SW)
         self.assertIn("pass50-v73-keep-official-links", SW)
         self.assertIn("PASS50_LINK_SAVE_RUNNING", SYNC)
         self.assertNotIn("repairAll({ forceRender: true }), 80", SYNC)

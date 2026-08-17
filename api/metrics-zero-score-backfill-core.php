@@ -23,6 +23,7 @@ function p50_mzb_zero_profile_ids(array $state,string $anchor='24H'): array {
     $ids=[];
     foreach((array)($state['profiles']??[]) as $profile){
         if(!is_array($profile)||empty($profile['id']))continue;
+        if(p50_is_tombstoned_profile_id($profile['id'],$state))continue;
         $scores=is_array($profile['scores']??null)?$profile['scores']:[];
         if(p50_mzb_score_missing($scores[$anchor]??null))$ids[]=(string)$profile['id'];
     }

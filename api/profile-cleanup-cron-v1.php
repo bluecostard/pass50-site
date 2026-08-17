@@ -5,7 +5,7 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/data-engine-core.php';
 
-const P50_PROFILE_CLEANUP_VERSION='PROFILE-CLEANUP-V1.0';
+const P50_PROFILE_CLEANUP_VERSION='PROFILE-CLEANUP-V2.0';
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $raw=file_get_contents('php://input');
@@ -20,16 +20,6 @@ $input=json_decode($raw,true);if(!is_array($input))json_response(['error'=>'JSON
 $dispatchId=trim((string)($input['dispatchId']??''));
 if($dispatchId===''||strlen($dispatchId)>120||!preg_match('/^[A-Za-z0-9._-]+$/',$dispatchId))json_response(['error'=>'dispatchId invalide.'],422);
 
-$deleteIds=[
- 'census-henri-michel',
- 'census-jai-horreur-des-fautes-lofficiel',
- 'census-le-brouteur',
- 'census-les-adresses-de-chez-nous',
- 'census-oustaz-diakite-yaya',
- 'census-sheisthecode',
- 'census-simon-adingra',
- 'census-epouse-gnahore',
-];
 $keepId='census-reine-a';
 $reineInstagram='https://www.instagram.com/cacaoispoppin/';
 
@@ -37,14 +27,8 @@ $pdo=db();p50_de_ensure_schema();
 $pdo->beginTransaction();
 try{
     $state=p50_de_load_public_state_for_update();if(!$state)throw new RuntimeException('État public introuvable.');
-    $profiles=is_array($state['profiles']??null)?$state['profiles']:[];
-    $deleted=[];$keptUpdated=false;
-    $state['profiles']=array_values(array_filter($profiles,function($profile)use($deleteIds,&$deleted,$keepId,$reineInstagram,&$keptUpdated){
-        if(!is_array($profile)||empty($profile['id']))return true;
-        $id=(string)$profile['id'];
-        if(in_array($id,$deleteIds,true)){$deleted[]=['id'=>$id,'name'=>(string)($profile['name']??$id)];return false;}
-        return true;
-    }));
+    $removed=p50_apply_profile_tombstones($state);
+    $keptUpdated=false;
     foreach($state['profiles'] as &$profile){
         if((string)($profile['id']??'')!==$keepId)continue;
         $profile['links']=is_array($profile['links']??null)?$profile['links']:[];
@@ -55,13 +39,40 @@ try{
         $keptUpdated=true;
     }
     unset($profile);
-    foreach(['content','events','signals','liveStreams'] as $key){
-        if(!is_array($state[$key]??null))continue;
-        $state[$key]=array_values(array_filter($state[$key],static fn($row)=>!is_array($row)||!in_array((string)($row['profileId']??''),$deleteIds,true)));
+    $remainingDeleted=0;
+    $tombstoneIds=p50_tombstone_ids($state);
+    $tombstoneMap=array_fill_keys($tombstoneIds,true);
+    foreach((array)($state['profiles']??[]) as $profile){
+        if(is_array($profile)&&isset($tombstoneMap[p50_normalize_profile_id($profile['id']??'')]))$remainingDeleted++;
+    }
+    if($tombstoneIds){
+        try{
+            $placeholders=implode(',',array_fill(0,count($tombstoneIds),'?'));
+            $pdo->prepare("UPDATE p50_profile_registry SET alive=0,eligible=0 WHERE profile_id IN ($placeholders)")->execute($tombstoneIds);
+        }catch(Throwable $ignored){}
     }
     $state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
-    $state['profileCleanup']=['version'=>P50_PROFILE_CLEANUP_VERSION,'updatedAt'=>gmdate(DATE_ATOM),'deleted'=>$deleted,'keptAndCompleted'=>['id'=>$keepId,'name'=>'Reine A.','Instagram'=>$reineInstagram]];
+    $state['profileCleanup']=[
+        'version'=>P50_PROFILE_CLEANUP_VERSION,
+        'updatedAt'=>gmdate(DATE_ATOM),
+        'deleted'=>$removed,
+        'tombstoneIds'=>$tombstoneIds,
+        'keptAndCompleted'=>['id'=>$keepId,'name'=>'Reine A.','Instagram'=>$reineInstagram],
+    ];
     p50_de_save_public_state($state,null,false);
     $pdo->commit();
-    json_response(['ok'=>true,'version'=>P50_PROFILE_CLEANUP_VERSION,'dispatchId'=>$dispatchId,'deletedCount'=>count($deleted),'deleted'=>$deleted,'keptUpdated'=>$keptUpdated,'kept'=>['id'=>$keepId,'name'=>'Reine A.','Instagram'=>$reineInstagram],'profilesRemaining'=>count($state['profiles']),'publicStateWrites'=>1]);
+    json_response([
+        'ok'=>true,
+        'version'=>P50_PROFILE_CLEANUP_VERSION,
+        'dispatchId'=>$dispatchId,
+        'deletedCount'=>count($removed),
+        'deleted'=>$removed,
+        'tombstoneCount'=>count($tombstoneIds),
+        'tombstoneIds'=>$tombstoneIds,
+        'remainingDeletedCount'=>$remainingDeleted,
+        'keptUpdated'=>$keptUpdated,
+        'kept'=>['id'=>$keepId,'name'=>'Reine A.','Instagram'=>$reineInstagram],
+        'profilesRemaining'=>count($state['profiles']),
+        'publicStateWrites'=>1,
+    ]);
 }catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();json_response(['error'=>'Suppression interrompue.','detail'=>$error->getMessage()],500);}

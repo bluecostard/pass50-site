@@ -31,11 +31,18 @@ $pdo=db();$pdo->exec("CREATE TABLE IF NOT EXISTS p50_profile_purge_backups (id B
 try{
  $stmt=$pdo->query("SELECT data FROM app_state WHERE id='public' LIMIT 1 FOR UPDATE");$rawState=$stmt->fetchColumn();
  $state=$rawState?json_decode((string)$rawState,true):null;if(!is_array($state))throw new RuntimeException('État public invalide.');
- $removed=[];foreach((array)($state['profiles']??[]) as $profile)if(is_array($profile)&&(!empty($profile['adminDeleted'])||(array_key_exists('alive',$profile)&&$profile['alive']===false))){$id=trim((string)($profile['id']??''));if($id!=='')$removed[$id]=(string)($profile['name']??$id);}
+ $removed=[];foreach((array)($state['profiles']??[]) as $profile){
+  if(!is_array($profile))continue;
+  $id=p50_normalize_profile_id($profile['id']??'');
+  if($id==='')continue;
+  $tombstoned=p50_is_tombstoned_profile_id($id,$state);
+  if($tombstoned||!empty($profile['adminDeleted'])||(array_key_exists('alive',$profile)&&$profile['alive']===false))$removed[$id]=(string)($profile['name']??$id);
+ }
+ $state['deletedProfileIds']=p50_tombstone_ids($state);
  if(!$removed){$pdo->commit();json_response(['ok'=>true,'contract'=>P50_PROFILE_PURGE_CONTRACT,'action'=>'purge','purgedCount'=>0,'purgedProfiles'=>[],'stateRevision'=>(int)($state['stateRevision']??0)]);}
  
  $pdo->prepare('INSERT INTO p50_profile_purge_backups(dispatch_id,removed_profiles_json,state_json) VALUES(?,?,?)')->execute([$dispatchId,json_encode($removed,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$rawState]);
- $clean=p50_purge_state_value($state,array_fill_keys(array_keys($removed),true));$clean['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$clean['publishedAt']=gmdate('c');
+ $clean=p50_purge_state_value($state,array_fill_keys(array_keys($removed),true));$clean['deletedProfileIds']=p50_tombstone_ids($state);$clean['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;$clean['publishedAt']=gmdate('c');
  $pdo->prepare("UPDATE app_state SET data=?,updated_by=NULL,updated_at=NOW() WHERE id='public'")->execute([json_encode($clean,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
  $pdo->commit();$items=[];foreach($removed as $id=>$name)$items[]=['id'=>$id,'name'=>$name];
  json_response(['ok'=>true,'contract'=>P50_PROFILE_PURGE_CONTRACT,'action'=>'purge','purgedCount'=>count($items),'purgedProfiles'=>$items,'stateRevision'=>$clean['stateRevision']]);

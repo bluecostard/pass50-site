@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__.'/metrics-ranking-core.php';
+require_once __DIR__.'/profile-tombstone-core.php';
 
 const P50_MRP_SIMULATION_VERSION='PUBSIM-V1.1';
 const P50_MRP_MAX_RUN_AGE_HOURS=6;
@@ -44,7 +45,9 @@ function p50_mrp_public_profile_index(array $state): array {
 
 function p50_mrp_public_rows(array $state,string $period): array {
     $period=p50_mrp_period($period);$profileIndex=p50_mrp_public_profile_index($state);$rankable=[];
+    $tombstoned=array_fill_keys(p50_tombstone_ids($state),true);
     foreach($profileIndex['profiles'] as $profileId=>$profile){
+        if(isset($tombstoned[p50_normalize_profile_id($profileId)]))continue;
         if(array_key_exists('alive',$profile)&&empty($profile['alive']))continue;
         $score=$profile['scores'][$period]??null;
         if(!is_int($score)&&!is_float($score)&&!is_numeric($score))continue;
@@ -186,6 +189,8 @@ function p50_mrp_simulate(PDO $pdo,string $period='2H',int $limit=200,?DateTimeI
     $period=p50_mrp_period($period);$limit=max(1,min(500,$limit));$now=$now??new DateTimeImmutable('now',new DateTimeZone('UTC'));
     $publicEnvelope=p50_mrp_public_state($pdo);$state=$publicEnvelope['state'];$public=p50_mrp_public_rows($state,$period);
     $experimental=p50_mrp_experimental_rows($pdo,$period);$latestRun=p50_mrp_latest_successful_run($pdo,$period);
+    $tombstoned=array_fill_keys(p50_tombstone_ids($state),true);
+    $experimental['rows']=array_values(array_filter($experimental['rows'],static fn($row)=>!isset($tombstoned[p50_normalize_profile_id($row['profileId']??'')])));
     $comparison=p50_mrp_compare($public['rows'],$experimental['rows']);
     $orphans=[];foreach($comparison['candidateRows'] as $row)if(!isset($public['profileIndex'][(string)$row['profileId']]))$orphans[]=(string)$row['profileId'];
     $runAgeHours=null;

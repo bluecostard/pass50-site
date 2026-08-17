@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-public-copy]')) return;
   var script = document.createElement('script');
-  script.src = './public-copy-fixes.js?v=1.10';
+  script.src = './public-copy-fixes.js?v=1.11';
   script.dataset.pass50PublicCopy = '1.9';
   document.head.appendChild(script);
 })();
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-obre-marie-pascale]')) return;
   var script = document.createElement('script');
-  script.src = './profile-obre-marie-pascale.js?v=1.1';
+  script.src = './profile-obre-marie-pascale.js?v=1.2';
   script.dataset.pass50ProfileObreMariePascale = '1.1';
   document.head.appendChild(script);
 })();

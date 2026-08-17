@@ -40,7 +40,7 @@ class CensusOverlayPreservesScoresV1Tests(unittest.TestCase):
         for src in (
             "profile-kawaii-nanami.js?v=1.1",
             "profile-ennemi-des-djandjou.js?v=1.1",
-            "profile-obre-marie-pascale.js?v=1.1",
+            "profile-obre-marie-pascale.js?v=1.2",
         ):
             self.assertIn(src, app)
             self.assertIn(src, sw)

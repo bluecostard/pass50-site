@@ -61,6 +61,21 @@ function baseProfile(){
 function applyProfile(){
   if(typeof db==='undefined'||!Array.isArray(db.profiles))return false;
 
+  const tombstoned=typeof p50IsDeletedProfileId==='function'
+    ?p50IsDeletedProfileId(PROFILE_ID)
+    :((window.P50_TOMBSTONE_PROFILE_IDS||[]).concat(Array.isArray(db.deletedProfileIds)?db.deletedProfileIds:[]).map(id=>String(id||'').toLowerCase()).includes(PROFILE_ID));
+  if(tombstoned){
+    const before=db.profiles.length;
+    db.profiles=db.profiles.filter(item=>item&&item.id!==PROFILE_ID);
+    if(db.profiles.length!==before){
+      try{
+        if(typeof save==='function')save();
+        else if(typeof APP_KEY!=='undefined')localStorage.setItem(APP_KEY,JSON.stringify(db));
+      }catch{}
+    }
+    return true;
+  }
+
   let profile=db.profiles.find(item=>{
     const name=String(item&&item.name||'').toLowerCase();
     const handle=String(item&&item.handle||'').toLowerCase();

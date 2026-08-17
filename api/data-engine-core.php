@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/http-tools.php';
+require_once __DIR__ . '/profile-tombstone-core.php';
 
 const P50_DATA_CONFIDENCE_THRESHOLD = 80;
 /** Seuils 15C pour publier un score classable (assouplis : ne plus bloquer ~la moitié de la base). */
@@ -33,8 +34,10 @@ function p50_de_profile_has_published_score(array $profile): bool {
 
 function p50_de_restore_scored_classability(array &$state): int {
     $restored = 0;
+    $tombstoned = array_fill_keys(p50_tombstone_ids($state), true);
     foreach (($state['profiles'] ?? []) as &$profile) {
         if (!is_array($profile)) continue;
+        if (isset($tombstoned[p50_normalize_profile_id($profile['id'] ?? '')])) continue;
         if (array_key_exists('alive', $profile) && empty($profile['alive'])) continue;
         if (!p50_de_profile_has_published_score($profile)) continue;
         $changed = false;
@@ -295,6 +298,7 @@ function p50_de_load_public_state(): array {
 }
 
 function p50_de_save_public_state(array $state, ?string $userId = null, bool $incrementRevision = true): void {
+    p50_apply_profile_tombstones($state);
     if($incrementRevision)$state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
     $stmt = db()->prepare("INSERT INTO app_state(id,data,updated_by) VALUES('public',?,?) ON DUPLICATE KEY UPDATE data=VALUES(data),updated_by=VALUES(updated_by),updated_at=NOW()");
     $stmt->execute([json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $userId]);
