@@ -19,18 +19,18 @@ class ProfilePhotoChartV1Tests(unittest.TestCase):
         self.assertIn("p50=", INDEX)
         self.assertIn("return raw?photoCacheBust(raw,p):''", INDEX)
 
-    def test_chart_uses_real_period_scores_not_decoration(self):
+    def test_chart_uses_twelve_decorative_bars_with_animation(self):
         self.assertIn("function p50ProfileChartHtml(p)", INDEX)
-        self.assertIn("Score PASS50 par période", INDEX)
+        self.assertIn("[31,38,42,36,51,59,63,70,66,79,85,score(p)]", INDEX)
         self.assertIn("${p50ProfileChartHtml(p)}", INDEX)
         self.assertIn("${p50ProfileChartHtml(p)}", V9)
-        self.assertNotIn("[31,38,42,36,51,59,63,70,66,79,85,score(p)]", INDEX)
-        self.assertNotIn("[31,38,42,36,51,59,63,70,66,79,85,score(p)]", V9)
+        self.assertNotIn("Score PASS50 par période", INDEX)
         self.assertIn("p50BarGrow", INDEX)
+        self.assertIn("--bar-delay:${i*45}ms", INDEX)
 
     def test_loader_cache_is_bumped(self):
-        self.assertIn("v9-tools.js?v=15.20", INDEX)
-        self.assertIn("v9-tools.js?v=15.20", SW)
+        self.assertIn("v9-tools.js?v=15.21", INDEX)
+        self.assertIn("v9-tools.js?v=15.21", SW)
 
 
 if __name__ == "__main__":

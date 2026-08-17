@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
 
-const P50_TRIGGER_SYNC_VERSION = 'PASS50-TRIGGER-SYNC-V1.0';
-const P50_TRIGGER_AUTO_MAX_AGE_SECONDS = 72 * 3600;
+const P50_TRIGGER_SYNC_VERSION = 'PASS50-TRIGGER-SYNC-V1.1';
+const P50_TRIGGER_AUTO_MAX_AGE_SECONDS = 168 * 3600;
 const P50_TRIGGER_MANUAL_MAX_AGE_SECONDS = 7 * 86400;
 
 function p50_trigger_load_public_state(PDO $pdo): ?array {
@@ -82,7 +82,18 @@ function p50_trigger_find_event_index(array $events, string $profileId): ?int {
     return null;
 }
 
-function p50_trigger_latest_official_news(PDO $pdo, string $profileId): ?array {
+function p50_trigger_is_video_type(string $itemType, string $platform = ''): bool {
+    if (preg_match('/video|reel|live|short/u', strtolower($itemType)) === 1) {
+        return true;
+    }
+
+    return in_array($platform, ['YouTube', 'TikTok'], true);
+}
+
+function p50_trigger_query_news(PDO $pdo, string $profileId, int $hours, bool $videoOnly): ?array {
+    $videoSql = $videoOnly
+        ? " AND (LOWER(n.item_type) REGEXP 'video|reel|live|short' OR n.platform IN ('YouTube','TikTok'))"
+        : '';
     $stmt = $pdo->prepare("SELECT n.platform,n.item_type,n.canonical_url,n.title,n.thumbnail_url,
         n.source_published_at,n.pass50_published_at,n.confidence
       FROM p50_news_items n
@@ -90,13 +101,123 @@ function p50_trigger_latest_official_news(PDO $pdo, string $profileId): ?array {
         AND n.validation_status='published'
         AND n.is_official=1
         AND (n.expires_at IS NULL OR n.expires_at>UTC_TIMESTAMP())
-        AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 72 HOUR)
+        AND COALESCE(n.source_published_at,n.pass50_published_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL ".$hours." HOUR)
+        AND n.canonical_url<>''".$videoSql."
       ORDER BY COALESCE(n.source_published_at,n.pass50_published_at) DESC,n.id DESC
       LIMIT 1");
     $stmt->execute([$profileId]);
     $row = $stmt->fetch();
 
     return is_array($row) ? $row : null;
+}
+
+function p50_trigger_query_metric_content(PDO $pdo, string $profileId, bool $videoOnly): ?array {
+    if (!p50_metrics_table_exists($pdo, 'p50_metric_contents')) {
+        return null;
+    }
+    $videoSql = $videoOnly
+        ? " AND (LOWER(c.content_type) REGEXP 'video|reel|live|short' OR c.platform IN ('YouTube','TikTok'))"
+        : '';
+    $stmt = $pdo->prepare("SELECT c.platform,c.content_type AS item_type,c.canonical_url,c.title,
+        c.published_at AS source_published_at,c.last_seen_at AS pass50_published_at,c.confidence,c.metadata_json,c.platform_content_id
+      FROM p50_metric_contents c
+      JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY c.profile_id
+      WHERE BINARY c.profile_id=BINARY ?
+        AND c.status='active'
+        AND r.alive=1
+        AND c.confidence>=70
+        AND c.canonical_url<>''".$videoSql."
+        AND COALESCE(c.published_at,c.last_seen_at)>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 45 DAY)
+      ORDER BY COALESCE(c.published_at,c.last_seen_at) DESC,c.id DESC
+      LIMIT 1");
+    $stmt->execute([$profileId]);
+    $row = $stmt->fetch();
+    if (!is_array($row)) {
+        return null;
+    }
+    if (trim((string) ($row['thumbnail_url'] ?? '')) === '' && function_exists('p50_ci_thumbnail')) {
+        $metadata = function_exists('p50_ci_decode') ? p50_ci_decode((string) ($row['metadata_json'] ?? '')) : [];
+        $thumb = p50_ci_thumbnail(
+            (string) $row['platform'],
+            (string) $row['canonical_url'],
+            $row['platform_content_id'] !== null ? (string) $row['platform_content_id'] : null,
+            $metadata
+        );
+        if ($thumb) {
+            $row['thumbnail_url'] = $thumb;
+        }
+    }
+    unset($row['metadata_json'], $row['platform_content_id']);
+
+    return $row;
+}
+
+function p50_trigger_query_trend_content(PDO $pdo, string $profileId): ?array {
+    if (!p50_metrics_table_exists($pdo, 'p50_content_trend_current')) {
+        return null;
+    }
+    $stmt = $pdo->prepare("SELECT c.platform,c.content_type AS item_type,c.canonical_url,c.title,
+        c.published_at AS source_published_at,c.last_seen_at AS pass50_published_at,c.confidence,c.metadata_json,c.platform_content_id,
+        n.thumbnail_url
+      FROM p50_content_trend_current t
+      JOIN p50_metric_contents c ON c.id=t.content_id
+      LEFT JOIN p50_news_items n ON n.content_id=c.id AND n.validation_status='published'
+      WHERE BINARY c.profile_id=BINARY ?
+        AND t.period_key='24h'
+        AND c.status='active'
+        AND c.canonical_url<>''
+      ORDER BY t.rank_position ASC
+      LIMIT 1");
+    $stmt->execute([$profileId]);
+    $row = $stmt->fetch();
+    if (!is_array($row)) {
+        return null;
+    }
+    if (trim((string) ($row['thumbnail_url'] ?? '')) === '' && function_exists('p50_ci_thumbnail')) {
+        $metadata = function_exists('p50_ci_decode') ? p50_ci_decode((string) ($row['metadata_json'] ?? '')) : [];
+        $thumb = p50_ci_thumbnail(
+            (string) $row['platform'],
+            (string) $row['canonical_url'],
+            $row['platform_content_id'] !== null ? (string) $row['platform_content_id'] : null,
+            $metadata
+        );
+        if ($thumb) {
+            $row['thumbnail_url'] = $thumb;
+        }
+    }
+    unset($row['metadata_json'], $row['platform_content_id']);
+
+    return $row;
+}
+
+function p50_trigger_latest_content(PDO $pdo, string $profileId): ?array {
+    foreach ([
+        [72, true],
+        [72, false],
+        [168, true],
+        [168, false],
+    ] as [$hours, $videoOnly]) {
+        $row = p50_trigger_query_news($pdo, $profileId, $hours, $videoOnly);
+        if ($row !== null) {
+            return $row;
+        }
+    }
+
+    $row = p50_trigger_query_trend_content($pdo, $profileId);
+    if ($row !== null) {
+        return $row;
+    }
+
+    $row = p50_trigger_query_metric_content($pdo, $profileId, true);
+    if ($row !== null) {
+        return $row;
+    }
+
+    return p50_trigger_query_metric_content($pdo, $profileId, false);
+}
+
+function p50_trigger_latest_official_news(PDO $pdo, string $profileId): ?array {
+    return p50_trigger_latest_content($pdo, $profileId);
 }
 
 function p50_trigger_relative_label(?string $publishedAt): string {
@@ -122,8 +243,7 @@ function p50_trigger_build_event(string $profileId, array $newsRow, array $profi
     $platform = (string) ($newsRow['platform'] ?? 'Web');
     $url = trim((string) ($newsRow['canonical_url'] ?? ''));
     $itemType = strtolower((string) ($newsRow['item_type'] ?? ''));
-    $isVideo = preg_match('/video|reel|live/u', $itemType) === 1
-        || in_array($platform, ['YouTube', 'TikTok', 'Instagram', 'Facebook', 'Snapchat'], true);
+    $isVideo = p50_trigger_is_video_type($itemType, $platform);
     $publishedAt = (string) ($newsRow['source_published_at'] ?? $newsRow['pass50_published_at'] ?? gmdate('Y-m-d H:i:s'));
     $publishedIso = gmdate('c', strtotime($publishedAt . ' UTC') ?: time());
     $title = trim((string) ($newsRow['title'] ?? ''));
@@ -237,11 +357,11 @@ function p50_trigger_sync_top10(PDO $pdo): array {
         $cleared = 0;
 
         foreach ($topIds as $profileId) {
-            $newsRow = p50_trigger_latest_official_news($pdo, $profileId);
+            $newsRow = p50_trigger_latest_content($pdo, $profileId);
             $eventIndex = p50_trigger_find_event_index($events, $profileId);
             $existing = $eventIndex !== null ? $events[$eventIndex] : null;
 
-            if ($newsRow === null) {
+            if ($newsRow === null || trim((string) ($newsRow['canonical_url'] ?? '')) === '') {
                 if (is_array($existing) && !empty($existing['autoSynced']) && p50_trigger_event_is_stale($existing)) {
                     unset($events[$eventIndex]);
                     $events = array_values($events);
