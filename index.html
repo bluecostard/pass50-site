@@ -438,7 +438,7 @@ function hasPeriodScore(p,period=ui.period){
   const value=Number(scores[period]);
   return Number.isFinite(value)&&value>0;
 }
-function isClassableProfile(p){return Boolean(p?.eligible)&&p.classable!==false&&hasPeriodScore(p);}
+function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&hasPeriodScore(p);}
 function ranking(){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));}
 function completeRanking(){
   const visible=db.profiles.filter(p=>p.alive&&regionEligible(p));

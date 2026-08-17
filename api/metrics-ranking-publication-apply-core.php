@@ -342,6 +342,7 @@ function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): 
         'periods'=>array_keys($plans),
     ];
     $state['publishedAt']=gmdate('c');
+    p50_de_restore_scored_classability($state);
     return ['state'=>$state,'profilesUpdated'=>count($profilesUpdated),'scoresWritten'=>$scoresWritten];
 }
 

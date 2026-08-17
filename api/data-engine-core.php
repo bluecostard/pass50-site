@@ -31,6 +31,30 @@ function p50_de_profile_has_published_score(array $profile): bool {
     return (float)($profile['score'] ?? 0) > 0;
 }
 
+function p50_de_restore_scored_classability(array &$state): int {
+    $restored = 0;
+    foreach (($state['profiles'] ?? []) as &$profile) {
+        if (!is_array($profile)) continue;
+        if (array_key_exists('alive', $profile) && empty($profile['alive'])) continue;
+        if (!p50_de_profile_has_published_score($profile)) continue;
+        $changed = false;
+        if (empty($profile['eligible'])) {
+            $profile['eligible'] = true;
+            $changed = true;
+        }
+        if (($profile['classable'] ?? true) === false) {
+            $profile['classable'] = true;
+            $changed = true;
+        }
+        if ($changed) {
+            $profile['classabilitySource'] = 'published_period_score';
+            $restored++;
+        }
+    }
+    unset($profile);
+    return $restored;
+}
+
 /**
  * Décide si un résultat 15C peut être publié comme score classable.
  * Les liens officiels vérifiés débloquent l’entrée au classement dès qu’un
@@ -1627,11 +1651,10 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
             $p['badges']=array_values(array_unique($badges));
             $changed=true;
         } elseif (p50_de_profile_has_published_score($p) && (!array_key_exists('alive', $p) || !empty($p['alive']))) {
-            // Score déjà public : ne pas laisser un overlay recensement ou une sortie 2H
-            // afficher « Non classé » / masquer le score dans le classement.
             if (empty($p['eligible']) || ($p['classable'] ?? true) === false) {
                 $p['eligible'] = true;
                 $p['classable'] = true;
+                $p['classabilitySource'] = 'published_period_score';
                 $changed = true;
             }
         }
