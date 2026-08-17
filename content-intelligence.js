@@ -83,7 +83,13 @@
   async function refreshTrends(force=false){
     if(P50CI.loading)return;if(!force&&Date.now()-P50CI.lastRefresh<30000)return;
     P50CI.loading=true;renderTrends();
-    try{P50CI.data=await fetchFeed();P50CI.lastRefresh=Date.now();}
+    try{P50CI.data=await fetchFeed();P50CI.lastRefresh=Date.now();
+      for(const item of (P50CI.data?.trends||[])){
+        if(typeof window.p50SyncTriggerFromOfficialNews==='function'){
+          window.p50SyncTriggerFromOfficialNews(item.profileId,{...item,official:true,itemType:item.contentType});
+        }
+      }
+      if(typeof render==='function')render();}
     catch(error){console.warn('PASS50 Content Intelligence',error);}
     finally{P50CI.loading=false;renderTrends();}
   }
@@ -102,6 +108,10 @@
       if(cached&&Date.now()-cached.fetchedAt<NEWS_TTL)data=cached.data;
       else{data=await fetchFeed(profileId);P50CI.news.set(key,{data,fetchedAt:Date.now()});}
       if(!document.body.contains(shell))return;const items=data.news||[];
+      const official=items.find(item=>item.official)||items[0];
+      if(official&&typeof window.p50SyncTriggerFromOfficialNews==='function'){
+        if(window.p50SyncTriggerFromOfficialNews(profileId,official)&&typeof render==='function')render();
+      }
       const hours=Number(data.rules?.officialNewsHoursApplied||72);
       const fallback=!!data.rules?.officialNewsUsedFallback;
       const windowLabel=fallback
