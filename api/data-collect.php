@@ -9,11 +9,13 @@ $user=auth_user();
 require_role($user,'owner','admin');
 set_time_limit(240);
 p50_de_ensure_schema();
-p50_de_sync_registry_from_state();
 $in=json_input();
 $profileId=trim((string)($in['profileId']??''));
 $limit=max(1,min(5,(int)($in['limit']??5)));
 $deep=!array_key_exists('deep',$in)||!empty($in['deep']);
+$includeHub=!array_key_exists('includeHub',$in)||!empty($in['includeHub']);
+$syncRegistry=!array_key_exists('syncRegistry',$in)||!empty($in['syncRegistry']);
+$preview=!empty($in['preview']);
 $excludeRaw=$in['excludeIds']??[];
 $excludeIds=[];
 if(is_array($excludeRaw)){
@@ -22,7 +24,13 @@ if(is_array($excludeRaw)){
         if($candidate!==''&&preg_match('/^[A-Za-z0-9._:-]{1,120}$/',$candidate))$excludeIds[$candidate]=true;
     }
 }
+if($syncRegistry&&!$preview)p50_de_sync_registry_from_state();
 $profiles=p50_de_profiles_for_collection($limit,$profileId!==''?$profileId:null,array_keys($excludeIds));
+if($preview){
+    $processedIds=[];
+    foreach($profiles as $profile)$processedIds[]=(string)$profile['profile_id'];
+    json_response(['ok'=>true,'preview'=>true,'processed'=>count($processedIds),'processedIds'=>$processedIds]);
+}
 p50_radar_begin_batch(20,5,count($profiles));
 $results=[];$totalFound=0;$totalVerified=0;$processedIds=[];
 $radarTotals=['fiTraversed'=>0,'officialLinksAnalyzed'=>0,'recentPublications'=>0,'capturesRecorded'=>0,'activeMetrics'=>0,'unavailablePlatforms'=>0,'youtubeApi'=>p50_radar_youtube_status()];
@@ -67,4 +75,4 @@ foreach($profiles as $profile){
 $remainingNeverCollected=(int)db()->query("SELECT COUNT(*) FROM p50_profile_registry r LEFT JOIN (SELECT DISTINCT profile_id FROM p50_collection_runs) x ON x.profile_id=r.profile_id WHERE r.alive=1 AND x.profile_id IS NULL")->fetchColumn();
 $metricSummary=p50_de_metric_summary($processedIds);
 $radarTotals['youtubeApi']=p50_radar_youtube_status();
-json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'radar'=>$radarTotals,'intelligence'=>$intelligenceTotals,'network'=>p50_network_stats(),'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>p50_de_hub_payload()]);
+json_response(['ok'=>true,'processed'=>count($profiles),'processedIds'=>$processedIds,'found'=>$totalFound,'verified'=>$totalVerified,'historicalMetrics'=>$metricSummary['historicalMetrics'],'uniqueEvents'=>$metricSummary['uniqueEvents'],'activeMetrics'=>$metricSummary['activeMetrics'],'measurableProfiles'=>$metricSummary['measurableProfiles'],'radar'=>$radarTotals,'intelligence'=>$intelligenceTotals,'network'=>p50_network_stats(),'remainingNeverCollected'=>$remainingNeverCollected,'nextOffset'=>0,'results'=>$results,'hub'=>$includeHub?p50_de_hub_payload():null]);

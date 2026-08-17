@@ -740,22 +740,49 @@
     const configured=youtube.configured?'oui':'non';
     return `YouTube — Clé configurée : ${configured} · ${youtube.profilesWithLink} profil(s) avec lien · ${youtube.callsAttempted} appel(s) tenté(s) · ${youtube.callsSucceeded} réussi(s) · ${youtube.videosRetrieved} vidéo(s) récupérée(s) · ${youtube.errors403} erreur(s) 403 · ${youtube.errors429} erreur(s) 429 · ${youtube.budgetExceeded} budget(s) dépassé(s) · ${youtube.invalidUrls} URL(s) invalide(s) · ${youtube.noRecentProfiles} profil(s) sans vidéo récente · ${deYoutubeMajStatus(youtube,captures)}.`;
   }
+  function deMajCanResume(saved){
+    return Boolean(saved&&saved.status!=='success'&&Array.isArray(saved.processedIds)&&saved.processedIds.length>0);
+  }
+  function deMajButtonLabel(){
+    if(DE.majRunning)return 'MAJ EN COURS…';
+    return deMajCanResume(DE.majLastResult||deMajSavedStatus())?'REPRENDRE LA MAJ PASS50':'LANCER LA MAJ PASS50';
+  }
+  function deMajSleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+  function deMajCheckpoint(extra){
+    deMajPersistStatus(Object.assign({status:'running',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget},extra||{}));
+  }
+  async function deMajCollectBatch(){
+    const body={limit:1,deep:true,excludeIds:[...DE.majSeen],includeHub:false,syncRegistry:false};
+    let lastError=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      try{return await apiFetch('data-collect.php',{method:'POST',body});}
+      catch(error){
+        lastError=error;
+        if(attempt>=3)break;
+        DE.majMessage=`Réponse serveur interrompue (${error?.message||'Erreur serveur'}). Nouvelle tentative ${attempt}/3 dans 5 secondes…`;
+        deDrawMajProgress();
+        await deMajSleep(5000);
+      }
+    }
+    throw lastError||new Error('Erreur serveur');
+  }
   function deRenderMajPass50(pane){
     const saved=DE.majLastResult||deMajSavedStatus();
     const last=saved?.finishedAt?new Date(saved.finishedAt).toLocaleString('fr-FR'):'Jamais';
+    const resume=deMajCanResume(saved);
     pane.innerHTML=`<div class="data-engine-shell">
       <div class="section-head"><div><div class="section-title">⚡ MAJ PASS50</div><div class="muted">Une seule action pour synchroniser les FI, collecter les données publiques disponibles, calculer les 15 critères, publier les scores et capturer le classement.</div></div></div>
-      <div class="media-hint"><strong>Fonctionnement :</strong> le traitement parcourt les ${Number(DE.hub?.kpis?.profiles||db?.profiles?.length||134)} FI par lots de 5. Tu peux quitter cet onglet, mais garde la page PASS50 ouverte jusqu’au message de fin.</div>
+      <div class="media-hint"><strong>Fonctionnement :</strong> le traitement parcourt les ${Number(DE.hub?.kpis?.profiles||db?.profiles?.length||134)} FI une par une, pour rester sous la limite HTTP de l’hébergeur. Tu peux quitter cet onglet, mais garde la page PASS50 ouverte jusqu’au message de fin.</div>
       <div class="de-toolbar" style="margin-top:14px">
-        <button class="btn primary" id="deMajPass50">${DE.majRunning?'MAJ EN COURS…':'LANCER LA MAJ PASS50'}</button>
-        ${DE.majRunning?'<button class="btn danger" id="deStopMajPass50">ARRÊTER APRÈS CE LOT</button>':''}
+        <button class="btn primary" id="deMajPass50">${deMajButtonLabel()}</button>
+        ${DE.majRunning?'<button class="btn danger" id="deStopMajPass50">ARRÊTER APRÈS CETTE FI</button>':''}
       </div>
       <div id="deMajProgress" class="de-auto-box"></div>
       <div class="de-kpis" style="margin-top:12px">
         <div class="de-kpi"><strong>${Number(db?.profiles?.length||0)}</strong><span>FI ACTUELLES</span><small>Total chargé dans PASS50</small></div>
         <div class="de-kpi"><strong>15</strong><span>CRITÈRES</span><small>Moteur algorithmique PASS50</small></div>
         <div class="de-kpi"><strong>5</strong><span>PÉRIODES</span><small>2H · 24H · 48H · 7J · 15J</small></div>
-        <div class="de-kpi"><strong>${deEsc(last)}</strong><span>DERNIÈRE MAJ</span><small>${saved?.status==='success'?'Terminée avec succès':saved?.status==='stopped'?'Arrêtée':'Aucune exécution complète'}</small></div>
+        <div class="de-kpi"><strong>${deEsc(last)}</strong><span>DERNIÈRE MAJ</span><small>${saved?.status==='success'?'Terminée avec succès':saved?.status==='stopped'?'Arrêtée':resume?`Reprise possible · ${Number(saved.processedIds.length)} FI`:'Aucune exécution complète'}</small></div>
       </div>
       <div class="media-hint" style="margin-top:14px"><strong>Étapes exécutées automatiquement :</strong><br>1. Synchronisation des 134 FI · 2. Collecte et conservation des preuves · 3. Calcul des 15 critères · 4. Écriture dans les scores · 5. Reclassement · 6. Publication · 7. Capture du classement.</div>
     </div>`;
@@ -767,24 +794,52 @@
     const stage=DE.majStage||'Prêt';
     const message=DE.majMessage||'Aucune mise à jour en cours.';
     el.innerHTML=`<div class="de-auto-line"><strong>${deEsc(stage)}</strong><span>${done}/${target||0} FI · ${pct} %</span></div><div class="de-progress de-progress-large"><i style="width:${pct}%"></i></div><div class="muted">${deEsc(message)}</div>`;
-    const btn=$('#deMajPass50');if(btn){btn.disabled=DE.majRunning;btn.textContent=DE.majRunning?'MAJ EN COURS…':'LANCER LA MAJ PASS50';}
+    const btn=$('#deMajPass50');if(btn){btn.disabled=DE.majRunning;btn.textContent=deMajButtonLabel();}
   }
   async function deRunMajPass50(){
     if(DE.majRunning)return;
     window.majPass50Running=true;
     if(typeof CLOUD==='object'&&CLOUD?.syncTimer){clearTimeout(CLOUD.syncTimer);CLOUD.syncTimer=null;}
-    DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set();DE.majStartedAt=new Date().toISOString();DE.majLastResult=null;
+    const saved=deMajSavedStatus();
+    const resume=deMajCanResume(saved);
+    DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set(resume?saved.processedIds.map(String):[]);DE.majStartedAt=(resume&&saved.startedAt)?saved.startedAt:new Date().toISOString();DE.majLastResult=null;
     let completedSuccessfully=false;
-    DE.majStage='1/7 · Synchronisation des FI';DE.majMessage='Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
-    let totals={found:0,verified:0,historicalMetrics:0,fiTraversed:0,officialLinksAnalyzed:0,recentPublications:0,uniqueEvents:0,capturesRecorded:0,activeMetrics:0,unavailablePlatforms:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0,intelligence:{profilesAnalyzed:0,profilesIgnored:0,strongTrends:0,buzzDetected:0,declinesDetected:0,errors:0},youtube:{configured:false,profilesWithLink:0,callsAttempted:0,callsSucceeded:0,videosRetrieved:0,errors403:0,errors429:0,budgetExceeded:0,invalidUrls:0,noRecentProfiles:0}};
+    DE.majStage='1/7 · Synchronisation des FI';DE.majMessage=resume?`Reprise à ${DE.majSeen.size} FI déjà parcourues. Envoi des fiches actuelles vers le registre serveur…`:'Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
+    let totals={found:0,verified:0,historicalMetrics:0,fiTraversed:0,officialLinksAnalyzed:0,recentPublications:0,uniqueEvents:0,capturesRecorded:0,activeMetrics:0,unavailablePlatforms:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0,skipped:0,intelligence:{profilesAnalyzed:0,profilesIgnored:0,strongTrends:0,buzzDetected:0,declinesDetected:0,errors:0},youtube:{configured:false,profilesWithLink:0,callsAttempted:0,callsSucceeded:0,videosRetrieved:0,errors403:0,errors429:0,budgetExceeded:0,invalidUrls:0,noRecentProfiles:0}};
     try{
       if(typeof window.PASS50_STEP12_STATUS==='object'&&Number(window.PASS50_STEP12_STATUS.present||0)<7&&typeof window.p50EnsureStep12Profiles==='function')window.p50EnsureStep12Profiles();
       const sync=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});
       DE.hub=sync.hub||DE.hub;DE.majTarget=Number(DE.hub?.kpis?.profiles||sync.syncedProfiles||db?.profiles?.length||0);
-      DE.majStage='2/7 · Collecte et conservation';DE.majMessage='Le moteur parcourt les FI par lots de 5…';deDrawMajProgress();
+      DE.majStage='2/7 · Collecte et conservation';DE.majMessage='Le moteur parcourt les FI une par une…';deDrawMajProgress();
 
+      let consecutiveSkips=0;
       while(!DE.majStopRequested&&DE.majSeen.size<DE.majTarget){
-        const data=await apiFetch('data-collect.php',{method:'POST',body:{limit:5,deep:true,excludeIds:[...DE.majSeen]}});
+        let data;
+        try{
+          data=await deMajCollectBatch();
+          consecutiveSkips=0;
+        }catch(error){
+          consecutiveSkips++;
+          if(consecutiveSkips>=8)throw new Error(`Le serveur ne répond plus après plusieurs tentatives (${DE.majSeen.size}/${DE.majTarget}). Relance le bouton pour reprendre au même point.`);
+          let skippedIds=[];
+          try{
+            const preview=await apiFetch('data-collect.php',{method:'POST',body:{preview:true,limit:1,excludeIds:[...DE.majSeen],includeHub:false,syncRegistry:false}});
+            skippedIds=(preview.processedIds||[]).map(String);
+          }catch(previewError){
+            DE.majMessage=`Hébergeur saturé. Pause 20 s avant reprise (${DE.majSeen.size}/${DE.majTarget})…`;
+            deDrawMajProgress();
+            await deMajSleep(20000);
+            continue;
+          }
+          if(!skippedIds.length)break;
+          skippedIds.forEach(id=>DE.majSeen.add(id));
+          totals.skipped+=skippedIds.length;
+          DE.majMessage=`FI ignorée après erreur serveur, poursuite ${DE.majSeen.size}/${DE.majTarget}…`;
+          deMajCheckpoint({totals});
+          deDrawMajProgress();
+          await deMajSleep(2000);
+          continue;
+        }
         const ids=(data.processedIds||[]).map(String);
         if(!ids.length)break;
         const before=DE.majSeen.size;ids.forEach(id=>DE.majSeen.add(id));
@@ -797,15 +852,16 @@
         for(const counter of ['profilesWithLink','callsAttempted','callsSucceeded','videosRetrieved','errors403','errors429','budgetExceeded','invalidUrls','noRecentProfiles'])totals.youtube[counter]+=Number(youtube[counter]||0);
         DE.hub=data.hub||DE.hub;
         DE.majStage='3/7 · Calcul des 15 critères';
-        DE.majMessage=`Lot ${totals.batches} : ${ids.length} FI · ${Number(data.found||0)} donnée(s) trouvée(s). Le calcul final sera vérifié à la publication.`;
+        DE.majMessage=`FI ${DE.majSeen.size}/${DE.majTarget} : ${ids.length} fiche(s) · ${Number(data.found||0)} donnée(s) trouvée(s). Le calcul final sera vérifié à la publication.`;
+        deMajCheckpoint({totals});
         deDrawMajProgress();
         if(DE.majSeen.size===before)break;
-        await new Promise(resolve=>setTimeout(resolve,180));
+        await deMajSleep(1000);
       }
 
       if(DE.majStopRequested){
-        const result={status:'stopped',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals};
-        DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='MAJ arrêtée';DE.majMessage=`${DE.majSeen.size}/${DE.majTarget} FI traitées. Relance le bouton pour effectuer un nouveau tour complet.`;toast('MAJ PASS50 arrêtée après le lot en cours');return;
+        const result={status:'stopped',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget,totals};
+        DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='MAJ arrêtée';DE.majMessage=`${DE.majSeen.size}/${DE.majTarget} FI traitées. Relance le bouton pour reprendre au même point.`;toast('MAJ PASS50 arrêtée après la FI en cours');return;
       }
 
       DE.majStage='4/7 · Publication des scores';DE.majMessage='Écriture des données vérifiées et des scores calculés dans l’état PASS50…';deDrawMajProgress();
@@ -821,7 +877,7 @@
       try{const snap=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});totals.captured=Number(snap.captured||0);}catch(error){console.warn('Capture classement non bloquante',error);}
 
       await deLoadHub(true);
-      const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
+      const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
       const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
       const counters=`${totals.fiTraversed} FI parcourue(s) · ${totals.officialLinksAnalyzed} lien(s) officiel(s) analysé(s) · ${totals.recentPublications} publication(s) récente(s) détectée(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.capturesRecorded} capture(s) métrique(s) enregistrée(s) · ${totals.activeMetrics} métrique(s) active(s) · Intelligence : ${totals.intelligence.profilesAnalyzed} analysé(s), ${totals.intelligence.profilesIgnored} ignoré(s), ${totals.intelligence.strongTrends} tendance(s), ${totals.intelligence.buzzDetected} buzz, ${totals.intelligence.declinesDetected} recul(s), ${totals.intelligence.errors} erreur(s) non bloquante(s) · ${totals.unavailablePlatforms} plateforme(s) indisponible(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s). ${deYoutubeMajSummary(totals.youtube,totals.capturesRecorded)}`;
       DE.majLastResult=result;deMajPersistStatus(result);DE.majStage=rankingChanged?'MAJ PASS50 terminée · classement actualisé':'MAJ PASS50 terminée';DE.majMessage=totals.activeMetrics===0?`Collecte terminée, mais aucune métrique récente n'est disponible pour recalculer les scores. ${counters}`:rankingChanged?`${counters} Classement actualisé.`:`Collecte terminée. Les profils ont été recalculés, mais aucun score ni rang n'a changé. ${counters}`;
@@ -830,7 +886,7 @@
       toast(`MAJ PASS50 terminée · ${result.processed} FI traitées`);
     }catch(err){
       console.error('MAJ PASS50',err);
-      const result={status:'error',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,target:DE.majTarget,totals,error:String(err?.message||err)};
+      const result={status:'error',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget,totals,error:String(err?.message||err)};
       DE.majLastResult=result;deMajPersistStatus(result);DE.majStage='Erreur pendant la MAJ';DE.majMessage=result.error;window.PASS50_MAJ_STATUS=result;toast(result.error||'MAJ PASS50 impossible');
     }finally{
       DE.majRunning=false;DE.majStopRequested=false;
