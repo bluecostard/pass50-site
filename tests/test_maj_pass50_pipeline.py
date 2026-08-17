@@ -271,6 +271,12 @@ class PipelineSourceContractTests(unittest.TestCase):
         self.assertIn("if($preview)", COLLECT)
         self.assertIn("Erreur serveur (${res.status})", INDEX)
 
+    def test_maj_display_refresh_does_not_fail_the_completed_collection(self):
+        start = UI.index("DE.majStage='5/7 · Rechargement et reclassement'")
+        chunk = UI[start:UI.index("DE.majStage='6/7 · État final publié'")]
+        self.assertIn("Reclassement affichage non bloquant", chunk)
+        self.assertIn("try{", chunk)
+
     def test_stale_frontend_state_cannot_overwrite_newer_state(self):
         current = {"profiles": [{"id": "a", "scores": {"2H": 80}}]}
         stale = {"profiles": [{"id": "a", "scores": {"2H": 20}}]}
