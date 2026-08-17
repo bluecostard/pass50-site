@@ -1,4 +1,5 @@
 import pathlib
+import subprocess
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -13,7 +14,8 @@ class IntelligenceSignalsMergeV1Test(unittest.TestCase):
     def test_server_has_one_persistent_signal_source(self):
         self.assertIn("CREATE TABLE IF NOT EXISTS p50_signal_events", CORE)
         self.assertIn("p50_is_import_state_signals", CORE)
-        self.assertIn("p50_is_import_activity_events", CORE)
+        self.assertIn("p50_is_import_live_streams", CORE)
+        self.assertIn("p50_is_public_ranking_index", CORE)
         self.assertIn("p50_activity_events", CORE)
 
     def test_intelligence_combines_signal_and_metric_scores(self):
@@ -33,11 +35,14 @@ class IntelligenceSignalsMergeV1Test(unittest.TestCase):
         self.assertIn("PASS50 INTELLIGENCE & SIGNAUX", UI)
         self.assertIn("[data-admin-tab=\"signals\"]", UI)
         self.assertIn("Intelligence & Signaux", UI)
-        self.assertIn("intelligence-signals-ui-v1.js?v=1.0", LOADER)
+        self.assertIn("intelligence-signals-ui-v1.js?v=1.2", LOADER)
 
     def test_api_and_refresh_use_the_fused_engine(self):
-        self.assertIn("intelligence-signals-core.php", ENDPOINT)
+        live_refresh = (ROOT / "api" / "intelligence-signals-live-refresh.php").read_text(encoding="utf-8")
+        self.assertIn("intelligence-signals-live-refresh.php", ENDPOINT)
+        self.assertIn("intelligence-signals-core.php", live_refresh)
         self.assertIn("p50_is_dashboard()", ENDPOINT)
+        self.assertIn("liveSignalsImported", live_refresh)
         self.assertIn("intelligence-signals-core.php", REFRESH)
         self.assertIn("PASS50-INTELLIGENCE-SIGNALS-REFRESH-V3.0", REFRESH)
 
@@ -45,6 +50,20 @@ class IntelligenceSignalsMergeV1Test(unittest.TestCase):
         self.assertNotIn("p50_de_save_public_state", CORE)
         self.assertNotIn("data-publish.php", CORE)
         self.assertNotIn("metrics-ranking-publication", CORE)
+        self.assertIn("source_type='activity' AND reviewed_at IS NULL", CORE)
+        self.assertIn("'status'=>'pending'", CORE)
+        self.assertIn("p50_is_import_live_streams", CORE)
+        self.assertIn("Classement public", UI)
+
+    def test_unranked_activity_does_not_invent_buzz(self):
+        result = subprocess.run(
+            ["php", str(ROOT / "tests/intelligence_signals_observed_unit.php")],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.stdout.strip(), "Intelligence observed ranking/radar: OK")
 
 
 if __name__ == "__main__":
