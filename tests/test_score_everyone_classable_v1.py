@@ -43,7 +43,19 @@ class ScoreEveryoneClassableV1Tests(unittest.TestCase):
         self.assertIn("ZERO-SCORE-BACKFILL-V1.3", BACKFILL)
         self.assertNotIn("classable=1 AND score IS NOT NULL AND score>0", BACKFILL)
 
-    def test_public_ranking_still_uses_the_visible_period_score(self):
+    def test_census_verified_links_are_official_and_get_a_presence_score(self):
+        self.assertIn("legacy_social_link", RANKING)
+        self.assertIn("verified_social_link", RANKING)
+        self.assertIn("verifiedOfficialIds", RANKING)
+        self.assertIn("awaiting_measurable_capture", RANKING)
+        self.assertIn("$score=0.1", RANKING)
+        self.assertNotIn("preg_match('/(?:unknown|candidate|unverified|legacy)/i'", RANKING)
+
+    def test_youtube_public_fallback_records_subscribers(self):
+        collectors = (ROOT / "api/metrics-collectors-core.php").read_text(encoding="utf-8")
+        self.assertIn("function p50_mc_youtube_public_subscribers", collectors)
+        self.assertIn("'followers'=>$subscribers", collectors)
+        self.assertIn("'sourceType'=>'youtube_public_feed'", collectors)
         self.assertIn(
             "function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&hasPeriodScore(p);}",
             INDEX,
