@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
 
-const P50_TRIGGER_SYNC_VERSION = 'PASS50-TRIGGER-SYNC-V1.2';
+const P50_TRIGGER_SYNC_VERSION = 'PASS50-TRIGGER-SYNC-V1.3';
 const P50_TRIGGER_AUTO_MAX_AGE_SECONDS = 168 * 3600;
 const P50_TRIGGER_MANUAL_MAX_AGE_SECONDS = 7 * 86400;
 
@@ -72,21 +72,6 @@ function p50_trigger_ranked_profile_ids(array $state, int $limit = 10): array {
     return $ids;
 }
 
-function p50_trigger_syncable_profile_ids(array $state): array {
-    $ids = [];
-    foreach ((array) ($state['profiles'] ?? []) as $profile) {
-        if (!is_array($profile) || empty($profile['id'])) {
-            continue;
-        }
-        if (!($profile['alive'] ?? true) || !empty($profile['adminDeleted'])) {
-            continue;
-        }
-        $ids[] = (string) $profile['id'];
-    }
-
-    return $ids;
-}
-
 function p50_trigger_find_event_index(array $events, string $profileId): ?int {
     foreach ($events as $index => $event) {
         if (is_array($event) && (string) ($event['profileId'] ?? '') === $profileId) {
@@ -95,6 +80,14 @@ function p50_trigger_find_event_index(array $events, string $profileId): ?int {
     }
 
     return null;
+}
+
+function p50_trigger_reason_for_rank(int $rank): string {
+    if ($rank > 0 && $rank <= 10) {
+        return 'Ce contenu récent explique la progression de cette fiche dans le Top 10.';
+    }
+
+    return 'Ce contenu récent explique la progression de cette fiche dans le Top 50.';
 }
 
 function p50_trigger_is_video_type(string $itemType, string $platform = ''): bool {
@@ -254,7 +247,7 @@ function p50_trigger_relative_label(?string $publishedAt): string {
     return gmdate('d M Y', $ts);
 }
 
-function p50_trigger_build_event(string $profileId, array $newsRow, array $profile): array {
+function p50_trigger_build_event(string $profileId, array $newsRow, array $profile, int $rank = 50): array {
     $platform = (string) ($newsRow['platform'] ?? 'Web');
     $url = trim((string) ($newsRow['canonical_url'] ?? ''));
     $itemType = strtolower((string) ($newsRow['item_type'] ?? ''));
@@ -273,7 +266,7 @@ function p50_trigger_build_event(string $profileId, array $newsRow, array $profi
         'platforms' => [$platform],
         'metric' => 'Contenu officiel détecté',
         'publishedLabel' => p50_trigger_relative_label($publishedAt),
-        'reason' => 'Ce contenu récent met en avant l’actualité de cette fiche.',
+        'reason' => p50_trigger_reason_for_rank($rank),
         'url' => $url,
         'submittedUrl' => $url,
         'resolvedUrl' => $url,
@@ -344,7 +337,7 @@ function p50_trigger_sync_content_entry(array &$state, string $profileId, string
     $state['content'][$foundIndex]['time'] = 'Récent';
 }
 
-function p50_trigger_sync_profiles(PDO $pdo): array {
+function p50_trigger_sync_top50(PDO $pdo): array {
     if (!p50_metrics_table_exists($pdo, 'p50_news_items') || !p50_metrics_table_exists($pdo, 'app_state')) {
         return ['ok' => false, 'version' => P50_TRIGGER_SYNC_VERSION, 'writes' => 0, 'reason' => 'tables_missing'];
     }
@@ -366,12 +359,13 @@ function p50_trigger_sync_profiles(PDO $pdo): array {
         }
 
         $events = array_values(array_filter((array) ($state['events'] ?? []), 'is_array'));
-        $profileIds = p50_trigger_syncable_profile_ids($state);
+        $profileIds = p50_trigger_ranked_profile_ids($state, 50);
         $updated = 0;
         $skipped = 0;
         $cleared = 0;
 
-        foreach ($profileIds as $profileId) {
+        foreach ($profileIds as $index => $profileId) {
+            $rank = $index + 1;
             $newsRow = p50_trigger_latest_content($pdo, $profileId);
             $eventIndex = p50_trigger_find_event_index($events, $profileId);
             $existing = $eventIndex !== null ? $events[$eventIndex] : null;
@@ -388,7 +382,7 @@ function p50_trigger_sync_profiles(PDO $pdo): array {
             }
 
             $profile = $profilesById[$profileId] ?? ['id' => $profileId, 'name' => 'Influenceur'];
-            $incoming = p50_trigger_build_event($profileId, $newsRow, $profile);
+            $incoming = p50_trigger_build_event($profileId, $newsRow, $profile, $rank);
             if (is_array($existing) && !p50_trigger_should_replace($existing, $incoming)) {
                 $skipped++;
                 continue;
@@ -426,6 +420,7 @@ function p50_trigger_sync_profiles(PDO $pdo): array {
             'cleared' => $cleared,
             'skipped' => $skipped,
             'profileCount' => count($profileIds),
+            'top50Profiles' => count($profileIds),
         ];
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) {
@@ -442,7 +437,12 @@ function p50_trigger_sync_profiles(PDO $pdo): array {
     }
 }
 
-/** @deprecated Use p50_trigger_sync_profiles() — kept for backward compatibility. */
+/** @deprecated Use p50_trigger_sync_top50() — kept for backward compatibility. */
+function p50_trigger_sync_profiles(PDO $pdo): array {
+    return p50_trigger_sync_top50($pdo);
+}
+
+/** @deprecated Use p50_trigger_sync_top50() — kept for backward compatibility. */
 function p50_trigger_sync_top10(PDO $pdo): array {
-    return p50_trigger_sync_profiles($pdo);
+    return p50_trigger_sync_top50($pdo);
 }

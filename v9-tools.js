@@ -100,16 +100,29 @@ function p50TriggerIsStale(event){
   if(!event.autoSynced&&!event.manualDataValidated&&/\b3\s*j|\b72\s*h|trois jour|il y a 3/.test(label))return true;
   return false;
 }
-function p50TriggerKicker(profileId){
+function p50TriggerRank(profileId){
   const r=typeof completeRanking==='function'?completeRanking():[];
   const ix=r.findIndex(p=>p.id===profileId);
-  const rank=ix>=0?ix+1:null;
-  if(rank&&rank<=5)return '⚡ POURQUOI DANS LE TOP 5 ?';
+  return ix>=0?ix+1:null;
+}
+function p50IsTop50Profile(id){
+  const rank=p50TriggerRank(id);
+  const p=typeof profile==='function'?profile(id):null;
+  return rank!==null&&rank<=50&&p&&score(p)>0;
+}
+function p50TriggerKicker(profileId){
+  const rank=p50TriggerRank(profileId);
   if(rank&&rank<=10)return '⚡ POURQUOI DANS LE TOP 10 ?';
-  return '⚡ ACTUALITÉ RÉCENTE';
+  return '⚡ POURQUOI DANS LE TOP 50 ?';
+}
+function p50TriggerReason(profileId){
+  const rank=p50TriggerRank(profileId);
+  if(rank&&rank<=10)return 'Ce contenu récent explique la progression de cette fiche dans le Top 10.';
+  return 'Ce contenu récent explique la progression de cette fiche dans le Top 50.';
 }
 function p50SyncTriggerFromOfficialNews(profileId,item){
   if(!profileId||!item||!item.url)return false;
+  if(!p50IsTop50Profile(profileId))return false;
   const itemTs=Date.parse(item.publishedAt||'');
   const itemUrl=String(item.url||'').trim();
   let ev=primaryEvent(profileId);
@@ -128,7 +141,7 @@ function p50SyncTriggerFromOfficialNews(profileId,item){
     platforms:[platform],
     metric:item.official?'Contenu officiel détecté':'Contenu validé',
     publishedLabel:item.publishedAt?String(item.publishedAt).slice(0,10):'Récent',
-    reason:'Ce contenu récent met en avant l’actualité de cette fiche.',
+    reason:p50TriggerReason(profileId),
     url:itemUrl,submittedUrl:itemUrl,resolvedUrl:itemUrl,
     icon:isVideo?'▶':'📰',
     confidence:(Number(item.confidence||0)>=80)?'élevée':'moyenne',

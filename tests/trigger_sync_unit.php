@@ -46,13 +46,22 @@ $state = [
 ];
 $top = p50_trigger_ranked_profile_ids($state, 10);
 if ($top !== ['fi-a', 'fi-b']) {
-    echo "FAIL ranked ids\n";
+    echo "FAIL ranked ids top10\n";
     $failed++;
 }
 
-$all = p50_trigger_syncable_profile_ids($state);
-if ($all !== ['fi-a', 'fi-b', 'fi-c']) {
-    echo "FAIL syncable ids\n";
+$top50 = p50_trigger_ranked_profile_ids($state, 50);
+if ($top50 !== ['fi-a', 'fi-b']) {
+    echo "FAIL ranked ids top50\n";
+    $failed++;
+}
+
+if (p50_trigger_reason_for_rank(3) !== 'Ce contenu récent explique la progression de cette fiche dans le Top 10.') {
+    echo "FAIL reason top10\n";
+    $failed++;
+}
+if (p50_trigger_reason_for_rank(25) !== 'Ce contenu récent explique la progression de cette fiche dans le Top 50.') {
+    echo "FAIL reason top50\n";
     $failed++;
 }
 
