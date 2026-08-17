@@ -95,7 +95,9 @@ $periodSummaryCount=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric
 mr_must($periodSummaryCount===5,'Le cycle automatique écrit cinq résumés exacts');
 $summaryStmt=$pdo->prepare("SELECT * FROM p50_metric_ranking_period_runs WHERE run_uuid=? AND period_key='24H'");
 $summaryStmt->execute([$scheduled['runUuid']]);$storedSummary=$summaryStmt->fetch();
-$currentSummaryInput=[];foreach($pdo->query("SELECT score,confidence,coverage,classable,exclusion_reasons_json FROM p50_metric_ranking_current WHERE algorithm_version='MR-V1.0' AND period_key='24H'")->fetchAll() as $row){
+$currentStmt=$pdo->prepare("SELECT score,confidence,coverage,classable,exclusion_reasons_json FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key='24H'");
+$currentStmt->execute([P50_MR_ALGORITHM_VERSION]);
+$currentSummaryInput=[];foreach($currentStmt->fetchAll() as $row){
     $currentSummaryInput[]=['score'=>$row['score']===null?null:(float)$row['score'],'confidence'=>(float)$row['confidence'],'coverage'=>(float)$row['coverage'],'classable'=>(bool)$row['classable'],'exclusionReasons'=>json_decode((string)$row['exclusion_reasons_json'],true)?:[]];
 }
 $expectedSummary=p50_mr_period_summary($currentSummaryInput);

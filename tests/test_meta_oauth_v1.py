@@ -126,7 +126,7 @@ class MetaOauthV1Tests(unittest.TestCase):
         self.assertIn('healthUpdated', COLLECT)
 
     def test_ui_is_loaded_and_has_no_publish_action(self):
-        self.assertIn('meta-oauth-ui-v1.js?v=1.6', LOADER)
+        self.assertIn('meta-oauth-ui-v1.js?v=1.7', LOADER)
         self.assertIn('meta-live-collect.php', UI)
         self.assertIn('Aucune publication automatique', UI)
         self.assertNotIn('publish', UI.lower())

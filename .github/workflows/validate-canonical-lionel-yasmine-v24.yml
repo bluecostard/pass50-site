@@ -23,6 +23,10 @@ on:
       - 'tests/test_live_trust_gate_v1.py'
       - 'tests/test_metrics_ranking_calibration_v1.py'
       - 'tests/test_mobile_public_ux_polish.py'
+      - 'tests/test_profile_tombstone_v1.py'
+      - 'tests/test_scored_profiles_enter_ranking_v1.py'
+      - 'api/profile-tombstone-core.php'
+      - 'api/profile-cleanup-cron-v1.php'
       - '.github/workflows/validate-canonical-lionel-yasmine-v24.yml'
 
 jobs:
@@ -43,6 +47,8 @@ jobs:
           node --check profile-lionel-pcs.js
           node --check profile-yasmine-fofana.js
           php -l api/social-links.php
+          php -l api/profile-tombstone-core.php
+          php -l api/profile-cleanup-cron-v1.php
       - name: Profils canoniques et liens officiels
         run: |
           python3 -m unittest tests.test_canonical_lionel_yasmine_v24
@@ -53,6 +59,8 @@ jobs:
           python3 -m unittest tests.test_observateur_ebene_canonical_profile
           python3 -m unittest tests.test_observateur_locked_links_search
           python3 -m unittest tests.test_el_profesor_live_radar
+          python3 -m unittest tests.test_profile_tombstone_v1
+          python3 -m unittest tests.test_scored_profiles_enter_ranking_v1
       - name: Radar et versions publiques
         run: |
           python3 -m unittest tests.test_live_radar_v3

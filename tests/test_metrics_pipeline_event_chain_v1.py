@@ -60,7 +60,7 @@ class MetricsPipelineEventChainV1Tests(unittest.TestCase):
         self.assertIn('.publication.appStateWriteAttempted == false', SIMULATION)
         self.assertIn('.scope.publicStateWrites == 0', SIMULATION)
         self.assertIn('pass50/publication-simulation', SIMULATION)
-        self.assertIn('metrics-ranking-publication-apply.yml', SIMULATION)
+        self.assertIn('metrics-ranking-publication-apply-cron.php', SIMULATION)
 
     def test_chain_never_contains_a_public_write_path(self):
         combined = P1 + RANKING + SIMULATION

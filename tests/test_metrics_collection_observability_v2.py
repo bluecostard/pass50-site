@@ -39,7 +39,7 @@ class MetricsCollectionObservabilityV2Tests(unittest.TestCase):
 
     def test_public_baseline_explains_configuration_gaps(self):
         for token in (
-            'PUBLIC-BASELINE-P1-V1.1', 'publicProfilesWithoutVerifiedSources',
+            'PUBLIC-BASELINE-P1-V1.3', 'publicProfilesWithoutVerifiedSources',
             'eligibleLinksByPlatform', 'selectedByPlatform', 'skippedConfigurationByPlatform',
         ):
             self.assertIn(token, BASELINE)

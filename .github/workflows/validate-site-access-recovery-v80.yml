@@ -53,7 +53,7 @@ jobs:
         run: |
           grep -q -- '--only-newer' .github/workflows/deploy-ionos.yml
           grep -q 'v82-share-v2-only' .github/workflows/deploy-ionos.yml
-          grep -q 'PASS50-PUBLIC-RUNTIME-V91' public-copy-fixes.js
+          grep -q 'PASS50-PUBLIC-RUNTIME-V92' public-copy-fixes.js
           grep -q 'context-share-v2.js?v=2.6' public-copy-fixes.js
           ! grep -q "loadScript('script\[data-pass50-context-share\]','./context-share-v1.js" public-copy-fixes.js
           ! grep -q 'controllerchange' public-copy-fixes.js
@@ -64,7 +64,7 @@ jobs:
           ! grep -q "addEventListener('fetch'" sw.js
           grep -q 'no-store, no-cache' .htaccess
           grep -q 'context-share-v2.js?v=2.6' .github/workflows/deploy-ionos.yml
-          grep -q 'PASS50-PUBLIC-RUNTIME-V91' .github/workflows/deploy-ionos.yml
+          grep -Eq 'PASS50-PUBLIC-RUNTIME-V9[0-9]+' .github/workflows/deploy-ionos.yml
           grep -q 'pass50-v81-service-worker-disabled' .github/workflows/deploy-ionos.yml
       - name: Diff safety
         run: git diff --check origin/${{ github.base_ref || 'main' }}...HEAD

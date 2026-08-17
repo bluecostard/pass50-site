@@ -39,7 +39,7 @@ jobs:
       - name: Read-only guards
         run: |
           ! grep -E 'INSERT INTO app_state|UPDATE app_state|DELETE FROM app_state|REPLACE INTO app_state' api/metrics-public-baseline-core.php api/metrics-public-baseline-cron.php api/metrics-ranking-publication-period-core.php
-          grep -F "P50_METRICS_ORCHESTRATOR_VERSION,'p1'" api/metrics-public-baseline-core.php
-          grep -F 'PUBLIC-BASELINE-P1-V1.1' .github/workflows/metrics-public-baseline-p1.yml
+          grep -F "P50_METRICS_PUBLIC_BASELINE_VERSION,'fresh'" api/metrics-public-baseline-core.php
+          grep -F 'PUBLIC-BASELINE-P1-V1.3' .github/workflows/metrics-public-baseline-p1.yml
       - name: Diff check
         run: git diff --check origin/${{ github.base_ref }}...HEAD

@@ -11,7 +11,7 @@ APPLY = (ROOT / "api/metrics-ranking-publication-apply-core.php").read_text(enco
 class ScoredProfilesEnterRankingV1Tests(unittest.TestCase):
     def test_public_ranking_uses_period_score_not_census_flags(self):
         self.assertIn(
-            "function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&hasPeriodScore(p);}",
+            "function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&!p50IsDeletedProfileId(p&&p.id)&&hasPeriodScore(p);}",
             INDEX,
         )
         self.assertIn("p50_de_restore_scored_classability($data)", STATE)
@@ -23,28 +23,34 @@ class ScoredProfilesEnterRankingV1Tests(unittest.TestCase):
             const vm = require('vm');
             const fs = require('fs');
             const source = fs.readFileSync('index.html', 'utf8');
+            const tombStart = source.indexOf('const P50_TOMBSTONE_PROFILE_IDS');
+            const tombEnd = source.indexOf('function migrateDb');
             const start = source.indexOf('function hasPeriodScore');
             const end = source.indexOf('function coulesCandidates');
-            if (start < 0 || end < 0) throw new Error('ranking helpers missing');
+            if (tombStart < 0 || tombEnd < 0 || start < 0 || end < 0) throw new Error('ranking helpers missing');
             const context = {
               ui: { period: '24H' },
               db: {
+                deletedProfileIds: [],
                 profiles: [
                   { id: 'kawaii-nanami', name: 'Kawaii Nanami', alive: true, eligible: false, classable: false, scores: { '24H': 71.5, '2H': 73.4 } },
                   { id: 'bebe-nicapol', name: 'Bébé Nicapol', alive: true, eligible: true, classable: false, scores: { '24H': 38.4 } },
-                  { id: 'empty', name: 'Sans score', alive: true, eligible: true, classable: true, scores: {} }
+                  { id: 'empty', name: 'Sans score', alive: true, eligible: true, classable: true, scores: {} },
+                  { id: 'census-sheisthecode', name: 'Sheisthecode', alive: true, eligible: true, classable: true, scores: { '24H': 12 } }
                 ]
               }
             };
             context.window = context;
             vm.createContext(context);
-            vm.runInContext(source.slice(start, end) + '; function regionEligible(){return true} function score(p){return Number(p.scores[ui.period]||0)}', context);
+            vm.runInContext(source.slice(tombStart, tombEnd) + source.slice(start, end) + '; function regionEligible(){return true} function score(p){return Number(p.scores[ui.period]||0)}', context);
             const ranked = context.ranking().map(p => p.id);
             if (!ranked.includes('kawaii-nanami')) throw new Error('Kawaii Nanami still excluded');
             if (!ranked.includes('bebe-nicapol')) throw new Error('Bébé Nicapol still excluded');
             if (ranked.includes('empty')) throw new Error('empty score entered ranking');
+            if (ranked.includes('census-sheisthecode')) throw new Error('tombstoned FI entered ranking');
             const complete = context.completeRanking();
             if (complete.findIndex(p => p.id === 'kawaii-nanami') > 1) throw new Error('Kawaii remains in the recensement tail');
+            if (complete.some(p => p.id === 'census-sheisthecode')) throw new Error('tombstoned FI remains in complete ranking');
             """
         )
         import subprocess

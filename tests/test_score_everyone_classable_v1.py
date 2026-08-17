@@ -57,7 +57,7 @@ class ScoreEveryoneClassableV1Tests(unittest.TestCase):
         self.assertIn("'followers'=>$subscribers", collectors)
         self.assertIn("'sourceType'=>'youtube_public_feed'", collectors)
         self.assertIn(
-            "function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&hasPeriodScore(p);}",
+            "function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&!p50IsDeletedProfileId(p&&p.id)&&hasPeriodScore(p);}",
             INDEX,
         )
 

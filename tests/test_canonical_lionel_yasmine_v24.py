@@ -32,15 +32,15 @@ class CanonicalLionelYasmineV24Tests(unittest.TestCase):
         self.assertGreaterEqual(len(profile['official_socials']), 5)
 
     def test_browser_fetches_the_new_census_revision(self):
-        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.13', V9)
-        self.assertIn("const CENSUS_VERSION='99-v30'", V9)
-        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.13', SW)
+        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.15', V9)
+        self.assertIn("const CENSUS_VERSION='99-v32'", V9)
+        self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.15', SW)
         self.assertRegex(SW, r"const CACHE='pass50-v\d+-[a-z0-9-]+'")
 
     def test_public_loader_is_cache_busted(self):
-        self.assertIn('public-copy-fixes.js?v=1.4', APP_CONFIG)
-        self.assertIn("pass50PublicCopy = '1.1'", APP_CONFIG)
-        self.assertIn('public-copy-fixes.js?v=1.4', SW)
+        self.assertIn('public-copy-fixes.js?v=1.11', APP_CONFIG)
+        self.assertIn("pass50PublicCopy = '1.9'", APP_CONFIG)
+        self.assertIn('public-copy-fixes.js?v=1.11', SW)
 
 
 if __name__ == '__main__':

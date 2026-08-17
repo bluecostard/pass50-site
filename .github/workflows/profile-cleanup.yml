@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'api/profile-cleanup-cron-v1.php'
+      - 'api/profile-tombstone-core.php'
       - '.github/workflows/profile-cleanup.yml'
       - '.htaccess'
 
@@ -23,7 +24,7 @@ jobs:
       CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Delete selected profiles and complete Reine A.
+      - name: Delete tombstoned profiles from public state.
         id: cleanup
         shell: bash
         run: |
@@ -37,11 +38,11 @@ jobs:
             timestamp="$(date +%s)"
             signature="$(printf '%s\n%s' "$timestamp" "$body" | openssl dgst -sha256 -hmac "$CRON_SECRET" -r | awk '{print $1}')"
             code="$(curl --silent --show-error --max-time 90 --output /tmp/profile-cleanup.json --write-out '%{http_code}' -H 'Content-Type: application/json' -H "X-P50-Timestamp: $timestamp" -H "X-P50-Signature: $signature" --data "$body" "$ENDPOINT" || true)"
-            if [ "$code" = 200 ] && jq -e '.ok==true and .version=="PROFILE-CLEANUP-V1.0" and .deletedCount==8 and .keptUpdated==true' /tmp/profile-cleanup.json >/dev/null 2>&1; then break; fi
+            if [ "$code" = 200 ] && jq -e '.ok==true and .version=="PROFILE-CLEANUP-V2.1" and .remainingDeletedCount==0 and .tombstoneCount>=8' /tmp/profile-cleanup.json >/dev/null 2>&1; then break; fi
             echo "Endpoint en attente · tentative $attempt/36 · HTTP ${code:-000}"
             sleep 10
           done
-          jq -e '.ok==true and .deletedCount==8 and .keptUpdated==true' /tmp/profile-cleanup.json >/dev/null
+          jq -e '.ok==true and .remainingDeletedCount==0 and .tombstoneCount>=8' /tmp/profile-cleanup.json >/dev/null
           cat /tmp/profile-cleanup.json
           echo "deleted=$(jq -r '.deletedCount' /tmp/profile-cleanup.json)" >> "$GITHUB_OUTPUT"
           echo "remaining=$(jq -r '.profilesRemaining' /tmp/profile-cleanup.json)" >> "$GITHUB_OUTPUT"

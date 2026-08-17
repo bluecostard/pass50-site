@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.6';
+  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.7';
   const METRIC_SOURCE = /(?:^|\b)MR-V1\.\d+(?:\b|$)/i;
   const PUBLISHED_MR_STATUS = 'published_mr_v1';
   const VERIFIED_LINK_STATUSES = new Set(['owner_verified', 'manual_verified', 'ok', 'verified']);
@@ -125,6 +125,7 @@
 
   function authoritativeIsClassableProfile(profileItem) {
     if (!profileItem || profileItem.alive === false) return false;
+    if (typeof p50IsDeletedProfileId === 'function' && p50IsDeletedProfileId(profileItem.id)) return false;
     // Un score publié pour la période affichée doit apparaître dans le classement,
     // même si un overlay « à recenser » a forcé classable=false.
     if (hasSelectedPeriodScore(profileItem)) return true;

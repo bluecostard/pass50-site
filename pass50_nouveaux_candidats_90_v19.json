@@ -1,24 +1,5 @@
 [
   {
-    "id": "census-jai-horreur-des-fautes-lofficiel",
-    "name": "J’ai Horreur des Fautes L’officiel",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Éducation / Impact positif",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2024-10-13",
-      "url": "https://www.pulse.ci/article/decouvrez-les-22-gagnants-des-pulse-influencers-awards-2024-en-cote-divoire-2024102810001168223"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
     "id": "census-marie-ella-kouakou",
     "name": "Marie Ella Kouakou",
     "known_alias": "",
@@ -63,25 +44,6 @@
     "entity_type": "Personne",
     "zone": "CI",
     "category": "Santé / Fitness",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2024-10-13",
-      "url": "https://www.pulse.ci/article/decouvrez-les-22-gagnants-des-pulse-influencers-awards-2024-en-cote-divoire-2024102810001168223"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-simon-adingra",
-    "name": "Simon Adingra",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "DIASPORA",
-    "category": "Sport / Football",
     "census_status": "Recensé confirmé",
     "verification_priority": "P1",
     "eligible": false,
@@ -309,25 +271,6 @@
     "entity_type": "Personne",
     "zone": "CI",
     "category": "Mode",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2024-10-13",
-      "url": "https://www.pulse.ci/article/decouvrez-les-22-gagnants-des-pulse-influencers-awards-2024-en-cote-divoire-2024102810001168223"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-sheisthecode",
-    "name": "Sheisthecode",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Tech / Innovation",
     "census_status": "Recensé confirmé",
     "verification_priority": "P1",
     "eligible": false,
@@ -593,25 +536,6 @@
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
   },
   {
-    "id": "census-reine-a",
-    "name": "Reine A.",
-    "known_alias": "@cacaoispoppin",
-    "entity_type": "Personne",
-    "zone": "DIASPORA",
-    "category": "Instagram / Lifestyle",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2023-10-09",
-      "url": "https://www.pulse.ci/article/decouvrez-les-laureats-de-ledition-2023-des-pulse-influencer-awards-2024090512323480803"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
     "id": "census-wilfried-assi",
     "name": "Wilfried Assi",
     "known_alias": "",
@@ -780,25 +704,6 @@
       "url": "https://www.pulse.ci/article/decouvrez-les-laureats-de-ledition-2023-des-pulse-influencer-awards-2024090512323480803"
     },
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-les-adresses-de-chez-nous",
-    "name": "Les Adresses de chez nous",
-    "known_alias": "",
-    "entity_type": "Projet / collectif",
-    "zone": "CI",
-    "category": "Bons plans / Voyage",
-    "census_status": "Organisation/collectif à traiter",
-    "verification_priority": "P2",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2023-10-09",
-      "url": "https://www.pulse.ci/article/decouvrez-les-laureats-de-ledition-2023-des-pulse-influencer-awards-2024090512323480803"
-    },
-    "notes": "Décider si PASS50 classe les collectifs/organisations ou seulement les personnes."
   },
   {
     "id": "census-rita-josee-sery",
@@ -1160,25 +1065,6 @@
     "category": "TikTok / Lifestyle",
     "census_status": "Recensé confirmé",
     "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2022-07-19",
-      "url": "https://www.pulse.ci/article/10-influenceurs-ivoiriens-sur-tiktok-a-suivre-2024090510363536863"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-epouse-gnahore",
-    "name": "Épouse Gnahoré",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "TikTok / Famille",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P2",
     "eligible": false,
     "classable": false,
     "official_socials": {},
@@ -1939,50 +1825,12 @@
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
   },
   {
-    "id": "census-le-brouteur",
-    "name": "Le Brouteur",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Humour",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P2",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2025-03-11",
-      "url": "https://www.pulse.ci/article/lhumour-adn-de-livoirien-quand-rire-devient-un-art-de-vivre-2025031112223351393"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
     "id": "census-papa-ado",
     "name": "Papa Ado",
     "known_alias": "",
     "entity_type": "Personne",
     "zone": "CI",
     "category": "Humour / Parodie",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P2",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2025-03-11",
-      "url": "https://www.pulse.ci/article/lhumour-adn-de-livoirien-quand-rire-devient-un-art-de-vivre-2025031112223351393"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-oustaz-diakite-yaya",
-    "name": "Oustaz Diakité Yaya",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Humour / Religion",
     "census_status": "Recensé confirmé",
     "verification_priority": "P2",
     "eligible": false,
