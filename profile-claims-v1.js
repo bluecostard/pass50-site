@@ -27,8 +27,7 @@ function injectAccount(){
  var profiles=claimableProfiles();
  var host=document.createElement('div');host.className='pref';host.setAttribute('data-p50-claim-account','1');
  host.innerHTML='<div class="p50-claim-account"><div><strong>Revendiquer une fiche</strong><div class="muted">Sélectionnez votre nom pour vérifier un compte officiel.</div></div><select data-p50-claim-select aria-label="Nom de l’influenceur"><option value="">Choisir une fiche…</option>'+profiles.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.name||p.handle||p.id)+'</option>';}).join('')+'</select><button type="button" class="btn primary" data-p50-claim-account-open disabled>Continuer</button></div>';
- var legal=panel.querySelector('.account-legal-links');
- panel.insertBefore(host,legal?legal.previousElementSibling:null);
+ var anchor=panel.querySelector('[data-p50-account-danger]');panel.insertBefore(host,anchor||null);
 }
 async function openClaim(profileId){
  if(!connected()){if(typeof requireAuth==='function')requireAuth();return notice('Connectez-vous d’abord à PASS50.');}

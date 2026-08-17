@@ -38,7 +38,7 @@ const ASSETS=[
   './live-radar-v3.js?v=1.9','./live-trust-gate-v1.js?v=1.3',
   './live-experience-v4-1.js?v=1.7','./live-dismiss-ui-v1.js?v=1.0',
   './official-links-persistence-v3.js?v=3.4','./public-copy-fixes.js?v=1.11',
-  './connector-sections-v1.js?v=1.1','./account-mobile-nav-v1.js?v=1.0','./youtube-analytics-ui-v1.js?v=1.0',
+  './connector-sections-v1.js?v=1.1','./account-mobile-nav-v1.js?v=1.1','./youtube-analytics-ui-v1.js?v=1.0',
   './meta-oauth-ui-v1.js?v=1.7','./tiktok-oauth-ui-v1.js?v=1.1',
   './admin-fictive-ranking-v1.js?v=1.0','./classement-fictif.html',
   './v9-tools.css?v=22.4','./v9-tools.js?v=15.21',
