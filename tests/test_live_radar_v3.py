@@ -118,6 +118,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('function p50_live_v4_discovery_rank', source)
         self.assertIn('function p50_live_v4_is_warm_watch', source)
         self.assertIn('function p50_live_v4_needs_tiktok_rescan', source)
+        self.assertIn('function p50_live_v4_is_p0_tiktok', source)
+        self.assertIn("'general-camille-makosso'", source)
         self.assertIn('function p50_live_v4_is_graph_fresh', source)
         self.assertIn("return [0,$meta,'']", source)
         self.assertIn("return [1,0,$checked]", source)

@@ -129,4 +129,8 @@ must(p50_live_v4_needs_tiktok_rescan($verifiedOffline),'Un TikTok vérifié offl
 must(!p50_live_v4_needs_tiktok_rescan($genericOffline),'Un TikTok vérifié contrôlé il y a 5 min ne doit pas saturer le rescan.');
 must(p50_live_v4_discovery_rank($verifiedOffline)<p50_live_v4_discovery_rank($genericOffline),'Le TikTok vérifié stale doit passer avant un offline récent non prioritaire.');
 
-echo json_encode(['ok'=>true,'cases'=>27],JSON_UNESCAPED_SLASHES).PHP_EOL;
+$p0Stale=['profile_id'=>'general-camille-makosso','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-200)];
+must(p50_live_v4_is_p0_tiktok($p0Stale),'Général Makosso doit être en watchlist P0 TikTok.');
+must(p50_live_v4_needs_tiktok_rescan($p0Stale),'Un P0 TikTok offline depuis 200 s doit être rescané.');
+
+echo json_encode(['ok'=>true,'cases'=>29],JSON_UNESCAPED_SLASHES).PHP_EOL;
