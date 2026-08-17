@@ -1325,13 +1325,21 @@ function setCloudStatus(text,ok=false,{publicVisible=false}={}){
     banner.setAttribute('aria-hidden',show?'false':'true');
   }
 }
-async function apiFetch(path,{method='GET',body=null,formData=null,auth=true}={}){
+async function apiFetch(path,{method='GET',body=null,formData=null,auth=true,timeoutMs=0}={}){
   const headers={};
   if(auth&&CLOUD.token)headers.Authorization='Bearer '+CLOUD.token;
   if(body!==null)headers['Content-Type']='application/json';
-  const res=await fetch(CLOUD.baseUrl+'/'+path.replace(/^\//,''),{method,headers,body:formData|| (body!==null?JSON.stringify(body):undefined),cache:'no-store'});
+  const controller=Number(timeoutMs)>0?new AbortController():null;
+  const timer=controller?setTimeout(()=>controller.abort(),Number(timeoutMs)):null;
+  let res;
+  try{
+    res=await fetch(CLOUD.baseUrl+'/'+path.replace(/^\//,''),{method,headers,body:formData|| (body!==null?JSON.stringify(body):undefined),cache:'no-store',signal:controller?controller.signal:undefined});
+  }catch(err){
+    if(controller&&err&&err.name==='AbortError')throw new Error('Erreur serveur (délai dépassé)');
+    throw err;
+  }finally{if(timer)clearTimeout(timer);}
   let data={};try{data=await res.json()}catch{}
-  if(!res.ok)throw new Error(data.error||'Erreur serveur');
+  if(!res.ok)throw new Error(data.error||data.message||(res.status?`Erreur serveur (${res.status})`:'Erreur serveur'));
   return data;
 }
 function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};copy.liveStreams=(copy.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});return copy;}
@@ -1387,7 +1395,7 @@ async function loadCloudState(){
     photoManualUpdatedAt:p.photoManualUpdatedAt||new Date().toISOString()
   }]));
   const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p.birthManualLocked&&p.birthDate).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(p.birthDate.slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...(p.quality||{}),birth:100},dataEngine:{...(p.dataEngine||{}),verifiedFacts:[...new Set([...(p.dataEngine?.verifiedFacts||[]),'birth_date'])]}}]));
-  const data=await apiFetch('state.php',{auth:false});
+  const data=await apiFetch('state.php',{auth:false,timeoutMs:12000});
   if(Number.isFinite(Number(data?.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
   if(data?.data){const cloud=data.data;cloud.liveStreams=(cloud.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{
     const kept=manualPhotos[p.id];
@@ -1516,17 +1524,29 @@ function openCampaignProfile(){
   if(id&&profile(id))requestAnimationFrame(()=>openProfile(id));
 }
 async function initCloud(){
-  if(!CLOUD.enabled){setCloudStatus('',false);scheduleRender({immediate:true});openCampaignProfile();return;}
+  if(!CLOUD.enabled){setCloudStatus('',false);scheduleRender({immediate:true});endBootSettling();openCampaignProfile();return;}
+  // Peindre tout de suite le dernier classement local : le Top 10 ne doit pas
+  // attendre IONOS. L'état cloud met à jour ensuite.
+  scheduleRender({immediate:true});
   try{
     setCloudStatus('',false);
-    await loadCloudState();
+    let loaded=false,lastError=null;
+    for(let attempt=1;attempt<=3&&!loaded;attempt++){
+      try{await loadCloudState();loaded=true;}
+      catch(error){
+        lastError=error;
+        if(attempt>=3)break;
+        await new Promise(resolve=>setTimeout(resolve,1200*attempt));
+      }
+    }
+    if(!loaded)throw lastError||new Error('État public indisponible');
     if(CLOUD.token){
       try{const me=await apiFetch('me.php');const notes=await loadCloudNotifications();hydrateApiUser(me.user,notes);applyPass50V6Patch();await syncCloudState()}catch{CLOUD.token='';localStorage.removeItem('pass50_api_token')}
     }
     await loadCloudCoulesHistory();
     await loadCloudCoulesPoll();
     CLOUD.ready=true;window.__pass50CloudReady=true;clearInterval(CLOUD.coulesTimer);clearInterval(CLOUD.coulesHistoryTimer);CLOUD.coulesTimer=setInterval(loadCloudCoulesPoll,15000);CLOUD.coulesHistoryTimer=setInterval(loadCloudCoulesHistory,3600000);clearInterval(CLOUD.notificationTimer);CLOUD.notificationTimer=setInterval(()=>refreshCloudNotifications(true),30000);setCloudStatus('',true);scheduleRender({immediate:true});syncFollowContextAlerts();openCampaignProfile();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
-  }catch(err){console.error(err);setCloudStatus('',false);scheduleRender({immediate:true});}
+  }catch(err){console.error(err);setCloudStatus('',false);scheduleRender({immediate:true});endBootSettling();openCampaignProfile();}
 }
 initCloud();
 
