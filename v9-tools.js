@@ -93,7 +93,7 @@ function p50TriggerIsStale(event){
   if(!event)return true;
   const validated=Date.parse(event.originalLinkValidatedAt||'');
   const age=Number.isFinite(validated)?Date.now()-validated:Infinity;
-  if(event.autoSynced)return age>72*3600*1000;
+  if(event.autoSynced)return age>168*3600*1000;
   if(event.manualDataValidated)return age>7*24*3600*1000;
   if(Number.isFinite(validated)&&age>24*3600*1000)return true;
   const label=String(event.publishedLabel||'').toLowerCase();
@@ -105,8 +105,10 @@ function p50IsTop10Profile(id){
   const ix=r.findIndex(p=>p.id===id);
   return ix>=0&&ix<10&&score(r[ix])>0;
 }
-function p50SyncTriggerFromOfficialNews(profileId,item){
-  if(!profileId||!item||!item.url||!p50IsTop10Profile(profileId))return false;
+function p50SyncTriggerFromOfficialNews(profileId,item,options={}){
+  const allowAnyProfile=Boolean(options.allowAnyProfile);
+  if(!profileId||!item||!item.url)return false;
+  if(!allowAnyProfile&&!p50IsTop10Profile(profileId))return false;
   const itemTs=Date.parse(item.publishedAt||'');
   const itemUrl=String(item.url||'').trim();
   let ev=primaryEvent(profileId);
@@ -118,7 +120,7 @@ function p50SyncTriggerFromOfficialNews(profileId,item){
   const p=profile(profileId);
   const typeHint=String(item.itemType||item.contentType||'').toLowerCase();
   const platform=String(item.platform||'Web');
-  const isVideo=/video|reel|live/.test(typeHint)||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(platform);
+  const isVideo=/video|reel|live|short/.test(typeHint)||['YouTube','TikTok'].includes(platform);
   const patch={
     type:isVideo?'Vidéo':'Article',
     title:item.title||`Contenu récent de ${p?.name||'cette FI'}`,

@@ -107,10 +107,11 @@
       const key=`${profileId}:${P50CI.period}`,cached=P50CI.news.get(key);let data;
       if(cached&&Date.now()-cached.fetchedAt<NEWS_TTL)data=cached.data;
       else{data=await fetchFeed(profileId);P50CI.news.set(key,{data,fetchedAt:Date.now()});}
-      if(!document.body.contains(shell))return;const items=data.news||[];
-      const official=items.find(item=>item.official)||items[0];
+      if(!document.body.contains(shell))return;      const items=data.news||[];
+      const isVideoItem=item=>/video|reel|live|short/i.test(String(item?.itemType||item?.contentType||''))||['YouTube','TikTok'].includes(String(item?.platform||''));
+      const official=items.find(item=>item.official&&isVideoItem(item))||items.find(item=>item.official)||items.find(isVideoItem)||items[0];
       if(official&&typeof window.p50SyncTriggerFromOfficialNews==='function'){
-        if(window.p50SyncTriggerFromOfficialNews(profileId,official)&&typeof render==='function')render();
+        if(window.p50SyncTriggerFromOfficialNews(profileId,official,{allowAnyProfile:true})&&typeof render==='function')render();
       }
       const hours=Number(data.rules?.officialNewsHoursApplied||72);
       const fallback=!!data.rules?.officialNewsUsedFallback;

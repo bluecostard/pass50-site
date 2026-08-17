@@ -11,7 +11,7 @@ $cases = [
     ],
     'auto_stale' => [
         'autoSynced' => true,
-        'originalLinkValidatedAt' => gmdate('c', time() - 80 * 3600),
+        'originalLinkValidatedAt' => gmdate('c', time() - 170 * 3600),
         'expected' => true,
     ],
     'manual_fresh' => [

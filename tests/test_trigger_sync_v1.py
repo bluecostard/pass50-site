@@ -17,22 +17,24 @@ class TriggerSyncV1Tests(unittest.TestCase):
         self.assertIn("triggerSync", CORE)
 
     def test_trigger_sync_core_constants(self):
-        self.assertIn("P50_TRIGGER_SYNC_VERSION", TRIGGER)
-        self.assertIn("autoSynced", TRIGGER)
-        self.assertIn("manualDataValidated", TRIGGER)
-        self.assertIn("72 HOUR", TRIGGER)
+        self.assertIn("P50_TRIGGER_SYNC_VERSION = 'PASS50-TRIGGER-SYNC-V1.1'", TRIGGER)
+        self.assertIn("p50_trigger_latest_content", TRIGGER)
+        self.assertIn("p50_trigger_query_metric_content", TRIGGER)
+        self.assertIn("168 * 3600", TRIGGER)
 
     def test_client_respects_stale_trigger_for_top5_background(self):
         self.assertIn("function p50TriggerIsStale(event)", V9)
-        self.assertIn("if(event.autoSynced)return age>72*3600*1000", V9)
+        self.assertIn("if(event.autoSynced)return age>168*3600*1000", V9)
+        self.assertIn("allowAnyProfile", V9)
         self.assertIn("if(event.manualDataValidated)return age>7*24*3600*1000", V9)
         self.assertIn("ev=rawEv&&!p50TriggerIsStale(rawEv)?rawEv:null", V9)
         self.assertIn("function p50SyncTriggerFromOfficialNews", V9)
 
     def test_content_intelligence_applies_official_trigger_sync(self):
         self.assertIn("p50SyncTriggerFromOfficialNews", CLIENT)
-        self.assertIn("content-intelligence.js?v=1.11", CONFIG)
-        self.assertIn("content-intelligence.js?v=1.11", SW)
+        self.assertIn("allowAnyProfile:true", CLIENT)
+        self.assertIn("content-intelligence.js?v=1.12", CONFIG)
+        self.assertIn("content-intelligence.js?v=1.12", SW)
 
 
 if __name__ == "__main__":
