@@ -16,23 +16,23 @@ class MetricsPublicBaselineP1V1Tests(unittest.TestCase):
         self.assertNotIn('localStorage', CORE)
 
     def test_jobs_share_the_canonical_p1_idempotency(self):
-        self.assertIn("P50_METRICS_ORCHESTRATOR_VERSION,'p1',$bucket['key'],$profileId,$platform", CORE)
-        self.assertIn("'priority'=>50", CORE)
+        self.assertIn("P50_METRICS_PUBLIC_BASELINE_VERSION,'fresh',$freshSlot,$profileId,$platform", CORE)
+        self.assertIn("'priority'=>P50_METRICS_PUBLIC_BASELINE_PRIORITY", CORE)
         self.assertIn("'cadence'=>'p1'", CORE)
-        self.assertIn("'reason'=>'public_baseline'", CORE)
+        self.assertIn("'reason'=>'public_baseline_freshness'", CORE)
 
     def test_verified_authorized_sources_and_freshness_are_preserved(self):
         self.assertIn("s.status='verified'", CORE)
         self.assertIn('s.confidence>=?', CORE)
         self.assertIn('p50_mc_public_access', CORE)
         self.assertIn("quality_status='usable'", CORE)
-        self.assertIn("$cfg['fresh']['p1']", CORE)
+        self.assertIn('P50_METRICS_PUBLIC_BASELINE_FRESH_MINUTES', CORE)
         self.assertIn('skippedAuthRequired', CORE)
         self.assertIn('skippedUnsupported', CORE)
 
     def test_coverage_is_explained_by_platform_and_profile(self):
         for token in (
-            'PUBLIC-BASELINE-P1-V1.1',
+            'PUBLIC-BASELINE-P1-V1.3',
             'publicProfilesWithoutVerifiedSources',
             'eligibleLinksByPlatform',
             'selectedByPlatform',
@@ -56,10 +56,10 @@ class MetricsPublicBaselineP1V1Tests(unittest.TestCase):
         self.assertIn('P50_METRICS_PUBLIC_BASELINE_VERSION', ENDPOINT)
 
     def test_workflow_runs_before_regular_p1_and_dispatches_it_on_push(self):
-        self.assertIn("cron: '2 */2 * * *'", WORKFLOW)
-        self.assertIn('PUBLIC-BASELINE-P1-V1.1', WORKFLOW)
+        self.assertIn("cron: '17 * * * *'", WORKFLOW)
+        self.assertIn('PUBLIC-BASELINE-P1-V1.3', WORKFLOW)
         self.assertIn('metrics-top50-2h.yml/dispatches', WORKFLOW)
-        self.assertIn("github.event_name != 'schedule'", WORKFLOW)
+        self.assertIn("steps.baseline.outputs.needs_refresh != '0'", WORKFLOW)
         self.assertIn('pass50/metrics-public-baseline-p1', WORKFLOW)
         self.assertIn('publicStateWrites == 0', WORKFLOW)
 

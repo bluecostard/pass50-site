@@ -57,7 +57,7 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('pass50/publication-period-deployment', DEPLOYMENT_WORKFLOW)
 
     def test_workflow_runs_after_experimental_cycle_and_can_be_dispatched(self):
-        self.assertIn("cron: '12 1-23/2 * * *'", WORKFLOW)
+        self.assertIn("cron: '15 */2 * * *'", WORKFLOW)
         self.assertIn('workflow_dispatch:', WORKFLOW)
         self.assertIn('metrics-ranking-publication-simulate-cron.php', WORKFLOW)
         self.assertIn('PASS50_METRICS_CRON_URL', WORKFLOW)
@@ -83,7 +83,7 @@ class MetricsRankingPublicationSimulationCronV1Tests(unittest.TestCase):
         self.assertIn('.scope.publicStateWrites == 0', WORKFLOW)
         self.assertIn('.history.publicStateWrites == 0', WORKFLOW)
         self.assertIn('Écritures app_state (simulation) : `0`', WORKFLOW)
-        self.assertIn('metrics-ranking-publication-apply.yml', WORKFLOW)
+        self.assertIn('metrics-ranking-publication-apply-cron.php', WORKFLOW)
 
     def test_workflow_publishes_only_sanitized_commit_status(self):
         self.assertIn('statuses: write', WORKFLOW)

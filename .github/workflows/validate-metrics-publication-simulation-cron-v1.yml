@@ -16,7 +16,7 @@ jobs:
         run: python3 -m unittest tests.test_metrics_ranking_publication_simulation_cron_v1
       - name: Workflow syntax guards
         run: |
-          grep -F "cron: '12 1-23/2 * * *'" .github/workflows/metrics-ranking-publication-simulation.yml
+          grep -F "cron: '15 */2 * * *'" .github/workflows/metrics-ranking-publication-simulation.yml
           grep -F 'p50_mo_verify_cron_signature' api/metrics-ranking-publication-simulate-cron.php
           grep -F '.scope.publicStateWrites == 0' .github/workflows/metrics-ranking-publication-simulation.yml
       - name: Diff check
