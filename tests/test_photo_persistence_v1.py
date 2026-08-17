@@ -11,7 +11,9 @@ class PhotoPersistenceV1Tests(unittest.TestCase):
     def test_cloud_merge_preserves_unlocked_validated_photos(self):
         self.assertIn("manualPhotos=Object.fromEntries((db.profiles||[]).filter(p=>{", INDEX)
         self.assertIn("['validated','verified','approved','manual_verified','pending']", INDEX)
-        self.assertIn("const localBetter=!cloudHasPhoto||kept.photoManualLocked", INDEX)
+        self.assertIn("function p50LocalPhotoShouldKeep(kept,cloud)", INDEX)
+        self.assertIn("if(p50LocalPhotoShouldKeep(kept,p))Object.assign(p,kept)", INDEX)
+        self.assertNotIn("const localBetter=!cloudHasPhoto||kept.photoManualLocked", INDEX)
 
     def test_public_photo_accepts_verified_aliases(self):
         self.assertIn("['validated','verified','approved','manual_verified'].includes(status)", INDEX)
