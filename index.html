@@ -1097,8 +1097,8 @@ function openTop50(){
   const heatSpan=Math.max(1,Math.min(50,classableCount)-1);
   const lastUrgentFrom=Math.max(classableCount+1,r.length-9);
   const rows=r.map((p,i)=>{
-    const classable=isClassableProfile(p),rank=i+1,searchText=`${p.name} ${p.handle||''} ${p.category||''}`.toLowerCase();
-    const scoreCell=classable?formatTrendScore(score(p)):'À vérifier';
+    const classable=isClassableProfile(p),hasScore=hasPeriodScore(p),rank=i+1,searchText=`${p.name} ${p.handle||''} ${p.category||''}`.toLowerCase();
+    const scoreCell=hasScore||classable?formatTrendScore(score(p)):'À vérifier';
     const movementCell=classable?arrow(p):'Non classé';
     const badgeCell=classable?(p.badges[0]?badgeHtml(p.badges[0],p.id):''):'<span class="badge new">RECENSÉ</span>';
     let tone='rank-beyond unranked',style=`--row-i:${i}`,detail;

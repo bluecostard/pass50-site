@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-public-copy]')) return;
   var script = document.createElement('script');
-  script.src = './public-copy-fixes.js?v=1.9';
+  script.src = './public-copy-fixes.js?v=1.10';
   script.dataset.pass50PublicCopy = '1.9';
   document.head.appendChild(script);
 })();
@@ -95,8 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-ennemi-djandjou]')) return;
   var script = document.createElement('script');
-  script.src = './profile-ennemi-des-djandjou.js?v=1.0';
-  script.dataset.pass50ProfileEnnemiDjandjou = '1.0';
+  script.src = './profile-ennemi-des-djandjou.js?v=1.1';
+  script.dataset.pass50ProfileEnnemiDjandjou = '1.1';
   document.head.appendChild(script);
 })();
 
@@ -104,8 +104,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-kawaii-nanami]')) return;
   var script = document.createElement('script');
-  script.src = './profile-kawaii-nanami.js?v=1.0';
-  script.dataset.pass50ProfileKawaiiNanami = '1.0';
+  script.src = './profile-kawaii-nanami.js?v=1.1';
+  script.dataset.pass50ProfileKawaiiNanami = '1.1';
   document.head.appendChild(script);
 })();
 
@@ -131,8 +131,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-obre-marie-pascale]')) return;
   var script = document.createElement('script');
-  script.src = './profile-obre-marie-pascale.js?v=1.0';
-  script.dataset.pass50ProfileObreMariePascale = '1.0';
+  script.src = './profile-obre-marie-pascale.js?v=1.1';
+  script.dataset.pass50ProfileObreMariePascale = '1.1';
   document.head.appendChild(script);
 })();
 
