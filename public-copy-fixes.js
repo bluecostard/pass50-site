@@ -184,7 +184,7 @@
   loadScript('script[data-pass50-coules-admin]','./coules-admin-v1.js?v=1.0','pass50CoulesAdmin','1.0',false);
   loadScript('script[data-pass50-admin-profile-alphabetical]','./admin-profile-alphabetical-v1.js?v=1.6','pass50AdminProfileAlphabetical','1.6',false);
   loadScript('script[data-pass50-admin-news-hotfix]','./admin-news-hotfix-v1.js?v=1.2','pass50AdminNewsHotfix','1.2',false);
-  loadScript('script[data-pass50-intelligence-signals-ui]','./intelligence-signals-ui-v1.js?v=1.1','pass50IntelligenceSignalsUi','1.1',false);
+  loadScript('script[data-pass50-intelligence-signals-ui]','./intelligence-signals-ui-v1.js?v=1.2','pass50IntelligenceSignalsUi','1.2',false);
   loadScript('script[data-pass50-intelligence-signals-diagnostic]','./intelligence-signals-diagnostic-v1.js?v=1.0','pass50IntelligenceSignalsDiagnostic','1.0',false);
   loadScript('script[data-pass50-official-links-protection-v4]','./official-links-protection-v4.js?v=4.3','pass50OfficialLinksProtectionV4','4.3',false);
 })();

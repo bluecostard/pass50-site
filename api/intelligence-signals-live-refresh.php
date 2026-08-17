@@ -49,5 +49,6 @@ function p50_is_live_refresh(int $limit=20,int $maxAgeMinutes=60): array {
         'requested'=>count($rows),'processed'=>count($processed),'processedProfileIds'=>$processed,
         'errors'=>$errors,'manualSignalsImported'=>(int)($import['manualImported']??0),
         'activitySignalsImported'=>(int)($import['activityImported']??0),
+        'liveSignalsImported'=>(int)($import['liveImported']??0),
     ];
 }

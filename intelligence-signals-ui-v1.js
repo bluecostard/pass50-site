@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const RUNTIME='PASS50-INTELLIGENCE-SIGNALS-UI-V1.1';
+  const RUNTIME='PASS50-INTELLIGENCE-SIGNALS-UI-V1.2';
   let installed=false,loading=false;
 
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
@@ -38,19 +38,26 @@
   }
 
   function evidence(item){
+    const bits=[];
+    if(item.publicRank){
+      const period=item.publicPeriod||'24H';
+      const score=item.publicScore!=null?` · score ${number(item.publicScore)}`:'';
+      bits.push(`<div>Classement public : ${number(item.publicRank)}e · ${esc(period)}${esc(score)}</div>`);
+    }
     const signals=Array.isArray(item.recentSignals)?item.recentSignals:[];
-    if(!signals.length)return '<div class="muted">Aucun événement récent rattaché.</div>';
-    return signals.slice(0,3).map(signal=>{
+    if(!signals.length&&!bits.length)return '<div class="muted">Aucun événement récent rattaché.</div>';
+    signals.slice(0,3).forEach(signal=>{
       const meta=`${signal.platforms?.join(' · ')||'Source'} · score ${number(signal.signalScore)} · ${date(signal.occurredAt)}`;
       const body=`${esc(signal.title)}<br><small>${esc(meta)}</small>`;
-      return signal.evidenceUrl?`<a href="${attr(signal.evidenceUrl)}" target="_blank" rel="noopener">${body}</a>`:`<div>${body}</div>`;
-    }).join('');
+      bits.push(signal.evidenceUrl?`<a href="${attr(signal.evidenceUrl)}" target="_blank" rel="noopener">${body}</a>`:`<div>${body}</div>`);
+    });
+    return bits.join('');
   }
 
   function card(item){
     const initials=String(item.name||'?').split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase();
     const photo=item.photo?`<img src="${attr(item.photo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:`<span>${esc(initials)}</span>`;
-    return `<article class="p50is-card ${esc(item.classification)}"><div class="p50is-head"><div class="p50is-avatar">${photo}</div><div class="p50is-title"><strong>${esc(item.name)}</strong><small>${esc(label(item.classification))} · priorité ${number(item.priorityScore)}</small></div>${confidence(item.combinedConfidence)}</div><div class="p50is-scores"><div class="p50is-score"><b>${number(item.combinedBuzzIndex)}</b>Buzz fusionné</div><div class="p50is-score"><b>${number(item.combinedGrowthIndex)}</b>Growth fusionné</div><div class="p50is-score"><b>${number(item.signalScore)}</b>Signaux</div></div><div class="p50is-platforms">${(item.signalPlatforms||[]).map(platform=>`<span>${esc(platform)}</span>`).join('')||'<span>Aucune plateforme</span>'}</div><div class="p50is-evidence">${evidence(item)}</div><small>${number(item.signalCount)} signal(aux) · ${number(item.validatedSignalCount)} validé(s) · Intelligence : ${item.fresh?'fraîche':'à rafraîchir'}</small></article>`;
+    return `<article class="p50is-card ${esc(item.classification)}"><div class="p50is-head"><div class="p50is-avatar">${photo}</div><div class="p50is-title"><strong>${esc(item.name)}</strong><small>${esc(label(item.classification))} · priorité ${number(item.priorityScore)}</small></div>${confidence(item.combinedConfidence)}</div><div class="p50is-scores"><div class="p50is-score"><b>${number(item.combinedBuzzIndex)}</b>Buzz fusionné</div><div class="p50is-score"><b>${number(item.combinedGrowthIndex)}</b>Growth fusionné</div><div class="p50is-score"><b>${number(item.signalScore)}</b>Signaux</div></div><div class="p50is-platforms">${(item.signalPlatforms||[]).map(platform=>`<span>${esc(platform)}</span>`).join('')||'<span>Aucune plateforme</span>'}</div><div class="p50is-evidence">${evidence(item)}</div><small>${number(item.signalCount)} signal(aux) · ${number(item.validatedSignalCount)} validé(s) · ${item.publicRank?`Classement public : ${number(item.publicRank)}e`:(item.fresh?'Intelligence : fraîche':'Intelligence : à rafraîchir')}</small></article>`;
   }
 
   const section=(title,items,empty)=>`<section class="p50is-section"><div class="section-head"><div class="section-title">${esc(title)}</div><span class="muted">${items.length}</span></div>${items.length?`<div class="p50is-grid">${items.map(card).join('')}</div>`:`<div class="p50is-empty">${esc(empty)}</div>`}</section>`;
@@ -63,7 +70,7 @@
   function draw(data){
     const content=document.getElementById('p50IntelligenceSignalsContent');if(!content)return;
     const summary=data.summary||{};
-    content.innerHTML=`<div class="p50is-note"><strong>Moteur fusionné :</strong> les événements collectés alimentent Signaux ; leur fraîcheur, leurs plateformes et leur validation renforcent ensuite les scores Intelligence. Aucun rang public n’est forcé directement.</div><div class="p50is-summary"><div class="p50is-kpi"><strong>${number(summary.priorityAlerts)}</strong><span>Alertes prioritaires</span></div><div class="p50is-kpi"><strong>${number(summary.confirmedBuzz)}</strong><span>Buzz confirmés</span></div><div class="p50is-kpi"><strong>${number(summary.signalsPending)}</strong><span>Signaux à valider</span></div><div class="p50is-kpi"><strong>${number(summary.profilesWithSignals)}</strong><span>Profils avec signaux</span></div><div class="p50is-kpi"><strong>${number(summary.signalsTotal)}</strong><span>Événements sur 7 jours</span></div></div>${section('Alertes prioritaires',data.priorityAlerts||[],'Aucune alerte suffisamment étayée pour l’instant.')}<section class="p50is-section"><div class="section-head"><div class="section-title">Signaux à valider</div><span class="muted">${number((data.signalsPending||[]).length)}</span></div>${pending(data.signalsPending||[])}</section>${section('Buzz confirmés',data.buzzDetected||[],'Aucun buzz confirmé par les deux moteurs.')}${section('Tendances fortes',data.strongTrends||[],'Aucune tendance forte suffisamment récente.')}${section('Profils en recul',data.declines||[],'Aucun recul fiable détecté.')}${section('Données à construire',data.buildingSignals||[],'Toutes les fiches disposent de données suffisantes.')}`;
+    content.innerHTML=`<div class="p50is-note"><strong>Moteur fusionné :</strong> le classement public, les lives du radar et les comptes officiels alimentent Signaux. Aucun rang public n’est réécrit depuis cet écran.</div><div class="p50is-summary"><div class="p50is-kpi"><strong>${number(summary.priorityAlerts)}</strong><span>Alertes prioritaires</span></div><div class="p50is-kpi"><strong>${number(summary.confirmedBuzz)}</strong><span>Buzz confirmés</span></div><div class="p50is-kpi"><strong>${number(summary.signalsPending)}</strong><span>Signaux à valider</span></div><div class="p50is-kpi"><strong>${number(summary.profilesWithSignals)}</strong><span>Profils avec signaux</span></div><div class="p50is-kpi"><strong>${number(summary.signalsTotal)}</strong><span>Événements sur 7 jours</span></div></div>${section('Alertes prioritaires',data.priorityAlerts||[],'Aucune alerte suffisamment étayée pour l’instant.')}<section class="p50is-section"><div class="section-head"><div class="section-title">Signaux à valider</div><span class="muted">${number((data.signalsPending||[]).length)}</span></div>${pending(data.signalsPending||[])}</section>${section('Buzz confirmés',data.buzzDetected||[],'Aucun buzz confirmé par les deux moteurs.')}${section('Tendances fortes',data.strongTrends||[],'Aucune tendance forte suffisamment récente.')}${section('Profils en recul',data.declines||[],'Aucun recul fiable détecté.')}${section('Données à construire',data.buildingSignals||[],'Toutes les fiches disposent de données suffisantes.')}`;
   }
 
   async function load(){
