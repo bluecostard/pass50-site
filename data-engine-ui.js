@@ -868,8 +868,10 @@
       const published=await apiFetch('data-publish.php',{method:'POST',body:{period:ui.period}});totals.published=Number(published.publishedProfiles||0);totals.historicalMetrics=Number(published.historicalMetrics??totals.historicalMetrics);totals.uniqueEvents=Number(published.uniqueEvents??totals.uniqueEvents);totals.activeMetrics=Number(published.activeMetrics??totals.activeMetrics);totals.measurableProfiles=Number(published.measurableProfiles??totals.measurableProfiles);totals.recalculated=Number(published.recalculatedProfiles||0);totals.notRecalculated=Number(published.notRecalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);totals.ranksChanged=Number(published.ranksChanged||0);DE.hub=published.hub||DE.hub;
 
       DE.majStage='5/7 · Rechargement et reclassement';DE.majMessage='Récupération de l’état serveur puis reclassement automatique…';deDrawMajProgress();
-      if(typeof loadCloudState==='function')await loadCloudState();
-      if(typeof render==='function')render();
+      try{
+        if(typeof loadCloudState==='function')await loadCloudState();
+        if(typeof render==='function')render();
+      }catch(refreshError){console.warn('Reclassement affichage non bloquant',refreshError);}
 
       DE.majStage='6/7 · État final publié';DE.majMessage='Les nouveaux scores et le classement trié ont été publiés en une seule écriture atomique.';deDrawMajProgress();
 

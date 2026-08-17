@@ -21,6 +21,14 @@ class PublicTop10FirstPaintTests(unittest.TestCase):
         self.assertIn("id=\"top10Grid\"", INDEX)
         self.assertIn("function renderTop10(", INDEX)
 
+    def test_previous_top10_order_is_declared_before_render(self):
+        self.assertIn("let previousTop10Order=[];", INDEX)
+        self.assertLess(
+            INDEX.index("let previousTop10Order=[];"),
+            INDEX.index("function renderTop10("),
+        )
+        self.assertIn("if(!Array.isArray(previousTop10Order))previousTop10Order=[];", INDEX)
+
 
 if __name__ == "__main__":
     unittest.main()

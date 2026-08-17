@@ -854,6 +854,7 @@ function eventHtml(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigg
 function ageText(p){if(p.agePublic===false)return'Masqué';const confidence=Number(p?.quality?.birth||0),verifiedFacts=Array.isArray(p?.dataEngine?.verifiedFacts)?p.dataEngine.verifiedFacts:[],confirmed=p.ageStatus==='confirmed'||confidence>=90||verifiedFacts.includes('birth_date');if(confirmed&&p.birthDate){const b=new Date(p.birthDate+'T00:00:00'),n=new Date();if(!Number.isNaN(b.getTime())){let age=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))age--;return `${age} ans`;}}if(p.birthYear){const a=new Date().getFullYear()-Number(p.birthYear);return confirmed?`${a} ans`:`≈ ${a-1}–${a} ans`;}return'Non confirmé'}
 function publishedAtIso(){const meta=db.metricsRankingMeta||{};return meta.publishedAt||db.publishedAt||new Date().toISOString();}
 let _renderCoalesceTimer=null,_renderForceScoreMotion=false;
+let previousTop10Order=[];
 function endBootSettling(){
   if(!ui.bootSettling&&!document.documentElement.classList.contains('is-booting'))return;
   ui.bootSettling=false;
@@ -921,6 +922,7 @@ function renderHero(scoreMotion=false){
 function renderTop10(scoreMotion=false){
   const grid=$('#top10Grid');
   if(!grid)return;
+  if(!Array.isArray(previousTop10Order))previousTop10Order=[];
   const r=ranking().slice(3,10),nextOrder=r.map(p=>p.id);
   const structureKey=r.map(p=>`${p.id}|${publicPhoto(p)}|${p.photoPosition||''}`).join('||');
   const scoreClass=scoreMotion?'mini-score score-animate':'mini-score';
