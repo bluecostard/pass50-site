@@ -432,7 +432,7 @@
     const item=values[status]||['Inconnu','empty'];
     return `<span class="de-status ${item[1]}">${item[0]}</span>`;
   }
-  const DE_RANKING_REASON_LABELS={editorial_not_eligible:'Non éligible éditorialement',no_official_metric_account:'Aucun compte métrique officiel',no_recent_activity:'Aucune activité récente mesurée',no_measurable_content:'Aucun contenu mesurable',coverage_below_45:'Couverture inférieure à 45 %',confidence_below_55:'Confiance inférieure à 55 %',stale_captures:'Captures trop anciennes'};
+  const DE_RANKING_REASON_LABELS={editorial_not_eligible:'Non éligible éditorialement',no_official_metric_account:'Aucun compte métrique officiel',no_recent_activity:'Aucune activité récente mesurée',no_measurable_content:'Aucun contenu mesurable',coverage_below_5:'Couverture inférieure à 5 %',coverage_below_30:'Couverture inférieure à 30 %',confidence_below_35:'Confiance inférieure à 35 %',confidence_below_40:'Confiance inférieure à 40 %',stale_captures:'Captures trop anciennes'};
   async function deLoadRankingLab(force=false){
     if(DE.rankingLabLoading||(!force&&DE.rankingLab?.selectedPeriod===DE.rankingLabPeriod))return;
     DE.rankingLabLoading=true;
@@ -663,7 +663,7 @@
       ['Scores modifiés',ranking.scoresChanged],
       ['Rangs modifiés',ranking.ranksChanged],
     ];
-    const reasonLabels={insufficientConfidence:'Confiance insuffisante',insufficientCoverage:'Couverture insuffisante',fewerThanSixCriteria:'Moins de 6 critères',noRecentMetrics:'Aucune métrique récente'};
+    const reasonLabels={insufficientConfidence:'Confiance insuffisante',insufficientCoverage:'Couverture insuffisante',fewerThanMinCriteria:'Moins de 4 critères',noRecentMetrics:'Aucune métrique récente'};
     pane.innerHTML=`<div class="de-observability-shell">
       <div class="section-head"><div><div class="section-title">DIAGNOSTIC MÉTRIQUES</div><div class="muted">Lecture seule · aucune collecte, aucun recalcul et aucune publication.</div></div><div class="de-toolbar">${deObsStatus(data.status)}<button class="btn de-metrics-refresh">Actualiser</button></div></div>
       <div class="de-observability-dates"><div><span>Dernière collecte réussie</span><strong>${deEsc(deObsAge(fresh.collection_success))}</strong><small>${deEsc(fresh.collection_success?.at?deTime(fresh.collection_success.at):'Jamais')}</small></div><div><span>Dernière publication atomique</span><strong>${deEsc(deObsAge(ranking.lastAtomicPublicationAge))}</strong><small>${deEsc(ranking.lastAtomicPublicationAt?deTime(ranking.lastAtomicPublicationAt):'Jamais')}</small></div></div>

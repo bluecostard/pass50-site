@@ -101,11 +101,11 @@ class MetricsObservabilityContractTests(unittest.TestCase):
         for reason in (
             "insufficientConfidence",
             "insufficientCoverage",
-            "fewerThanSixCriteria",
+            "fewerThanMinCriteria",
             "noRecentMetrics",
         ):
             self.assertIn(reason, CORE)
-        self.assertIn("$confidence>=65&&$coverage>=60&&$criteria>=6", CORE)
+        self.assertIn("$confidence>=40&&$coverage>=25&&$criteria>=4", CORE)
 
     def test_platform_diagnostic_has_requested_counters(self):
         for field in (

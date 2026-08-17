@@ -61,7 +61,7 @@ function enforceLocks(saveState=true){
         ...current,
         status:'owner_verified',
         checkedAt:current.checkedAt||new Date().toISOString(),
-        message:'Compte officiel confirmé et figé par le propriétaire PASS50',
+        message:'Compte officiel confirmé',
         locked:true,
         persistedServerSide:true
       };
@@ -81,7 +81,7 @@ function decorateLockedFields(){
     input.value=url;
     input.readOnly=true;
     input.dataset.officialLocked='1';
-    input.title='Lien officiel figé par le propriétaire PASS50';
+    input.title='Lien officiel confirmé';
     input.setAttribute('aria-label',`${platform} officiel figé`);
     const state=input.nextElementSibling;
     if(state&&state.classList.contains('link-state')){

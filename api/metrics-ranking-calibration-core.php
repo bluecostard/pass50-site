@@ -45,7 +45,7 @@ function p50_mrc_transition(?array $previous,array $current): array {
 function p50_mrc_threshold_simulation(array $currentRows): array {
     $coverageThresholds=[35,40,45,50,55,60];$confidenceThresholds=[45,50,55,60,65,70];
     $baseline=count(array_filter($currentRows,static fn($row)=>(bool)$row['classable']));
-    $total=count($currentRows);$thresholdReasons=['coverage_below_45'=>true,'confidence_below_55'=>true];$cells=[];
+    $total=count($currentRows);$thresholdReasons=['coverage_below_30'=>true,'confidence_below_40'=>true];$cells=[];
     foreach($coverageThresholds as $coverageThreshold)foreach($confidenceThresholds as $confidenceThreshold){
         $classable=0;
         foreach($currentRows as $row){

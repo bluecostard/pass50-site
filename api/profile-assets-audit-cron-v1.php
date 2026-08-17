@@ -95,7 +95,7 @@ try{
             if(p50_paa_valid_photo($candidate)&&(!empty($profile['photoManualLocked'])||in_array($status,['verified','validated','approved','manual_verified'],true))){$photo=$candidate;$photoSource='validated_candidate';}
             elseif(isset($repoPhotos[$pid])){$photo=$repoPhotos[$pid];$photoSource='repository_profile_module';}
             if($photo!==''){
-                $profile['photoUrl']=$photo;$profile['photoStatus']='verified';$profile['photoNote']='Photo restaurée automatiquement depuis une source PASS50 persistante.';$restoredPhotos++;$profileChanged=true;$photoMissing=false;
+                $profile['photoUrl']=$photo;$profile['photoStatus']='validated';$profile['photoNote']='Photo restaurée automatiquement depuis une source PASS50 persistante.';$profile['photoManualLocked']=true;$profile['photoManualUpdatedAt']=gmdate(DATE_ATOM);$restoredPhotos++;$profileChanged=true;$photoMissing=false;
             }
         }
         if($profileChanged){$profilesChanged++;$changed=true;}

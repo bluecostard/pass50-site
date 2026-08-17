@@ -29,9 +29,9 @@ $pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,tr
     ->execute([$runUuid,P50_MR_ALGORITHM_VERSION,'cron_2h','success','[\"2H\",\"24H\",\"48H\",\"7J\",\"15J\"]']);
 $stmt=$pdo->prepare("INSERT INTO p50_metric_ranking_current(algorithm_version,period_key,profile_id,run_uuid,rank_position,score,confidence,coverage,classable,exclusion_reasons_json) VALUES(?,?,?,?,?,?,?,?,?,?)");
 foreach([
-    [P50_MR_ALGORITHM_VERSION,'2H','A',$runUuid,null,35,42,38,0,'[\"coverage_below_45\"]'],
-    [P50_MR_ALGORITHM_VERSION,'2H','B',$runUuid,null,30,40,35,0,'[\"coverage_below_45\"]'],
-    [P50_MR_ALGORITHM_VERSION,'2H','C',$runUuid,null,25,39,34,0,'[\"coverage_below_45\"]'],
+    [P50_MR_ALGORITHM_VERSION,'2H','A',$runUuid,null,35,42,38,0,'[\"coverage_below_30\"]'],
+    [P50_MR_ALGORITHM_VERSION,'2H','B',$runUuid,null,30,40,35,0,'[\"coverage_below_30\"]'],
+    [P50_MR_ALGORITHM_VERSION,'2H','C',$runUuid,null,25,39,34,0,'[\"coverage_below_30\"]'],
     [P50_MR_ALGORITHM_VERSION,'24H','B',$runUuid,1,88,85,80,1,'[]'],
     [P50_MR_ALGORITHM_VERSION,'24H','A',$runUuid,2,84,82,78,1,'[]'],
     [P50_MR_ALGORITHM_VERSION,'24H','C',$runUuid,3,79,80,75,1,'[]'],

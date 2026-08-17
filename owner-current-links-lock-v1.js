@@ -21,7 +21,7 @@ function lockProfile(p,saveState=true){
     if(!p.platforms.includes(platform)){p.platforms.push(platform);changed=true;}
     const current=p.linkChecks[platform]||{};
     if(current.status!=='owner_verified'||current.locked!==true||!current.persistedServerSide){
-      p.linkChecks[platform]={...current,status:'owner_verified',checkedAt:current.checkedAt||new Date().toISOString(),message:'Compte officiel confirmé et figé par le propriétaire PASS50',locked:true,persistedServerSide:true,protectedBy:'PASS50-OWNER-CURRENT-LINKS-LOCK-V1'};
+      p.linkChecks[platform]={...current,status:'owner_verified',checkedAt:current.checkedAt||new Date().toISOString(),message:'Compte officiel confirmé',locked:true,persistedServerSide:true,protectedBy:'PASS50-OWNER-CURRENT-LINKS-LOCK-V1'};
       changed=true;
     }
   });
@@ -34,7 +34,7 @@ function decorate(){
     Object.entries(p.officialLinkLocks||{}).forEach(([platform,url])=>{
       if(!url)return;
       const input=card.querySelector(`[data-link-platform="${CSS.escape(platform)}"]`);if(!input)return;
-      input.value=url;input.readOnly=true;input.dataset.officialLocked='1';input.title='Lien officiel figé par le propriétaire PASS50';
+      input.value=url;input.readOnly=true;input.dataset.officialLocked='1';input.title='Lien officiel confirmé';
       const state=input.nextElementSibling;
       if(state&&state.classList.contains('link-state')){state.classList.add('ok');state.textContent='FIGÉ';state.title='Compte officiel protégé contre la suppression et le remplacement automatique';}
     });

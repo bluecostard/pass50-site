@@ -12,7 +12,7 @@ $youtubeKey=hash('sha256','youtube-orchestrator-fixture');
 $config=['data_engine'=>['confidence_threshold'=>90,'live_stale_minutes'=>45],'metrics'=>[
   'PASS50_YOUTUBE_API_KEY'=>$youtubeKey,'orchestrator_enabled'=>true,'cron_secret'=>$cronSecret,
   'instagram_enabled'=>true,'instagram_access_token'=>'','facebook_enabled'=>true,'facebook_access_token'=>hash('sha256','facebook-fixture'),'facebook_mode'=>'unsupported_account_type',
-  'p0_max_profiles'=>20,'p1_max_profiles'=>100,'p1_max_rank'=>70,'p2_max_profiles'=>500,
+  'p0_max_profiles'=>20,'p1_max_profiles'=>200,'p1_max_rank'=>200,'p2_max_profiles'=>500,
   'priority_profile_ids'=>['priority'],'p0_min_freshness_minutes'=>12,'p1_min_freshness_minutes'=>90,
   'p2_min_freshness_minutes'=>600,'worker_lock_timeout_minutes'=>10,
 ]];
@@ -44,7 +44,7 @@ p50_metrics_ensure_schema($pdo);
 $p0=p50_mo_select($pdo,'p0');$p0Ids=array_column($p0['candidates'],'profileId');
 orchestrator_must(in_array('live',$p0Ids,true)&&in_array('priority',$p0Ids,true),'P0 utilise LIVE récent et liste prioritaire');
 $p1=p50_mo_select($pdo,'p1');$p1Ids=array_column($p1['candidates'],'profileId');
-orchestrator_must(in_array('live',$p1Ids,true)&&in_array('priority',$p1Ids,true)&&in_array('near',$p1Ids,true),'P1 couvre rangs 1 à 70');
+orchestrator_must(in_array('live',$p1Ids,true)&&in_array('priority',$p1Ids,true)&&in_array('near',$p1Ids,true),'P1 couvre rangs 1 à 200');
 $p2=p50_mo_select($pdo,'p2');$p2Ids=array_column($p2['candidates'],'profileId');
 orchestrator_must(!in_array('dead',$p2Ids,true)&&in_array('low',$p2Ids,true)&&!in_array('candidate',$p2Ids,true),'Census filtre les morts et liens non vérifiés mais accepte la confiance supérieure à 80');
 orchestrator_must($p2['summary']['skippedConfiguration']>0&&$p2['summary']['skippedAuthRequired']>0&&$p2['summary']['skippedUnsupported']>0,'Plateformes non configurées, non autorisées et incompatibles exclues');

@@ -4,6 +4,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/http-tools.php';
 
 const P50_DATA_CONFIDENCE_THRESHOLD = 80;
+/** Seuils 15C pour publier un score classable (assouplis : ne plus bloquer ~la moitié de la base). */
+const P50_DE_CLASSABLE_MIN_CONFIDENCE = 40;
+const P50_DE_CLASSABLE_MIN_COVERAGE = 25.0;
+const P50_DE_CLASSABLE_MIN_CRITERIA = 4;
 const P50_PRIORITY_WAVE_V22 = [
     'census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey',
     'census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo',
@@ -18,6 +22,48 @@ function p50_de_is_priority_profile(string $profileId): bool {
 function p50_de_threshold(): int {
     global $config;
     return max(60, min(P50_DATA_CONFIDENCE_THRESHOLD, (int)($config['data_engine']['confidence_threshold'] ?? P50_DATA_CONFIDENCE_THRESHOLD)));
+}
+
+/**
+ * Décide si un résultat 15C peut être publié comme score classable.
+ * Les liens officiels vérifiés débloquent l’entrée au classement dès qu’un
+ * signal mesurable (critère ou événement) existe — sans exiger 6 critères / 60 %.
+ */
+function p50_de_is_trend_classable(array $trend, int $verifiedSocialLinks = 0): bool {
+    $confidence = (int)($trend['confidence'] ?? 0);
+    $coverage = (float)($trend['coverage'] ?? 0);
+    $criteria = (int)($trend['measuredCriteria'] ?? 0);
+    $events = (int)($trend['events'] ?? 0);
+    $score = (int)($trend['score'] ?? 0);
+    if ($score <= 0 && $events <= 0 && $verifiedSocialLinks < 1) {
+        return false;
+    }
+    if (
+        $confidence >= P50_DE_CLASSABLE_MIN_CONFIDENCE
+        && $coverage >= P50_DE_CLASSABLE_MIN_COVERAGE
+        && $criteria >= P50_DE_CLASSABLE_MIN_CRITERIA
+        && $events >= 1
+    ) {
+        return true;
+    }
+    // Liens vérifiés + activité récente : même plancher de 4 critères.
+    if (
+        $verifiedSocialLinks >= 1
+        && $events >= 1
+        && $criteria >= P50_DE_CLASSABLE_MIN_CRITERIA
+        && $score > 0
+    ) {
+        return true;
+    }
+    // Présence multi-réseaux vérifiée avec au moins 4 critères mesurés.
+    if (
+        $verifiedSocialLinks >= 2
+        && $criteria >= P50_DE_CLASSABLE_MIN_CRITERIA
+        && $score > 0
+    ) {
+        return true;
+    }
+    return false;
 }
 
 function p50_de_ensure_schema(): void {
@@ -1329,7 +1375,14 @@ function p50_de_15c_window(string $profileId,int $hours): array {
         for($i=0;$i<$extraPlatforms;$i++)$platforms['signal_'.$e['id'].'_'.$i]=$timeWeight;
         $conf[]=(int)$e['confidence'];
     }
-    foreach($links as $l)$conf[]=(int)$l['confidence'];
+    foreach($links as $l){
+        $conf[]=(int)$l['confidence'];
+        // Les réseaux officiels vérifiés comptent pour la présence multi-plateformes
+        // même sans capture d’événement récente (évite un plafond artificiel ~70–80).
+        $platform=trim((string)($l['platform']??''));
+        if($platform===''||strcasecmp($platform,'Web')===0)continue;
+        $platforms[$platform]=max((float)($platforms[$platform]??0),0.45);
+    }
     $followers=0.0;
     foreach($events as $e){
         $m=p50_de_normalize_score_metrics(decode_json_column($e['metrics']??null,[]));
@@ -1364,7 +1417,15 @@ function p50_de_15c_window(string $profileId,int $hours): array {
     return ['score'=>(int)round($score),'baseScore'=>round($base,2),'confidence'=>(int)round($confidence*100),'coverage'=>round($coverage,2),'criteria'=>$scores,'raw'=>$raw,'measuredCriteria'=>count($scores),'topCriteria'=>$top,'events'=>count($events),'platforms'=>array_keys($platforms),'latestAt'=>$latest?gmdate('c',$latest):null,'freshHours'=>$freshHours,'freshWeight'=>$freshWeight];
 }
 function p50_de_compute_trend_score(string $profileId): array {
-    $w=p50_de_15c_window($profileId,168);$w['classable']=$w['confidence']>=65&&$w['coverage']>=60&&$w['measuredCriteria']>=6;$w['events30']=$w['events'];$w['events7']=$w['events'];$w['sumViews']=0;$w['maxViews']=0;return $w;
+    $w=p50_de_15c_window($profileId,168);
+    $verifiedSocial=count(array_filter(
+        p50_de_social_links($profileId,true),
+        static fn(array $link): bool => strcasecmp((string)($link['platform']??''),'Web')!==0
+    ));
+    $w['verifiedSocialLinks']=$verifiedSocial;
+    $w['classable']=p50_de_is_trend_classable($w,$verifiedSocial);
+    $w['events30']=$w['events'];$w['events7']=$w['events'];$w['sumViews']=0;$w['maxViews']=0;
+    return $w;
 }
 function p50_de_period_scores(int|string $profile): array {
     if(is_int($profile))return ['2H'=>$profile,'24H'=>$profile,'48H'=>$profile,'7J'=>$profile,'15J'=>$profile];
