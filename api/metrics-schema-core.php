@@ -430,7 +430,7 @@ function p50_metrics_backfill_legacy(PDO $pdo,int $limit=500): array {
         $pdo->beginTransaction();
         $links=$pdo->query("SELECT profile_id,platform,normalized_url,confidence,status,verified_at,updated_at FROM p50_social_links WHERE status='verified' ORDER BY profile_id,platform LIMIT ".$limit)->fetchAll();
         foreach($links as $row)try{
-            $result=p50_metrics_upsert_account($pdo,['profileId'=>$row['profile_id'],'platform'=>$row['platform'],'canonicalUrl'=>$row['normalized_url'],'status'=>'active','confidence'=>$row['confidence'],'sourceType'=>'legacy_social_link','observedAt'=>$row['updated_at']??$row['verified_at']??gmdate('c'),'provenance'=>['sourceTable'=>'p50_social_links','sourceKey'=>$row['profile_id'].'|'.$row['platform'],'legacyUrlHash'=>hash('sha256',(string)$row['normalized_url']),'originalDate'=>$row['verified_at']??null,'migration'=>'legacy_backfill_v1']]);
+            $result=p50_metrics_upsert_account($pdo,['profileId'=>$row['profile_id'],'platform'=>$row['platform'],'canonicalUrl'=>$row['normalized_url'],'status'=>'active','confidence'=>$row['confidence'],'sourceType'=>'verified_social_link','observedAt'=>$row['updated_at']??$row['verified_at']??gmdate('c'),'provenance'=>['sourceTable'=>'p50_social_links','sourceKey'=>$row['profile_id'].'|'.$row['platform'],'legacyUrlHash'=>hash('sha256',(string)$row['normalized_url']),'originalDate'=>$row['verified_at']??null,'migration'=>'legacy_backfill_v1']]);
             $totals['accountsCreated']+=(int)$result['created'];
         }catch(Throwable){$totals['errors']++;}
 

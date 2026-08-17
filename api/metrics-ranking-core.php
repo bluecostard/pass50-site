@@ -241,12 +241,20 @@ function p50_mr_load(PDO $pdo,DateTimeImmutable $now): array {
       ) r ON r.account_id=c.account_id AND r.series_content=COALESCE(c.content_id,0) AND r.captured_at=c.captured_at
       WHERE c.quality_status='usable' AND c.confidence>=70 ORDER BY c.captured_at,c.id");
     $stmt->execute([$cutoff]);foreach($stmt->fetchAll() as $capture)$captures[]=$capture;
-    return compact('profiles','accounts','contents','captures');
+    $verifiedOfficialIds=[];
+    if(p50_metrics_table_exists($pdo,'p50_social_links')){
+        $linkStmt=$pdo->prepare("SELECT DISTINCT profile_id FROM p50_social_links WHERE status='verified' AND confidence>=70 AND profile_id<>''");
+        $linkStmt->execute();
+        foreach($linkStmt->fetchAll(PDO::FETCH_COLUMN) as $profileId)$verifiedOfficialIds[(string)$profileId]=true;
+    }
+    return compact('profiles','accounts','contents','captures','verifiedOfficialIds');
 }
 
 function p50_mr_is_official_account(array $account): bool {
-    return (string)$account['status']==='active'&&(int)$account['confidence']>=70
-        &&preg_match('/(?:unknown|candidate|unverified|legacy)/i',(string)$account['source_type'])!==1;
+    if((string)$account['status']!=='active'||(int)$account['confidence']<70)return false;
+    $source=strtolower(trim((string)$account['source_type']));
+    if($source==='legacy_social_link'||$source==='verified_social_link')return true;
+    return preg_match('/(?:^unknown$|^legacy_unknown$|candidate|unverified)/i',$source)!==1;
 }
 
 function p50_mr_platform_raw(array $account,array $contents,array $captures,DateTimeImmutable $start,DateTimeImmutable $end): array {
@@ -336,10 +344,14 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
         $score=$aggregate('score');$base=$aggregate('baseScore');$weightedCoverage=$aggregate('coverage')??0;$coverage=p50_mr_profile_coverage($platforms,$weightedCoverage);$confidence=$aggregate('confidence')??0;
         $contentCount=array_sum(array_column(array_column($platforms,'raw'),'contentCount'));$captureCount=array_sum(array_column(array_column($platforms,'raw'),'captureCount'));
         $latest=null;$reachRaw=0.0;foreach($platforms as $platform){$candidate=$platform['raw']['latestCaptureAt'];if($candidate&&($latest===null||$candidate>$latest))$latest=$candidate;$reachRaw+=(float)($platform['raw']['reachRaw']??0);}
-        $official=count(array_filter($accountsByProfile[$profileId]??[],fn($account)=>p50_mr_is_official_account($account)))>0;
+        $official=count(array_filter($accountsByProfile[$profileId]??[],fn($account)=>p50_mr_is_official_account($account)))>0
+            ||!empty($loaded['verifiedOfficialIds'][$profileId]);
         $recentActivity=p50_mr_has_recent_activity($platforms);
         $reasons=[];if(!(bool)$profile['editorial_eligible']||!(bool)$profile['alive'])$reasons[]='editorial_not_eligible';if(!$official)$reasons[]='no_official_metric_account';if($periodKey==='2H'&&!$recentActivity)$reasons[]='no_recent_activity';elseif($contentCount<1)$reasons[]='no_measurable_content';if($coverage<$thresholds['coverage'])$reasons[]=$periodKey==='2H'?'coverage_below_5':'coverage_below_30';if($confidence<$thresholds['confidence'])$reasons[]=$periodKey==='2H'?'confidence_below_35':'confidence_below_40';
         $age=$latest?($now->getTimestamp()-(new DateTimeImmutable($latest,new DateTimeZone('UTC')))->getTimestamp())/3600:INF;if($age>$freshLimit)$reasons[]='stale_captures';
+        if($score===null&&$official&&(bool)$profile['alive']){
+            $score=0.1;if($base===null)$base=0.1;$reasons[]='awaiting_measurable_capture';
+        }
         $classable=$score!==null&&(bool)$profile['alive']&&$official;
         $rows[]=['profile'=>$profile,'profileId'=>$profileId,'score'=>$score,'baseScore'=>$base,'confidence'=>$confidence,'coverage'=>$coverage,'classable'=>$classable,'editorialEligible'=>(bool)$profile['editorial_eligible'],'platformCount'=>count($platforms),'contentCount'=>$contentCount,'captureCount'=>$captureCount,'latestCaptureAt'=>$latest,'components'=>$platforms,'rawFeatures'=>array_map(fn($p)=>['platform'=>$p['platform'],'features'=>$p['raw']['features'],'availability'=>$p['raw']['availability'],'reachRaw'=>$p['raw']['reachRaw'],'publishedInsideWindowFallback'=>$p['raw']['publishedInsideWindowFallback']],$platforms),'exclusionReasons'=>array_values(array_unique($reasons)),'reachRaw'=>$reachRaw,'previousRank'=>$previousRanks[$profileId]??null,'rank'=>null,'rankDelta'=>null];
     }
