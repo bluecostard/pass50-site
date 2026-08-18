@@ -6,13 +6,20 @@ const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verif
 /** Couverture rolling (scan récent) — distincte du trust gate anti-ghost. */
 const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-3';
 const P50_LIVE_V4_COVERAGE_WINDOW_SECONDS = 7200;
-/** TikTok à rescanner toutes les ~2 min : les 4 lives confirmés + Apoutchou. */
+/** TikTok à rescanner toutes les ~2 min. */
 const P50_LIVE_V4_P0_TIKTOK = [
     'apoutchou',
     'general-camille-makosso',
     'census-no-limit',
     'census-amour-ruth-poopy',
     'census-jordan-evraa',
+    'dbz',
+    'maabio',
+    'census-el-profesor',
+    'census-adjinaya-el-professor',
+    'p_1785175190809',
+    'census-sarara-messan',
+    'louissette',
 ];
 /** Délai minimum entre deux sondes TikTok vérifié (secondes). */
 const P50_LIVE_V4_P0_RESCAN_SECONDS = 120;
@@ -163,6 +170,13 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-no-limit|tiktok'=>'https://www.tiktok.com/@nolimit_vousdv',
         'census-amour-ruth-poopy|tiktok'=>'https://www.tiktok.com/@amourruth0',
         'census-jordan-evraa|tiktok'=>'https://www.tiktok.com/@realjordanevraa',
+        'dbz|tiktok'=>'https://www.tiktok.com/@dbz.07',
+        'maabio|tiktok'=>'https://www.tiktok.com/@biodetoxminceur',
+        'census-el-profesor|tiktok'=>'https://www.tiktok.com/@elprofesor_off',
+        'census-adjinaya-el-professor|tiktok'=>'https://www.tiktok.com/@elprofesor.off',
+        'p_1785175190809|tiktok'=>'https://www.tiktok.com/@ulrich_jordan30',
+        'census-sarara-messan|tiktok'=>'https://www.tiktok.com/@sarra_messan',
+        'louissette|tiktok'=>'https://www.tiktok.com/@misscadic',
     ];
     return $overrides[$key]??$url;
 }
@@ -221,6 +235,11 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-no-limit','name'=>'No Limit','handle'=>'nolimit_vousdv'],
         ['id'=>'census-amour-ruth-poopy','name'=>'Amour Ruth & Poopy','handle'=>'amourruth0'],
         ['id'=>'census-jordan-evraa','name'=>'Jordan Evraa','handle'=>'realjordanevraa'],
+        ['id'=>'dbz','name'=>'DBZ','handle'=>'dbz.07'],
+        ['id'=>'maabio','name'=>'Maabio','handle'=>'biodetoxminceur'],
+        ['id'=>'p_1785175190809','name'=>'Ulrich Jordan','handle'=>'ulrich_jordan30'],
+        ['id'=>'census-sarara-messan','name'=>'Sarara Messan','handle'=>'sarra_messan'],
+        ['id'=>'louissette','name'=>'Cadic N’Guessan','handle'=>'misscadic'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
