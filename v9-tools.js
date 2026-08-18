@@ -110,15 +110,29 @@ function p50TriggerIsStale(event){
   if(!event.autoSynced&&!event.manualDataValidated&&/\b3\s*j|\b72\s*h|trois jour|il y a 3/.test(label))return true;
   return false;
 }
-function p50IsTop10Profile(id){
+function p50TriggerRank(profileId){
   const r=typeof completeRanking==='function'?completeRanking():[];
-  const ix=r.findIndex(p=>p.id===id);
-  return ix>=0&&ix<10&&score(r[ix])>0;
+  const ix=r.findIndex(p=>p.id===profileId);
+  return ix>=0?ix+1:null;
 }
-function p50SyncTriggerFromOfficialNews(profileId,item,options={}){
-  const allowAnyProfile=Boolean(options.allowAnyProfile);
+function p50IsTop50Profile(id){
+  const rank=p50TriggerRank(id);
+  const p=typeof profile==='function'?profile(id):null;
+  return rank!==null&&rank<=50&&p&&score(p)>0;
+}
+function p50TriggerKicker(profileId){
+  const rank=p50TriggerRank(profileId);
+  if(rank&&rank<=10)return '⚡ POURQUOI DANS LE TOP 10 ?';
+  return '⚡ POURQUOI DANS LE TOP 50 ?';
+}
+function p50TriggerReason(profileId){
+  const rank=p50TriggerRank(profileId);
+  if(rank&&rank<=10)return 'Ce contenu récent explique la progression de cette fiche dans le Top 10.';
+  return 'Ce contenu récent explique la progression de cette fiche dans le Top 50.';
+}
+function p50SyncTriggerFromOfficialNews(profileId,item){
   if(!profileId||!item||!item.url)return false;
-  if(!allowAnyProfile&&!p50IsTop10Profile(profileId))return false;
+  if(!p50IsTop50Profile(profileId))return false;
   const itemTs=Date.parse(item.publishedAt||'');
   const itemUrl=String(item.url||'').trim();
   let ev=primaryEvent(profileId);
@@ -137,7 +151,7 @@ function p50SyncTriggerFromOfficialNews(profileId,item,options={}){
     platforms:[platform],
     metric:item.official?'Contenu officiel détecté':'Contenu validé',
     publishedLabel:item.publishedAt?String(item.publishedAt).slice(0,10):'Récent',
-    reason:'Ce contenu récent explique la progression de cette fiche dans le Top 10.',
+    reason:p50TriggerReason(profileId),
     url:itemUrl,submittedUrl:itemUrl,resolvedUrl:itemUrl,
     icon:isVideo?'▶':'📰',
     confidence:(Number(item.confidence||0)>=80)?'élevée':'moyenne',
@@ -213,7 +227,7 @@ async function p50v9BulkCovers(){const ids=ranking().slice(0,10).map(p=>primaryE
 const p50v8OpenProfile=openProfile;
 openProfile=function(id){close('top50Modal');const p=profile(id);if(!p){toast('Profil introuvable');return;}const u=userPrefs(),links=p50v9OfficialLinks(p),badges=Array.isArray(p.badges)?p.badges:[];$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category||''}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name||'Influenceur'}</h2><div class="handle">${p.handle||''}</div><div style="margin-top:11px">${badges.map(b=>badgeHtml(b,id)).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}${p50ProfileChartHtml(p)}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé. Les liens de recherche ne sont pas affichés au public.</div>':''}</div></div>`;open('profileModal')}
 
-eventHtml=function(p){const e=primaryEvent(p.id);if(!e||p50TriggerIsStale(e))return `<div class="trigger-empty"><strong>Aucune actualité récente mise en avant</strong><div style="margin-top:5px">${e?'Les anciennes informations ont été retirées de cette fiche.':'Les nouvelles publications apparaîtront ici dès qu’elles seront disponibles.'}</div></div>`;const link=p50v9ExactContentLink(e.url)?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'<span class="muted">Lien original à valider</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${p50v20EventThumbHtml(p,e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${e.platforms.join(' · ')} · ${e.publishedLabel} · Confiance ${e.confidence}</div><div class="trigger-reason">${e.reason}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric}</span>${link}</div></section>`}
+eventHtml=function(p){const e=primaryEvent(p.id);if(!e||p50TriggerIsStale(e))return `<div class="trigger-empty"><strong>Aucune actualité récente mise en avant</strong><div style="margin-top:5px">${e?'Les anciennes informations ont été retirées de cette fiche.':'Les nouvelles publications apparaîtront ici dès qu’elles seront disponibles.'}</div></div>`;const link=p50v9ExactContentLink(e.url)?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'<span class="muted">Lien original à valider</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">${p50TriggerKicker(p.id)}</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${p50v20EventThumbHtml(p,e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${e.platforms.join(' · ')} · ${e.publishedLabel} · Confiance ${e.confidence}</div><div class="trigger-reason">${e.reason}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric}</span>${link}</div></section>`}
 renderContent=function(){const content=[...db.content].sort((a,b)=>{const pa=profile(a.profileId),pb=profile(b.profileId);return score(pb)-score(pa)}).slice(0,5);$('#contentGrid').innerHTML=content.map((c,i)=>{const p=profile(c.profileId),rawEv=primaryEvent(c.profileId),ev=rawEv&&!p50TriggerIsStale(rawEv)?rawEv:null,detected=p50v20DetectedCover(ev),cover=ev?p50v20TrendCover(p,ev):'',fallback=Boolean(cover&&!detected),url=ev&&p50v9ExactContentLink(ev.url)?ev.url:(p50v9ExactContentLink(c.url)?c.url:'');const body=`${cover?`<img class="cover-bg" src="${safeAttr(cover)}" alt="Visuel ${safeAttr(p.name)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:''}${fallback?'<span class="content-cover-fallback">VISUEL DU PROFIL</span>':''}<div><strong>#${i+1} · ${p.name}</strong><div style="margin-top:8px">${badgeHtml(c.badge)}</div></div><div class="play">▶</div><div class="content-meta"><span>${c.platform}</span><span>${c.views} · ${c.time}</span></div>`;return url?`<a class="content-card ${cover?'has-cover':''}" href="${safeAttr(url)}" target="_blank" rel="noopener" data-content="${c.id}">${body}</a>`:`<article class="content-card ${cover?'has-cover':''}" data-content="${c.id}">${body}<div class="platform-hidden-note">Lien original à valider</div></article>`}).join('')}
 
 document.addEventListener('input',e=>{if(e.target.id==='mediaProfileSearch')p50ApplyMediaSearch();});
@@ -461,7 +475,7 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
 
   function p50RejectTrigger(profileId){const ev=primaryEvent(profileId);if(!ev)return;if(!confirm('Retirer ce déclencheur de la FI ?'))return;db.events=db.events.filter(x=>x.id!==ev.id);save();render();p50v9RenderNews();toast('Déclencheur retiré');}
 
-  eventHtml=function(p){const e=primaryEvent(p.id);if(!e||p50TriggerIsStale(e))return `<div class="trigger-empty"><strong>Aucune actualité récente mise en avant</strong><div style="margin-top:5px">${e?'Les anciennes informations ont été retirées de cette fiche.':'Les nouvelles publications apparaîtront ici dès qu’elles seront disponibles.'}</div></div>`;const valid=e.originalLinkValidated&&p50v9ExactContentLink(e.url);const link=valid?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'<span class="muted">Source en cours de validation</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${p50v20EventThumbHtml(p,e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${(e.platforms||[]).join(' · ')} · ${e.publishedLabel||''} · Confiance ${e.confidence||'à vérifier'}</div><div class="trigger-reason">${e.reason||''}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric||'Signal détecté'}</span>${link}</div></section>`;};
+  eventHtml=function(p){const e=primaryEvent(p.id);if(!e||p50TriggerIsStale(e))return `<div class="trigger-empty"><strong>Aucune actualité récente mise en avant</strong><div style="margin-top:5px">${e?'Les anciennes informations ont été retirées de cette fiche.':'Les nouvelles publications apparaîtront ici dès qu’elles seront disponibles.'}</div></div>`;const valid=e.originalLinkValidated&&p50v9ExactContentLink(e.url);const link=valid?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'<span class="muted">Source en cours de validation</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">${p50TriggerKicker(p.id)}</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${p50v20EventThumbHtml(p,e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${(e.platforms||[]).join(' · ')} · ${e.publishedLabel||''} · Confiance ${e.confidence||'à vérifier'}</div><div class="trigger-reason">${e.reason||''}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric||'Signal détecté'}</span>${link}</div></section>`;};
 
   openProfile=function(id){
     const top50=$('#top50Modal'),profileWasOpen=$('#profileModal').classList.contains('show');
