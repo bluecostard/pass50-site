@@ -60,7 +60,7 @@ if($mode==='full'){
     $reconfirm=[];$discovery=[];$used=[];
     foreach($sources as $source){
         $key=strtolower((string)$source['platform']).'|'.trim((string)$source['profile_id']);
-        if(isset($activeKeys[$key])||p50_live_v4_needs_tiktok_rescan($source)||p50_live_v4_is_warm_watch($source)){
+        if(isset($activeKeys[$key])||p50_live_v4_needs_p0_rescan($source)||p50_live_v4_is_warm_watch($source)){
             $reconfirm[]=$source;$used[(string)$source['source_key']]=true;
         }else $discovery[]=$source;
     }
@@ -70,8 +70,8 @@ if($mode==='full'){
     usort($reconfirm,static function(array $a,array $b) use($activeKeys): int {
         $keyA=strtolower((string)$a['platform']).'|'.trim((string)$a['profile_id']);
         $keyB=strtolower((string)$b['platform']).'|'.trim((string)$b['profile_id']);
-        $prioA=isset($activeKeys[$keyA])?0:(p50_live_v4_is_p0_tiktok($a)?1:(p50_live_v4_is_warm_watch($a)?2:3));
-        $prioB=isset($activeKeys[$keyB])?0:(p50_live_v4_is_p0_tiktok($b)?1:(p50_live_v4_is_warm_watch($b)?2:3));
+        $prioA=isset($activeKeys[$keyA])?0:(p50_live_v4_is_p0_source($a)?1:(p50_live_v4_is_warm_watch($a)?2:3));
+        $prioB=isset($activeKeys[$keyB])?0:(p50_live_v4_is_p0_source($b)?1:(p50_live_v4_is_warm_watch($b)?2:3));
         if($prioA!==$prioB)return $prioA<=>$prioB;
         $ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');
         if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);

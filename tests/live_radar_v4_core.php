@@ -173,4 +173,12 @@ $requests=p50_live_v4_probe_requests($jordanSource);
 must(isset($requests['api_webcast']),'Jordan Evraa doit être sondé via webcast.tiktok.com.');
 must(str_contains((string)$requests['api_webcast']['url'],'webcast.tiktok.com/webcast/room/info_by_user'),'La sonde webcast doit viser info_by_user.');
 
-echo json_encode(['ok'=>true,'cases'=>38],JSON_UNESCAPED_SLASHES).PHP_EOL;
+$merged=p50_live_v4_merge_p0_watch(
+    [['profileId'=>'census-jordan-evraa','platform'=>'TikTok','handle'=>'realjordanevraa']],
+    [['profileId'=>'census-jordan-evraa','platform'=>'TikTok'],['profileId'=>'yt-coach','platform'=>'YouTube']]
+);
+must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un même compte.');
+must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
+must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
+
+echo json_encode(['ok'=>true,'cases'=>41],JSON_UNESCAPED_SLASHES).PHP_EOL;
