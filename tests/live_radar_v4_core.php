@@ -153,4 +153,24 @@ $noLimitSource=['profile_id'=>'census-no-limit','public_name'=>'No Limit','platf
 $noLimitApi=p50_live_v4_parse_tiktok($noLimitSource,['api'=>response('{"data":{"user":{"uniqueId":"nolimit_vousdv","roomId":"7675157318859639573","status":2},"liveRoom":{"status":2,"startTime":1787011835}},"statusCode":0}')]);
 must($noLimitApi['state']==='live','L’API TikTok No Limit status=2 + uniqueId doit publier le LIVE.');
 
-echo json_encode(['ok'=>true,'cases'=>34],JSON_UNESCAPED_SLASHES).PHP_EOL;
+$jordanSource=['profile_id'=>'census-jordan-evraa','public_name'=>'Jordan Evraa','platform'=>'TikTok','url'=>'https://www.tiktok.com/@realjordanevraa'];
+$webcastLive=p50_live_v4_parse_tiktok($jordanSource,['api_webcast'=>response('{"data":{"status":2,"id":7675133122324843295,"id_str":"7675133122324843295","title":"Goumin tv","user_count":147,"owner":{"display_id":"realjordanevraa","nickname":"JORDAN EVRAA"}},"status_code":0}')]);
+must($webcastLive['state']==='live','L’API webcast status=2 + display_id doit publier le LIVE même sans www.tiktok.com/api-live.');
+must(($webcastLive['live']['metadata']['roomId']??'')==='7675133122324843295','Le roomId webcast doit être lu depuis id_str.');
+must(($webcastLive['live']['metadata']['strictApiLabels'][0]??'')==='api_webcast','La preuve stricte peut venir de api_webcast.');
+
+$embedOnlyBlocked=p50_live_v4_parse_tiktok($jordanSource,[
+    'api'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'http_403','timeMs'=>8],
+    'live'=>['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>'https://www.tiktok.com/@realjordanevraa/live','error'=>'blocked_or_challenged','timeMs'=>8],
+    'embed'=>response('<!doctype html><title>TikTok</title><div id="app"></div>',200,'https://www.tiktok.com/embed/live/@realjordanevraa'),
+]);
+must($embedOnlyBlocked['state']==='unknown','Un embed sans JSON live + API 403 ne doit pas classer un direct comme hors ligne.');
+
+$readableOffline=p50_live_v4_parse_tiktok($source,['profile'=>response('<!doctype html><title>Coach Test | TikTok</title><script>{"uniqueId":"coachtest","videoCount":12}</script>',200,'https://www.tiktok.com/@coachtest')]);
+must($readableOffline['state']==='offline','Une page profil lisible sans signal live reste hors ligne.');
+
+$requests=p50_live_v4_probe_requests($jordanSource);
+must(isset($requests['api_webcast']),'Jordan Evraa doit être sondé via webcast.tiktok.com.');
+must(str_contains((string)$requests['api_webcast']['url'],'webcast.tiktok.com/webcast/room/info_by_user'),'La sonde webcast doit viser info_by_user.');
+
+echo json_encode(['ok'=>true,'cases'=>38],JSON_UNESCAPED_SLASHES).PHP_EOL;
