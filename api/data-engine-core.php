@@ -1608,10 +1608,14 @@ function p50_de_lock_birth_date(array &$p, bool $adminConfirmed=false): void {
     $p['quality']=is_array($p['quality']??null)?$p['quality']:[];
     $current=(int)($p['quality']['birth']??0);
     $p['quality']['birth']=$adminConfirmed?max(100,$current):max(90,$current);
-    $p['dataEngine']=is_array($p['dataEngine']??null)?$p['dataEngine']:[];
+    $p['dataEngine']=is_array($p['dataEngine']??null)&&!array_is_list($p['dataEngine']??[])?$p['dataEngine']:[];
     $verified=$p['dataEngine']['verifiedFacts']??[];
-    if(!is_array($verified))$verified=[];
-    $p['dataEngine']['verifiedFacts']=array_values(array_unique(array_merge($verified,['birth_date'])));
+    $keys=[];
+    if(is_array($verified)){
+        $list=array_is_list($verified)?$verified:array_keys($verified);
+        foreach($list as $item){if(is_string($item)&&$item!==''&&!is_numeric($item))$keys[]=$item;}
+    }
+    $p['dataEngine']['verifiedFacts']=array_values(array_unique(array_merge($keys,['birth_date'])));
 }
 
 function p50_de_freeze_existing_birth(array &$p): bool {

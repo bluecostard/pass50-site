@@ -14,7 +14,7 @@ class BirthFreezeAllFiV1Tests(unittest.TestCase):
     def test_client_helpers_lock_every_confirmed_fiche(self):
         self.assertIn("function p50FreezeExistingBirth(p)", INDEX)
         self.assertIn("function p50LockBirthDate(p,adminConfirmed=false)", INDEX)
-        self.assertIn("p50FreezeExistingBirth(p);}});", INDEX)
+        self.assertIn("try{p50FreezeExistingBirth(p)}catch{}});", INDEX)
         self.assertIn("p50BirthShouldPreserve(p)", INDEX)
         self.assertIn("else if(p.ageStatus==='confirmed'||p.birthManualLocked)p50LockBirthDate(p,true)", INDEX)
         self.assertIn("if(Number(p.quality.birth||0)>=90&&p50BirthDateValue(p))p50LockBirthDate(p,true)", INDEX)
