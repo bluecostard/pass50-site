@@ -26,7 +26,9 @@ class LiveRadarV41Tests(unittest.TestCase):
     def test_tiktok_requires_current_or_cross_family_confirmation(self):
         parser = re.search(r'function p50_live_v4_parse_tiktok\(.*?\n}', PARSERS, re.S).group(0)
         self.assertIn("$confirmed?'live':'probable'", parser)
-        self.assertIn("['api','api_basic']", PARSERS)
+        self.assertIn("['api','api_basic','api_webcast']", PARSERS)
+        self.assertIn('p50_live_v4_tiktok_is_api_label', PARSERS)
+        self.assertIn('p50_live_v4_tiktok_bodies_inconclusive', PARSERS)
         self.assertIn("'live','mobile_live','embed'", PARSERS)
         self.assertIn('proofFamilies', parser)
         self.assertIn('strictApiLabels', parser)

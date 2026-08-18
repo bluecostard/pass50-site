@@ -395,9 +395,18 @@ function p50_live_v4_probe_requests(array $source): array {
             'Sec-Fetch-Mode: cors',
             'Sec-Fetch-Site: same-origin',
         ];
+        $webcastHeaders=[
+            'Referer: '.$identity['profileUrl'],
+            'Origin: https://www.tiktok.com',
+            'Sec-Fetch-Dest: empty',
+            'Sec-Fetch-Mode: cors',
+            'Sec-Fetch-Site: cross-site',
+        ];
         return [
             'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*','headers'=>$tiktokApiHeaders],
             'api_basic'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*','headers'=>$tiktokApiHeaders],
+            // Domaine distinct : IONOS est souvent en 403 sur www.tiktok.com/api-live, pas forcément sur webcast.
+            'api_webcast'=>['url'=>'https://webcast.tiktok.com/webcast/room/info_by_user/?aid=1988&unique_id='.$handle,'accept'=>'application/json,text/plain,*/*','headers'=>$webcastHeaders],
             'mobile_live'=>['url'=>'https://m.tiktok.com/@'.$handle.'/live','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','userAgent'=>P50_LIVE_V4_MOBILE_UA,'headers'=>['Referer: https://www.tiktok.com/']],
             'live'=>['url'=>$identity['liveUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','headers'=>['Referer: '.$identity['profileUrl']]],
             'embed'=>['url'=>'https://www.tiktok.com/embed/live/@'.$handle.'?autoplay=0&muted=1&controls=1&embed_domain=pass50.store','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','headers'=>['Referer: https://www.tiktok.com/']],
