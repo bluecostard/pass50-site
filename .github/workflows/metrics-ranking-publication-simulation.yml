@@ -68,7 +68,7 @@ jobs:
             )"
             set +e
             http_code="$(
-              curl --silent --show-error --max-time 55 \
+              curl --silent --show-error --max-time 180 \
                 --output "$response_file" \
                 --write-out '%{http_code}' \
                 -H "Content-Type: application/json" \

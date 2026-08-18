@@ -113,7 +113,7 @@ jobs:
               awk '{print $1}'
           )"
           response="$(
-            curl --fail-with-body --silent --show-error --max-time 55 \
+            curl --fail-with-body --silent --show-error --max-time 180 \
               -H "Content-Type: application/json" \
               -H "X-P50-Timestamp: $timestamp" \
               -H "X-P50-Signature: $signature" \

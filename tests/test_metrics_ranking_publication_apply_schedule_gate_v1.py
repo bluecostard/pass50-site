@@ -33,6 +33,11 @@ class MetricsRankingPublicationApplyScheduleGateV1Tests(unittest.TestCase):
         self.assertIn("MAX_STALE_HOURS", WATCHDOG)
         self.assertIn("'2.0'", WATCHDOG)
         self.assertIn("10,40 * * * *", WATCHDOG)
+        self.assertIn("newer_candidate", WATCHDOG)
+        self.assertIn("latestApplied.runUuid", WATCHDOG)
+        self.assertIn("publicFingerprint", WATCHDOG)
+        self.assertIn("Candidat plus recent que la derniere publication", WATCHDOG)
+        self.assertIn("candidat deja publie", WATCHDOG)
         self.assertNotIn("metrics-ranking-publication-apply.yml/dispatches", WATCHDOG)
 
     def test_apply_transport_is_observable_and_long_enough(self):
