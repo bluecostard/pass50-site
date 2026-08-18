@@ -33,7 +33,7 @@ class PronosticsCoulesTabV1Tests(unittest.TestCase):
         self.assertIn('pronostics-coules-tab-v1.js?v=1.0',NAV)
         self.assertIn('loadPronoCoulesTab();',NAV)
         self.assertIn('PASS50-MOBILE-BOTTOM-NAV-V1.8',NAV)
-        self.assertIn('mobile-bottom-nav-v1.js?v=1.8',PRONO)
+        self.assertIn('mobile-bottom-nav-v1.js?v=1.9',PRONO)
         self.assertIn('<script src="./pronostics-coules-tab-v1.js?v=1.0" data-pass50-prono-coules-tab="1.0"></script>',INDEX)
 
 if __name__=='__main__':

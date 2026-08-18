@@ -396,11 +396,58 @@ function p50ApplyProfileTombstones(){
 }
 window.P50_TOMBSTONE_PROFILE_IDS=P50_TOMBSTONE_PROFILE_IDS;
 window.p50IsDeletedProfileId=p50IsDeletedProfileId;
+function p50BirthDateValue(p){return String(p?.birthDate||'').trim()}
+function p50BirthIsConfirmed(p){
+  if(!p50BirthDateValue(p))return false;
+  if(p.birthManualLocked)return true;
+  if(String(p.ageStatus||'')==='confirmed')return true;
+  if(Number(p?.quality?.birth||0)>=90)return true;
+  const facts=Array.isArray(p?.dataEngine?.verifiedFacts)?p.dataEngine.verifiedFacts:[];
+  return facts.includes('birth_date');
+}
+function p50BirthShouldPreserve(p){return Boolean(p50BirthDateValue(p)&&(p50BirthIsConfirmed(p)||p.birthManualLocked))}
+function p50LockBirthDate(p,adminConfirmed=false){
+  if(!p||!p50BirthDateValue(p))return p;
+  p.birthYear=Number(String(p.birthDate).slice(0,4))||p.birthYear||null;
+  p.ageStatus='confirmed';
+  p.agePublic=p.agePublic!==false;
+  p.birthManualLocked=true;
+  p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();
+  p.quality=p.quality||{};
+  p.quality.birth=adminConfirmed?Math.max(100,Number(p.quality.birth||0)):Math.max(90,Number(p.quality.birth||0));
+  p.dataEngine=p.dataEngine||{};
+  p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];
+  return p;
+}
+function p50FreezeExistingBirth(p){if(p50BirthIsConfirmed(p))p50LockBirthDate(p,Number(p?.quality?.birth||0)>=100);return p}
+function p50IsReloadNavigation(){
+  try{
+    const nav=performance.getEntriesByType?.('navigation')?.[0];
+    if(nav&&nav.type)return nav.type==='reload';
+    if(performance.navigation&&Number(performance.navigation.type)===1)return true;
+  }catch{}
+  return false;
+}
+function p50ClearProfileQuery(){
+  try{
+    const url=new URL(location.href);
+    if(!url.searchParams.has('profile'))return;
+    url.searchParams.delete('profile');
+    history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+  }catch{}
+}
+window.p50BirthDateValue=p50BirthDateValue;
+window.p50BirthIsConfirmed=p50BirthIsConfirmed;
+window.p50BirthShouldPreserve=p50BirthShouldPreserve;
+window.p50LockBirthDate=p50LockBirthDate;
+window.p50FreezeExistingBirth=p50FreezeExistingBirth;
+window.p50IsReloadNavigation=p50IsReloadNavigation;
+window.p50ClearProfileQuery=p50ClearProfileQuery;
 function migrateDb(){
   db.profiles=db.profiles||clone(seedData.profiles);db.content=db.content||clone(seedData.content);db.signals=db.signals||clone(seedData.signals);db.users=db.users||[];db.notifications=db.notifications||[];db.coulesPoll=db.coulesPoll||{votesByPoll:{},previousSharesByPoll:{}};db.coulesPoll.votesByPoll=db.coulesPoll.votesByPoll||{};db.coulesPoll.previousSharesByPoll=db.coulesPoll.previousSharesByPoll||{};
   if(!Array.isArray(db.events)||!db.events.length)db.events=clone(seedData.events);
   else seedData.events.forEach(e=>{if(!db.events.some(x=>x.profileId===e.profileId))db.events.push(clone(e));});
-  db.profiles.forEach(p=>{const seed=seedData.profiles.find(x=>x.id===p.id)||{};p.photoUrl=p.photoUrl||seed.photoUrl||'';p.photoCandidateUrl=p.photoCandidateUrl||seed.photoCandidateUrl||'';p.photoStatus=p.photoStatus||seed.photoStatus||'missing';p.photoSource=p.photoSource||seed.photoSource||'';p.photoNote=p.photoNote||seed.photoNote||'';p.photoManualLocked=Boolean(p.photoManualLocked);p.photoManualUpdatedAt=p.photoManualUpdatedAt||null;p.birthManualLocked=Boolean(p.birthManualLocked);p.birthManualUpdatedAt=p.birthManualUpdatedAt||null;const photoStatus=String(p.photoStatus||'').toLowerCase();if(!p.photoManualLocked&&(p.photoUrl||p.photoCandidateUrl)&&['validated','verified','approved','manual_verified'].includes(photoStatus)){p.photoManualLocked=true;p.photoManualUpdatedAt=p.photoManualUpdatedAt||new Date().toISOString();if(photoStatus!=='validated')p.photoStatus='validated';}});
+  db.profiles.forEach(p=>{const seed=seedData.profiles.find(x=>x.id===p.id)||{};p.photoUrl=p.photoUrl||seed.photoUrl||'';p.photoCandidateUrl=p.photoCandidateUrl||seed.photoCandidateUrl||'';p.photoStatus=p.photoStatus||seed.photoStatus||'missing';p.photoSource=p.photoSource||seed.photoSource||'';p.photoNote=p.photoNote||seed.photoNote||'';p.photoManualLocked=Boolean(p.photoManualLocked);p.photoManualUpdatedAt=p.photoManualUpdatedAt||null;p.birthManualLocked=Boolean(p.birthManualLocked);p.birthManualUpdatedAt=p.birthManualUpdatedAt||null;const photoStatus=String(p.photoStatus||'').toLowerCase();if(!p.photoManualLocked&&(p.photoUrl||p.photoCandidateUrl)&&['validated','verified','approved','manual_verified'].includes(photoStatus)){p.photoManualLocked=true;p.photoManualUpdatedAt=p.photoManualUpdatedAt||new Date().toISOString();if(photoStatus!=='validated')p.photoStatus='validated';}p50FreezeExistingBirth(p);}});
   db.events.forEach(e=>{e.coverUrl=e.coverUrl||'';e.coverCandidateUrl=e.coverCandidateUrl||'';e.coverStatus=e.coverStatus||'missing';e.coverSource=e.coverSource||'';e.coverNote=e.coverNote||'';});
   db.version=Math.max(Number(db.version||1),5);
   p50ApplyProfileTombstones();
@@ -1096,7 +1143,7 @@ function close(id){
   if(id==='adminModal')return p50AdminGoHome();
   if(id==='profileModal'&&returnToFeedAfterProfile())return;
   modal.classList.remove('show');
-  if(id==='profileModal'){closeFiPhoto();restoreProfileOrigin();}
+  if(id==='profileModal'){closeFiPhoto();restoreProfileOrigin();p50ClearProfileQuery();}
   if(id==='voteShareModal')voteShareCleanup();
 }
 function requireAuth(){if(currentUser())return true;openAuth('login');return false}
@@ -1368,7 +1415,7 @@ document.addEventListener('input',e=>{
     const count=document.querySelector('#fullRankingCount');if(count)count.textContent=`${visible} profil${visible>1?'s':''}`;
   }
 });
-document.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='authForm')submitAuth(e.target);if(e.target.id==='liveForm')startLive(new FormData(e.target));if(e.target.id==='hubForm'){const p=profile(e.target.dataset.id),fd=new FormData(e.target);ensureQuality(p);['identity','photo','birth','nationality','social','score','live'].forEach(k=>p.quality[k]=Math.max(0,Math.min(100,Number(fd.get(k)||0))));p.qualityNote=String(fd.get('qualityNote')||'');p.lastCollectedAt=new Date().toISOString();save();ui.adminTab='adminhome';renderAdmin();toast('Contrôle enregistré');}if(e.target.id==='profileForm'){const fd=new FormData(e.target),isNew=e.target.dataset.new==='1';let p=isNew?null:profile(e.target.dataset.id);if(isNew){p=buildProfile([e.target.dataset.id,String(fd.get('name')),String(fd.get('handle')),(String(fd.get('name')).match(/\b\w/g)||['I','A']).slice(0,2).join('').toUpperCase(),String(fd.get('region')),String(fd.get('category')),['Instagram'],Number(fd.get('score')),Number(fd.get('delta')),0],db.profiles.length);db.profiles.push(p);}p.name=String(fd.get('name'));p.handle=String(fd.get('handle'));p.region=String(fd.get('region'));p.category=String(fd.get('category'));p.scores[ui.period]=Number(fd.get('score'));p.delta=Number(fd.get('delta'));p.birthDate=String(fd.get('birthDate')||'');p.birthYear=p.birthDate?Number(p.birthDate.slice(0,4)):null;p.ageStatus=String(fd.get('ageStatus'));if(p.birthDate&&p.ageStatus==='confirmed'){p.birthManualLocked=true;p.birthManualUpdatedAt=new Date().toISOString();p.agePublic=true;p.quality=p.quality||{};p.quality.birth=100;p.dataEngine=p.dataEngine||{};p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];}const nextPhotoUrl=String(fd.get('photoUrl')||'').trim();const nextPhotoStatus=String(fd.get('photoStatus')||p.photoStatus||'missing');p.photoPosition=String(fd.get('photoPosition')||p.photoPosition||'50% 50%');if(nextPhotoUrl){p.photoUrl=nextPhotoUrl;p.photoCandidateUrl=nextPhotoUrl;p.photoStatus=nextPhotoStatus||'validated';p.photoManualLocked=true;p.photoManualUpdatedAt=new Date().toISOString();}else if(!p.photoUrl&&!p.photoCandidateUrl){p.photoStatus=nextPhotoStatus||'missing';}else{p.photoStatus=nextPhotoStatus||p.photoStatus||'pending';}p.alive=fd.get('alive')==='on';p.eligible=fd.get('eligible')==='on';if(p.alive){p.adminDeleted=false;delete p.deletedAt;}else{p.classable=false;}save();render();ui.adminTab='profiles';renderAdmin();toast('Profil enregistré')}});
+document.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='authForm')submitAuth(e.target);if(e.target.id==='liveForm')startLive(new FormData(e.target));if(e.target.id==='hubForm'){const p=profile(e.target.dataset.id),fd=new FormData(e.target);ensureQuality(p);['identity','photo','birth','nationality','social','score','live'].forEach(k=>p.quality[k]=Math.max(0,Math.min(100,Number(fd.get(k)||0))));p.qualityNote=String(fd.get('qualityNote')||'');p.lastCollectedAt=new Date().toISOString();if(Number(p.quality.birth||0)>=90&&p50BirthDateValue(p))p50LockBirthDate(p,true);save();ui.adminTab='adminhome';renderAdmin();toast('Contrôle enregistré');}if(e.target.id==='profileForm'){const fd=new FormData(e.target),isNew=e.target.dataset.new==='1';let p=isNew?null:profile(e.target.dataset.id);if(isNew){p=buildProfile([e.target.dataset.id,String(fd.get('name')),String(fd.get('handle')),(String(fd.get('name')).match(/\b\w/g)||['I','A']).slice(0,2).join('').toUpperCase(),String(fd.get('region')),String(fd.get('category')),['Instagram'],Number(fd.get('score')),Number(fd.get('delta')),0],db.profiles.length);db.profiles.push(p);}p.name=String(fd.get('name'));p.handle=String(fd.get('handle'));p.region=String(fd.get('region'));p.category=String(fd.get('category'));p.scores[ui.period]=Number(fd.get('score'));p.delta=Number(fd.get('delta'));p.birthDate=String(fd.get('birthDate')||'').trim()||null;p.birthYear=p.birthDate?Number(String(p.birthDate).slice(0,4)):null;p.ageStatus=String(fd.get('ageStatus'));if(!p.birthDate){p.birthManualLocked=false;p.birthManualUpdatedAt=null;}else if(p.ageStatus==='confirmed'||p.birthManualLocked)p50LockBirthDate(p,true);const nextPhotoUrl=String(fd.get('photoUrl')||'').trim();const nextPhotoStatus=String(fd.get('photoStatus')||p.photoStatus||'missing');p.photoPosition=String(fd.get('photoPosition')||p.photoPosition||'50% 50%');if(nextPhotoUrl){p.photoUrl=nextPhotoUrl;p.photoCandidateUrl=nextPhotoUrl;p.photoStatus=nextPhotoStatus||'validated';p.photoManualLocked=true;p.photoManualUpdatedAt=new Date().toISOString();}else if(!p.photoUrl&&!p.photoCandidateUrl){p.photoStatus=nextPhotoStatus||'missing';}else{p.photoStatus=nextPhotoStatus||p.photoStatus||'pending';}p.alive=fd.get('alive')==='on';p.eligible=fd.get('eligible')==='on';if(p.alive){p.adminDeleted=false;delete p.deletedAt;}else{p.classable=false;}save();render();ui.adminTab='profiles';renderAdmin();toast('Profil enregistré')}});
 $$('#periodFilters button').forEach(b=>b.addEventListener('click',()=>{$$('#periodFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');ui.period=b.dataset.period;ui.scoreMotion=true;render();toast('Période : '+periodLabels[ui.period])}));
 $$('#regionFilters button').forEach(b=>b.addEventListener('click',()=>{$$('#regionFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');ui.region=b.dataset.region;ui.scoreMotion=true;render();toast('Zone mise à jour')}));
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)close(m.id)}));
@@ -1485,7 +1532,7 @@ async function loadCloudState(){
     photoManualLocked:Boolean(p.photoManualLocked)||['validated','verified','approved','manual_verified'].includes(String(p.photoStatus||'').toLowerCase()),
     photoManualUpdatedAt:p.photoManualUpdatedAt||new Date().toISOString()
   }]));
-  const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p.birthManualLocked&&p.birthDate).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(p.birthDate.slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...(p.quality||{}),birth:100},dataEngine:{...(p.dataEngine||{}),verifiedFacts:[...new Set([...(p.dataEngine?.verifiedFacts||[]),'birth_date'])]}}]));
+  const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p50BirthShouldPreserve(p)).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(String(p.birthDate).slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...(p.quality||{}),birth:Math.max(100,Number(p.quality?.birth||0))},dataEngine:{...(p.dataEngine||{}),verifiedFacts:[...new Set([...(p.dataEngine?.verifiedFacts||[]),'birth_date'])]}}]));
   const data=await apiFetch('state.php',{auth:false,timeoutMs:12000});
   if(Number.isFinite(Number(data?.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
   if(data?.data){const cloud=data.data;const localTombstones=[...(Array.isArray(db.deletedProfileIds)?db.deletedProfileIds:[]),...P50_TOMBSTONE_PROFILE_IDS];cloud.liveStreams=(cloud.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};db.deletedProfileIds=Array.from(new Set([...localTombstones,...(Array.isArray(cloud.deletedProfileIds)?cloud.deletedProfileIds:[])]));migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{
@@ -1609,6 +1656,7 @@ async function deleteCloudProfile(){if(!CLOUD.token)return;await apiFetch('delet
 function openCampaignProfile(){
   const params=new URLSearchParams(location.search),id=params.get('profile'),period=params.get('period');
   if(period&&periods.includes(period))ui.period=period;
+  if(p50IsReloadNavigation()){p50ClearProfileQuery();return;}
   if(params.get('open')==='live'){requestAnimationFrame(()=>openLives());return;}
   if(id&&profile(id))requestAnimationFrame(()=>openProfile(id));
 }
@@ -1641,7 +1689,7 @@ initCloud();
 
 </script>
   <script src="./public-ui-sanitizer-v1.js?v=1.1"></script>
-<script src="./v9-tools.js?v=15.27"></script>
+<script src="./v9-tools.js?v=15.28"></script>
 <script src="./pronostics-coules-tab-v1.js?v=1.0" data-pass50-prono-coules-tab="1.0"></script>
 </body>
 </html>

@@ -699,8 +699,11 @@
       const birth=item.birthBest||item.facts?.birth_date,date=String(item.birthDate||birth?.normalized_value||'').trim(),confidence=Number(birth?.confidence||item.quality?.birth||0),status=String(item.birthStatus||birth?.status||'');
       if(!date||status!=='verified'||confidence<threshold)continue;
       const p=db.profiles.find(x=>x.id===item.id);if(!p)continue;
+      const frozen=Boolean(p.birthManualLocked||(typeof p50BirthShouldPreserve==='function'&&p50BirthShouldPreserve(p))||(p.birthDate&&(p.ageStatus==='confirmed'||Number(p?.quality?.birth||0)>=90)));
+      if(frozen&&String(p.birthDate||'')!==date)continue;
       if(p.birthDate!==date||p.ageStatus!=='confirmed'||Number(p?.quality?.birth||0)!==confidence){
-        p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=p.quality||{};p.quality.birth=confidence;p.dataEngine=p.dataEngine||{};p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];changed++;
+        if(frozen)continue;
+        p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=p.quality||{};p.quality.birth=confidence;p.dataEngine=p.dataEngine||{};p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];if(typeof p50LockBirthDate==='function')p50LockBirthDate(p);else{p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();}changed++;
       }
     }
     if(changed){localStorage.setItem(APP_KEY,JSON.stringify(db));if(!DE.majRunning&&window.__pass50CloudReady&&typeof scheduleCloudSync==='function')scheduleCloudSync();}

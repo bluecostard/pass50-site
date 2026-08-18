@@ -7,7 +7,7 @@ window.PASS50_API = {
 (function () {
   if (document.querySelector('script[data-pass50-share-center]')) return;
   var script = document.createElement('script');
-  script.src = './share-center-v1.js?v=1.4';
+  script.src = './share-center-v1.js?v=1.5';
   script.async = false;
   script.dataset.pass50ShareCenter = '1.0';
   document.head.appendChild(script);
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-fi-navigation]')) return;
   var script = document.createElement('script');
-  script.src = './fi-navigation-v3.js?v=1.2';
+  script.src = './fi-navigation-v3.js?v=1.3';
   script.dataset.pass50FiNavigation = '3.2';
   document.head.appendChild(script);
 })();
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-kim-makosso]')) return;
   var script = document.createElement('script');
-  script.src = './profile-kim-makosso.js?v=1.0';
+  script.src = './profile-kim-makosso.js?v=1.1';
   script.dataset.pass50ProfileKimMakosso = '1.0';
   document.head.appendChild(script);
 })();

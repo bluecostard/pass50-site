@@ -65,8 +65,9 @@ function orderedIds(){
 function updateUrl(id){
   try{
     const url=new URL(location.href);
-    url.searchParams.set('profile',id);
-    history.replaceState(history.state,'',url);
+    // Ne pas persister la FI dans l’URL : un F5 doit revenir au classement.
+    url.searchParams.delete('profile');
+    history.replaceState({...(history.state&&typeof history.state==='object'?history.state:{}),p50ProfileId:id},'',url.pathname+url.search+url.hash);
   }catch{}
 }
 

@@ -178,6 +178,9 @@ function p50v9ApplyPatch(){
     Object.entries(p.links).forEach(([platform,url])=>{if(!p.linkChecks[platform])p.linkChecks[platform]={status:p50v9IsDirectPlatformLink(platform,url)?'pending':'search_not_official',checkedAt:null};});
     if(!p.photoPosition)p.photoPosition='50% 50%';
     p.photoManualLocked=Boolean(p.photoManualLocked);p.photoManualUpdatedAt=p.photoManualUpdatedAt||null;
+    p.birthManualLocked=Boolean(p.birthManualLocked);p.birthManualUpdatedAt=p.birthManualUpdatedAt||null;
+    if(typeof p50FreezeExistingBirth==='function')p50FreezeExistingBirth(p);
+    else if((p.birthDate||p.birthYear)&&(p.ageStatus==='confirmed'||Number(p?.quality?.birth||0)>=90)){p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();p.ageStatus='confirmed';}
   });
   db.events=(db.events||[]).map(e=>({...e,coverStatus:e.coverStatus||'missing',coverUrl:e.coverUrl||'',coverCandidateUrl:e.coverCandidateUrl||'',coverSource:e.coverSource||'',coverNote:e.coverNote||''}));
   db.content.forEach(c=>{const ev=primaryEvent(c.profileId);if(ev&&p50v9ExactContentLink(ev.url)&&!p50v9ExactContentLink(c.url))c.url=ev.url;});
@@ -258,7 +261,7 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=18.21';
+    js.src='./data-engine-ui.js?v=18.22';
     js.dataset.pass50DataEngine='1';
     js.onload=function(){
       if(document.querySelector('script[data-pass50-admin-notifications]'))return;
