@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.3';
+  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.4';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
   const OWNER_LOCK_KEY='pass50_owner_locked_profiles_v1';
   const OFFICIAL_LINK_FIELDS=['TikTok','Instagram','Facebook','YouTube','X','Snapchat'];
@@ -16,6 +16,10 @@
       TikTok:'https://www.tiktok.com/@cheffezeinabbance',
       Instagram:'https://www.instagram.com/zeinabbance/',
       Facebook:'https://www.facebook.com/p/Zeinab-BANCE-WRG-61568549139334/'
+    },
+    samo:{
+      TikTok:'https://www.tiktok.com/@kommandersamosamo',
+      Instagram:'https://www.instagram.com/kommander_samo_samo/'
     }
   };
   let installed=false;
@@ -105,7 +109,7 @@
 
   function ownerLockedLinks(profile,key){
     const current=profile&&profile.links&&typeof profile.links==='object'?profile.links:{};
-    const source=key==='samo'?current:{...current,...(OWNER_LOCK_EXACT[key]||{})};
+    const source={...current,...(OWNER_LOCK_EXACT[key]||{})};
     const result={};
     Object.entries(source).forEach(([platform,url])=>{
       const normalized=normalize(url);

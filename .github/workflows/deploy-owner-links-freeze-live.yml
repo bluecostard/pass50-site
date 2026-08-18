@@ -60,7 +60,7 @@ jobs:
               obs="$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/observateur-official-links-lock-v1.js?sha=$GITHUB_SHA&a=$attempt" || true)"
               endpoint="$(curl -sSL --max-time 20 -o /tmp/p50-endpoint.txt -w '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$site/api/official-links-batch-owner-cron-v1.php?sha=$GITHUB_SHA&a=$attempt" || true)"
               if grep -q 'PASS50_OWNER_CURRENT_LINK_LOCKS' <<<"$owner" \
-                && grep -q 'owner-current-links-lock-v1.js?v=1.0' <<<"$obs" \
+                && grep -q 'owner-current-links-lock-v1.js?v=1.1' <<<"$obs" \
                 && [ "$endpoint" != "404" ] && [ "$endpoint" != "000" ]; then
                 ready=true
                 echo "$site sert bien le gel multi-profils."

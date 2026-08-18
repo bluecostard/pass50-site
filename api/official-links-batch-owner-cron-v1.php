@@ -36,6 +36,9 @@ $explicitFreeze=[
     'zeinabbance'=>[
         'Facebook'=>'https://www.facebook.com/p/Zeinab-BANCE-WRG-61568549139334/',
     ],
+    'samosamo'=>[
+        'Instagram'=>'https://www.instagram.com/kommander_samo_samo/',
+    ],
 ];
 
 function p50_batch_profile_index(array $state,string $normalizedName): int {
