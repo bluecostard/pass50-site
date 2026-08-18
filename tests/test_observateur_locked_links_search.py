@@ -29,7 +29,7 @@ class ObservateurLockedLinksSearchTests(unittest.TestCase):
         self.assertIn("'locked'=>$lockedOfficialUrl!==''", API)
 
     def test_patch_is_loaded_publicly(self):
-        self.assertIn("observateur-official-links-lock-v1.js?v=1.0", APP)
+        self.assertIn("observateur-official-links-lock-v1.js?v=1.1", APP)
         self.assertIn("data-pass50-observateur-link-locks", APP)
 
     def test_official_links_search_exists_and_is_extended(self):

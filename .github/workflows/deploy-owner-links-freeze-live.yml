@@ -7,8 +7,10 @@ on:
       - '.github/workflows/deploy-owner-links-freeze-live.yml'
       - 'api/official-links-batch-owner-cron-v1.php'
       - 'api/social-links.php'
+      - 'app-config.js'
       - 'owner-current-links-lock-v1.js'
       - 'observateur-official-links-lock-v1.js'
+      - 'profile-samo-samo.js'
   workflow_dispatch:
 
 permissions:
@@ -27,6 +29,12 @@ jobs:
           php -l api/social-links.php
           node --check owner-current-links-lock-v1.js
           node --check observateur-official-links-lock-v1.js
+          node --check profile-samo-samo.js
+          node --check app-config.js
+          grep -q 'https://www.instagram.com/kommander_samo_samo/' profile-samo-samo.js
+          grep -q 'https://www.instagram.com/kommander_samo_samo/' owner-current-links-lock-v1.js
+          grep -q 'profile-samo-samo.js?v=1.1' app-config.js
+          grep -q "'samo-samo|instagram'=>'https://www.instagram.com/kommander_samo_samo/'" api/social-links.php
       - name: Installer SFTP
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
       - name: Publier les fichiers de gel
@@ -46,6 +54,8 @@ jobs:
           open -u "$USER","$PASSWORD" sftp://$HOST:22
           put -O "$REMOTE_DIR" owner-current-links-lock-v1.js
           put -O "$REMOTE_DIR" observateur-official-links-lock-v1.js
+          put -O "$REMOTE_DIR" profile-samo-samo.js
+          put -O "$REMOTE_DIR" app-config.js
           put -O "$REMOTE_DIR/api" api/social-links.php
           put -O "$REMOTE_DIR/api" api/official-links-batch-owner-cron-v1.php
           bye
@@ -58,12 +68,16 @@ jobs:
             for attempt in $(seq 1 24); do
               owner="$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/owner-current-links-lock-v1.js?sha=$GITHUB_SHA&a=$attempt" || true)"
               obs="$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/observateur-official-links-lock-v1.js?sha=$GITHUB_SHA&a=$attempt" || true)"
+              profile="$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/profile-samo-samo.js?sha=$GITHUB_SHA&a=$attempt" || true)"
+              config="$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/app-config.js?sha=$GITHUB_SHA&a=$attempt" || true)"
               endpoint="$(curl -sSL --max-time 20 -o /tmp/p50-endpoint.txt -w '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$site/api/official-links-batch-owner-cron-v1.php?sha=$GITHUB_SHA&a=$attempt" || true)"
-              if grep -q 'PASS50_OWNER_CURRENT_LINK_LOCKS' <<<"$owner" \
-                && grep -q 'owner-current-links-lock-v1.js?v=1.1' <<<"$obs" \
+              if grep -q 'kommander_samo_samo' <<<"$owner" \
+                && grep -q 'owner-current-links-lock-v1.js?v=1.2' <<<"$obs" \
+                && grep -q 'instagram.com/kommander_samo_samo/' <<<"$profile" \
+                && grep -q 'profile-samo-samo.js?v=1.1' <<<"$config" \
                 && [ "$endpoint" != "404" ] && [ "$endpoint" != "000" ]; then
                 ready=true
-                echo "$site sert bien le gel multi-profils."
+                echo "$site sert bien l’Instagram officiel de Samo Samo."
                 break
               fi
               sleep 5

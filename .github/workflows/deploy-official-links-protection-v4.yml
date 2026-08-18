@@ -70,13 +70,14 @@ jobs:
               runtime="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/official-links-protection-v4.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
               loader="$(curl --location --silent --show-error --max-time 20 -H 'Cache-Control: no-cache, no-store' "$site/public-copy-fixes.js?sha=$GITHUB_SHA&attempt=$attempt" || true)"
               state="$(curl --location --silent --show-error --max-time 30 -H 'Accept: application/json' -H 'Cache-Control: no-cache, no-store' "$site/api/state.php?sha=$GITHUB_SHA&attempt=$attempt" || true)"
-              if grep -q 'PASS50-OFFICIAL-LINKS-PROTECTION-V4.2' <<<"$runtime" \
+              if grep -q 'PASS50-OFFICIAL-LINKS-PROTECTION-V4.4' <<<"$runtime" \
+                && grep -q 'kommander_samo_samo' <<<"$runtime" \
                 && grep -q 'linksProfileSearch' <<<"$runtime" \
                 && grep -q 'ensureOfficialLinksSearch' <<<"$runtime" \
                 && grep -q 'official-links-protection-v4.js' <<<"$loader" \
                 && jq -e '.ok==true and .linkProtectionVersion=="PASS50-STATE-LINK-PROTECTION-V4.1"' >/dev/null 2>&1 <<<"$state"; then
                 ready=true
-                echo "$site sert bien la recherche Liens officiels et la protection V4.2."
+                echo "$site sert bien la recherche Liens officiels et la protection V4.4."
                 break
               fi
               echo "Propagation de la recherche Liens officiels en attente pour $site ($attempt/36)."

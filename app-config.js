@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-observateur-link-locks]')) return;
   var script = document.createElement('script');
-  script.src = './observateur-official-links-lock-v1.js?v=1.0';
+  script.src = './observateur-official-links-lock-v1.js?v=1.1';
   script.dataset.pass50ObservateurLinkLocks = '1.0';
   document.head.appendChild(script);
 })();

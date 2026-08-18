@@ -76,6 +76,9 @@ jobs:
           put -O ${REMOTE_DIR@Q} .deploy/mon-fil.html
           put -O ${REMOTE_DIR@Q} .deploy/mon-fil.js
           put -O ${REMOTE_DIR@Q} .deploy/app-config.js
+          put -O ${REMOTE_DIR@Q} .deploy/profile-samo-samo.js
+          put -O ${REMOTE_DIR@Q} .deploy/owner-current-links-lock-v1.js
+          put -O ${REMOTE_DIR@Q} .deploy/observateur-official-links-lock-v1.js
           put -O ${REMOTE_DIR@Q} .deploy/public-copy-fixes.js
           put -O ${REMOTE_DIR@Q} .deploy/public-ui-sanitizer-v1.js
           put -O ${REMOTE_DIR@Q} .deploy/context-share-v2.js

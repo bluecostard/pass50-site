@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='1.1';
+const VERSION='1.2';
 const TARGET_NAMES=new Set(['zagbalerequin','zeinabbance','samosamo']);
 const EXACT_LOCKS={
   samosamo:{Instagram:'https://www.instagram.com/kommander_samo_samo/'}
