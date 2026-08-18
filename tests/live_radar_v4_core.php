@@ -138,7 +138,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -176,6 +176,11 @@ $hamondApiDown=p50_live_v4_parse_tiktok($hamondSource,[
 ]);
 must($hamondApiDown['state']==='unknown','Un embed « ended » sans API ne doit pas clôturer Coach Hamond.');
 
+$dezSource=['profile_id'=>'dez-cocrane225','public_name'=>'Dez Cocrane 225','platform'=>'TikTok','url'=>'https://www.tiktok.com/@dezcocrane.225'];
+$dezLive=p50_live_v4_parse_tiktok($dezSource,['api_webcast'=>response('{"data":{"status":2,"id":7675422496225168161,"id_str":"7675422496225168161","title":"","user_count":504,"owner":{"display_id":"dezcocrane.225","nickname":"Dez Cocrane 225"}},"status_code":0}')]);
+must($dezLive['state']==='live','Dez Cocrane 225 webcast status=2 doit publier le LIVE.');
+must(($dezLive['live']['metadata']['roomId']??'')==='7675422496225168161','Le roomId Dez Cocrane doit être conservé.');
+
 $embedOnlyBlocked=p50_live_v4_parse_tiktok($jordanSource,[
     'api'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'http_403','timeMs'=>8],
     'live'=>['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>'https://www.tiktok.com/@realjordanevraa/live','error'=>'blocked_or_challenged','timeMs'=>8],
@@ -198,4 +203,4 @@ must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un mêm
 must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
 must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
 
-echo json_encode(['ok'=>true,'cases'=>50],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>53],JSON_UNESCAPED_SLASHES).PHP_EOL;

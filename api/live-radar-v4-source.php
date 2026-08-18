@@ -24,6 +24,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'hamondchic',
     'coachhamond',
     'coachhamondchic',
+    'dez-cocrane225',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -190,6 +191,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'coachhamond|tiktok'=>'https://www.tiktok.com/@coachhamond',
         'coachhamondchic|tiktok'=>'https://www.tiktok.com/@coachhamond',
         'coach-hamond|tiktok'=>'https://www.tiktok.com/@coachhamond',
+        'dez-cocrane225|tiktok'=>'https://www.tiktok.com/@dezcocrane.225',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
@@ -256,6 +258,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'louissette','name'=>'Cadic N’Guessan','handle'=>'misscadic'],
         ['id'=>'aya-robert','name'=>'Aya Robert','handle'=>'aya.robert27'],
         ['id'=>'hamondchic','name'=>'Coach Hamond Chic','handle'=>'coachhamond'],
+        ['id'=>'dez-cocrane225','name'=>'Dez Cocrane 225','handle'=>'dezcocrane.225'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
