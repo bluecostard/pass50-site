@@ -41,8 +41,8 @@ const ASSETS=[
   './connector-sections-v1.js?v=1.1','./account-mobile-nav-v1.js?v=1.1','./youtube-analytics-ui-v1.js?v=1.0',
   './meta-oauth-ui-v1.js?v=1.7','./tiktok-oauth-ui-v1.js?v=1.1',
   './admin-fictive-ranking-v1.js?v=1.0','./classement-fictif.html',
-  './v9-tools.css?v=22.4','./v9-tools.js?v=15.27','./v9-tools.js?v=15.28',
-  './pass50_nouveaux_candidats_90_v19.json?v=22.15','./data-engine-ui.js?v=18.21','./data-engine-ui.js?v=18.22',
+  './v9-tools.css?v=22.4','./v9-tools.js?v=15.27','./v9-tools.js?v=15.28','./v9-tools.js?v=15.29',
+  './pass50_nouveaux_candidats_90_v19.json?v=22.15','./data-engine-ui.js?v=18.21','./data-engine-ui.js?v=18.22','./data-engine-ui.js?v=18.23',
   './manifest.webmanifest?v=22.4','./icon.svg?v=22.4','./favicon-32.png?v=22.4',
   './apple-touch-icon.png?v=22.4','./assets/hero-media-1.jpg','./assets/hero-media-2.jpg',
   './assets/hero-media-3.jpg','./assets/hero-media-4.jpg','./assets/hero-media-5.jpg','./assets/hero-media-6.jpg','./data-engine-ui.css?v=27.1'

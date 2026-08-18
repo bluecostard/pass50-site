@@ -703,7 +703,7 @@
       if(frozen&&String(p.birthDate||'')!==date)continue;
       if(p.birthDate!==date||p.ageStatus!=='confirmed'||Number(p?.quality?.birth||0)!==confidence){
         if(frozen)continue;
-        p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=p.quality||{};p.quality.birth=confidence;p.dataEngine=p.dataEngine||{};p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];if(typeof p50LockBirthDate==='function')p50LockBirthDate(p);else{p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();}changed++;
+        p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=(typeof p50EnsurePlainObject==='function'?p50EnsurePlainObject(p.quality):(p.quality&&typeof p.quality==='object'?p.quality:{}));p.quality.birth=confidence;if(typeof p50LockBirthDate==='function')p50LockBirthDate(p);else{p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();p.dataEngine=(p.dataEngine&&typeof p.dataEngine==='object'&&!Array.isArray(p.dataEngine))?p.dataEngine:{};const facts=Array.isArray(p.dataEngine.verifiedFacts)?p.dataEngine.verifiedFacts:[];p.dataEngine.verifiedFacts=[...new Set([...facts,'birth_date'])];}changed++;
       }
     }
     if(changed){localStorage.setItem(APP_KEY,JSON.stringify(db));if(!DE.majRunning&&window.__pass50CloudReady&&typeof scheduleCloudSync==='function')scheduleCloudSync();}
