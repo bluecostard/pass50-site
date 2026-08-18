@@ -259,12 +259,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function loadContentIntelligence() {
     if (document.querySelector('script[data-pass50-content-intelligence]')) return;
     var script = document.createElement('script');
-    script.src = './content-intelligence.js?v=1.12';
-    script.dataset.pass50ContentIntelligence = '1.2';
+    script.src = './content-intelligence.js?v=1.14';
+    script.dataset.pass50ContentIntelligence = '1.3';
     document.body.appendChild(script);
   }
-  if (document.readyState === 'complete') loadContentIntelligence();
-  else window.addEventListener('load', loadContentIntelligence, { once: true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadContentIntelligence, { once: true });
+  else loadContentIntelligence();
 })();
 
 
