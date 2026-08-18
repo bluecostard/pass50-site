@@ -111,7 +111,7 @@
       const isVideoItem=item=>/video|reel|live|short/i.test(String(item?.itemType||item?.contentType||''))||['YouTube','TikTok'].includes(String(item?.platform||''));
       const official=items.find(item=>item.official&&isVideoItem(item))||items.find(item=>item.official)||items.find(isVideoItem)||items[0];
       if(official&&typeof window.p50SyncTriggerFromOfficialNews==='function'){
-        if(window.p50SyncTriggerFromOfficialNews(profileId,official))&&typeof render==='function')render();
+        if(window.p50SyncTriggerFromOfficialNews(profileId,official)&&typeof render==='function')render();
       }
       const hours=Number(data.rules?.officialNewsHoursApplied||72);
       const fallback=!!data.rules?.officialNewsUsedFallback;

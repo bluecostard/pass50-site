@@ -60,13 +60,19 @@ if($mode==='full'){
     $reconfirm=[];$discovery=[];$used=[];
     foreach($sources as $source){
         $key=strtolower((string)$source['platform']).'|'.trim((string)$source['profile_id']);
-        if(isset($activeKeys[$key])){$reconfirm[]=$source;$used[(string)$source['source_key']]=true;}
-        else $discovery[]=$source;
+        if(isset($activeKeys[$key])||p50_live_v4_needs_tiktok_rescan($source)||p50_live_v4_is_warm_watch($source)){
+            $reconfirm[]=$source;$used[(string)$source['source_key']]=true;
+        }else $discovery[]=$source;
     }
     // Meta classifiés par Graph : le cron OAuth suffit, on libère les slots scrape.
     $reconfirm=array_values(array_filter($reconfirm,static fn(array $source): bool => !p50_live_v4_is_graph_fresh($source)));
     $discovery=array_values(array_filter($discovery,static fn(array $source): bool => !p50_live_v4_is_graph_fresh($source)));
-    usort($reconfirm,static function(array $a,array $b): int {
+    usort($reconfirm,static function(array $a,array $b) use($activeKeys): int {
+        $keyA=strtolower((string)$a['platform']).'|'.trim((string)$a['profile_id']);
+        $keyB=strtolower((string)$b['platform']).'|'.trim((string)$b['profile_id']);
+        $prioA=isset($activeKeys[$keyA])?0:(p50_live_v4_is_p0_tiktok($a)?1:(p50_live_v4_is_warm_watch($a)?2:3));
+        $prioB=isset($activeKeys[$keyB])?0:(p50_live_v4_is_p0_tiktok($b)?1:(p50_live_v4_is_warm_watch($b)?2:3));
+        if($prioA!==$prioB)return $prioA<=>$prioB;
         $ad=(string)($a['last_checked_at']??'');$bd=(string)($b['last_checked_at']??'');
         if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
         if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);
@@ -78,7 +84,7 @@ if($mode==='full'){
         if($ad===$bd)return strnatcasecmp((string)$a['public_name'],(string)$b['public_name']);
         if($ad==='')return -1;if($bd==='')return 1;return strcmp($ad,$bd);
     });
-    $discoveryFloor=min(8,max(5,(int)floor(($batch*2)/3)));
+    $discoveryFloor=min(5,max(4,(int)floor(($batch*2)/3)));
     $reconfirmCap=max(0,$batch-$discoveryFloor);
     $reconfirm=array_slice($reconfirm,0,$reconfirmCap);
     $discoveryQuota=min($discoveryFloor,max(0,$batch-count($reconfirm)));

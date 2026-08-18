@@ -51,8 +51,8 @@ class KehouPavlovCanonicalProfileTests(unittest.TestCase):
         worker_version = re.search(r"v9-tools\.js\?v=([0-9.]+)", self.sw)
         self.assertIsNotNone(index_version)
         self.assertIsNotNone(worker_version)
-        self.assertEqual(index_version.group(1), "15.18")
-        self.assertEqual(worker_version.group(1), "15.18")
+        self.assertEqual(index_version.group(1), "15.24")
+        self.assertEqual(worker_version.group(1), "15.24")
         self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.15", self.sw)
 
 

@@ -5,8 +5,18 @@ const PASS50_V9={photoCandidates:[],photoProfileId:null,preview:null,previewEven
 function p50v9IsGenericLink(url=''){
   try{
     const u=new URL(url),path=u.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
+    const host=u.hostname.toLowerCase().replace(/^www\./,'');
+    if(host.includes('youtube.com')||host==='youtu.be'){
+      if(host==='youtu.be'&&path.length>1)return false;
+      if(path==='watch'&&u.searchParams.get('v'))return false;
+      if(/^shorts\/[^/]+/.test(path)||/^live(\/[^/]+)?$/.test(path)||/^embed\//.test(path))return false;
+    }
+    if(host.includes('tiktok.com')&&/\/video\//.test(u.pathname))return false;
+    if(host.includes('instagram.com')&&/^\/(p|reel|reels|tv)\//.test(u.pathname))return false;
+    if(host.includes('facebook.com')&&(u.searchParams.get('v')||/\/(reel|share|watch|videos)\//.test(u.pathname)))return false;
     const searchPath=/(^|\/)(search|results|explore\/search)(\/|$)/i.test(path);
-    if(!path||searchPath||/^(accounts\/)?login(\/|$)/i.test(path)||/^(home|feed|watch)(\/|$)/i.test(path))return true;
+    if(!path||searchPath||/^(accounts\/)?login(\/|$)/i.test(path)||/^(home|feed)(\/|$)/i.test(path))return true;
+    if(/^(watch)(\/|$)/i.test(path))return true;
     if(u.searchParams.has('search_query'))return true;
     // `q` n'est une recherche que sur les chemins de recherche, pas sur un profil.
     if(u.searchParams.has('q')&&(searchPath||/(^|\/)(search|explore)(\/|$)/i.test(path)))return true;
