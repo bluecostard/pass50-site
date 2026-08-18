@@ -135,4 +135,22 @@ must(p50_live_v4_needs_tiktok_rescan($p0Stale),'Un P0 TikTok offline depuis 130 
 $p0Fresh=['profile_id'=>'general-camille-makosso','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-60)];
 must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 60 s ne doit pas être resondé.');
 
-echo json_encode(['ok'=>true,'cases'=>29],JSON_UNESCAPED_SLASHES).PHP_EOL;
+$noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
+must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
+foreach(['census-amour-ruth-poopy','census-jordan-evraa'] as $liveId){
+    $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+    must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
+}
+
+$unknownTikTok=['profile_id'=>'census-samuella-kouassi','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_unknown_tiktok($unknownTikTok),'Un TikTok unknown doit être reconnu comme tel.');
+must(!p50_live_v4_needs_tiktok_rescan($unknownTikTok),'Un unknown hors P0 ne doit pas saturer le rescan 2 min.');
+$metaUnknown=['profile_id'=>'ig-unknown','platform'=>'Instagram','verification_status'=>'verified','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_discovery_rank($unknownTikTok)<p50_live_v4_discovery_rank($metaUnknown),'Un TikTok unknown passe avant un Instagram unknown.');
+
+$noLimitSource=['profile_id'=>'census-no-limit','public_name'=>'No Limit','platform'=>'TikTok','url'=>'https://www.tiktok.com/@nolimit_vousdv'];
+$noLimitApi=p50_live_v4_parse_tiktok($noLimitSource,['api'=>response('{"data":{"user":{"uniqueId":"nolimit_vousdv","roomId":"7675157318859639573","status":2},"liveRoom":{"status":2,"startTime":1787011835}},"statusCode":0}')]);
+must($noLimitApi['state']==='live','L’API TikTok No Limit status=2 + uniqueId doit publier le LIVE.');
+
+echo json_encode(['ok'=>true,'cases'=>34],JSON_UNESCAPED_SLASHES).PHP_EOL;
