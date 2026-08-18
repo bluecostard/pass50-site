@@ -37,6 +37,12 @@ $lockedOfficialLinks=[
     'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     'census-observateur-ebene|facebook'=>'https://www.facebook.com/observateurofficiel/',
     'census-observateur-ebene|x'=>'https://x.com/FlorentAMANY',
+    'samo-samo|instagram'=>'https://www.instagram.com/kommander_samo_samo/',
+];
+$ownerExactLocks=[
+    'samosamo'=>[
+        'instagram'=>'https://www.instagram.com/kommander_samo_samo/',
+    ],
 ];
 $lockKey=strtolower($profileId).'|'.strtolower($platform);
 $lockedOfficialUrl=$lockedOfficialLinks[$lockKey]??'';
@@ -54,6 +60,8 @@ if($lockedOfficialUrl===''&&in_array($normalizedProfileName,$ownerLockedNames,tr
         if(is_array($types)&&in_array('manual_owner',$types,true))$lockedOfficialUrl=(string)($lockedRow['normalized_url']??'');
     }
 }
+$exactOwnerUrl=$ownerExactLocks[$normalizedProfileName][strtolower($platform)]??'';
+if($exactOwnerUrl!=='')$lockedOfficialUrl=$exactOwnerUrl;
 
 if($lockedOfficialUrl!==''&&in_array($action,['delete','reject'],true)){
     json_response([
