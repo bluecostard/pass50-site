@@ -94,7 +94,7 @@ if($mode==='full'){
         $state=strtolower(trim((string)($source['last_state']??'never_checked')));
         return $state===''||$state==='never_checked'||$state==='unknown';
     }));
-    $metaFloor=min(4,max(2,(int)floor($discoveryQuota/2)));
+    $metaFloor=min(2,max(1,(int)floor($discoveryQuota/4)));
     $metaPick=array_slice($metaNeed,0,min($metaFloor,$discoveryQuota));
     $metaUsed=[];foreach($metaPick as $source)$metaUsed[(string)$source['source_key']]=true;
     $discoveryRest=[];foreach($discovery as $source){if(!isset($metaUsed[(string)$source['source_key']]))$discoveryRest[]=$source;}
