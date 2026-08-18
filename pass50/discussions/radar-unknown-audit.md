@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-18 14:16 UTC
+
+- Unknown sondés : **183**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **1**
+
+Vraiment en live :
+- TikTok `hamondchic` @coachhamond — Allô yougoss · 10507 viewers
+
+Nouveaux P0 :
+- TikTok `hamondchic`
+
 ### 2026-08-18 10:52 UTC
 
 - Unknown sondés : **176**
