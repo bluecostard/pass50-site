@@ -895,7 +895,11 @@ function p50_de_collect_page_enrichment(array $profile,string $url,string $sourc
     }
     if($official||$identityScore>=60)$birthDates=array_merge($birthDates,p50_de_birth_context_dates($plain));
     $birthDates=array_values(array_unique($birthDates));
-    foreach($birthDates as $date){p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$sourceType,$sourceName,$final,$weight);$found++;}
+    $stateProfile=p50_de_state_profile($profileId);
+    foreach($birthDates as $date){
+        if(is_array($stateProfile)&&p50_de_profile_birth_frozen($stateProfile)&&p50_de_profile_birth_value($stateProfile)!==$date)continue;
+        p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$sourceType,$sourceName,$final,$weight);$found++;
+    }
     $description=p50_de_text_excerpt($description!==''?$description:(string)($meta['description']??''),500);
     if($description!==''&&($official||$identityScore>=60)){p50_de_add_fact_evidence($profileId,'bio',$description,$description,$sourceType,$sourceName,$final,min(98,$weight));$found++;}
     if($occupation!==''){p50_de_add_fact_evidence($profileId,'occupation',$occupation,$occupation,$sourceType,$sourceName,$final,min(98,$weight));$found++;}
@@ -1480,14 +1484,18 @@ function p50_de_collect_state_facts(array $profile): int {
     $count=0;$profileId=(string)$profile['profile_id'];
     $date=trim((string)($p['birthDate']??''));
     if($date!==''&&preg_match('/^\d{4}-\d{2}-\d{2}$/',$date)){
-        $manual=!empty($p['birthManualLocked']);
+        $manual=p50_de_profile_birth_frozen($p);
         p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$manual?'manual_owner':'state_import',$manual?'Administrateur PASS50':'État PASS50','',$manual?100:70);$count++;
     }
     $allowed=['real_name','education','occupation','nationality','bio','category','official_website','birth_date'];
     foreach((array)($p['curatedFacts']??[]) as $key=>$seed){
         if(!in_array((string)$key,$allowed,true)||!is_array($seed))continue;
         $value=trim((string)($seed['value']??''));if($value==='')continue;
-        if($key==='birth_date'){$value=p50_de_normalize_iso_date($value);if($value==='')continue;}
+        if($key==='birth_date'){
+            $value=p50_de_normalize_iso_date($value);if($value==='')continue;
+            $existing=p50_de_profile_birth_value($p);
+            if($existing!==''&&p50_de_profile_birth_frozen($p)&&$existing!==$value)continue;
+        }
         $weight=max(90,min(96,(int)($seed['confidence']??94)));
         p50_de_add_fact_evidence($profileId,(string)$key,$value,$value,'curated_research_v22',(string)($seed['source_name']??'Recherche PASS50 V22'),(string)($seed['source_url']??''),$weight);$count++;
     }
@@ -1553,6 +1561,66 @@ function p50_de_social_links(string $profileId, bool $verifiedOnly=false): array
     return $rows;
 }
 
+function p50_de_state_profile(string $profileId): ?array {
+    $state=p50_de_load_public_state();
+    if(!is_array($state))return null;
+    $map=p50_de_profile_state_map($state);
+    $p=$map[$profileId]??null;
+    return is_array($p)?$p:null;
+}
+
+function p50_de_profile_birth_value(array $p): string {
+    return trim((string)($p['birthDate']??''));
+}
+
+function p50_de_fact_is_manual($fact): bool {
+    if(!is_array($fact))return false;
+    $types=$fact['source_types']??$fact['sourceTypes']??[];
+    if(is_string($types)){
+        $decoded=json_decode($types,true);
+        $types=is_array($decoded)?$decoded:array_values(array_filter(explode(',',$types)));
+    }
+    if(!is_array($types))return false;
+    foreach($types as $type){
+        $type=(string)$type;
+        if(in_array($type,['manual_owner','manual_admin'],true)||str_starts_with($type,'manual_source'))return true;
+    }
+    return false;
+}
+
+function p50_de_profile_birth_frozen(array $p): bool {
+    if(p50_de_profile_birth_value($p)==='')return false;
+    if(!empty($p['birthManualLocked']))return true;
+    if(strtolower((string)($p['ageStatus']??''))==='confirmed')return true;
+    $quality=is_array($p['quality']??null)?$p['quality']:[];
+    if((int)($quality['birth']??0)>=90)return true;
+    $facts=$p['dataEngine']['verifiedFacts']??[];
+    return is_array($facts)&&in_array('birth_date',$facts,true);
+}
+
+function p50_de_lock_birth_date(array &$p, bool $adminConfirmed=false): void {
+    if(p50_de_profile_birth_value($p)==='')return;
+    $p['birthYear']=(int)substr((string)$p['birthDate'],0,4);
+    $p['ageStatus']='confirmed';
+    $p['agePublic']=($p['agePublic']??true)!==false;
+    $p['birthManualLocked']=true;
+    if(empty($p['birthManualUpdatedAt']))$p['birthManualUpdatedAt']=gmdate('c');
+    $p['quality']=is_array($p['quality']??null)?$p['quality']:[];
+    $current=(int)($p['quality']['birth']??0);
+    $p['quality']['birth']=$adminConfirmed?max(100,$current):max(90,$current);
+    $p['dataEngine']=is_array($p['dataEngine']??null)?$p['dataEngine']:[];
+    $verified=$p['dataEngine']['verifiedFacts']??[];
+    if(!is_array($verified))$verified=[];
+    $p['dataEngine']['verifiedFacts']=array_values(array_unique(array_merge($verified,['birth_date'])));
+}
+
+function p50_de_freeze_existing_birth(array &$p): bool {
+    if(!p50_de_profile_birth_frozen($p))return false;
+    $was=!empty($p['birthManualLocked']);
+    p50_de_lock_birth_date($p, (int)(($p['quality']['birth']??0))>=100);
+    return !$was;
+}
+
 function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array &$sharedState=null): bool {
     $ownsState=$sharedState===null;
     $state=$ownsState?p50_de_load_public_state():$sharedState;
@@ -1584,15 +1652,26 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
         $p['quality']['identity']=max(90,(int)($p['quality']['identity']??0));
         $p['quality']['social']=$maxSocial;
 
+        if(p50_de_freeze_existing_birth($p))$changed=true;
+        $existingBirth=p50_de_profile_birth_value($p);
+        $birthFrozen=p50_de_profile_birth_frozen($p);
         if(isset($facts['birth_date'])){
             $date=(string)$facts['birth_date']['normalized_value'];
-            if(($p['birthDate']??null)!==$date){$p['birthDate']=$date;$changed=true;}
-            $p['birthYear']=(int)substr($date,0,4);
-            $p['ageStatus']='confirmed';
-            $p['quality']['birth']=(int)$facts['birth_date']['confidence'];
+            $manual=p50_de_fact_is_manual($facts['birth_date']);
+            if($existingBirth!==''&&$birthFrozen&&!$manual&&$existingBirth!==$date){
+                p50_de_lock_birth_date($p);
+            }else{
+                if(($p['birthDate']??null)!==$date){$p['birthDate']=$date;$changed=true;}
+                $p['birthYear']=(int)substr($date,0,4);
+                $p['ageStatus']='confirmed';
+                $p['quality']['birth']=(int)$facts['birth_date']['confidence'];
+                p50_de_lock_birth_date($p,$manual);
+                $changed=true;
+            }
         }else{
             // Ne jamais effacer une information déjà saisie : elle reste simplement non confirmée.
-            if(empty($p['birthDate'])){$p['ageStatus']=$p['ageStatus']??'unconfirmed';$p['quality']['birth']=0;}
+            if($existingBirth===''){$p['ageStatus']=$p['ageStatus']??'unconfirmed';$p['quality']['birth']=0;}
+            elseif($birthFrozen)p50_de_lock_birth_date($p);
         }
 
         $autoBioValue=(string)($previousEngine['autoBioValue']??'');
@@ -1653,7 +1732,7 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
         $p['dataEngine']=[
             'threshold'=>p50_de_threshold(),
             'publishedAt'=>gmdate('c'),
-            'verifiedFacts'=>array_keys($facts),
+            'verifiedFacts'=>(p50_de_profile_birth_frozen($p)?array_values(array_unique(array_merge(array_keys($facts),['birth_date']))):array_keys($facts)),
             'verifiedSocialLinks'=>count($links),
             'photoCandidate'=>(bool)$photoCandidate,
             'autoBioValue'=>$autoBioValue,

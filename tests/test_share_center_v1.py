@@ -29,9 +29,9 @@ class ShareCenterV1Tests(unittest.TestCase):
 
     def test_center_loads_before_legacy_profile_sharing(self):
         self.assertIn("data-pass50-share-center", APP_CONFIG)
-        self.assertIn("share-center-v1.js?v=1.4", APP_CONFIG)
+        self.assertIn("share-center-v1.js?v=1.5", APP_CONFIG)
         self.assertLess(
-            APP_CONFIG.index("share-center-v1.js?v=1.4"),
+            APP_CONFIG.index("share-center-v1.js?v=1.5"),
             APP_CONFIG.index("fi-engagement-v3.js?v=1.4"),
         )
 
@@ -93,7 +93,7 @@ class ShareCenterV1Tests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
 
     def test_service_worker_keeps_share_center_and_versioned_cache(self):
-        self.assertIn("./share-center-v1.js?v=1.4", SW)
+        self.assertIn("./share-center-v1.js?v=1.5", SW)
         self.assertIn("./coules-share-simple-v1.js?v=1.3", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 

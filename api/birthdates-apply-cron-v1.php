@@ -24,9 +24,9 @@ try{
  $row=$pdo->query("SELECT data FROM app_state WHERE id='public' LIMIT 1 FOR UPDATE")->fetchColumn();$state=$row?json_decode((string)$row,true):null;if(!is_array($state))throw new RuntimeException('État invalide.');
  $pdo->prepare('INSERT INTO p50_birth_apply_backups(dispatch_id,state_json) VALUES(?,?)')->execute([$dispatchId,$row]);
  $applied=[];
- foreach($state['profiles'] as &$profile){$id=(string)($profile['id']??'');if(!isset($updates[$id]))continue;$u=$updates[$id];if(trim((string)($profile['birthDate']??''))!=='')continue;
+ foreach($state['profiles'] as &$profile){$id=(string)($profile['id']??'');if(!isset($updates[$id]))continue;$u=$updates[$id];if(trim((string)($profile['birthDate']??''))!==''||!empty($profile['birthManualLocked']))continue;
   $profile['birthDate']=$u['birthDate'];$profile['birthYear']=$u['birthYear'];$profile['ageStatus']='confirmed';$profile['agePublic']=true;
-  $profile['birthManualLocked']=!empty($u['manual']);$profile['birthEvidence']=['status'=>'confirmed','sources'=>$u['sources'],'checkedAt'=>gmdate('c')];
+  $profile['birthManualLocked']=true;$profile['birthManualUpdatedAt']=$profile['birthManualUpdatedAt']??gmdate('c');$profile['birthEvidence']=['status'=>'confirmed','sources'=>$u['sources'],'checkedAt'=>gmdate('c')];
   $profile['dataEngine']=is_array($profile['dataEngine']??null)?$profile['dataEngine']:[];
   $profile['dataEngine']['verifiedFacts']=array_values(array_unique(array_merge((array)($profile['dataEngine']['verifiedFacts']??[]),['birth_date'])));
   $applied[]=['id'=>$id,'name'=>(string)($profile['name']??$id),'birthDate'=>$u['birthDate']];
