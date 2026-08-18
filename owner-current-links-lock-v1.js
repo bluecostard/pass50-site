@@ -1,8 +1,11 @@
 (function(){
 'use strict';
 
-const VERSION='1.0';
+const VERSION='1.1';
 const TARGET_NAMES=new Set(['zagbalerequin','zeinabbance','samosamo']);
+const EXACT_LOCKS={
+  samosamo:{Instagram:'https://www.instagram.com/kommander_samo_samo/'}
+};
 let renderWrapped=false;
 
 function normName(value){
@@ -15,6 +18,10 @@ function lockProfile(p,saveState=true){
   if(!p)return false;
   p.links=p.links||{};p.linkChecks=p.linkChecks||{};p.officialLinkLocks={...(p.officialLinkLocks||{})};p.platforms=Array.isArray(p.platforms)?p.platforms:[];
   let changed=false;
+  const exact=EXACT_LOCKS[normName(p?.name)]||{};
+  Object.entries(exact).forEach(([platform,url])=>{
+    if(p.links[platform]!==url){p.links[platform]=url;changed=true;}
+  });
   Object.entries(p.links).forEach(([platform,raw])=>{
     const url=String(raw||'').trim();if(!url)return;
     if(p.officialLinkLocks[platform]!==url){p.officialLinkLocks[platform]=url;changed=true;}
@@ -47,10 +54,25 @@ function wrapRender(){
   window.p50v9RenderLinks=function(){targets().forEach(p=>lockProfile(p,false));const result=original.apply(this,arguments);queueMicrotask(decorate);return result;};
   renderWrapped=true;
 }
+function isDirectOfficial(platform,url){
+  try{if(typeof p50v9IsDirectPlatformLink==='function')return p50v9IsDirectPlatformLink(platform,url);}catch{}
+  return /^https?:\/\//i.test(String(url||''));
+}
 document.addEventListener('click',e=>{
   const button=e.target?.closest?.('.save-links,.check-links');if(!button)return;
   const p=targets().find(item=>String(item.id)===String(button.dataset.id));if(!p)return;
-  Object.entries(p.officialLinkLocks||{}).forEach(([platform,url])=>{const input=button.closest('[data-link-profile]')?.querySelector(`[data-link-platform="${CSS.escape(platform)}"]`);if(input)input.value=url;});
+  const card=button.closest('[data-link-profile]');
+  Object.entries({...(p.officialLinkLocks||{}),...(EXACT_LOCKS[normName(p?.name)]||{})}).forEach(([platform,url])=>{
+    const input=card?.querySelector(`[data-link-platform="${CSS.escape(platform)}"]`);if(!input)return;
+    const typed=input.value.trim();
+    if(typed&&isDirectOfficial(platform,typed)){
+      p.links[platform]=typed;
+      p.officialLinkLocks[platform]=typed;
+      input.value=typed;
+      return;
+    }
+    input.value=url;
+  });
   lockProfile(p,true);
 },true);
 function install(){wrapRender();enforce();}

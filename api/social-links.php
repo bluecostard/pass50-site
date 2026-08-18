@@ -84,9 +84,13 @@ if($action==='delete'){
     json_response(['ok'=>true,'deleted'=>true,'links'=>p50_de_social_links($profileId,false)]);
 }
 $url=trim((string)($in['url']??''));
-if($lockedOfficialUrl!==''){
+$incomingNormalized=p50_de_normalize_social_url($platform,$url);
+$ownerReplace=$user['role']==='owner'&&!empty($in['confirmedOfficial'])&&$incomingNormalized!==''&&$incomingNormalized!==$lockedOfficialUrl;
+if($lockedOfficialUrl!==''&&!$ownerReplace){
     $url=$lockedOfficialUrl;
     $in['confirmedOfficial']=true;
+    $in['replaceExisting']=true;
+}elseif($ownerReplace){
     $in['replaceExisting']=true;
 }
 if($url==='')json_response(['error'=>'URL requise.'],422);

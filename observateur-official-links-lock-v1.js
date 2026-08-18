@@ -2,7 +2,7 @@
 'use strict';
 if(!document.querySelector('script[data-pass50-owner-current-links-lock]')){
   const script=document.createElement('script');
-  script.src='./owner-current-links-lock-v1.js?v=1.0';
+  script.src='./owner-current-links-lock-v1.js?v=1.1';
   script.async=false;
   script.dataset.pass50OwnerCurrentLinksLock='1.0';
   document.head.appendChild(script);

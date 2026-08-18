@@ -207,5 +207,5 @@
   loadScript('script[data-pass50-admin-news-hotfix]','./admin-news-hotfix-v1.js?v=1.2','pass50AdminNewsHotfix','1.2',false);
   loadScript('script[data-pass50-intelligence-signals-ui]','./intelligence-signals-ui-v1.js?v=1.2','pass50IntelligenceSignalsUi','1.2',false);
   loadScript('script[data-pass50-intelligence-signals-diagnostic]','./intelligence-signals-diagnostic-v1.js?v=1.0','pass50IntelligenceSignalsDiagnostic','1.0',false);
-  loadScript('script[data-pass50-official-links-protection-v4]','./official-links-protection-v4.js?v=4.3','pass50OfficialLinksProtectionV4','4.3',false);
+  loadScript('script[data-pass50-official-links-protection-v4]','./official-links-protection-v4.js?v=4.4','pass50OfficialLinksProtectionV4','4.4',false);
 })();
