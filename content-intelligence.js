@@ -114,33 +114,30 @@
 
   function newsCard(item,index){
     const cover=item.thumbnailUrl||fallbackCover(item.profileId),extra=index>=3,facebook=isFacebook(item);
-    return `<article class="p50ci-news-card ${facebook?'facebook':''} ${extra?'is-extra':''}"><div class="p50ci-news-thumb">${cover?`<img src="${attr(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:'📰'}</div><div><h4>${esc(item.title||'Actualité récente')}</h4><div class="p50ci-news-meta"><span class="${item.official?'p50ci-official':''}">${item.official?'SOURCE OFFICIELLE':esc(item.sourceType)}</span> · ${esc(item.platform)} · ${esc(relative(item.publishedAt))}${item.trendBadge?` · ${esc(item.trendBadge)}`:''}</div>${facebook?'<div class="p50ci-facebook-note" style="margin-top:6px">Aperçu lisible dans Pass50.</div>':''}</div><a class="btn small" href="${attr(item.url)}" target="_blank" rel="noopener">${facebook?'Ouvrir Facebook':'Voir'} ↗</a></article>`;
+    return `<article class="p50ci-news-card ${facebook?'facebook':''} ${extra?'is-extra':''}"><div class="p50ci-news-thumb">${cover?`<img src="${attr(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:'📰'}</div><div><h4>${esc(item.title||'Actualité récente')}</h4><div class="p50ci-news-meta"><span class="${item.official?'p50ci-official':''}">${item.official?'SOURCE OFFICIELLE':esc(item.sourceType)}</span> · ${esc(item.platform)} · ${esc(relative(item.publishedAt))}${item.trendBadge?` · ${esc(item.trendBadge)}`:''}</div></div><a class="btn small" href="${attr(item.url)}" target="_blank" rel="noopener">${facebook?'Ouvrir Facebook':'Voir'} ↗</a></article>`;
   }
 
   async function renderProfileNews(profileId){
     const body=document.getElementById('profileBody');if(!body)return;
     body.querySelector('#p50ciProfileNews')?.remove();
-    const shell=document.createElement('section');shell.id='p50ciProfileNews';shell.className='p50ci-news';shell.innerHTML='<div class="p50ci-news-head"><div class="p50ci-news-title">📰 Actualité récente</div></div><div class="p50ci-empty">Chargement des publications officielles…</div>';body.appendChild(shell);
     try{
       const key=`${profileId}:${P50CI.period}`,cached=P50CI.news.get(key);let data;
       if(cached&&Date.now()-cached.fetchedAt<NEWS_TTL)data=cached.data;
       else{data=await fetchFeed(profileId);P50CI.news.set(key,{data,fetchedAt:Date.now()});}
-      if(!document.body.contains(shell))return;      const items=data.news||[];
+      const host=document.getElementById('profileBody');if(!host)return;
+      const items=data.news||[];
       const isVideoItem=item=>/video|reel|live|short/i.test(String(item?.itemType||item?.contentType||''))||['YouTube','TikTok'].includes(String(item?.platform||''));
       const official=items.find(item=>item.official&&isVideoItem(item))||items.find(item=>item.official)||items.find(isVideoItem)||items[0];
       if(official&&typeof window.p50SyncTriggerFromOfficialNews==='function'){
         if(window.p50SyncTriggerFromOfficialNews(profileId,official)&&typeof render==='function')render();
       }
-      const hours=Number(data.rules?.officialNewsHoursApplied||72);
-      const fallback=!!data.rules?.officialNewsUsedFallback;
-      const windowLabel=fallback
-        ? `Aucune actu en 72 h → publications des ${hours} dernières heures`
-        : `Publications officielles des ${hours} dernières heures`;
-      const emptyLabel=fallback
-        ? 'Aucune actualité récente de moins de 7 jours pour cette fiche.'
-        : 'Aucune actualité récente de moins de 72 heures pour cette fiche.';
-      shell.innerHTML=`<div class="p50ci-news-head"><div><div class="p50ci-news-title">📰 Actualité récente</div><div class="muted" style="font-size:11px">${esc(windowLabel)} · contenus officiels + validations</div></div>${items.length>3?'<button class="btn small" data-p50ci-expand>Voir toute l’actualité</button>':''}</div><div class="p50ci-news-list">${items.length?items.map(newsCard).join(''):`<div class="p50ci-empty">${esc(emptyLabel)}</div>`}</div>`;
-    }catch(error){shell.innerHTML='<div class="p50ci-news-head"><div class="p50ci-news-title">📰 Actualité récente</div></div><div class="p50ci-empty">Actualité momentanément indisponible.</div>';}
+      if(!items.length)return;
+      const current=document.getElementById('profileBody');if(!current)return;
+      current.querySelector('#p50ciProfileNews')?.remove();
+      const shell=document.createElement('section');shell.id='p50ciProfileNews';shell.className='p50ci-news';
+      shell.innerHTML=`<div class="p50ci-news-head"><div class="p50ci-news-title">📰 Actualité récente</div>${items.length>3?'<button class="btn small" data-p50ci-expand>Voir toute l’actualité</button>':''}</div><div class="p50ci-news-list">${items.map(newsCard).join('')}</div>`;
+      current.appendChild(shell);
+    }catch(error){}
   }
 
   function installProfileHook(){

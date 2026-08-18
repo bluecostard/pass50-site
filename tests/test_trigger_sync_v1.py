@@ -32,12 +32,12 @@ class TriggerSyncV1Tests(unittest.TestCase):
         self.assertIn("POURQUOI DANS LE TOP 50 ?", V9)
         self.assertNotIn("POURQUOI DANS LE TOP 5 ?", V9)
         self.assertNotIn("ACTUALITÉ RÉCENTE", V9)
-        self.assertIn("v9-tools.js?v=15.29", SW)
+        self.assertIn("v9-tools.js?v=15.30", SW)
 
     def test_content_intelligence_applies_official_trigger_sync(self):
         self.assertIn("p50SyncTriggerFromOfficialNews", CLIENT)
-        self.assertIn("content-intelligence.js?v=1.14", CONFIG)
-        self.assertIn("content-intelligence.js?v=1.14", SW)
+        self.assertIn("content-intelligence.js?v=1.15", CONFIG)
+        self.assertIn("content-intelligence.js?v=1.15", SW)
 
 
 if __name__ == "__main__":

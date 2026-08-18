@@ -16,10 +16,11 @@ class FiPhotoEnlargeV1Tests(unittest.TestCase):
         self.assertIn("function closeFiPhoto()", INDEX)
         self.assertIn('id="fiPhotoLightbox"', INDEX)
         self.assertIn("#profileBody .avatar.is-zoomable", INDEX)
+        self.assertNotIn('content:"Agrandir"', INDEX)
 
     def test_lightbox_closes_without_leaving_the_fiche(self):
         self.assertIn("if($('#fiPhotoLightbox')?.classList.contains('show')){closeFiPhoto();return;}", INDEX)
-        self.assertIn("if(id==='profileModal'){closeFiPhoto();restoreProfileOrigin();}", INDEX)
+        self.assertIn("if(id==='profileModal'){closeFiPhoto();restoreProfileOrigin();p50ClearProfileQuery();}", INDEX)
         self.assertIn("e.target.closest('#fiPhotoLightbox')", INDEX)
 
     def test_other_avatars_stay_as_fiche_entry_points(self):
