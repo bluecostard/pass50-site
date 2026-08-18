@@ -9,6 +9,7 @@ PROTECT = (ROOT / "official-links-protection-v4.js").read_text(encoding="utf-8")
 SOCIAL = (ROOT / "api/social-links.php").read_text(encoding="utf-8")
 BATCH = (ROOT / "api/official-links-batch-owner-cron-v1.php").read_text(encoding="utf-8")
 CONFIG = (ROOT / "app-config.js").read_text(encoding="utf-8")
+SW = (ROOT / "sw.js").read_text(encoding="utf-8")
 FREEZE = (ROOT / ".github/workflows/deploy-owner-links-freeze-live.yml").read_text(encoding="utf-8")
 
 
@@ -35,7 +36,7 @@ class SamoInstagramOfficialV1Tests(unittest.TestCase):
         self.assertIn("observateur-official-links-lock-v1.js?v=1.1", CONFIG)
         self.assertIn("owner-current-links-lock-v1.js?v=1.2", OBS)
         self.assertIn("const VERSION='1.2'", LOCK)
-        self.assertIn("PASS50-OFFICIAL-LINKS-PROTECTION-V4.4", PROTECT)
+        self.assertIn("PASS50-OFFICIAL-LINKS-PROTECTION-V4.5", PROTECT)
         self.assertIn("put -O \"$REMOTE_DIR\" profile-samo-samo.js", FREEZE)
         self.assertIn("put -O \"$REMOTE_DIR\" app-config.js", FREEZE)
         self.assertIn("instagram.com/kommander_samo_samo/", FREEZE)
