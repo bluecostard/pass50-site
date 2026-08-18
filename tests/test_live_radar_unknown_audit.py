@@ -5,7 +5,13 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from live_radar_unknown_audit import parse_facebook_live_html, parse_tiktok_webcast, parse_youtube_live_html  # noqa: E402
+from live_radar_unknown_audit import (  # noqa: E402
+    format_discussion_entry,
+    parse_facebook_live_html,
+    parse_tiktok_webcast,
+    parse_youtube_live_html,
+    write_discussion_log,
+)
 
 SOURCE = (ROOT / 'api' / 'live-radar-v4-source.php').read_text(encoding='utf-8')
 ENDPOINT = (ROOT / 'api' / 'live-radar-unknown-audit.php').read_text(encoding='utf-8')
@@ -55,6 +61,38 @@ class LiveRadarUnknownAuditTests(unittest.TestCase):
         self.assertIn('unknown_audit_webcast', ENDPOINT)
         self.assertIn("cron: '20 */3 * * *'", WORKFLOW)
         self.assertIn('scripts/live_radar_unknown_audit.py', WORKFLOW)
+        self.assertIn('pass50/discussions/radar-unknown-audit.md', WORKFLOW)
+        self.assertIn('contents: write', WORKFLOW)
+
+    def test_discussion_journal_lists_real_lives(self):
+        entry = format_discussion_entry({
+            'unknownCount': 12,
+            'lives': [{'platform': 'TikTok', 'profileId': 'census-jordan-evraa', 'handle': 'realjordanevraa', 'title': 'Goumin tv', 'viewers': 141}],
+            'posted': {'published': 1, 'added': [], 'stored': [{'profileId': 'census-jordan-evraa', 'platform': 'TikTok'}], 'skipped': []},
+            'enabled': True,
+        }, when='2026-08-18 00:45 UTC')
+        self.assertIn('Vraiment en live : **1**', entry)
+        self.assertIn('census-jordan-evraa', entry)
+        self.assertIn('@realjordanevraa', entry)
+
+    def test_discussion_file_is_prepended(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            discussion = root / 'radar-unknown-audit.md'
+            latest = root / 'radar-unknown-audit-latest.json'
+            write_discussion_log({'unknownCount': 2, 'lives': [], 'posted': None, 'enabled': True}, discussion, latest)
+            write_discussion_log({
+                'unknownCount': 2,
+                'lives': [{'platform': 'TikTok', 'profileId': 'census-jordan-evraa', 'title': 'Goumin tv'}],
+                'posted': {'published': 1, 'added': []},
+                'enabled': True,
+            }, discussion, latest)
+            text = discussion.read_text(encoding='utf-8')
+            self.assertLess(text.find('census-jordan-evraa'), text.find('Aucun unknown réellement en live'))
+            snapshot = json.loads(latest.read_text(encoding='utf-8'))
+            self.assertEqual(snapshot['liveCount'], 1)
 
 
 if __name__ == '__main__':
