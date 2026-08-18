@@ -11,6 +11,10 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-18 05:03 UTC
+
+Erreur : `GET HTTP 404`
+
 ### 2026-08-18 00:47 UTC
 
 Contrôle webcast des 11 comptes P0 déjà en liste (avant le premier cron prod).
