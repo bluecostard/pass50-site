@@ -182,6 +182,7 @@ function refreshLinksPanel(options={}){
   persistLocal();
   // Éviter render() global quand une validation est en cours : il reconstruisait
   // le panneau et donnait l'impression que le lien venait d'être effacé.
+  if(window.PASS50_FI_EDIT_PRESERVE?.busy?.()&&!options.fullRender)return;
   if(options.fullRender&&typeof render==='function')render();
   if(typeof p50v9RenderLinks==='function'&&typeof ui==='object'&&ui.adminTab==='links')p50v9RenderLinks();
 }
@@ -302,6 +303,10 @@ async function runIntegritySync(){
     setCloudRevision(data.stateRevision);
     const restoredCount=Number(data.restoredCount||0);
     if(restoredCount>0){
+      if(window.PASS50_FI_EDIT_PRESERVE?.busy?.()){
+        rememberIntegritySignature(restoredCount);
+        return;
+      }
       if(typeof loadCloudState==='function')await loadCloudState();
       persistLocal();
       if(typeof render==='function')render();
