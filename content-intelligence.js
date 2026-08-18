@@ -44,6 +44,8 @@
       .news-refresh-progress.is-active:not(.is-done):not(.is-error) .news-refresh-fill{background-size:200% 100%;animation:p50ciProgressShine 1.2s linear infinite}
       .news-refresh-progress-detail{margin-top:8px;font-size:11px;font-weight:750;color:#aeb7ab;line-height:1.4}
       @keyframes p50ciProgressShine{from{filter:brightness(.95)}to{filter:brightness(1.15)}}
+      #contentGrid.p50-content-grid-loading,#contentGrid:empty{display:block!important;min-height:0;overflow:hidden}
+      #contentGrid:has(.p50ci-card)>.content-card:not(.p50ci-card),#contentGrid [data-content="c1"],#contentGrid [data-content="c2"],#contentGrid [data-content="c3"],#contentGrid [data-content="c4"],#contentGrid [data-content="c5"],#contentGrid .p50ci-empty,#contentGrid .p50-content-wait{display:none!important}
       @media(max-width:680px){.p50ci-periods{justify-content:flex-start}.p50ci-card-cover{height:150px}.p50ci-news-card{grid-template-columns:62px minmax(0,1fr)}.p50ci-news-thumb{width:62px;height:58px}.p50ci-news-card>a{grid-column:1/-1;width:100%;text-align:center}}
     `;
   }
@@ -62,12 +64,28 @@
     controls.innerHTML=Object.entries(PERIODS).map(([key,label])=>`<button class="p50ci-period ${P50CI.period===key?'active':''}" data-p50ci-period="${key}">${label}</button>`).join('');
   }
 
+  function stripLegacyTrendCards(grid){
+    grid.querySelectorAll('.content-card:not(.p50ci-card),[data-content="c1"],[data-content="c2"],[data-content="c3"],[data-content="c4"],[data-content="c5"]').forEach(el=>{
+      if(!el.classList.contains('p50ci-card'))el.remove();
+    });
+  }
+
+  function paintTrendWait(grid){
+    if(grid.querySelector('.p50ci-card'))return;
+    grid.classList.add('p50-content-grid-loading');
+    grid.setAttribute('aria-busy','true');
+    grid.innerHTML='';
+  }
+
   function renderTrends(){
     ensurePeriodControls();const grid=document.getElementById('contentGrid');if(!grid)return;
-    if(P50CI.loading&&!P50CI.data){grid.innerHTML='<div class="p50ci-empty">Calcul du Top 5 en cours…</div>';return;}
-    const data=P50CI.data;if(!data?.ready){grid.innerHTML='<div class="p50ci-empty">Le premier calcul automatique est en préparation.</div>';return;}
+    stripLegacyTrendCards(grid);
+    if(P50CI.loading&&!P50CI.data){paintTrendWait(grid);return;}
+    const data=P50CI.data;if(!data?.ready){paintTrendWait(grid);return;}
     const items=data.trends||[];
-    if(!items.length){grid.innerHTML='<div class="p50ci-empty">Aucun contenu suffisamment récent ne progresse sur cette période.</div>';return;}
+    grid.classList.remove('p50-content-grid-loading');
+    grid.removeAttribute('aria-busy');
+    if(!items.length){grid.innerHTML='';return;}
     grid.innerHTML=items.map(item=>{
       const cover=item.thumbnailUrl||fallbackCover(item.profileId),title=item.title||`Contenu récent de ${item.name}`,facebook=isFacebook(item);
       return `<article class="content-card p50ci-card" data-content="${item.contentId}">
@@ -138,9 +156,11 @@
   }
 
   function installRenderHook(){
-    if(typeof window.renderContent!=='function'||window.renderContent.__p50ci)return;
-    const original=window.renderContent;
-    const wrapped=function(){if(P50CI.data){renderTrends();return;}const result=original.apply(this,arguments);ensurePeriodControls();refreshTrends();return result;};
+    if(typeof window.renderContent==='function'&&window.renderContent.__p50ci)return;
+    const wrapped=function(){
+      renderTrends();
+      if(!P50CI.data&&!P50CI.loading)refreshTrends();
+    };
     wrapped.__p50ci=true;window.renderContent=wrapped;
   }
 
