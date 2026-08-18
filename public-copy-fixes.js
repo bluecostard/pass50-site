@@ -24,6 +24,24 @@
   void LEGACY_CONTEXT_SHARE_DISABLED;
   void FACEBOOK_VIEWER_DEPLOY_TRIGGER;
 
+  function removePublicNewsLectures(root=document){
+    root.querySelectorAll('.trigger-empty').forEach(node=>{
+      if(node.closest('#adminModal,#adminPane,[data-admin]'))return;
+      node.remove();
+    });
+    root.querySelectorAll('#p50ciProfileNews .p50ci-empty,#p50ciProfileNews .muted').forEach(node=>node.remove());
+    const news=root.querySelector('#p50ciProfileNews');
+    if(news&&!news.querySelector('.p50ci-news-card'))news.remove();
+  }
+
+  function hideFiPhotoAgrandirLabel(){
+    if(document.getElementById('p50HideAgrandirLabel'))return;
+    const style=document.createElement('style');
+    style.id='p50HideAgrandirLabel';
+    style.textContent='.profile-grid>.left .avatar.is-zoomable::after{content:none!important;display:none!important}';
+    document.head.appendChild(style);
+  }
+
   function replaceInternalCopy(root=document){
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
     while(walker.nextNode())nodes.push(walker.currentNode);
@@ -71,7 +89,7 @@
 
   function watchTrendScores(){
     if(window.__pass50TrendScoreObserver)return;
-    const observer=new MutationObserver(()=>removePublicTrendScores(document));
+    const observer=new MutationObserver(()=>{removePublicTrendScores(document);removePublicNewsLectures(document);});
     observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
     window.__pass50TrendScoreObserver=observer;
   }
@@ -126,6 +144,8 @@
 
   function runPublicFixes(){
     replaceInternalCopy(document);
+    removePublicNewsLectures(document);
+    hideFiPhotoAgrandirLabel();
     installLegalLinks();
     removeLegacyShareUi();
     removePublicTrendScores(document);
