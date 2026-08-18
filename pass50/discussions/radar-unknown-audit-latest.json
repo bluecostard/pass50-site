@@ -21,7 +21,20 @@
   ],
   "posted": {
     "published": 0,
-    "added": [],
+    "added": [
+      {
+        "profileId": "aya-robert",
+        "platform": "TikTok",
+        "handle": "aya.robert27",
+        "reason": "unknown_audit_live"
+      },
+      {
+        "profileId": "census-observateur-ebene",
+        "platform": "YouTube",
+        "handle": "Observateur",
+        "reason": "unknown_audit_live"
+      }
+    ],
     "stored": [],
     "skipped": []
   },

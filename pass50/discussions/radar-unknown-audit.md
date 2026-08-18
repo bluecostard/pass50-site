@@ -65,6 +65,10 @@ Vraiment en live à 03:12 :
 
 Statut Aya Robert au passage 05:03 : `tiktok_live_ended` (radar) · webcast `status_code=30003` (05:11, hors live)
 
+Nouveaux P0 (seed radar, rescan ~2 min) :
+- TikTok `aya-robert` @aya.robert27
+- YouTube `census-observateur-ebene` @Observateur
+
 ### 2026-08-18 05:03 UTC
 
 Erreur : `GET HTTP 404`
