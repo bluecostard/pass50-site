@@ -20,6 +20,11 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'p_1785175190809',
     'census-sarara-messan',
     'louissette',
+    'aya-robert',
+];
+/** YouTube à rescanner au même rythme P0. */
+const P50_LIVE_V4_P0_YOUTUBE = [
+    'census-observateur-ebene',
 ];
 /** Délai minimum entre deux sondes TikTok vérifié (secondes). */
 const P50_LIVE_V4_P0_RESCAN_SECONDS = 120;
@@ -177,6 +182,8 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'p_1785175190809|tiktok'=>'https://www.tiktok.com/@ulrich_jordan30',
         'census-sarara-messan|tiktok'=>'https://www.tiktok.com/@sarra_messan',
         'louissette|tiktok'=>'https://www.tiktok.com/@misscadic',
+        'aya-robert|tiktok'=>'https://www.tiktok.com/@aya.robert27',
+        'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
 }
@@ -240,12 +247,21 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'p_1785175190809','name'=>'Ulrich Jordan','handle'=>'ulrich_jordan30'],
         ['id'=>'census-sarara-messan','name'=>'Sarara Messan','handle'=>'sarra_messan'],
         ['id'=>'louissette','name'=>'Cadic N’Guessan','handle'=>'misscadic'],
+        ['id'=>'aya-robert','name'=>'Aya Robert','handle'=>'aya.robert27'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
         $seen[$forcedKey]=true;$out[]=[
             'profile_id'=>$forced['id'],'public_name'=>$forced['name'],'handle'=>'@'.$forced['handle'],
             'platform'=>'TikTok','url'=>'https://www.tiktok.com/@'.$forced['handle'],'confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $observateurKey='YouTube|census-observateur-ebene';
+    if(!isset($seen[$observateurKey])){
+        $seen[$observateurKey]=true;$out[]=[
+            'profile_id'=>'census-observateur-ebene','public_name'=>'Observateur Ébène','handle'=>'@Observateur',
+            'platform'=>'YouTube','url'=>'https://www.youtube.com/@Observateur','confidence'=>100,
             'verification_status'=>'manual_verified',
         ];
     }
@@ -350,10 +366,17 @@ function p50_live_v4_is_p0_tiktok(array $source): bool {
     return p50_live_v4_is_dynamic_p0($source);
 }
 
+function p50_live_v4_is_p0_youtube(array $source): bool {
+    if((string)($source['platform']??'')!=='YouTube')return false;
+    if(in_array((string)($source['profile_id']??''),P50_LIVE_V4_P0_YOUTUBE,true))return true;
+    return p50_live_v4_is_dynamic_p0($source);
+}
+
 function p50_live_v4_is_p0_source(array $source): bool {
     $platform=(string)($source['platform']??'');
     if($platform==='TikTok')return p50_live_v4_is_p0_tiktok($source);
-    if(!in_array($platform,['YouTube','Facebook'],true))return false;
+    if($platform==='YouTube')return p50_live_v4_is_p0_youtube($source);
+    if($platform!=='Facebook')return false;
     return p50_live_v4_is_dynamic_p0($source);
 }
 
