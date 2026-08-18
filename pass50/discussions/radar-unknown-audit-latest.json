@@ -1,9 +1,104 @@
 {
-  "at": "2026-08-18 05:03 UTC",
+  "at": "2026-08-18 05:11 UTC",
   "unknownCount": 0,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "platform": "YouTube",
+      "profileId": "census-observateur-ebene",
+      "name": "Observateur Ébène",
+      "title": "OBSERVATEUR-",
+      "url": "https://www.youtube.com/@Observateur/live",
+      "videoId": "EGCaAq-4Bvg",
+      "confidence": 99,
+      "lastConfirmedAt": "2026-08-18T05:06:50+00:00",
+      "published": false,
+      "independentProbe": {
+        "at": "2026-08-18 05:11 UTC",
+        "isLiveNow": false
+      }
+    }
+  ],
+  "posted": {
+    "published": 0,
+    "added": [],
+    "stored": [],
+    "skipped": []
+  },
   "enabled": true,
-  "error": "GET HTTP 404"
+  "error": "GET HTTP 404",
+  "unknownAudit": {
+    "endpoint": "https://pass50.store/api/live-radar-unknown-audit.php",
+    "http": 404,
+    "body": "No input file specified."
+  },
+  "sweep0507": {
+    "cycleId": "github_32101356382_1",
+    "generatedAt": "2026-08-18T05:07:02.865044+00:00",
+    "scanned": 475,
+    "total": 475,
+    "classified": 235,
+    "unknown": 240,
+    "live": 1,
+    "probable": 0,
+    "replay": 1,
+    "activePublished": 0,
+    "states": {
+      "offline": 233,
+      "unknown": 240,
+      "live": 1,
+      "replay": 1
+    },
+    "platforms": {
+      "Facebook": { "unknown": 90, "offline": 28 },
+      "Instagram": { "unknown": 135 },
+      "TikTok": { "offline": 131 },
+      "YouTube": { "unknown": 15, "offline": 74, "live": 1, "replay": 1 }
+    },
+    "replay": [
+      {
+        "platform": "YouTube",
+        "profileId": "kevine",
+        "name": "Kévine Obin",
+        "error": "known_false_positive"
+      }
+    ]
+  },
+  "sweep0312": {
+    "cycleId": "github_32094366805_1",
+    "generatedAt": "2026-08-18T03:12:06.470480+00:00",
+    "scanned": 475,
+    "live": 2,
+    "activePublished": 1,
+    "publishedStreams": [
+      {
+        "profileId": "aya-robert",
+        "platform": "TikTok",
+        "title": "Aya Robert est en direct",
+        "url": "https://www.tiktok.com/@aya.robert27/live",
+        "handle": "@aya.robert27",
+        "viewers": 571,
+        "roomId": "7675136586312370976",
+        "confidence": 99,
+        "startedAt": "2026-08-17T22:49:51+00:00",
+        "lastConfirmedAt": "2026-08-18T03:10:39+00:00"
+      }
+    ],
+    "ayaRobertAt0503": "tiktok_live_ended"
+  },
+  "p0Webcast": [
+    { "profileId": "apoutchou", "handle": "apoutchou_national1", "live": false, "http": 200 },
+    { "profileId": "general-camille-makosso", "handle": "generalmakossocamille79", "live": false, "http": 200 },
+    { "profileId": "census-no-limit", "handle": "nolimit_vousdv", "live": false, "http": 200 },
+    { "profileId": "census-amour-ruth-poopy", "handle": "amourruth0", "live": false, "http": 200 },
+    { "profileId": "census-jordan-evraa", "handle": "realjordanevraa", "live": false, "http": 200 },
+    { "profileId": "dbz", "handle": "dbz.07", "live": false, "http": 200 },
+    { "profileId": "maabio", "handle": "biodetoxminceur", "live": false, "http": 200 },
+    { "profileId": "census-el-profesor", "handle": "elprofesor_off", "live": false, "http": 200 },
+    { "profileId": "census-adjinaya-el-professor", "handle": "elprofesor.off", "live": false, "http": 200 },
+    { "profileId": "p_1785175190809", "handle": "ulrich_jordan30", "live": false, "http": 200 },
+    { "profileId": "census-sarara-messan", "handle": "sarra_messan", "live": false, "http": 200 },
+    { "profileId": "louissette", "handle": "misscadic", "live": false, "http": 200 },
+    { "profileId": "census-observateur-ebene", "handle": "observateur_ebene", "live": false, "http": 200 }
+  ]
 }
