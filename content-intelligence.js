@@ -44,8 +44,8 @@
       .news-refresh-progress.is-active:not(.is-done):not(.is-error) .news-refresh-fill{background-size:200% 100%;animation:p50ciProgressShine 1.2s linear infinite}
       .news-refresh-progress-detail{margin-top:8px;font-size:11px;font-weight:750;color:#aeb7ab;line-height:1.4}
       @keyframes p50ciProgressShine{from{filter:brightness(.95)}to{filter:brightness(1.15)}}
-      #contentGrid.p50-content-grid-loading,#contentGrid:has(>.p50-content-wait),#contentGrid:has(>.p50ci-empty:only-child){display:grid!important;grid-template-columns:1fr!important;overflow:hidden;min-height:0}
-      #contentGrid:has(.p50ci-card)>.content-card:not(.p50ci-card),#contentGrid [data-content="c1"],#contentGrid [data-content="c2"],#contentGrid [data-content="c3"],#contentGrid [data-content="c4"],#contentGrid [data-content="c5"]{display:none!important}
+      #contentGrid.p50-content-grid-loading,#contentGrid:empty{display:block!important;min-height:0;overflow:hidden}
+      #contentGrid:has(.p50ci-card)>.content-card:not(.p50ci-card),#contentGrid [data-content="c1"],#contentGrid [data-content="c2"],#contentGrid [data-content="c3"],#contentGrid [data-content="c4"],#contentGrid [data-content="c5"],#contentGrid .p50ci-empty,#contentGrid .p50-content-wait{display:none!important}
       @media(max-width:680px){.p50ci-periods{justify-content:flex-start}.p50ci-card-cover{height:150px}.p50ci-news-card{grid-template-columns:62px minmax(0,1fr)}.p50ci-news-thumb{width:62px;height:58px}.p50ci-news-card>a{grid-column:1/-1;width:100%;text-align:center}}
     `;
   }
@@ -70,20 +70,22 @@
     });
   }
 
-  function paintTrendWait(grid,message){
+  function paintTrendWait(grid){
     if(grid.querySelector('.p50ci-card'))return;
     grid.classList.add('p50-content-grid-loading');
-    grid.innerHTML=`<div class="p50ci-empty p50-content-wait" role="status">${esc(message)}</div>`;
+    grid.setAttribute('aria-busy','true');
+    grid.innerHTML='';
   }
 
   function renderTrends(){
     ensurePeriodControls();const grid=document.getElementById('contentGrid');if(!grid)return;
     stripLegacyTrendCards(grid);
-    if(P50CI.loading&&!P50CI.data){paintTrendWait(grid,'Calcul du Top 5 en cours…');return;}
-    const data=P50CI.data;if(!data?.ready){paintTrendWait(grid,data? 'Le premier calcul automatique est en préparation.':'Chargement des tendances…');return;}
+    if(P50CI.loading&&!P50CI.data){paintTrendWait(grid);return;}
+    const data=P50CI.data;if(!data?.ready){paintTrendWait(grid);return;}
     const items=data.trends||[];
     grid.classList.remove('p50-content-grid-loading');
-    if(!items.length){grid.innerHTML='<div class="p50ci-empty p50-content-wait">Aucun contenu suffisamment récent ne progresse sur cette période.</div>';return;}
+    grid.removeAttribute('aria-busy');
+    if(!items.length){grid.innerHTML='';return;}
     grid.innerHTML=items.map(item=>{
       const cover=item.thumbnailUrl||fallbackCover(item.profileId),title=item.title||`Contenu récent de ${item.name}`,facebook=isFacebook(item);
       return `<article class="content-card p50ci-card" data-content="${item.contentId}">

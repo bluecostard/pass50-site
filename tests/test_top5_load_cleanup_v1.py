@@ -35,8 +35,8 @@ class Top5LoadCleanupV1Tests(unittest.TestCase):
             body = extract_function(source, name)
             self.assertNotIn("db.content", body)
             self.assertNotIn("data-content=\"${c.id}\"", body)
-            self.assertIn("Chargement des tendances", body)
-            self.assertIn("p50-content-wait", body)
+            self.assertNotIn("Chargement des tendances", body)
+            self.assertIn("grid.innerHTML=''", body.replace(' ', ''))
 
     def test_legacy_seed_slots_are_hidden_and_removed(self):
         for source in (INDEX, CLIENT, V9):
@@ -56,12 +56,19 @@ class Top5LoadCleanupV1Tests(unittest.TestCase):
         self.assertIn("refreshTrends()", hook)
 
     def test_content_intelligence_loads_before_window_load(self):
-        self.assertIn("content-intelligence.js?v=1.13", CONFIG)
-        self.assertIn("content-intelligence.js?v=1.13", SW)
-        self.assertIn("v9-tools.js?v=15.25", INDEX)
-        self.assertIn("v9-tools.js?v=15.25", SW)
+        self.assertIn("content-intelligence.js?v=1.14", CONFIG)
+        self.assertIn("content-intelligence.js?v=1.14", SW)
+        self.assertIn("v9-tools.js?v=15.26", INDEX)
+        self.assertIn("v9-tools.js?v=15.26", SW)
         self.assertIn("DOMContentLoaded", CONFIG)
         self.assertNotIn("addEventListener('load', loadContentIntelligence", CONFIG)
+
+    def test_trend_grid_has_no_visible_status_copy(self):
+        for source in (INDEX, V9, extract_function(CLIENT, "renderTrends"), extract_function(CLIENT, "paintTrendWait")):
+            self.assertNotIn("Chargement des tendances", source)
+            self.assertNotIn("Calcul du Top 5", source)
+            self.assertNotIn("premier calcul automatique", source)
+            self.assertNotIn("Aucun contenu suffisamment récent", source)
 
 
 if __name__ == "__main__":

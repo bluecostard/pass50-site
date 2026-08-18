@@ -29,8 +29,8 @@ class ProfilePhotoChartV1Tests(unittest.TestCase):
         self.assertIn("--bar-delay:${i*45}ms", INDEX)
 
     def test_loader_cache_is_bumped(self):
-        self.assertIn("v9-tools.js?v=15.25", INDEX)
-        self.assertIn("v9-tools.js?v=15.25", SW)
+        self.assertIn("v9-tools.js?v=15.26", INDEX)
+        self.assertIn("v9-tools.js?v=15.26", SW)
 
 
 if __name__ == "__main__":

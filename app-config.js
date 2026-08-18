@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function loadContentIntelligence() {
     if (document.querySelector('script[data-pass50-content-intelligence]')) return;
     var script = document.createElement('script');
-    script.src = './content-intelligence.js?v=1.13';
+    script.src = './content-intelligence.js?v=1.14';
     script.dataset.pass50ContentIntelligence = '1.3';
     document.body.appendChild(script);
   }
