@@ -1,22 +1,22 @@
 from pathlib import Path
-import json
 import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from live_radar_unknown_audit import (  # noqa: E402
-    format_discussion_entry,
     parse_facebook_live_html,
     parse_tiktok_webcast,
     parse_youtube_live_html,
-    write_discussion_log,
 )
 
 SOURCE = (ROOT / 'api' / 'live-radar-v4-source.php').read_text(encoding='utf-8')
 ENDPOINT = (ROOT / 'api' / 'live-radar-unknown-audit.php').read_text(encoding='utf-8')
+STATUS = (ROOT / 'api' / 'live-radar-unknown-audit-status.php').read_text(encoding='utf-8')
+LIVE_STATUS = (ROOT / 'api' / 'live-status-v4.php').read_text(encoding='utf-8')
 WORKFLOW = (ROOT / '.github' / 'workflows' / 'live-radar-unknown-audit.yml').read_text(encoding='utf-8')
-STATUS = (ROOT / 'api' / 'live-status-v4.php').read_text(encoding='utf-8')
+SCRIPT = (ROOT / 'scripts' / 'live_radar_unknown_audit.py').read_text(encoding='utf-8')
+INDEX = (ROOT / 'index.html').read_text(encoding='utf-8')
 
 
 class LiveRadarUnknownAuditTests(unittest.TestCase):
@@ -56,43 +56,30 @@ class LiveRadarUnknownAuditTests(unittest.TestCase):
         self.assertIn('webcast.tiktok.com/webcast/room/info_by_user', SOURCE)
         self.assertIn('function p50_live_v4_merge_p0_watch', SOURCE)
         self.assertIn('function p50_live_v4_is_p0_source', SOURCE)
-        self.assertIn('p50_live_v4_needs_p0_rescan', STATUS)
+        self.assertIn('function p50_live_v4_unknown_audit_public_snapshot', SOURCE)
+        self.assertIn('p50_live_v4_needs_p0_rescan', LIVE_STATUS)
         self.assertIn('github_unknown_audit', ENDPOINT)
         self.assertIn('unknown_audit_webcast', ENDPOINT)
+        self.assertIn("P50_LIVE_V4_UNKNOWN_AUDIT_LAST_SETTING", ENDPOINT)
+        self.assertIn("'lives'=>$publicLives", ENDPOINT)
         self.assertIn("cron: '20 */3 * * *'", WORKFLOW)
         self.assertIn('scripts/live_radar_unknown_audit.py', WORKFLOW)
-        self.assertIn('pass50/discussions/radar-unknown-audit.md', WORKFLOW)
-        self.assertIn('contents: write', WORKFLOW)
+        self.assertNotIn('pass50/discussions', WORKFLOW)
+        self.assertNotIn('contents: write', WORKFLOW)
+        self.assertIn('contents: read', WORKFLOW)
 
-    def test_discussion_journal_lists_real_lives(self):
-        entry = format_discussion_entry({
-            'unknownCount': 12,
-            'lives': [{'platform': 'TikTok', 'profileId': 'census-jordan-evraa', 'handle': 'realjordanevraa', 'title': 'Goumin tv', 'viewers': 141}],
-            'posted': {'published': 1, 'added': [], 'stored': [{'profileId': 'census-jordan-evraa', 'platform': 'TikTok'}], 'skipped': []},
-            'enabled': True,
-        }, when='2026-08-18 00:45 UTC')
-        self.assertIn('Vraiment en live : **1**', entry)
-        self.assertIn('census-jordan-evraa', entry)
-        self.assertIn('@realjordanevraa', entry)
-
-    def test_discussion_file_is_prepended(self):
-        import tempfile
-        from pathlib import Path
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            discussion = root / 'radar-unknown-audit.md'
-            latest = root / 'radar-unknown-audit-latest.json'
-            write_discussion_log({'unknownCount': 2, 'lives': [], 'posted': None, 'enabled': True}, discussion, latest)
-            write_discussion_log({
-                'unknownCount': 2,
-                'lives': [{'platform': 'TikTok', 'profileId': 'census-jordan-evraa', 'title': 'Goumin tv'}],
-                'posted': {'published': 1, 'added': []},
-                'enabled': True,
-            }, discussion, latest)
-            text = discussion.read_text(encoding='utf-8')
-            self.assertLess(text.find('census-jordan-evraa'), text.find('Aucun unknown réellement en live'))
-            snapshot = json.loads(latest.read_text(encoding='utf-8'))
-            self.assertEqual(snapshot['liveCount'], 1)
+    def test_results_go_to_admin_left_column_not_pass50(self):
+        self.assertIn('id="liveUnknownAudit"', INDEX)
+        self.assertIn('live-admin-layout', INDEX)
+        self.assertIn('p50FillUnknownAudit', INDEX)
+        self.assertIn('live-radar-unknown-audit-status.php', INDEX)
+        self.assertNotIn('pass50/discussions', INDEX)
+        self.assertNotIn('pass50/discussions', SCRIPT)
+        self.assertIn('unknownCount', SCRIPT)
+        self.assertIn('require_method(\'GET\')', STATUS)
+        self.assertNotIn('HTTP_X_PASS50_CRON_SECRET', STATUS)
+        self.assertNotIn("'unknowns'", STATUS)
+        self.assertIn('p50_live_v4_unknown_audit_public_snapshot', STATUS)
 
 
 if __name__ == '__main__':

@@ -55,10 +55,23 @@ if($_SERVER['REQUEST_METHOD']==='GET'){
     ]);
 }
 
-if(!$enabled)json_response(['ok'=>true,'enabled'=>false,'added'=>[],'published'=>0]);
+if(!$enabled){
+    p50_de_set_setting(P50_LIVE_V4_UNKNOWN_AUDIT_LAST_SETTING,[
+        'at'=>gmdate(DATE_ATOM),
+        'unknownCount'=>0,
+        'liveCount'=>0,
+        'published'=>0,
+        'addedCount'=>0,
+        'lives'=>[],
+        'added'=>[],
+        'enabled'=>false,
+    ]);
+    json_response(['ok'=>true,'enabled'=>false,'added'=>[],'published'=>0]);
+}
 
 $input=json_input();
 $incoming=is_array($input['lives']??null)?$input['lives']:[];
+$unknownCount=max(0,min(5000,(int)($input['unknownCount']??0)));
 $state=p50_de_load_public_state();
 $sourceMap=[];
 foreach(p50_live_v4_sources($state) as $source){
@@ -66,9 +79,9 @@ foreach(p50_live_v4_sources($state) as $source){
 }
 
 $watch=p50_live_v4_dynamic_p0_watch();
-$additions=[];$published=0;$skipped=[];$stored=[];
+$additions=[];$published=0;$skipped=[];$stored=[];$publicLives=[];
 foreach($incoming as $item){
-    if(!is_array($item)||count($additions)+count($stored)>=20)break;
+    if(!is_array($item)||count($publicLives)>=20)break;
     $profileId=trim((string)($item['profileId']??$item['profile_id']??''));
     $platform=trim((string)($item['platform']??''));
     $key=p50_live_v4_p0_key($profileId,$platform);
@@ -76,6 +89,18 @@ foreach($incoming as $item){
     $source=$sourceMap[$key];
     $live=p50_live_v4_unknown_audit_live_payload($source,$item);
     if($live===null){$skipped[]=['profileId'=>$profileId,'platform'=>$platform,'error'=>'invalid_proof'];continue;}
+    $identity=p50_live_v4_identity($platform,(string)$source['url']);
+    $public=p50_live_v4_unknown_audit_public_live([
+        'profileId'=>$profileId,
+        'platform'=>$platform,
+        'name'=>(string)($source['public_name']??''),
+        'handle'=>(string)($identity['handle']??$item['handle']??''),
+        'title'=>(string)($live['title']??$item['title']??''),
+        'viewers'=>$item['viewers']??null,
+        'roomId'=>$item['roomId']??'',
+        'videoId'=>$item['videoId']??'',
+    ]);
+    if($public!==null)$publicLives[]=$public;
     if(p50_live_v4_store_live($live)){
         $published++;
         p50_live_v4_health_update($source,['state'=>'live','confidence'=>(int)$live['confidence'],'error'=>'','responseMs'=>(int)($item['responseMs']??0),'probes'=>['unknown_audit'=>['ok'=>true,'status'=>200,'timeMs'=>(int)($item['responseMs']??0),'error'=>'']],'evidence'=>['source'=>'github_unknown_audit']]);
@@ -85,7 +110,6 @@ foreach($incoming as $item){
         continue;
     }
     if(p50_live_v4_is_p0_source($source))continue;
-    $identity=p50_live_v4_identity($platform,(string)$source['url']);
     $additions[]=[
         'profileId'=>$profileId,
         'platform'=>$platform,
@@ -104,7 +128,16 @@ foreach($merged as $row){
     if(!isset($before[$key]))$added[]=$row;
 }
 if($added)p50_de_set_setting(P50_LIVE_V4_P0_WATCH_SETTING,$merged);
-p50_de_set_setting('live_radar_v4_unknown_audit_last',['at'=>gmdate(DATE_ATOM),'published'=>$published,'added'=>count($added)]);
+p50_de_set_setting(P50_LIVE_V4_UNKNOWN_AUDIT_LAST_SETTING,[
+    'at'=>gmdate(DATE_ATOM),
+    'unknownCount'=>$unknownCount,
+    'liveCount'=>count($publicLives),
+    'published'=>$published,
+    'addedCount'=>count($added),
+    'lives'=>$publicLives,
+    'added'=>$added,
+    'enabled'=>true,
+]);
 
 json_response([
     'ok'=>true,

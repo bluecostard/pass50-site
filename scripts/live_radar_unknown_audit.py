@@ -10,7 +10,6 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 UA = (
@@ -19,22 +18,6 @@ UA = (
 )
 WEBCAST_URL = "https://webcast.tiktok.com/webcast/room/info_by_user/?aid=1988&unique_id="
 ENDPOINT_DEFAULT = "https://pass50.store/api/live-radar-unknown-audit.php"
-DISCUSSION_PATH = Path("pass50/discussions/radar-unknown-audit.md")
-LATEST_PATH = Path("pass50/discussions/radar-unknown-audit-latest.json")
-JOURNAL_MARK = "<!-- JOURNAL:BEGIN -->"
-MAX_JOURNAL_ENTRIES = 40
-DISCUSSION_HEADER = """# Discussion PASS50 — Audit unknown radar
-
-Contrôle régulier des lives classés `unknown`. Chaque passage (toutes les 3 h) s’écrit **en haut** de ce journal.
-
-- Outil TikTok : `webcast.tiktok.com/webcast/room/info_by_user`
-- YouTube : `isLiveNow` · Facebook : signal live public si la page n’est pas bloquée
-- Les salles terminées ne sont pas poussées
-- Un compte déjà en P0 n’est pas recopié dans la liste
-
-Pour arrêter la boucle : le dire dans le chat PASS50.
-
-"""
 
 
 def fetch(url: str, headers: dict[str, str] | None = None, timeout: int = 12, data: bytes | None = None) -> tuple[int, str]:
@@ -173,110 +156,16 @@ def probe_source(source: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def utc_now_label() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-
-
-def format_discussion_entry(result: dict[str, Any], when: str | None = None) -> str:
-    when = when or utc_now_label()
-    unknowns = int(result.get("unknownCount") or 0)
-    lives = result.get("lives") or []
-    posted = result.get("posted") if isinstance(result.get("posted"), dict) else {}
-    added = posted.get("added") or []
-    stored = posted.get("stored") or []
-    skipped = posted.get("skipped") or []
-    enabled = result.get("enabled", True)
-    error = str(result.get("error") or "")
-    lines = [f"### {when}", ""]
-    if not enabled:
-        lines.append("Boucle **arrêtée** (`live_radar_v4_unknown_audit_enabled=false`).")
-        lines.append("")
-        return "\n".join(lines)
-    if error:
-        lines.append(f"Erreur : `{error}`")
-        lines.append("")
-        return "\n".join(lines)
-    lines.append(f"- Unknown sondés : **{unknowns}**")
-    lines.append(f"- Vraiment en live : **{len(lives)}**")
-    lines.append(f"- Publiés radar : **{int(posted.get('published') or 0)}**")
-    lines.append(f"- Ajoutés P0 : **{len(added)}**")
-    if lives:
-        lines.append("")
-        lines.append("Vraiment en live :")
-        for live in lives:
-            label = live.get("title") or live.get("roomId") or live.get("videoId") or ""
-            handle = live.get("handle") or ""
-            extra = f" @{handle}" if handle else ""
-            viewers = live.get("viewers")
-            view = f" · {viewers} viewers" if viewers not in (None, "") else ""
-            lines.append(f"- {live.get('platform')} `{live.get('profileId')}`{extra} — {label}{view}")
-    else:
-        lines.append("- Aucun unknown réellement en live à ce passage.")
-    if added:
-        lines.append("")
-        lines.append("Nouveaux P0 :")
-        for row in added:
-            lines.append(f"- {row.get('platform')} `{row.get('profileId')}`")
-    if stored and not lives:
-        lines.append("")
-        lines.append("Publiés : " + ", ".join(f"{row.get('platform')} `{row.get('profileId')}`" for row in stored))
-    if skipped:
-        lines.append("")
-        lines.append(f"Ignorés : {len(skipped)}")
-    lines.append("")
-    return "\n".join(lines)
-
-
-def split_journal_entries(body: str) -> list[str]:
-    chunks = re.split(r"(?m)^### ", body.strip())
-    entries = []
-    for chunk in chunks:
-        chunk = chunk.strip()
-        if not chunk:
-            continue
-        entries.append("### " + chunk + "\n")
-    return entries
-
-
-def write_discussion_log(result: dict[str, Any], discussion_path: Path = DISCUSSION_PATH, latest_path: Path = LATEST_PATH) -> None:
-    discussion_path.parent.mkdir(parents=True, exist_ok=True)
-    entry = format_discussion_entry(result)
-    existing = discussion_path.read_text(encoding="utf-8") if discussion_path.is_file() else DISCUSSION_HEADER + JOURNAL_MARK + "\n"
-    if JOURNAL_MARK not in existing:
-        existing = DISCUSSION_HEADER + JOURNAL_MARK + "\n" + existing
-    prefix, remainder = existing.split(JOURNAL_MARK, 1)
-    old_entries = split_journal_entries(remainder)
-    entries = [entry] + old_entries
-    entries = entries[:MAX_JOURNAL_ENTRIES]
-    discussion_path.write_text(prefix + JOURNAL_MARK + "\n\n" + "\n".join(entries).rstrip() + "\n", encoding="utf-8")
-    snapshot = {
-        "at": utc_now_label(),
-        "unknownCount": result.get("unknownCount"),
-        "liveCount": len(result.get("lives") or []),
-        "lives": result.get("lives") or [],
-        "posted": result.get("posted"),
-        "enabled": result.get("enabled", True),
-        "error": result.get("error"),
-    }
-    latest_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
 def run(endpoint: str, secret: str) -> dict[str, Any]:
     status, body = fetch(f"{endpoint}?t=1", headers={"X-PASS50-CRON-SECRET": secret, "Accept": "application/json"})
     if status != 200:
-        result = {"ok": False, "enabled": True, "lives": [], "posted": None, "unknownCount": 0, "error": f"GET HTTP {status}"}
-        write_discussion_log(result)
         raise SystemExit(f"GET audit refusé HTTP {status}: {body[:300]}")
     listing = json.loads(body)
     if not listing.get("ok"):
-        result = {"ok": False, "enabled": True, "lives": [], "posted": None, "unknownCount": 0, "error": "GET invalide"}
-        write_discussion_log(result)
         raise SystemExit(f"GET audit invalide: {body[:300]}")
     if not listing.get("enabled", True):
-        result = {"ok": True, "enabled": False, "lives": [], "posted": None, "unknownCount": 0}
-        write_discussion_log(result)
         print("Audit unknown désactivé — arrêt demandé.")
-        return result
+        return {"ok": True, "enabled": False, "lives": [], "posted": None, "unknownCount": 0}
     unknowns = listing.get("unknowns") or []
     lives: list[dict[str, Any]] = []
     with ThreadPoolExecutor(max_workers=8) as pool:
@@ -289,33 +178,27 @@ def run(endpoint: str, secret: str) -> dict[str, Any]:
     print(f"Unknown sondés : {len(unknowns)} · vraiment en live : {len(lives)}")
     for live in lives:
         print(f"- {live['platform']} {live['profileId']} {live.get('title') or live.get('roomId') or live.get('videoId')}")
-    posted = None
-    if lives:
-        payload = json.dumps({"lives": lives}).encode("utf-8")
-        status, body = fetch(
-            endpoint,
-            headers={
-                "X-PASS50-CRON-SECRET": secret,
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-            },
-            data=payload,
-            timeout=45,
+    payload = json.dumps({"lives": lives, "unknownCount": len(unknowns)}).encode("utf-8")
+    status, body = fetch(
+        endpoint,
+        headers={
+            "X-PASS50-CRON-SECRET": secret,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        data=payload,
+        timeout=45,
+    )
+    if status != 200:
+        raise SystemExit(f"POST audit refusé HTTP {status}: {body[:400]}")
+    posted = json.loads(body)
+    print(
+        "Publiés : {published} · ajoutés P0 : {added}".format(
+            published=posted.get("published"),
+            added=len(posted.get("added") or []),
         )
-        if status != 200:
-            result = {"ok": False, "enabled": True, "lives": lives, "posted": None, "unknownCount": len(unknowns), "error": f"POST HTTP {status}"}
-            write_discussion_log(result)
-            raise SystemExit(f"POST audit refusé HTTP {status}: {body[:400]}")
-        posted = json.loads(body)
-        print(
-            "Publiés : {published} · ajoutés P0 : {added}".format(
-                published=posted.get("published"),
-                added=len(posted.get("added") or []),
-            )
-        )
-    result = {"ok": True, "enabled": True, "lives": lives, "posted": posted, "unknownCount": len(unknowns)}
-    write_discussion_log(result)
-    return result
+    )
+    return {"ok": True, "enabled": True, "lives": lives, "posted": posted, "unknownCount": len(unknowns)}
 
 
 def main() -> None:

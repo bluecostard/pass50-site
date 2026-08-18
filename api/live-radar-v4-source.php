@@ -294,6 +294,61 @@ function p50_live_v4_is_verified_tiktok(array $source): bool {
 
 const P50_LIVE_V4_P0_WATCH_SETTING = 'live_radar_v4_p0_watch';
 const P50_LIVE_V4_UNKNOWN_AUDIT_ENABLED_SETTING = 'live_radar_v4_unknown_audit_enabled';
+const P50_LIVE_V4_UNKNOWN_AUDIT_LAST_SETTING = 'live_radar_v4_unknown_audit_last';
+
+function p50_live_v4_unknown_audit_public_live(array $item): ?array {
+    $platform=trim((string)($item['platform']??''));
+    $profileId=trim((string)($item['profileId']??$item['profile_id']??''));
+    if($profileId===''||!in_array($platform,['TikTok','YouTube','Facebook'],true))return null;
+    $viewers=$item['viewers']??null;
+    $out=[
+        'profileId'=>$profileId,
+        'platform'=>$platform,
+        'name'=>trim((string)($item['name']??'')),
+        'handle'=>ltrim(trim((string)($item['handle']??'')),'@'),
+        'title'=>trim((string)($item['title']??'')),
+        'viewers'=>is_numeric($viewers)?(int)$viewers:null,
+    ];
+    $roomId=trim((string)($item['roomId']??''));
+    $videoId=trim((string)($item['videoId']??''));
+    if($roomId!=='')$out['roomId']=$roomId;
+    if($videoId!=='')$out['videoId']=$videoId;
+    return $out;
+}
+
+/** Résumé public du dernier audit 3 h — pas la liste des unknown. */
+function p50_live_v4_unknown_audit_public_snapshot(?array $raw): array {
+    $raw=is_array($raw)?$raw:[];
+    $lives=[];
+    foreach((is_array($raw['lives']??null)?$raw['lives']:[]) as $item){
+        if(!is_array($item))continue;
+        $live=p50_live_v4_unknown_audit_public_live($item);
+        if($live===null)continue;
+        $lives[]=$live;
+        if(count($lives)>=20)break;
+    }
+    $added=[];
+    foreach((is_array($raw['added']??null)?$raw['added']:[]) as $row){
+        if(!is_array($row))continue;
+        $entry=p50_live_v4_normalize_p0_entry($row);
+        if($entry===null)continue;
+        $added[]=['profileId'=>$entry['profileId'],'platform'=>$entry['platform'],'handle'=>$entry['handle']];
+        if(count($added)>=20)break;
+    }
+    $at=trim((string)($raw['at']??''));
+    return [
+        'ok'=>true,
+        'at'=>$at,
+        'unknownCount'=>(int)($raw['unknownCount']??0),
+        'liveCount'=>(int)($raw['liveCount']??count($lives)),
+        'published'=>(int)($raw['published']??0),
+        'addedCount'=>(int)($raw['addedCount']??count($added)),
+        'lives'=>$lives,
+        'added'=>$added,
+        'empty'=>$at===''&&$lives===[]&&(int)($raw['unknownCount']??0)===0,
+        'error'=>isset($raw['error'])&&is_string($raw['error'])&&$raw['error']!==''?$raw['error']:null,
+    ];
+}
 
 function p50_live_v4_p0_key(string $profileId,string $platform): string {
     return strtolower(trim($profileId)).'|'.strtolower(trim($platform));

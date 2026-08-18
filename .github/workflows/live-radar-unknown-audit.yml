@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: pass50-live-radar-unknown-audit
@@ -21,23 +21,8 @@ jobs:
       UNKNOWN_AUDIT_ENDPOINT: https://pass50.store/api/live-radar-unknown-audit.php
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: Trier les unknown vraiment en live (webcast TikTok, YouTube, Facebook)
         run: |
           set -euo pipefail
           test -n "${PASS50_METRICS_CRON_SECRET}"
           python3 scripts/live_radar_unknown_audit.py
-      - name: Inscrire le journal dans pass50/discussions
-        if: always()
-        run: |
-          set -euo pipefail
-          git config user.name "pass50-radar-audit"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pass50/discussions/radar-unknown-audit.md pass50/discussions/radar-unknown-audit-latest.json
-          if git diff --cached --quiet; then
-            echo "Pas de changement dans le journal pass50."
-            exit 0
-          fi
-          git commit -m "pass50: journal audit unknown radar"
-          git push

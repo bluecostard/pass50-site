@@ -181,4 +181,14 @@ must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un mêm
 must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
 must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
 
-echo json_encode(['ok'=>true,'cases'=>41],JSON_UNESCAPED_SLASHES).PHP_EOL;
+$snapshot=p50_live_v4_unknown_audit_public_snapshot([
+    'at'=>'2026-08-18T00:47:00+00:00',
+    'unknownCount'=>11,
+    'lives'=>[['profileId'=>'census-jordan-evraa','platform'=>'TikTok','handle'=>'@realjordanevraa','title'=>'Goumin tv','viewers'=>141,'roomId'=>'7675133122324843295']],
+    'added'=>[],
+]);
+must($snapshot['empty']===false,'Un audit avec un live ne doit pas être vide.');
+must($snapshot['lives'][0]['handle']==='realjordanevraa','Le résumé public retire le @ du handle.');
+must(!isset($snapshot['unknowns']),'Le résumé public ne doit pas exposer la liste des unknown.');
+
+echo json_encode(['ok'=>true,'cases'=>43],JSON_UNESCAPED_SLASHES).PHP_EOL;

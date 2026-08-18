@@ -9,6 +9,7 @@ on:
       - 'api/live-radar-v4-storage.php'
       - 'api/live-status-v4.php'
       - 'api/live-radar-unknown-audit.php'
+      - 'api/live-radar-unknown-audit-status.php'
       - 'api/live-status.php'
       - 'api/live-dismiss.php'
       - 'live-radar-v3.js'
@@ -62,6 +63,7 @@ jobs:
           php -l api/live-radar-v4-storage.php
           php -l api/live-status-v4.php
           php -l api/live-radar-unknown-audit.php
+          php -l api/live-radar-unknown-audit-status.php
           php -l api/live-status.php
           php -l api/live-dismiss.php
           php -l tests/live_radar_v4_core.php

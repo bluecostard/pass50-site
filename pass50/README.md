@@ -1,6 +1,3 @@
 # Dossier PASS50
 
-Journal de contrôle séparé du chat agent.
-
-- Discussion audit unknown radar : [`discussions/radar-unknown-audit.md`](discussions/radar-unknown-audit.md)
-- Dernier passage (JSON) : [`discussions/radar-unknown-audit-latest.json`](discussions/radar-unknown-audit-latest.json)
+Espace interne du dépôt. Les résultats de l’audit unknown radar s’affichent dans l’administration du site : **LIVE → colonne de gauche**.

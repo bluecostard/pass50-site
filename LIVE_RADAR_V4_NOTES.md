@@ -54,6 +54,6 @@ TikTok : API stricte, preuve croisée, **ou** salle API fraîche peuvent confirm
 
 Outil de travail **`webcast.tiktok.com/webcast/room/info_by_user`** : sonde P0 IONOS et audit GitHub des `unknown`. Un embed TikTok seul (sans JSON live) ne doit plus classer un direct en `offline`.
 
-Toutes les **3 h**, GitHub trie les sources `unknown` TikTok / YouTube / Facebook vraiment en live, les publie si la preuve est stricte, et les ajoute à la watchlist P0 dynamique s’ils n’y sont pas déjà. Résultats inscrits dans `pass50/discussions/radar-unknown-audit.md`. Arrêt : setting `live_radar_v4_unknown_audit_enabled=false` ou désactiver le workflow.
+Toutes les **3 h**, GitHub trie les sources `unknown` TikTok / YouTube / Facebook vraiment en live, les publie si la preuve est stricte, et les ajoute à la watchlist P0 dynamique s’ils n’y sont pas déjà. Les résultats s’affichent dans la **colonne gauche** de l’onglet admin LIVE. Arrêt : setting `live_radar_v4_unknown_audit_enabled=false` ou désactiver le workflow.
 
 Au clic sur **Regarder**, ouverture immédiate puis vérification en arrière-plan.
