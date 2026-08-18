@@ -754,6 +754,20 @@
   function deMajCheckpoint(extra){
     deMajPersistStatus(Object.assign({status:'running',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget},extra||{}));
   }
+  async function deMajPublish(){
+    let lastError=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      try{return await apiFetch('data-publish.php',{method:'POST',body:{period:ui.period,includeHub:false},timeoutMs:180000});}
+      catch(error){
+        lastError=error;
+        if(attempt>=3)break;
+        DE.majMessage=`Publication interrompue (${error?.message||'Erreur serveur'}). Nouvelle tentative ${attempt}/3 dans 8 secondes…`;
+        deDrawMajProgress();
+        await deMajSleep(8000);
+      }
+    }
+    throw lastError||new Error('Erreur serveur');
+  }
   async function deMajCollectBatch(){
     const body={limit:1,deep:true,excludeIds:[...DE.majSeen],includeHub:false,syncRegistry:false};
     let lastError=null;
@@ -868,7 +882,7 @@
       }
 
       DE.majStage='4/7 · Publication des scores';DE.majMessage='Écriture des données vérifiées et des scores calculés dans l’état PASS50…';deDrawMajProgress();
-      const published=await apiFetch('data-publish.php',{method:'POST',body:{period:ui.period}});totals.published=Number(published.publishedProfiles||0);totals.historicalMetrics=Number(published.historicalMetrics??totals.historicalMetrics);totals.uniqueEvents=Number(published.uniqueEvents??totals.uniqueEvents);totals.activeMetrics=Number(published.activeMetrics??totals.activeMetrics);totals.measurableProfiles=Number(published.measurableProfiles??totals.measurableProfiles);totals.recalculated=Number(published.recalculatedProfiles||0);totals.notRecalculated=Number(published.notRecalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);totals.ranksChanged=Number(published.ranksChanged||0);DE.hub=published.hub||DE.hub;
+      const published=await deMajPublish();totals.published=Number(published.publishedProfiles||0);totals.historicalMetrics=Number(published.historicalMetrics??totals.historicalMetrics);totals.uniqueEvents=Number(published.uniqueEvents??totals.uniqueEvents);totals.activeMetrics=Number(published.activeMetrics??totals.activeMetrics);totals.measurableProfiles=Number(published.measurableProfiles??totals.measurableProfiles);totals.recalculated=Number(published.recalculatedProfiles||0);totals.notRecalculated=Number(published.notRecalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);totals.ranksChanged=Number(published.ranksChanged||0);if(published.hub)DE.hub=published.hub;
 
       DE.majStage='5/7 · Rechargement et reclassement';DE.majMessage='Récupération de l’état serveur puis reclassement automatique…';deDrawMajProgress();
       try{
@@ -881,7 +895,7 @@
       DE.majStage='7/7 · Capture du classement';DE.majMessage='Enregistrement de la photographie du classement actuel…';deDrawMajProgress();
       try{const snap=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});totals.captured=Number(snap.captured||0);}catch(error){console.warn('Capture classement non bloquante',error);}
 
-      await deLoadHub(true);
+      try{await deLoadHub(true);}catch(hubError){console.warn('Hub MAJ non bloquant',hubError);}
       const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
       const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
       const counters=`${totals.fiTraversed} FI parcourue(s) · ${totals.officialLinksAnalyzed} lien(s) officiel(s) analysé(s) · ${totals.recentPublications} publication(s) récente(s) détectée(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.capturesRecorded} capture(s) métrique(s) enregistrée(s) · ${totals.activeMetrics} métrique(s) active(s) · Intelligence : ${totals.intelligence.profilesAnalyzed} analysé(s), ${totals.intelligence.profilesIgnored} ignoré(s), ${totals.intelligence.strongTrends} tendance(s), ${totals.intelligence.buzzDetected} buzz, ${totals.intelligence.declinesDetected} recul(s), ${totals.intelligence.errors} erreur(s) non bloquante(s) · ${totals.unavailablePlatforms} plateforme(s) indisponible(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s). ${deYoutubeMajSummary(totals.youtube,totals.capturesRecorded)}`;
@@ -1016,7 +1030,7 @@
     finally{DE.autoRunning=false;DE.stopRequested=false;deSetAutoUi();deAutoProgress();await deLoadHub(true);}
   }
   async function dePriority16(btn){await deAction(btn,async()=>{const data=await apiFetch('priority-refresh.php',{method:'POST',body:{}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.processed} profils prioritaires parcourus · ${data.classable} classables sur preuves récentes`);},'Actualisation des 16…');}
-  async function dePublish(btn){await deAction(btn,async()=>{const data=await apiFetch('data-publish.php',{method:'POST',body:{}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.publishedProfiles} profils publiés`);},'Publication…');}
+  async function dePublish(btn){await deAction(btn,async()=>{const data=await apiFetch('data-publish.php',{method:'POST',body:{includeHub:false},timeoutMs:180000});if(data.hub)DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();try{await deLoadHub(true);}catch(hubError){console.warn('Hub publication non bloquant',hubError);}toast(`${data.publishedProfiles} profils publiés`);},'Publication…');}
   async function deSnapshot(btn){await deAction(btn,async()=>{const data=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});toast(`${data.captured} positions enregistrées`);},'Capture…');}
 
   async function deOpenBirth(profileId){

@@ -1373,8 +1373,8 @@ function p50_de_state_metric_values(array $event): array {
     return $metrics;
 }
 
-function p50_de_import_state_activities(string $profileId): int {
-    $state=p50_de_load_public_state();$count=0;
+function p50_de_import_state_activities(string $profileId, ?array $state=null): int {
+    $state=$state??p50_de_load_public_state();$count=0;
     foreach((array)($state['events']??[]) as $event){
         if(!is_array($event)||(string)($event['profileId']??'')!==$profileId)continue;
         if(($event['originalLinkValidated']??false)!==true)continue;
@@ -1390,6 +1390,19 @@ function p50_de_import_state_activities(string $profileId): int {
         $confidence=str_contains($confidenceLabel,'eleve')?98:(str_contains($confidenceLabel,'moyen')?94:92);
         p50_de_add_activity($profileId,$platform,$type,$title,$url,$published,$metrics,$confidence);
         $count++;
+    }
+    return $count;
+}
+
+function p50_de_import_all_state_activities(array $state): int {
+    $count=0;
+    $seen=[];
+    foreach((array)($state['events']??[]) as $event){
+        if(!is_array($event))continue;
+        $profileId=trim((string)($event['profileId']??''));
+        if($profileId===''||isset($seen[$profileId]))continue;
+        $seen[$profileId]=true;
+        $count+=p50_de_import_state_activities($profileId,$state);
     }
     return $count;
 }
@@ -1476,8 +1489,8 @@ function p50_de_collect_enrichment(array $profile,bool $deep=true): array {
 }
 
 
-function p50_de_collect_state_facts(array $profile): int {
-    $state=p50_de_load_public_state();
+function p50_de_collect_state_facts(array $profile, ?array $state=null): int {
+    $state=$state??p50_de_load_public_state();
     $map=p50_de_profile_state_map($state);
     $p=$map[(string)$profile['profile_id']]??null;
     if(!is_array($p))return 0;
@@ -1630,8 +1643,10 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
     $state=$ownsState?p50_de_load_public_state():$sharedState;
     if(!$state)return false;
     $registry=p50_de_registry_profiles($profileId,1,0,false);
-    if($registry){p50_de_collect_state_facts($registry[0]);p50_de_collect_curated_evidence_v221($registry[0]);}
-    p50_de_import_state_activities($profileId);
+    if($ownsState){
+        if($registry){p50_de_collect_state_facts($registry[0],$state);p50_de_collect_curated_evidence_v221($registry[0]);}
+        p50_de_import_state_activities($profileId,$state);
+    }
     p50_de_rebuild_profile_facts($profileId);
     $facts=p50_de_verified_facts($profileId);
     $photoCandidate=p50_de_best_fact($profileId,'photo_url',60);
@@ -1790,10 +1805,12 @@ function p50_de_publish_score_pipeline(?string $userId=null,string $period='2H')
     try{
         $state=p50_de_load_public_state_for_update();
         if(!$state)throw new RuntimeException('État public introuvable.');
+        p50_de_import_all_state_activities($state);
+        $registryProfiles=p50_de_registry_profiles(null,1000,0,false);
         $beforeScores=[];foreach((array)($state['profiles']??[]) as $p)if(is_array($p)&&!empty($p['id']))$beforeScores[(string)$p['id']]=(array)($p['scores']??[]);
         $beforeRanks=p50_de_rank_map($state,$period);
         $published=0;$recalculated=0;$notRecalculated=0;
-        foreach(p50_de_registry_profiles(null,1000,0,false) as $registry){
+        foreach($registryProfiles as $registry){
             $id=(string)$registry['profile_id'];
             if(p50_de_publish_profile($id,$userId,$state))$published++;
             $profile=null;foreach((array)($state['profiles']??[]) as $candidate)if((string)($candidate['id']??'')===$id){$profile=$candidate;break;}

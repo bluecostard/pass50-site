@@ -280,6 +280,23 @@ class PipelineSourceContractTests(unittest.TestCase):
         self.assertIn("if($preview)", COLLECT)
         self.assertIn("Erreur serveur (${res.status})", INDEX)
 
+    def test_final_publish_avoids_ionos_500_after_full_collection(self):
+        self.assertIn("set_time_limit(300)", PUBLISH)
+        self.assertIn("ignore_user_abort(true)", PUBLISH)
+        self.assertIn("'hub'=>$includeHub?p50_de_hub_payload():null", PUBLISH)
+        self.assertNotIn("'hub'=>p50_de_hub_payload()", PUBLISH)
+        self.assertNotIn("p50_de_sync_registry_from_state()", PUBLISH)
+        self.assertIn("function deMajPublish", UI)
+        self.assertIn("includeHub:false", UI)
+        self.assertIn("timeoutMs:180000", UI)
+        self.assertIn("Hub MAJ non bloquant", UI)
+        self.assertIn("function p50_de_import_all_state_activities", CORE)
+        self.assertIn("if($ownsState)", CORE)
+        start = UI.index("DE.majStage='4/7 · Publication des scores'")
+        chunk = UI[start:UI.index("DE.majStage='5/7 · Rechargement et reclassement'")]
+        self.assertIn("deMajPublish()", chunk)
+        self.assertNotIn("apiFetch('data-publish.php'", chunk)
+
     def test_maj_display_refresh_does_not_fail_the_completed_collection(self):
         start = UI.index("DE.majStage='5/7 · Rechargement et reclassement'")
         chunk = UI[start:UI.index("DE.majStage='6/7 · État final publié'")]
