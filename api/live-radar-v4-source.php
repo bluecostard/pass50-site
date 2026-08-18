@@ -292,9 +292,69 @@ function p50_live_v4_is_verified_tiktok(array $source): bool {
     return in_array((string)($source['verification_status']??''),['owner_verified','manual_verified','verified'],true);
 }
 
+const P50_LIVE_V4_P0_WATCH_SETTING = 'live_radar_v4_p0_watch';
+const P50_LIVE_V4_UNKNOWN_AUDIT_ENABLED_SETTING = 'live_radar_v4_unknown_audit_enabled';
+
+function p50_live_v4_p0_key(string $profileId,string $platform): string {
+    return strtolower(trim($profileId)).'|'.strtolower(trim($platform));
+}
+
+function p50_live_v4_normalize_p0_entry(array $row): ?array {
+    $profileId=trim((string)($row['profileId']??$row['profile_id']??''));
+    $platform=trim((string)($row['platform']??'TikTok'));
+    if($profileId===''||!in_array($platform,['TikTok','YouTube','Facebook'],true))return null;
+    return [
+        'profileId'=>$profileId,
+        'platform'=>$platform,
+        'handle'=>trim((string)($row['handle']??'')),
+        'addedAt'=>(string)($row['addedAt']??''),
+        'reason'=>(string)($row['reason']??''),
+    ];
+}
+
+/** Fusionne la watchlist P0 sans doublon (profileId+plateforme). */
+function p50_live_v4_merge_p0_watch(array $current,array $additions): array {
+    $out=[];$seen=[];
+    foreach(array_merge($current,$additions) as $row){
+        if(!is_array($row))continue;
+        $entry=p50_live_v4_normalize_p0_entry($row);
+        if($entry===null)continue;
+        $key=p50_live_v4_p0_key($entry['profileId'],$entry['platform']);
+        if(isset($seen[$key]))continue;
+        $seen[$key]=true;
+        if($entry['addedAt']==='')$entry['addedAt']=gmdate(DATE_ATOM);
+        $out[]=$entry;
+    }
+    return $out;
+}
+
+function p50_live_v4_dynamic_p0_watch(): array {
+    if(!function_exists('p50_de_get_setting'))return [];
+    try{$raw=p50_de_get_setting(P50_LIVE_V4_P0_WATCH_SETTING,[]);}
+    catch(Throwable){return [];}
+    return is_array($raw)?p50_live_v4_merge_p0_watch([],$raw):[];
+}
+
+function p50_live_v4_is_dynamic_p0(array $source): bool {
+    $key=p50_live_v4_p0_key((string)($source['profile_id']??''),(string)($source['platform']??''));
+    if($key==='|')return false;
+    foreach(p50_live_v4_dynamic_p0_watch() as $row){
+        if(p50_live_v4_p0_key($row['profileId'],$row['platform'])===$key)return true;
+    }
+    return false;
+}
+
 function p50_live_v4_is_p0_tiktok(array $source): bool {
-    return (string)($source['platform']??'')==='TikTok'
-        && in_array((string)($source['profile_id']??''),P50_LIVE_V4_P0_TIKTOK,true);
+    if((string)($source['platform']??'')!=='TikTok')return false;
+    if(in_array((string)($source['profile_id']??''),P50_LIVE_V4_P0_TIKTOK,true))return true;
+    return p50_live_v4_is_dynamic_p0($source);
+}
+
+function p50_live_v4_is_p0_source(array $source): bool {
+    $platform=(string)($source['platform']??'');
+    if($platform==='TikTok')return p50_live_v4_is_p0_tiktok($source);
+    if(!in_array($platform,['YouTube','Facebook'],true))return false;
+    return p50_live_v4_is_dynamic_p0($source);
 }
 
 function p50_live_v4_is_unknown_tiktok(array $source): bool {
@@ -316,6 +376,17 @@ function p50_live_v4_needs_tiktok_rescan(array $source,?int $minStaleSeconds=nul
     return $checkedTs<=0||(time()-$checkedTs)>=$stale;
 }
 
+/** P0 YouTube/Facebook : même rythme que le P0 TikTok. */
+function p50_live_v4_needs_p0_rescan(array $source,?int $minStaleSeconds=null): bool {
+    if((string)($source['platform']??'')==='TikTok')return p50_live_v4_needs_tiktok_rescan($source,$minStaleSeconds);
+    if(!p50_live_v4_is_p0_source($source))return false;
+    $state=strtolower(trim((string)($source['last_state']??'')));
+    if($state==='live')return true;
+    $stale=$minStaleSeconds??P50_LIVE_V4_P0_RESCAN_SECONDS;
+    $checkedTs=p50_live_v4_health_ts((string)($source['last_checked_at']??''));
+    return $checkedTs<=0||(time()-$checkedTs)>=$stale;
+}
+
 /** Compte live récemment (72 h) : rescan prioritaire même si marqué offline. */
 function p50_live_v4_is_warm_watch(array $source,int $maxAgeSeconds=259200): bool {
     if(!p50_live_v4_is_verified_tiktok($source))return false;
@@ -330,7 +401,7 @@ function p50_live_v4_discovery_rank(array $source): array {
     $platform=(string)($source['platform']??'');
     $tiktokFirst=$platform==='TikTok'?0:1;
     if($checked===''||$state===''||$state==='never_checked')return [0,$tiktokFirst,''];
-    if(p50_live_v4_is_p0_tiktok($source)||p50_live_v4_is_warm_watch($source)||p50_live_v4_needs_tiktok_rescan($source))return [1,0,$checked];
+    if(p50_live_v4_is_p0_source($source)||p50_live_v4_is_warm_watch($source)||p50_live_v4_needs_p0_rescan($source))return [1,0,$checked];
     if($state==='unknown')return [2,$tiktokFirst,$checked];
     if(p50_live_v4_is_verified_tiktok($source))return [3,0,$checked];
     return [4,$tiktokFirst,$checked];
