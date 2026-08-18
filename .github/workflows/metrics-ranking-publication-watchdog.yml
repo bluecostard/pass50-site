@@ -1,12 +1,18 @@
 name: Metrics Ranking Publication Watchdog
 
-# Anti-silence: if public ranking was not written for too long while flags are on
-# and a candidate is eligible, republish. Fail loudly if flags are off or recovery fails.
+# Anti-silence: republish when the last write is stale OR a newer eligible
+# experimental run / fingerprint is waiting. Fail loudly if flags are off
+# or recovery fails. Do not wait 2h when the candidate already changed.
 
 "on":
   schedule:
     - cron: '10,40 * * * *'
   workflow_dispatch: {}
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/metrics-ranking-publication-watchdog.yml'
 
 permissions:
   contents: read
@@ -136,27 +142,48 @@ jobs:
           jq -e '.ok == true' watchdog-preview.json >/dev/null
           eligible="$(jq -r '.publicationEligible // .automaticPublicationEligible // false' watchdog-preview.json)"
           mutations="$(jq -r '.summary.mutations // .totalMutations // 0' watchdog-preview.json)"
+          latest_run="$(jq -r '.latestApplied.runUuid // empty' watchdog-history.json)"
+          candidate_run="$(jq -r '.runUuid // empty' watchdog-preview.json)"
+          fp_mismatch="$(jq -r '
+            ([.publishPlans,.plans] | map(select(. != null))[0] // {})
+            | to_entries
+            | map(select(.value.publicFingerprint != null and .value.candidateFingerprint != null and .value.publicFingerprint != .value.candidateFingerprint))
+            | length
+          ' watchdog-preview.json)"
+          newer_candidate=false
+          if [ -n "$candidate_run" ] && [ "$candidate_run" != "$latest_run" ]; then
+            newer_candidate=true
+          fi
+          if [ "${fp_mismatch:-0}" != "0" ]; then
+            newer_candidate=true
+          fi
 
           {
             printf '### Watchdog publication classement\n'
             printf -- '- flags : publication=`%s` automatic=`%s`\n' "$pub" "$auto"
             printf -- '- derniere ecriture : `%s` (rev. `%s`)\n' "$latest_at" "$latest_rev"
+            printf -- '- runUuid publie / candidat : `%s` / `%s`\n' "${latest_run:-—}" "${candidate_run:-—}"
+            printf -- '- empreintes differentes : `%s`\n' "$fp_mismatch"
             printf -- '- age : `%sh` (seuil `%s`)\n' "$age_hours" "$MAX_STALE_HOURS"
             printf -- '- preview eligible : `%s` / mutations : `%s`\n' "$eligible" "$mutations"
           } >> "$GITHUB_STEP_SUMMARY"
 
           stale="$(python3 -c "print('true' if float('$age_hours') >= float('$MAX_STALE_HOURS') else 'false')")"
 
-          if [ "$stale" != "true" ]; then
-            echo "::notice::Classement frais (${age_hours}h < ${MAX_STALE_HOURS}h). Rien a faire."
+          if [ "$newer_candidate" != "true" ] && [ "$stale" != "true" ]; then
+            echo "::notice::Classement frais (${age_hours}h < ${MAX_STALE_HOURS}h) et candidat deja publie. Rien a faire."
             printf 'stale=false\nrecovered=false\nage_hours=%s\n' "$age_hours" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "::warning::Classement stale (${age_hours}h). Tentative de recovery."
+          if [ "$newer_candidate" = "true" ]; then
+            echo "::warning::Candidat plus recent que la derniere publication (run $candidate_run vs $latest_run, fingerprints=$fp_mismatch). Application."
+          else
+            echo "::warning::Classement stale (${age_hours}h). Tentative de recovery."
+          fi
 
           if [ "$eligible" != "true" ]; then
-            echo "::error::Classement stale et candidat non eligible (mutations=$mutations). Intervention requise."
+            echo "::error::Candidat non eligible (mutations=$mutations, newer=$newer_candidate, stale=$stale). Intervention requise."
             exit 1
           fi
 
