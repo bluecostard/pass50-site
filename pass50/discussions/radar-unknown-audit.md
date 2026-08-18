@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-18 08:04 UTC
+
+- Unknown sondés : **138**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-08-18 05:11 UTC
 
 Collecte live 3 h — résultats complets (cron unknown 05:03 + balayages radar + sondes webcast).
