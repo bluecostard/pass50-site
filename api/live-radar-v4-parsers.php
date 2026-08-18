@@ -150,6 +150,30 @@ function p50_live_v4_tiktok_is_api_label(string $label): bool {
     return in_array($label,['api','api_basic','api_webcast'],true);
 }
 
+function p50_live_v4_tiktok_api_unreachable(array $responses): bool {
+    $attempted=false;
+    foreach($responses as $label=>$r){
+        if(!p50_live_v4_tiktok_is_api_label((string)$label))continue;
+        $attempted=true;
+        if(!empty($r['ok'])&&(int)($r['status']??0)===200)return false;
+    }
+    return $attempted;
+}
+
+function p50_live_v4_tiktok_api_title(array $responses): string {
+    foreach(['api_webcast','api','api_basic'] as $label){
+        $raw=(string)($responses[$label]['body']??'');
+        if($raw===''||empty($responses[$label]['ok']))continue;
+        $json=p50_live_v4_tiktok_api_json($raw);
+        if(!is_array($json))continue;
+        $data=is_array($json['data']??null)?$json['data']:$json;
+        $liveRoom=is_array($data['liveRoom']??null)?$data['liveRoom']:[];
+        $title=trim((string)($data['title']??$liveRoom['title']??''));
+        if($title!==''&&!preg_match('/^(TikTok|Make Your Day|TikTok Embed LIVE)$/iu',$title))return $title;
+    }
+    return '';
+}
+
 function p50_live_v4_tiktok_probe_family(string $label): string {
     return p50_live_v4_tiktok_is_api_label($label)?'api':'html';
 }
@@ -219,17 +243,29 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
             if($rank>$bestRank||($rank===$bestRank&&$candidateConfirmed&&!$confirmed)||($rank===$bestRank&&$candidateConfirmed===$confirmed&&$total>$bestTotal)){$roomId=(string)$candidate;$strictApi=$strictCount>0;$freshApi=$freshCount>0;$crossFamily=$cross;$confirmed=$candidateConfirmed;$bestRank=$rank;$bestTotal=$total;}
         }
         // Page « LIVE terminé » gagne sauf preuve API stricte propriétaire.
-        if($endedLabels&&!$strictApi)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
+        // Si l’API n’a pas répondu, un embed HTML « terminé » ne clôt pas un direct encore frais.
+        if($endedLabels&&!$strictApi){
+            if(p50_live_v4_tiktok_api_unreachable($responses)){
+                return ['state'=>'unknown','error'=>'tiktok_api_failed_html_ended','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
+            }
+            return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>array_keys($positive),'rooms'=>$roomEvidence]];
+        }
         $state=$confirmed?'live':'probable';$confidence=$strictApi?99:($crossFamily?78:($freshApi?74:70));
-        $best='';$bestUrl=$identity['liveUrl'];foreach(['live','mobile_live','embed','profile','api','api_webcast','api_basic'] as $label)if(!empty($bodies[$label])){$best=$bodies[$label];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}
-        $meta=p50_page_metadata($best,$bestUrl);$title=trim((string)($meta['title']??''));$title=preg_replace('/\s*\|\s*TikTok\s*$/iu','',$title)??$title;
+        $apiTitle=p50_live_v4_tiktok_api_title($responses);
+        $best='';$bestUrl=$identity['liveUrl'];foreach(['api_webcast','api','api_basic','live','mobile_live','embed','profile'] as $label)if(!empty($bodies[$label])){$best=$bodies[$label];$bestUrl=(string)($responses[$label]['finalUrl']??$bestUrl);break;}
+        $meta=p50_page_metadata($best,$bestUrl);$title=$apiTitle!==''?$apiTitle:trim((string)($meta['title']??''));$title=preg_replace('/\s*\|\s*TikTok\s*$/iu','',$title)??$title;
         if($title===''||preg_match('/^(TikTok|Make Your Day)$/iu',$title))$title=trim((string)($source['public_name']??''));
         if($title==='')$title='Direct TikTok détecté';elseif(!preg_match('/\b(direct|live)\b/iu',$title))$title.=' est en direct';
         $families=$roomEvidence[$roomId]??['api'=>[],'html'=>[],'strictApi'=>[],'freshApi'=>[],'apiLiveStructure'=>[],'roomStartedAt'=>null];$startedTimestamp=(int)($families['roomStartedAt']??0);$startedAt=$startedTimestamp>0?gmdate('Y-m-d H:i:s',$startedTimestamp):null;
         $live=['profileId'=>(string)$source['profile_id'],'platform'=>'TikTok','title'=>$title,'url'=>$identity['liveUrl'],'thumbnail'=>(string)($meta['image']??''),'confidence'=>$confidence,'startedAt'=>$startedAt,'viewers'=>p50_live_v4_viewers(implode("\n",$bodies)),'metadata'=>['profileUrl'=>$identity['profileUrl'],'handle'=>'@'.$identity['handle'],'roomId'=>$roomId,'roomStartedAt'=>$startedAt,'roomAgeSeconds'=>$startedTimestamp>0?max(0,time()-$startedTimestamp):null,'probeLabels'=>array_keys($positive),'proofFamilies'=>['api'=>$families['api'],'html'=>$families['html']],'strictApiLabels'=>$families['strictApi'],'freshApiLabels'=>$families['freshApi'],'apiLiveStructureLabels'=>$families['apiLiveStructure'],'classification'=>$state]];
         return ['state'=>$state,'confidence'=>$confidence,'responseMs'=>$maxMs,'error'=>$state==='probable'?'tiktok_confirmation_incomplete':'','live'=>$live,'evidence'=>['positive'=>array_keys($positive),'ended'=>$endedLabels,'blocked'=>$blocked,'rooms'=>$roomEvidence,'freshRoomSeconds'=>P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS]];
     }
-    if($endedLabels)return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>[],'rooms'=>[]]];
+    if($endedLabels){
+        if(p50_live_v4_tiktok_api_unreachable($responses)){
+            return ['state'=>'unknown','error'=>'tiktok_api_failed_html_ended','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>[],'rooms'=>[]]];
+        }
+        return ['state'=>'offline','error'=>'tiktok_live_ended','confidence'=>99,'responseMs'=>$maxMs,'evidence'=>['ended'=>$endedLabels,'blocked'=>$blocked,'positive'=>[],'rooms'=>[]]];
+    }
     // Embed seul n’a pas de JSON live même pendant un direct — IONOS bloqué sur l’API ne doit pas classer « offline ».
     if(p50_live_v4_tiktok_bodies_inconclusive($bodies)){
         return ['state'=>'unknown','error'=>$blocked>0?'tiktok_blocked_or_challenged':'tiktok_embed_uninformative','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>[],'blocked'=>$blocked,'positive'=>[],'readable'=>array_keys($bodies)]];

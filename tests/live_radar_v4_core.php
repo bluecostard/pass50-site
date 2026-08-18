@@ -138,7 +138,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -162,6 +162,19 @@ $webcastLive=p50_live_v4_parse_tiktok($jordanSource,['api_webcast'=>response('{"
 must($webcastLive['state']==='live','L’API webcast status=2 + display_id doit publier le LIVE même sans www.tiktok.com/api-live.');
 must(($webcastLive['live']['metadata']['roomId']??'')==='7675133122324843295','Le roomId webcast doit être lu depuis id_str.');
 must(($webcastLive['live']['metadata']['strictApiLabels'][0]??'')==='api_webcast','La preuve stricte peut venir de api_webcast.');
+must(($webcastLive['live']['title']??'')==='Goumin tv est en direct'||str_contains((string)($webcastLive['live']['title']??''),'Goumin tv'),'Le titre webcast doit primer sur l’embed.');
+
+$hamondSource=['profile_id'=>'hamondchic','public_name'=>'Coach Hamond Chic','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachhamond'];
+$hamondLive=p50_live_v4_parse_tiktok($hamondSource,['api_webcast'=>response('{"data":{"status":2,"id":7675380840767048470,"id_str":"7675380840767048470","title":"Allô yougoss","user_count":13346,"owner":{"display_id":"coachhamond","nickname":"coachhamondchic"}},"status_code":0}'),'embed'=>response('<!doctype html><title>TikTok Embed LIVE</title>',200,'https://www.tiktok.com/embed/live/@coachhamond')]);
+must($hamondLive['state']==='live','Coach Hamond Chic webcast status=2 doit publier le LIVE.');
+must(str_contains((string)($hamondLive['live']['title']??''),'Allô yougoss'),'Le titre Allô yougoss doit primer sur TikTok Embed LIVE.');
+
+$hamondApiDown=p50_live_v4_parse_tiktok($hamondSource,[
+    'api'=>['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'timeout','timeMs'=>4000],
+    'api_webcast'=>['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>'https://webcast.tiktok.com/webcast/room/info_by_user/','error'=>'timeout','timeMs'=>4000],
+    'embed'=>response('<!doctype html><title>TikTok</title><p>This live has ended</p>',200,'https://www.tiktok.com/embed/live/@coachhamond'),
+]);
+must($hamondApiDown['state']==='unknown','Un embed « ended » sans API ne doit pas clôturer Coach Hamond.');
 
 $embedOnlyBlocked=p50_live_v4_parse_tiktok($jordanSource,[
     'api'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'http_403','timeMs'=>8],
@@ -185,4 +198,4 @@ must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un mêm
 must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
 must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
 
-echo json_encode(['ok'=>true,'cases'=>45],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>50],JSON_UNESCAPED_SLASHES).PHP_EOL;

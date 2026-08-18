@@ -42,8 +42,10 @@ class LiveRadarV41Tests(unittest.TestCase):
 
     def test_tiktok_end_only_beats_unconfirmed_or_stale_signals(self):
         parser = re.search(r'function p50_live_v4_parse_tiktok\(.*?\n}', PARSERS, re.S).group(0)
-        self.assertIn("if($endedLabels&&!$strictApi)return ['state'=>'offline'", parser)
-        self.assertIn("if($endedLabels)return ['state'=>'offline'", parser)
+        self.assertIn("if($endedLabels&&!$strictApi){", parser)
+        self.assertIn('tiktok_api_failed_html_ended', parser)
+        self.assertIn("if($endedLabels){", parser)
+        self.assertIn("return ['state'=>'offline','error'=>'tiktok_live_ended'", parser)
         self.assertIn('p50_live_v4_tiktok_owner_match', PARSERS)
         self.assertIn('p50_live_v4_tiktok_room_is_fresh', PARSERS)
         self.assertIn("!$strictApiActive", parser)
@@ -137,6 +139,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("'louissette'", source)
         self.assertIn("'p_1785175190809'", source)
         self.assertIn("'aya-robert'", source)
+        self.assertIn("'hamondchic'", source)
+        self.assertIn('coachhamond', source)
         self.assertIn("'census-observateur-ebene'", source)
         self.assertIn('function p50_live_v4_is_p0_youtube', source)
         self.assertIn('aya.robert27', source)

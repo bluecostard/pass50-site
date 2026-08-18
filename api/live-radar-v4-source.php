@@ -21,6 +21,9 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-sarara-messan',
     'louissette',
     'aya-robert',
+    'hamondchic',
+    'coachhamond',
+    'coachhamondchic',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -183,6 +186,10 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-sarara-messan|tiktok'=>'https://www.tiktok.com/@sarra_messan',
         'louissette|tiktok'=>'https://www.tiktok.com/@misscadic',
         'aya-robert|tiktok'=>'https://www.tiktok.com/@aya.robert27',
+        'hamondchic|tiktok'=>'https://www.tiktok.com/@coachhamond',
+        'coachhamond|tiktok'=>'https://www.tiktok.com/@coachhamond',
+        'coachhamondchic|tiktok'=>'https://www.tiktok.com/@coachhamond',
+        'coach-hamond|tiktok'=>'https://www.tiktok.com/@coachhamond',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
@@ -248,6 +255,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-sarara-messan','name'=>'Sarara Messan','handle'=>'sarra_messan'],
         ['id'=>'louissette','name'=>'Cadic N’Guessan','handle'=>'misscadic'],
         ['id'=>'aya-robert','name'=>'Aya Robert','handle'=>'aya.robert27'],
+        ['id'=>'hamondchic','name'=>'Coach Hamond Chic','handle'=>'coachhamond'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
