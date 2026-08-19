@@ -10,7 +10,20 @@ Campagne **app & confiance** — pas des slides classement.
 | `anti-faux-comptes` | Anti-usurpation | Marre des faux comptes ? Comptes **vérifiés tous les jours**, **certifiés**. |
 | `classement-2h` | Classement CI | **Vrai classement** · mis à jour **toutes les 2 h** · influenceurs tendances ivoiriens → **Télécharge l'application** |
 
-## ⚠️ Envoyer tes MP4 — le chat ne les accepte pas
+## Vidéos finales (v1)
+
+| Message | Fichier |
+|---------|---------|
+| Faux comptes (26 s) | `output/final/final-02-anti-faux-comptes.mp4` |
+| Classement 2 h (10 s) | `output/final/final-03-classement-2h.mp4` |
+
+Ta voix + captures **pass50.store** + sous-titres. Ajouter musique trend dans TikTok avant publish.
+
+Regénérer :
+```bash
+python3 pass50/promo/tiktok/tools/capture_pass50_screens.py
+python3 pass50/promo/tiktok/tools/assemble_final.py
+```
 
 **Les pièces jointes MP4 ne passent pas dans Cursor.** Utilise :
 

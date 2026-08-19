@@ -41,9 +41,10 @@
         "02-anti-faux-comptes.mp3",
         "02-anti-faux-comptes.m4a"
       ],
-      "status": "received",
+      "status": "final",
       "receivedFile": "assets/voice/02-anti-faux-comptes.mp4",
-      "sourceNote": "WhatsApp 23.11.00 · 26s · faux comptes / vérifiés chaque jour"
+      "sourceNote": "WhatsApp 23.11.00 · 26s · faux comptes / vérifiés chaque jour",
+      "finalVideo": "output/final/final-02-anti-faux-comptes.mp4"
     },
     {
       "id": "03-classement-2h",
@@ -54,9 +55,10 @@
         "03-classement-2h.mp3",
         "03-classement-2h.m4a"
       ],
-      "status": "received",
+      "status": "final",
       "receivedFile": "assets/voice/03-classement-2h.mp4",
-      "sourceNote": "WhatsApp 23.11.10 · 10s · vrai classement toutes les 2h"
+      "sourceNote": "WhatsApp 23.11.10 · 10s · vrai classement toutes les 2h",
+      "finalVideo": "output/final/final-03-classement-2h.mp4"
     }
   ],
   "optionalHooks": [
