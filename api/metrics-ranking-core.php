@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
 
-const P50_MR_ALGORITHM_VERSION='MR-V1.3';
+const P50_MR_ALGORITHM_VERSION='MR-V1.4';
 const P50_MR_LOCK='pass50_metrics_ranking_experimental_v1';
+const P50_MR_MIN_PERCENTILE_POOL=20;
 
 function p50_mr_periods(): array {
     return ['2H'=>2,'24H'=>24,'48H'=>48,'7J'=>168,'15J'=>360];
@@ -189,6 +190,28 @@ function p50_mr_percentiles(array $values): array {
     return $out;
 }
 
+/** Percentiles globaux quand le vivier dynamique est trop petit — évite qu'une poignée de profils monopolisent le haut du classement. */
+function p50_mr_assign_feature_percentiles(array &$raw,array $weights,int $minPool=P50_MR_MIN_PERCENTILE_POOL): void {
+    foreach(array_keys($weights) as $feature){
+        $values=[];
+        foreach($raw as $key=>$item){
+            if(!empty($item['raw']['availability'][$feature]))$values[$key]=$item['raw']['features'][$feature];
+        }
+        if(!$values)continue;
+        if(count($values)<$minPool){
+            foreach(p50_mr_percentiles($values) as $key=>$percentile)$raw[$key]['percentiles'][$feature]=$percentile;
+            continue;
+        }
+        $byPlatform=[];
+        foreach($raw as $key=>$item){
+            if(!empty($item['raw']['availability'][$feature]))$byPlatform[$item['account']['platform']][$key]=$item['raw']['features'][$feature];
+        }
+        foreach($byPlatform as $platformValues){
+            foreach(p50_mr_percentiles($platformValues) as $key=>$percentile)$raw[$key]['percentiles'][$feature]=$percentile;
+        }
+    }
+}
+
 function p50_mr_metric_delta(array $captures,string $metric,DateTimeImmutable $start,DateTimeImmutable $end,?DateTimeImmutable $publishedAt): array {
     $usable=[];
     foreach($captures as $capture){
@@ -310,10 +333,7 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
         $key=$profile['profile_id'].'|'.$account['platform'];
         $raw[$key]=['profile'=>$profile,'account'=>$account,'raw'=>p50_mr_platform_raw($account,$loaded['contents'],$loaded['captures'],$start,$now)];
     }
-    foreach(array_keys($weights) as $feature){
-        $byPlatform=[];foreach($raw as $key=>$item)if($item['raw']['availability'][$feature])$byPlatform[$item['account']['platform']][$key]=$item['raw']['features'][$feature];
-        foreach($byPlatform as $values)foreach(p50_mr_percentiles($values) as $key=>$percentile)$raw[$key]['percentiles'][$feature]=$percentile;
-    }
+    p50_mr_assign_feature_percentiles($raw,$weights);
     $platformsByProfile=[];
     foreach($raw as $item){
         $available=$item['percentiles']??[];$weightSum=0.0;$dynamicWeightSum=0.0;$dynamicWeighted=0.0;
