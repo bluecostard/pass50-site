@@ -9,7 +9,8 @@ Campagne **app & confiance** — pas des slides classement.
 | `live-liens-verifies` | Live + vrai compte | Si tu veux le vrai compte, ne pas rater le live → PASS50. Liens vérifiés. **Télécharge PASS50.** |
 | `anti-faux-comptes` | Anti-usurpation | Marre des faux comptes ? Sur PASS50, comptes **vérifiés tous les jours**, **certifiés**. |
 
-Source : [`scripts/campaign-core-messages.json`](scripts/campaign-core-messages.json)
+| [`scripts/campaign-core-messages.json`](scripts/campaign-core-messages.json) | Textes cœur + voix off |
+| [`assets/voice/`](assets/voice/) | **Tes enregistrements vocaux** (MP3/M4A/WAV) |
 
 ## Fichiers principaux
 

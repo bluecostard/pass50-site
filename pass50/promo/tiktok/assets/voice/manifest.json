@@ -1,0 +1,28 @@
+{
+  "version": "VOICE-INTake-V1.0",
+  "directory": "pass50/promo/tiktok/assets/voice/",
+  "acceptedFormats": ["mp3", "m4a", "wav", "aac", "ogg"],
+  "tracks": [
+    {
+      "id": "01-live-liens-verifies",
+      "messageId": "live-liens-verifies",
+      "expectedFiles": ["01-live-liens-verifies.mp3", "01-live-liens-verifies.m4a", "01-live-liens-verifies.wav"],
+      "status": "pending"
+    },
+    {
+      "id": "02-anti-faux-comptes",
+      "messageId": "anti-faux-comptes",
+      "expectedFiles": ["02-anti-faux-comptes.mp3", "02-anti-faux-comptes.m4a", "02-anti-faux-comptes.wav"],
+      "status": "pending"
+    }
+  ],
+  "optionalHooks": [
+    { "id": "hook-live-01", "text": "Tu rates tous les lives de ton influenceur ?", "status": "pending" },
+    { "id": "hook-faux-01", "text": "Encore un faux compte à ton nom ?", "status": "pending" }
+  ],
+  "postProcessing": [
+    "Normaliser volume (~ -14 LUFS si possible)",
+    "Découper silence début/fin",
+    "Sync avec captures app dans CapCut ou ffmpeg"
+  ]
+}
