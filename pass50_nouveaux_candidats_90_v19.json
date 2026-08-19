@@ -1737,10 +1737,12 @@
     "zone": "CI",
     "category": "Humour / TikTok",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
+    "verification_priority": "P0",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@rach_makosso1"
+    },
     "source": {
       "publisher": "SEN Influenceurs",
       "date": "2023-01-01",
