@@ -30,6 +30,10 @@ if ((string)$question['status'] !== 'open' || (string)$question['opens_at'] > $n
     json_response(['error' => 'Ce prono n’est plus ouvert.'], 409);
 }
 
+if (p50_prono_is_live_question($question)) {
+    json_response(['error' => 'Ce prono se joue dans Prono50 live.'], 409);
+}
+
 $options = p50_prono_options($question['options_json'] ?? []);
 $validKeys = array_column($options, 'key');
 if (!in_array($optionKey, $validKeys, true)) {

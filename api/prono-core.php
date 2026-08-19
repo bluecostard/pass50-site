@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 require_once __DIR__.'/notification-core.php';
 
-const P50_PRONO_VERSION = 'PRONO-V1.5';
+const P50_PRONO_VERSION = 'PRONO-V1.6';
 const P50_PRONO_DAILY_COUNT = 12;
 const P50_PRONO_ODD_MARGIN = 0.08;
 const P50_PRONO_POINTS_CORRECT = 100; // mise nominale (gain = mise × cote)
+const P50_PRONO_LIVE_SOURCE = 'prono50_live';
+const P50_PRONO_LIVE_PAYOUT_MULTIPLIER = 2;
 const P50_PRONO_STARTING_BALANCE = 1000;
 const P50_PRONO_BALANCE_FLOOR = 100; // jamais en dessous — on peut toujours jouer
 const P50_PRONO_POINTS_DAILY_FIRST = 50;
@@ -192,7 +194,36 @@ function p50_prono_ensure_schema(): void {
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'batch_id', 'CHAR(36) CHARACTER SET ascii NOT NULL DEFAULT \'\' AFTER theme');
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'batch_date', 'DATE NULL AFTER batch_id');
     p50_prono_ensure_column($pdo, 'p50_prono_questions', 'source_type', 'VARCHAR(40) NOT NULL DEFAULT \'\' AFTER batch_date');
+    p50_prono_ensure_column($pdo, 'p50_prono_questions', 'live_session_id', 'CHAR(36) CHARACTER SET ascii NOT NULL DEFAULT \'\' AFTER source_type');
     p50_prono_ensure_index($pdo, 'p50_prono_questions', 'idx_p50_prono_q_batch', 'batch_date,status');
+    p50_prono_ensure_index($pdo, 'p50_prono_questions', 'idx_p50_prono_q_live', 'live_session_id,status');
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS p50_prono_live_sessions (
+        id CHAR(36) CHARACTER SET ascii PRIMARY KEY,
+        title VARCHAR(180) NOT NULL DEFAULT '',
+        context_text VARCHAR(500) NOT NULL DEFAULT '',
+        event_url VARCHAR(500) NOT NULL DEFAULT '',
+        gift_kind VARCHAR(16) NOT NULL DEFAULT 'soir',
+        gift_photo_url VARCHAR(500) NOT NULL DEFAULT '',
+        gift_url VARCHAR(500) NOT NULL DEFAULT '',
+        gift_text VARCHAR(800) NOT NULL DEFAULT '',
+        status VARCHAR(24) NOT NULL DEFAULT 'draft',
+        activated_by CHAR(36) NOT NULL DEFAULT '',
+        activated_at DATETIME NULL,
+        closed_at DATETIME NULL,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        INDEX idx_p50_prono_live_status(status,activated_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'event_url', 'VARCHAR(500) NOT NULL DEFAULT \'\' AFTER context_text');
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'gift_kind', 'VARCHAR(16) NOT NULL DEFAULT \'soir\' AFTER event_url');
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'gift_photo_url', 'VARCHAR(500) NOT NULL DEFAULT \'\' AFTER gift_kind');
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'gift_url', 'VARCHAR(500) NOT NULL DEFAULT \'\' AFTER gift_photo_url');
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'gift_text', 'VARCHAR(800) NOT NULL DEFAULT \'\' AFTER gift_url');
+
+    // Prono50 live : plusieurs participations par question → unique (question, user, slip).
+    p50_prono_drop_index($pdo, 'p50_prono_votes', 'uq_p50_prono_vote');
+    p50_prono_ensure_unique_index($pdo, 'p50_prono_votes', 'uq_p50_prono_vote_entry', 'question_id,user_id,slip_id');
 }
 
 function p50_prono_ensure_index(PDO $pdo, string $table, string $indexName, string $columns): void {
@@ -201,6 +232,132 @@ function p50_prono_ensure_index(PDO $pdo, string $table, string $indexName, stri
     $stmt->execute([$table, $indexName]);
     if ((int)$stmt->fetchColumn() > 0) return;
     $pdo->exec("ALTER TABLE `{$table}` ADD INDEX `{$indexName}` ({$columns})");
+}
+
+function p50_prono_ensure_unique_index(PDO $pdo, string $table, string $indexName, string $columns): void {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?');
+    $stmt->execute([$table, $indexName]);
+    if ((int)$stmt->fetchColumn() > 0) return;
+    $pdo->exec("ALTER TABLE `{$table}` ADD UNIQUE KEY `{$indexName}` ({$columns})");
+}
+
+function p50_prono_drop_index(PDO $pdo, string $table, string $indexName): void {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?');
+    $stmt->execute([$table, $indexName]);
+    if ((int)$stmt->fetchColumn() === 0) return;
+    try {
+        $pdo->exec("ALTER TABLE `{$table}` DROP INDEX `{$indexName}`");
+    } catch (Throwable $e) {
+        error_log('PASS50 prono drop index '.$table.'.'.$indexName.': '.$e->getMessage());
+    }
+}
+
+function p50_prono_is_live_question(array $row): bool {
+    return trim((string)($row['source_type'] ?? '')) === P50_PRONO_LIVE_SOURCE
+        || trim((string)($row['live_session_id'] ?? '')) !== '';
+}
+
+function p50_prono_live_payout(int $stake, float $odd): int {
+    return p50_prono_payout($stake, $odd) * P50_PRONO_LIVE_PAYOUT_MULTIPLIER;
+}
+
+function p50_prono_live_http_url(mixed $value, string $label = 'Lien'): string {
+    $url = trim((string)$value);
+    if ($url === '') return '';
+    if (preg_match('#^https?://#i', $url) !== 1) {
+        throw new InvalidArgumentException($label.' : URL HTTPS requise.');
+    }
+    return mb_substr($url, 0, 500);
+}
+
+function p50_prono_live_gift_kind(mixed $value): string {
+    return trim((string)$value) === 'jour' ? 'jour' : 'soir';
+}
+
+function p50_prono_live_session_meta(array $input, ?array $current = null): array {
+    $current = $current ?: [];
+    $title = trim((string)($input['sessionTitle'] ?? $input['eventTitle'] ?? ''));
+    $context = trim((string)($input['sessionContext'] ?? $input['eventContext'] ?? ''));
+    if ($title === '' && trim((string)($input['action'] ?? '')) !== 'saveQuestion') {
+        $title = trim((string)($input['title'] ?? ''));
+        if ($context === '') $context = trim((string)($input['context'] ?? ''));
+    }
+    try {
+        $eventUrl = array_key_exists('eventUrl', $input)
+            ? p50_prono_live_http_url($input['eventUrl'], 'Lien de l’événement')
+            : (string)($current['event_url'] ?? '');
+        $giftPhoto = array_key_exists('giftPhotoUrl', $input)
+            ? p50_prono_live_http_url($input['giftPhotoUrl'], 'Photo du cadeau')
+            : (string)($current['gift_photo_url'] ?? '');
+        $giftUrl = array_key_exists('giftUrl', $input)
+            ? p50_prono_live_http_url($input['giftUrl'], 'Lien du cadeau')
+            : (string)($current['gift_url'] ?? '');
+    } catch (InvalidArgumentException $e) {
+        json_response(['error' => $e->getMessage()], 400);
+    }
+    $giftText = array_key_exists('giftText', $input)
+        ? mb_substr(trim((string)$input['giftText']), 0, 800)
+        : (string)($current['gift_text'] ?? '');
+    $giftKind = array_key_exists('giftKind', $input)
+        ? p50_prono_live_gift_kind($input['giftKind'])
+        : p50_prono_live_gift_kind($current['gift_kind'] ?? 'soir');
+    return [
+        'title' => $title !== '' ? mb_substr($title, 0, 180) : (trim((string)($current['title'] ?? '')) !== '' ? (string)$current['title'] : 'Prono50 live'),
+        'context' => $context !== '' ? mb_substr($context, 0, 500) : (string)($current['context_text'] ?? ''),
+        'event_url' => $eventUrl,
+        'gift_kind' => $giftKind,
+        'gift_photo_url' => $giftPhoto,
+        'gift_url' => $giftUrl,
+        'gift_text' => $giftText,
+    ];
+}
+
+function p50_prono_live_session_public(?array $row): ?array {
+    if (!$row) return null;
+    return [
+        'id' => (string)$row['id'],
+        'title' => trim((string)($row['title'] ?? '')) !== '' ? (string)$row['title'] : 'Prono50 live',
+        'context' => (string)($row['context_text'] ?? ''),
+        'eventUrl' => (string)($row['event_url'] ?? ''),
+        'giftKind' => p50_prono_live_gift_kind($row['gift_kind'] ?? 'soir'),
+        'giftPhoto' => (string)($row['gift_photo_url'] ?? ''),
+        'giftUrl' => (string)($row['gift_url'] ?? ''),
+        'giftText' => (string)($row['gift_text'] ?? ''),
+        'status' => (string)($row['status'] ?? 'draft'),
+        'active' => (string)($row['status'] ?? '') === 'active',
+        'activatedAt' => !empty($row['activated_at']) ? gmdate('c', strtotime((string)$row['activated_at'].' UTC')) : null,
+        'closedAt' => !empty($row['closed_at']) ? gmdate('c', strtotime((string)$row['closed_at'].' UTC')) : null,
+    ];
+}
+
+function p50_prono_live_active_session(PDO $pdo): ?array {
+    $stmt = $pdo->query("SELECT * FROM p50_prono_live_sessions WHERE status='active' ORDER BY activated_at DESC, created_at DESC LIMIT 1");
+    $row = $stmt ? $stmt->fetch() : false;
+    return $row ?: null;
+}
+
+function p50_prono_live_latest_session(PDO $pdo): ?array {
+    $active = p50_prono_live_active_session($pdo);
+    if ($active) return $active;
+    $stmt = $pdo->query("SELECT * FROM p50_prono_live_sessions ORDER BY created_at DESC LIMIT 1");
+    $row = $stmt ? $stmt->fetch() : false;
+    return $row ?: null;
+}
+
+function p50_prono_live_questions(PDO $pdo, string $sessionId, bool $openOnly = false): array {
+    $sessionId = trim($sessionId);
+    if ($sessionId === '') return [];
+    $sql = 'SELECT * FROM p50_prono_questions WHERE live_session_id=? AND source_type=?';
+    $params = [$sessionId, P50_PRONO_LIVE_SOURCE];
+    if ($openOnly) {
+        $sql .= " AND status='open' AND opens_at<=UTC_TIMESTAMP() AND closes_at>UTC_TIMESTAMP()";
+    }
+    $sql .= ' ORDER BY created_at ASC';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll() ?: [];
 }
 
 function p50_prono_ensure_column(PDO $pdo, string $table, string $column, string $definition): void {
@@ -793,8 +950,10 @@ function p50_prono_resolve_cover(string $profileIdOrName, string $questionTitle 
 function p50_prono_question_public(array $row, ?array $vote = null, ?array $tallyBundle = null): array {
     $options = p50_prono_options($row['options_json'] ?? []);
     $stake = (int)($row['points_correct'] ?? P50_PRONO_POINTS_CORRECT);
+    $isLive = p50_prono_is_live_question($row);
+    $liveMult = $isLive ? P50_PRONO_LIVE_PAYOUT_MULTIPLIER : 1;
     foreach ($options as &$opt) {
-        $opt['payout'] = p50_prono_payout($stake, (float)$opt['odd']);
+        $opt['payout'] = p50_prono_payout($stake, (float)$opt['odd']) * $liveMult;
     }
     unset($opt);
     $coverPhoto = p50_prono_question_cover($row);
@@ -808,6 +967,9 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
         'batchId' => (string)($row['batch_id'] ?? ''),
         'batchDate' => !empty($row['batch_date']) ? (string)$row['batch_date'] : null,
         'sourceType' => (string)($row['source_type'] ?? ''),
+        'liveSessionId' => (string)($row['live_session_id'] ?? ''),
+        'live' => $isLive,
+        'livePayoutMultiplier' => $liveMult,
         'profileId' => (string)($row['profile_id'] ?? ''),
         'subjectKey' => (string)($row['subject_key'] ?? ''),
         'maxOpenPerSubject' => P50_PRONO_MAX_OPEN_PER_SUBJECT,
@@ -847,7 +1009,9 @@ function p50_prono_question_public(array $row, ?array $vote = null, ?array $tall
             'optionKey' => (string)$vote['option_key'],
             'oddLocked' => $locked,
             'stakeLocked' => $stakeLocked,
-            'potentialPayout' => p50_prono_payout($effectiveStake, $locked),
+            'potentialPayout' => $isLive
+                ? p50_prono_live_payout($effectiveStake, $locked)
+                : p50_prono_payout($effectiveStake, $locked),
             'slipId' => trim((string)($vote['slip_id'] ?? '')) ?: null,
             'updatedAt' => gmdate('c', strtotime((string)$vote['updated_at'] . ' UTC')),
         ];
