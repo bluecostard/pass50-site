@@ -27,6 +27,17 @@
         { "sec": "10-12", "visual": "pass50.store", "audio": "CTA" }
       ],
       "assets": ["Capture badge certifié FI", "Option : split faux vs vrai compte (flouter noms)" ]
+    },
+    "classement-2h": {
+      "label": "Vrai classement · MAJ 2 h",
+      "structure": [
+        { "sec": "0-2", "visual": "Hook + classement PASS50 à l'écran", "audio": "« Ça, c'est un vrai classement »" },
+        { "sec": "2-10", "visual": "Scroll Top 10 · scores · profils CI", "audio": "toutes les 2 h · influenceurs tendances" },
+        { "sec": "10-15", "visual": "Transition rapide entre positions", "audio": "ça se passe sur PASS50" },
+        { "sec": "15-18", "visual": "CTA téléchargement app", "audio": "Télécharge l'application" }
+      ],
+      "assets": ["Capture pass50.store classement 24H", "Enregistrement scroll fluide 15 s", "Logo PASS50"],
+      "avoid": ["Fond noir statique avec liste texte", "Slides PowerPoint sans mouvement"]
     }
   },
   "rules": [

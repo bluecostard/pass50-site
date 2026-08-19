@@ -27,6 +27,14 @@ Script exact : [`../campaign-core-messages.json`](../campaign-core-messages.json
 
 > Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ? Sur PASS50, tous les comptes sont vérifiés tous les jours. Certifiés.
 
+## Texte message 3 (à lire)
+
+> Ça, c'est un vrai classement. Toutes les 2 h, tu as un classement mis à jour de tous les influenceurs tendances ivoiriens. Et ça se passe sur PASS50. Télécharge l'application.
+
+## Fichiers attendus (suite)
+
+| `03-classement-2h.mp3` | Message 3 — vrai classement · MAJ 2 h |
+
 ## Ce qu’on fera avec
 
 1. Intégration dans le kit (`assets/voice/`)

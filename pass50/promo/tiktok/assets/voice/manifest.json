@@ -10,15 +10,16 @@
       "status": "pending"
     },
     {
-      "id": "02-anti-faux-comptes",
-      "messageId": "anti-faux-comptes",
-      "expectedFiles": ["02-anti-faux-comptes.mp3", "02-anti-faux-comptes.m4a", "02-anti-faux-comptes.wav"],
+      "id": "03-classement-2h",
+      "messageId": "classement-2h",
+      "expectedFiles": ["03-classement-2h.mp3", "03-classement-2h.m4a", "03-classement-2h.wav"],
       "status": "pending"
     }
   ],
   "optionalHooks": [
     { "id": "hook-live-01", "text": "Tu rates tous les lives de ton influenceur ?", "status": "pending" },
-    { "id": "hook-faux-01", "text": "Encore un faux compte à ton nom ?", "status": "pending" }
+    { "id": "hook-faux-01", "text": "Encore un faux compte à ton nom ?", "status": "pending" },
+    { "id": "hook-classement-01", "text": "Qui domine la scène ivoirienne en ce moment ?", "status": "pending" }
   ],
   "postProcessing": [
     "Normaliser volume (~ -14 LUFS si possible)",

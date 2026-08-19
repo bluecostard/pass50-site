@@ -91,90 +91,53 @@
       "slot": 3,
       "timeLocal": "11:00",
       "formatId": "fi_spotlight",
-      "messageId": "live-liens-verifies",
-      "pillar": "decouverte_live",
-      "hook": "Tu rates tous les lives de ton influenceur ?",
-      "durationSec": 15,
+      "messageId": "classement-2h",
+      "pillar": "classement_temps_reel",
+      "hook": "Qui domine la scène ivoirienne en ce moment ?",
+      "durationSec": 18,
       "voiceover": [
-        "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
-        "ne pas rater son live, c'est sur PASS50.",
-        "Tous les liens sont vérifiés et te ramènent directement à la bonne page.",
-        "Télécharge PASS50."
+        "Ça, c'est un vrai classement.",
+        "Toutes les 2 h, tu as un classement mis à jour",
+        "de tous les influenceurs tendances ivoiriens.",
+        "Et ça se passe sur PASS50.",
+        "Télécharge l'application."
       ],
       "onScreen": [
-        "LE VRAI COMPTE · LE BON LIVE",
-        "PASS50",
-        "Liens vérifiés → bonne page",
-        "Télécharge PASS50"
+        "VRAI CLASSEMENT · CI",
+        "Mis à jour toutes les 2 h",
+        "Influenceurs tendances",
+        "Télécharge l'application"
       ],
       "visualDirection": {
-        "format": "UGC ou capture app",
+        "format": "Capture écran site / app — scroll dynamique",
         "scenes": [
-          "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
-          "PASS50 : radar live ou fiche FI avec badge lien vérifié",
-          "Tap sur lien → ouverture directe du bon profil / live",
-          "Fin : logo PASS50 + CTA téléchargement"
+          "Hook : classement PASS50 visible (pas slide statique)",
+          "Scroll fluide Top 10 · noms + scores qui bougent",
+          "Badge ou texte « mis à jour toutes les 2 h »",
+          "Zoom sur 2–3 profils tendance · transition rapide",
+          "Fin : logo PASS50 + « Télécharge l'application »"
         ],
-        "durationSec": 15,
-        "music": "Trend TikTok · énergique · sans paroles",
-        "subtitles": "Obligatoires · gros texte"
+        "durationSec": 18,
+        "music": "Trend TikTok · rythmé · montée progressive",
+        "subtitles": "Obligatoires · sync voix utilisateur si fournie"
       },
       "broll": [
-        "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
-        "PASS50 : radar live ou fiche FI avec badge lien vérifié",
-        "Tap sur lien → ouverture directe du bon profil / live",
-        "Fin : logo PASS50 + CTA téléchargement"
+        "Hook : classement PASS50 visible (pas slide statique)",
+        "Scroll fluide Top 10 · noms + scores qui bougent",
+        "Badge ou texte « mis à jour toutes les 2 h »",
+        "Zoom sur 2–3 profils tendance · transition rapide",
+        "Fin : logo PASS50 + « Télécharge l'application »"
       ],
       "cta": "Télécharge PASS50 · pass50.store",
-      "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
+      "hashtags": "#pass50 #pass50store #classement #top50 #influenceur #tiktokci #abidjan"
     },
     {
       "slot": 4,
       "timeLocal": "13:00",
       "formatId": "classement_24h",
-      "messageId": "anti-faux-comptes",
-      "pillar": "confiance_certification",
-      "hook": "Qui est le vrai toi sur les réseaux ?",
-      "durationSec": 12,
-      "voiceover": [
-        "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
-        "Sur PASS50, tous les comptes sont vérifiés tous les jours.",
-        "Certifiés."
-      ],
-      "onScreen": [
-        "FAUX COMPTES ?",
-        "PASS50 vérifie chaque jour",
-        "Comptes certifiés ✓",
-        "pass50.store"
-      ],
-      "visualDirection": {
-        "format": "Face cam ou split écran",
-        "scenes": [
-          "Hook : réaction frustration (notifications faux comptes)",
-          "Écran PASS50 : badge certifié / statut vérifié sur une FI",
-          "Texte overlay : « vérifié tous les jours »",
-          "CTA : créateurs + fans → pass50.store"
-        ],
-        "durationSec": 12,
-        "music": "Trend TikTok · tension → resolve",
-        "subtitles": "Obligatoires"
-      },
-      "broll": [
-        "Hook : réaction frustration (notifications faux comptes)",
-        "Écran PASS50 : badge certifié / statut vérifié sur une FI",
-        "Texte overlay : « vérifié tous les jours »",
-        "CTA : créateurs + fans → pass50.store"
-      ],
-      "cta": "Télécharge PASS50 · pass50.store",
-      "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
-    },
-    {
-      "slot": 5,
-      "timeLocal": "15:00",
-      "formatId": "sondage",
       "messageId": "live-liens-verifies",
       "pillar": "decouverte_live",
-      "hook": "Fini les faux profils — PASS50.",
+      "hook": "Le vrai compte, c'est où ?",
       "durationSec": 15,
       "voiceover": [
         "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
@@ -210,12 +173,12 @@
       "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
     },
     {
-      "slot": 6,
-      "timeLocal": "17:00",
-      "formatId": "buzz_montee",
+      "slot": 5,
+      "timeLocal": "15:00",
+      "formatId": "sondage",
       "messageId": "anti-faux-comptes",
       "pillar": "confiance_certification",
-      "hook": "Encore un faux compte à ton nom ?",
+      "hook": "PASS50 certifie — tous les jours.",
       "durationSec": 12,
       "voiceover": [
         "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
@@ -248,6 +211,50 @@
       ],
       "cta": "Télécharge PASS50 · pass50.store",
       "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    },
+    {
+      "slot": 6,
+      "timeLocal": "17:00",
+      "formatId": "buzz_montee",
+      "messageId": "classement-2h",
+      "pillar": "classement_temps_reel",
+      "hook": "Qui domine la scène ivoirienne en ce moment ?",
+      "durationSec": 18,
+      "voiceover": [
+        "Ça, c'est un vrai classement.",
+        "Toutes les 2 h, tu as un classement mis à jour",
+        "de tous les influenceurs tendances ivoiriens.",
+        "Et ça se passe sur PASS50.",
+        "Télécharge l'application."
+      ],
+      "onScreen": [
+        "VRAI CLASSEMENT · CI",
+        "Mis à jour toutes les 2 h",
+        "Influenceurs tendances",
+        "Télécharge l'application"
+      ],
+      "visualDirection": {
+        "format": "Capture écran site / app — scroll dynamique",
+        "scenes": [
+          "Hook : classement PASS50 visible (pas slide statique)",
+          "Scroll fluide Top 10 · noms + scores qui bougent",
+          "Badge ou texte « mis à jour toutes les 2 h »",
+          "Zoom sur 2–3 profils tendance · transition rapide",
+          "Fin : logo PASS50 + « Télécharge l'application »"
+        ],
+        "durationSec": 18,
+        "music": "Trend TikTok · rythmé · montée progressive",
+        "subtitles": "Obligatoires · sync voix utilisateur si fournie"
+      },
+      "broll": [
+        "Hook : classement PASS50 visible (pas slide statique)",
+        "Scroll fluide Top 10 · noms + scores qui bougent",
+        "Badge ou texte « mis à jour toutes les 2 h »",
+        "Zoom sur 2–3 profils tendance · transition rapide",
+        "Fin : logo PASS50 + « Télécharge l'application »"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #classement #top50 #influenceur #tiktokci #abidjan"
     },
     {
       "slot": 7,
@@ -334,90 +341,53 @@
       "slot": 9,
       "timeLocal": "23:00",
       "formatId": "recap_jour",
-      "messageId": "live-liens-verifies",
-      "pillar": "decouverte_live",
-      "hook": "Tu rates tous les lives de ton influenceur ?",
-      "durationSec": 15,
+      "messageId": "classement-2h",
+      "pillar": "classement_temps_reel",
+      "hook": "Qui domine la scène ivoirienne en ce moment ?",
+      "durationSec": 18,
       "voiceover": [
-        "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
-        "ne pas rater son live, c'est sur PASS50.",
-        "Tous les liens sont vérifiés et te ramènent directement à la bonne page.",
-        "Télécharge PASS50."
+        "Ça, c'est un vrai classement.",
+        "Toutes les 2 h, tu as un classement mis à jour",
+        "de tous les influenceurs tendances ivoiriens.",
+        "Et ça se passe sur PASS50.",
+        "Télécharge l'application."
       ],
       "onScreen": [
-        "LE VRAI COMPTE · LE BON LIVE",
-        "PASS50",
-        "Liens vérifiés → bonne page",
-        "Télécharge PASS50"
+        "VRAI CLASSEMENT · CI",
+        "Mis à jour toutes les 2 h",
+        "Influenceurs tendances",
+        "Télécharge l'application"
       ],
       "visualDirection": {
-        "format": "UGC ou capture app",
+        "format": "Capture écran site / app — scroll dynamique",
         "scenes": [
-          "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
-          "PASS50 : radar live ou fiche FI avec badge lien vérifié",
-          "Tap sur lien → ouverture directe du bon profil / live",
-          "Fin : logo PASS50 + CTA téléchargement"
+          "Hook : classement PASS50 visible (pas slide statique)",
+          "Scroll fluide Top 10 · noms + scores qui bougent",
+          "Badge ou texte « mis à jour toutes les 2 h »",
+          "Zoom sur 2–3 profils tendance · transition rapide",
+          "Fin : logo PASS50 + « Télécharge l'application »"
         ],
-        "durationSec": 15,
-        "music": "Trend TikTok · énergique · sans paroles",
-        "subtitles": "Obligatoires · gros texte"
+        "durationSec": 18,
+        "music": "Trend TikTok · rythmé · montée progressive",
+        "subtitles": "Obligatoires · sync voix utilisateur si fournie"
       },
       "broll": [
-        "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
-        "PASS50 : radar live ou fiche FI avec badge lien vérifié",
-        "Tap sur lien → ouverture directe du bon profil / live",
-        "Fin : logo PASS50 + CTA téléchargement"
+        "Hook : classement PASS50 visible (pas slide statique)",
+        "Scroll fluide Top 10 · noms + scores qui bougent",
+        "Badge ou texte « mis à jour toutes les 2 h »",
+        "Zoom sur 2–3 profils tendance · transition rapide",
+        "Fin : logo PASS50 + « Télécharge l'application »"
       ],
       "cta": "Télécharge PASS50 · pass50.store",
-      "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
+      "hashtags": "#pass50 #pass50store #classement #top50 #influenceur #tiktokci #abidjan"
     },
     {
       "slot": 10,
       "timeLocal": "01:00",
       "formatId": "teaser_lendemain",
-      "messageId": "anti-faux-comptes",
-      "pillar": "confiance_certification",
-      "hook": "Qui est le vrai toi sur les réseaux ?",
-      "durationSec": 12,
-      "voiceover": [
-        "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
-        "Sur PASS50, tous les comptes sont vérifiés tous les jours.",
-        "Certifiés."
-      ],
-      "onScreen": [
-        "FAUX COMPTES ?",
-        "PASS50 vérifie chaque jour",
-        "Comptes certifiés ✓",
-        "pass50.store"
-      ],
-      "visualDirection": {
-        "format": "Face cam ou split écran",
-        "scenes": [
-          "Hook : réaction frustration (notifications faux comptes)",
-          "Écran PASS50 : badge certifié / statut vérifié sur une FI",
-          "Texte overlay : « vérifié tous les jours »",
-          "CTA : créateurs + fans → pass50.store"
-        ],
-        "durationSec": 12,
-        "music": "Trend TikTok · tension → resolve",
-        "subtitles": "Obligatoires"
-      },
-      "broll": [
-        "Hook : réaction frustration (notifications faux comptes)",
-        "Écran PASS50 : badge certifié / statut vérifié sur une FI",
-        "Texte overlay : « vérifié tous les jours »",
-        "CTA : créateurs + fans → pass50.store"
-      ],
-      "cta": "Télécharge PASS50 · pass50.store",
-      "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
-    },
-    {
-      "slot": 11,
-      "timeLocal": "03:00",
-      "formatId": "coulisses",
       "messageId": "live-liens-verifies",
       "pillar": "decouverte_live",
-      "hook": "Fini les faux profils — PASS50.",
+      "hook": "Le vrai compte, c'est où ?",
       "durationSec": 15,
       "voiceover": [
         "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
@@ -453,12 +423,12 @@
       "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
     },
     {
-      "slot": 12,
-      "timeLocal": "05:00",
-      "formatId": "classement_7j",
+      "slot": 11,
+      "timeLocal": "03:00",
+      "formatId": "coulisses",
       "messageId": "anti-faux-comptes",
       "pillar": "confiance_certification",
-      "hook": "Encore un faux compte à ton nom ?",
+      "hook": "PASS50 certifie — tous les jours.",
       "durationSec": 12,
       "voiceover": [
         "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
@@ -491,6 +461,50 @@
       ],
       "cta": "Télécharge PASS50 · pass50.store",
       "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    },
+    {
+      "slot": 12,
+      "timeLocal": "05:00",
+      "formatId": "classement_7j",
+      "messageId": "classement-2h",
+      "pillar": "classement_temps_reel",
+      "hook": "Qui domine la scène ivoirienne en ce moment ?",
+      "durationSec": 18,
+      "voiceover": [
+        "Ça, c'est un vrai classement.",
+        "Toutes les 2 h, tu as un classement mis à jour",
+        "de tous les influenceurs tendances ivoiriens.",
+        "Et ça se passe sur PASS50.",
+        "Télécharge l'application."
+      ],
+      "onScreen": [
+        "VRAI CLASSEMENT · CI",
+        "Mis à jour toutes les 2 h",
+        "Influenceurs tendances",
+        "Télécharge l'application"
+      ],
+      "visualDirection": {
+        "format": "Capture écran site / app — scroll dynamique",
+        "scenes": [
+          "Hook : classement PASS50 visible (pas slide statique)",
+          "Scroll fluide Top 10 · noms + scores qui bougent",
+          "Badge ou texte « mis à jour toutes les 2 h »",
+          "Zoom sur 2–3 profils tendance · transition rapide",
+          "Fin : logo PASS50 + « Télécharge l'application »"
+        ],
+        "durationSec": 18,
+        "music": "Trend TikTok · rythmé · montée progressive",
+        "subtitles": "Obligatoires · sync voix utilisateur si fournie"
+      },
+      "broll": [
+        "Hook : classement PASS50 visible (pas slide statique)",
+        "Scroll fluide Top 10 · noms + scores qui bougent",
+        "Badge ou texte « mis à jour toutes les 2 h »",
+        "Zoom sur 2–3 profils tendance · transition rapide",
+        "Fin : logo PASS50 + « Télécharge l'application »"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #classement #top50 #influenceur #tiktokci #abidjan"
     }
   ]
 }

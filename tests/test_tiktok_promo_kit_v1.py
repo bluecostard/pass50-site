@@ -104,10 +104,11 @@ class TikTokPromoKitTests(unittest.TestCase):
         core = json.loads(
             (PROMO / "scripts" / "campaign-core-messages.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(len(core["messages"]), 2)
+        self.assertEqual(len(core["messages"]), 3)
         ids = {m["id"] for m in core["messages"]}
         self.assertIn("live-liens-verifies", ids)
         self.assertIn("anti-faux-comptes", ids)
+        self.assertIn("classement-2h", ids)
 
     def test_app_promo_day01_scripts(self):
         subprocess.run(
@@ -122,6 +123,7 @@ class TikTokPromoKitTests(unittest.TestCase):
         raw = (PROMO / "scripts" / "app-promo" / "day-01.json").read_text(encoding="utf-8")
         self.assertIn("Télécharge PASS50", raw)
         self.assertIn("certifiés", raw.lower())
+        self.assertIn("vrai classement", raw.lower())
         self.assertIn("visualDirection", raw)
 
     def test_render_smoke(self):

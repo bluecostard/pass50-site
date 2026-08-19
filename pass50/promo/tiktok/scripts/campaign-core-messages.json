@@ -1,6 +1,6 @@
 {
-  "version": "APP-PROMO-CORE-V1.0",
-  "description": "Messages promo PASS50 fournis par l'équipe — axe app / confiance, pas classement quotidien.",
+  "version": "APP-PROMO-CORE-V1.1",
+  "description": "Messages promo PASS50 fournis par l'équipe — app, confiance, classement live.",
   "ctaPrimary": "Télécharge PASS50 · pass50.store",
   "ctaBio": "Lien en bio → pass50.store",
   "messages": [
@@ -72,10 +72,47 @@
         "subtitles": "Obligatoires"
       },
       "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    },
+    {
+      "id": "classement-2h",
+      "pillar": "classement_temps_reel",
+      "userOriginal": "ça c'est un vrai classement. Toutes les 2h, tu as un classement mis à jour de tous les influenceurs tendances ivoiriens, et ça se passe sur pass50. Télécharge l'application",
+      "voiceover": [
+        "Ça, c'est un vrai classement.",
+        "Toutes les 2 h, tu as un classement mis à jour",
+        "de tous les influenceurs tendances ivoiriens.",
+        "Et ça se passe sur PASS50.",
+        "Télécharge l'application."
+      ],
+      "onScreen": [
+        "VRAI CLASSEMENT · CI",
+        "Mis à jour toutes les 2 h",
+        "Influenceurs tendances",
+        "Télécharge l'application"
+      ],
+      "hooks": [
+        "Qui domine la scène ivoirienne en ce moment ?",
+        "Un Top 50 qui bouge toutes les 2 h.",
+        "Le vrai classement, c'est PASS50."
+      ],
+      "visualDirection": {
+        "format": "Capture écran site / app — scroll dynamique",
+        "scenes": [
+          "Hook : classement PASS50 visible (pas slide statique)",
+          "Scroll fluide Top 10 · noms + scores qui bougent",
+          "Badge ou texte « mis à jour toutes les 2 h »",
+          "Zoom sur 2–3 profils tendance · transition rapide",
+          "Fin : logo PASS50 + « Télécharge l'application »"
+        ],
+        "durationSec": 18,
+        "music": "Trend TikTok · rythmé · montée progressive",
+        "subtitles": "Obligatoires · sync voix utilisateur si fournie"
+      },
+      "hashtags": "#pass50 #pass50store #classement #top50 #influenceur #tiktokci #abidjan"
     }
   ],
   "rotation": {
     "slotsPerDay": 12,
-    "pattern": "Alterner live-liens-verifies et anti-faux-comptes · 3 hooks par message · varier créneau matin/soir"
+    "pattern": "Alterner live-liens-verifies · anti-faux-comptes · classement-2h (×4/jour) · hooks rotatifs"
   }
 }
