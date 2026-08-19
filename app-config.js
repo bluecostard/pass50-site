@@ -303,3 +303,12 @@ document.addEventListener('DOMContentLoaded', function () {
   script.dataset.pass50ProfileLiseAkrassi = '1.0';
   document.head.appendChild(script);
 })();
+
+// Profil recensé : L'Exès (Stéphane Sacré) — TikTok @stephanesacre.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-lexes]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-lexes.js?v=1.0';
+  script.dataset.pass50ProfileLexes = '1.0';
+  document.head.appendChild(script);
+})();

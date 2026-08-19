@@ -30,6 +30,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-jp-nda',
     'census-cahie-kunta',
     'census-lise-akrassi',
+    'census-lexes',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -202,6 +203,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-jp-nda|tiktok'=>'https://www.tiktok.com/@jpnda_1',
         'census-cahie-kunta|tiktok'=>'https://www.tiktok.com/@cahiekunta',
         'census-lise-akrassi|tiktok'=>'https://www.tiktok.com/@lise.akrassi.offi',
+        'census-lexes|tiktok'=>'https://www.tiktok.com/@stephanesacre',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
@@ -274,6 +276,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-jp-nda','name'=>'JP N\'da','handle'=>'jpnda_1'],
         ['id'=>'census-cahie-kunta','name'=>'Cahié kunta','handle'=>'cahiekunta'],
         ['id'=>'census-lise-akrassi','name'=>'Lise Akrassi','handle'=>'lise.akrassi.offi'],
+        ['id'=>'census-lexes','name'=>'L\'Exès','handle'=>'stephanesacre'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
