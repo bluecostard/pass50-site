@@ -10,7 +10,15 @@ Campagne **app & confiance** — pas des slides classement.
 | `anti-faux-comptes` | Anti-usurpation | Marre des faux comptes ? Comptes **vérifiés tous les jours**, **certifiés**. |
 | `classement-2h` | Classement CI | **Vrai classement** · mis à jour **toutes les 2 h** · influenceurs tendances ivoiriens → **Télécharge l'application** |
 
-Source : [`scripts/campaign-core-messages.json`](scripts/campaign-core-messages.json) · envois **MP4 acceptés** : [`assets/voice/`](assets/voice/)
+## ⚠️ Envoyer tes MP4 — le chat ne les accepte pas
+
+**Les pièces jointes MP4 ne passent pas dans Cursor.** Utilise :
+
+1. **Lien WeTransfer / Drive / Dropbox** → colle l’URL dans le chat  
+2. **Upload GitHub** → [dossier assets/voice](https://github.com/bluecostard/pass50-site/tree/cursor/tiktok-promo-kit-0a21/pass50/promo/tiktok/assets/voice)  
+3. **Git push** en local
+
+Guide complet : [`assets/ENVOYER-MP4.md`](assets/ENVOYER-MP4.md)
 
 ## Fichiers principaux
 
