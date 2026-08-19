@@ -44,8 +44,38 @@ function p50_metrics_content_key(string $accountKey,string $platform,?string $pl
     return hash('sha256',$accountKey.'|'.strtolower(trim($platform)).'|'.$identity);
 }
 
+/** Fuseau UTC tolérant aux hébergeurs sans zoneinfo (IONOS : « Timezone database is corrupt »). */
+function p50_metrics_utc_timezone(): DateTimeZone {
+    static $tz=null;
+    if($tz instanceof DateTimeZone)return $tz;
+    try{$tz=new DateTimeZone('UTC');}
+    catch(Throwable){$tz=new DateTimeZone('+00:00');}
+    return $tz;
+}
+
+function p50_metrics_now_utc(): DateTimeImmutable {
+    return new DateTimeImmutable('@'.time(),p50_metrics_utc_timezone());
+}
+
+function p50_metrics_parse_utc(?string $value): ?DateTimeImmutable {
+    $value=trim((string)$value);
+    if($value===''||str_starts_with($value,'0000-00-00'))return null;
+    $tz=p50_metrics_utc_timezone();
+    if(preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/',$value)){
+        try{return new DateTimeImmutable(str_replace(' ','T',$value),$tz);}
+        catch(Throwable){return null;}
+    }
+    try{return new DateTimeImmutable($value,$tz);}
+    catch(Throwable){
+        $timestamp=strtotime($value);
+        if($timestamp===false)return null;
+        try{return new DateTimeImmutable('@'.$timestamp,$tz);}
+        catch(Throwable){return null;}
+    }
+}
+
 function p50_metrics_timestamp(string|DateTimeInterface $value): string {
-    if($value instanceof DateTimeInterface)return DateTimeImmutable::createFromInterface($value)->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+    if($value instanceof DateTimeInterface)return DateTimeImmutable::createFromInterface($value)->setTimezone(p50_metrics_utc_timezone())->format('Y-m-d H:i:s');
     $timestamp=strtotime(trim($value));if($timestamp===false)throw new InvalidArgumentException('Date d’observation invalide.');
     return gmdate('Y-m-d H:i:s',$timestamp);
 }

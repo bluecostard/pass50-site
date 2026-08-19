@@ -43,7 +43,11 @@ class MetricsSchemaContractTests(unittest.TestCase):
         self.assertIn("'duplicate'=>!$created",CORE)
 
     def test_null_zero_validation_and_immutability(self):
-        self.assertIn("function p50_metrics_signature_value",CORE)
+        self.assertIn('function p50_metrics_utc_timezone', CORE)
+        self.assertIn('function p50_metrics_now_utc', CORE)
+        self.assertIn('function p50_metrics_parse_utc', CORE)
+        self.assertIn("new DateTimeZone('+00:00')", CORE)
+        self.assertIn('function p50_metrics_signature_value',CORE)
         self.assertIn("['type'=>'null']",CORE)
         self.assertIn("gettype($value)",CORE)
         self.assertIn("is_int($value)",CORE)
