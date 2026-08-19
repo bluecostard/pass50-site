@@ -288,7 +288,7 @@ function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): 
         $id=trim((string)($profile['id']??''));
         if($id!=='')$index[$id]=$i;
     }
-    $profilesUpdated=[];$scoresWritten=0;$primaryPeriod='2H';
+    $profilesUpdated=[];$scoresWritten=0;$primaryPeriod='24H';
     foreach($plans as $period=>$plan){
         foreach((array)($plan['mutations']??[]) as $mutation){
             if(!is_array($mutation))continue;
@@ -314,7 +314,7 @@ function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): 
                     if($score>=82)$badges[]='UP';
                     $state['profiles'][$i]['badges']=array_values(array_unique($badges));
                 }else{
-                    // Sortie 2H : retirer le score principal, conserver l’historique des autres périodes.
+                    // Sortie 24H : retirer le score principal, conserver l’historique des autres périodes.
                     // Ne pas renvoyer la fiche « Non classé / à recenser » tant qu’un score 24H+ existe.
                     unset($state['profiles'][$i]['score']);
                     $hasOtherScore=false;
