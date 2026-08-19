@@ -142,6 +142,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("'hamondchic'", source)
         self.assertIn("'dez-cocrane225'", source)
         self.assertIn('dezcocrane.225', source)
+        self.assertIn("'census-roseline-layo'", source)
+        self.assertIn('roselinelayoofficiel', source)
         self.assertIn('coachhamond', source)
         self.assertIn("'census-observateur-ebene'", source)
         self.assertIn('function p50_live_v4_is_p0_youtube', source)

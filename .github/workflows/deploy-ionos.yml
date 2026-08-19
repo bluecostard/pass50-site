@@ -106,6 +106,7 @@ jobs:
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-core.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-admin-refresh.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/metrics-collector-facebook.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/live-radar-v4-source.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-core.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-live.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-slip.php

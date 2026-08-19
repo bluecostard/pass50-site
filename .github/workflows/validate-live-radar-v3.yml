@@ -26,6 +26,7 @@ on:
       - 'tests/live_radar_v4_mariadb.php'
       - 'scripts/live_radar_unknown_audit.py'
       - 'tests/test_live_radar_unknown_audit.py'
+      - 'tests/test_roseline_layo_live_radar.py'
       - '.github/workflows/validate-live-radar-v3.yml'
       - '.github/workflows/live-radar-sweep.yml'
       - '.github/workflows/live-radar-unknown-audit.yml'
@@ -80,6 +81,7 @@ jobs:
           python3 -m unittest tests/test_live_radar_v4_docs.py
           python3 -m unittest tests/test_live_radar_runtime_v4.py
           python3 -m unittest tests/test_live_radar_unknown_audit.py
+          python3 -m unittest tests/test_roseline_layo_live_radar.py
           php tests/live_radar_v4_core.php
       - name: Vérifier la continuité MariaDB
         run: php tests/live_radar_v4_mariadb.php
