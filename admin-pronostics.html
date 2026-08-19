@@ -66,6 +66,42 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
     <p style="margin:12px 0 0"><a href="./" style="color:#b7ff00">→ Se connecter sur pass50.store</a></p>
   </div>
 
+  <div class="card" id="liveCard" style="border-color:rgba(183,255,0,.5)">
+    <h2 style="margin-top:0">Prono50 live</h2>
+    <p class="muted" id="liveStatus" style="margin:0 0 10px">Chargement…</p>
+    <div class="row">
+      <div>
+        <label>Titre de l’événement</label>
+        <input id="liveTitle" placeholder="Prono50 live">
+      </div>
+      <div>
+        <label>Contexte</label>
+        <input id="liveContext" placeholder="Match, live, soirée…">
+      </div>
+    </div>
+    <div class="batch-actions">
+      <button type="button" id="liveActivateBtn">Activer</button>
+      <button type="button" class="ghost" id="liveDeactivateBtn">Couper</button>
+      <button type="button" class="ghost" id="liveRefreshBtn">Rafraîchir</button>
+    </div>
+    <div class="toast" id="liveMsg"></div>
+    <div id="liveList" class="muted" style="margin-top:12px"></div>
+    <div class="theme-form" style="margin-top:14px;padding-top:12px;border-top:1px dashed #293129">
+      <label class="required">Question live</label>
+      <input id="liveQTitle" placeholder="Question à jouer maintenant">
+      <label>Contexte</label>
+      <textarea id="liveQContext" rows="2" placeholder="Précision optionnelle"></textarea>
+      <label class="required">Image (URL HTTPS — ou Profile ID)</label>
+      <input id="liveQCover" placeholder="https://…">
+      <label>Profile ID FI</label>
+      <input id="liveQProfile" list="fiProfileList" placeholder="Rechercher un influenceur…" autocomplete="off">
+      <label>Options (key|label|cote)</label>
+      <textarea id="liveQOptions" rows="3">y|Oui|1.70
+n|Non|2.20</textarea>
+      <button type="button" id="liveSaveQuestionBtn">Ajouter le prono live</button>
+    </div>
+  </div>
+
   <div class="card" id="themesCard">
     <h2 style="margin-top:0">Les 3 thèmes · questions + cotes</h2>
     <p class="muted" style="margin:0 0 8px">Ajoute des questions dans chaque bloc. Un brouillon affiche le bouton <strong style="color:#b7ff00">Publier</strong>. Un badge <strong>open</strong> = deja en ligne.</p>
@@ -399,7 +435,7 @@ function renderDraftQueue(){
   const wrap=document.getElementById('draftQueue');
   const list=document.getElementById('draftQueueList');
   if(!wrap||!list)return;
-  const drafts=ALL_ITEMS.filter(i=>i.status==='draft');
+  const drafts=ALL_ITEMS.filter(i=>i.status==='draft' && i.sourceType!=='prono50_live');
   if(!drafts.length){
     wrap.style.display='none';
     list.innerHTML='';
@@ -451,8 +487,9 @@ function prefillForm(item){
 }
 function renderList(items){
   const box=document.getElementById('qList');
-  if(!items.length){box.innerHTML='Aucune question.';return;}
-  const sorted=[...items].sort((a,b)=>{
+  const visible=(items||[]).filter(i=>i.sourceType!=='prono50_live');
+  if(!visible.length){box.innerHTML='Aucune question.';renderDraftQueue();return;}
+  const sorted=[...visible].sort((a,b)=>{
     const rank=s=>s==='draft'?0:s==='open'?1:2;
     return rank(a.status)-rank(b.status);
   });
@@ -517,7 +554,7 @@ function renderThemeBlocks(){
   const box=document.getElementById('themeBlocks');
   if(!box)return;
   box.innerHTML=THEMES.map((theme,ti)=>{
-    const items=ALL_ITEMS.filter(i=>i.theme===theme.key).slice(0,12);
+    const items=ALL_ITEMS.filter(i=>i.theme===theme.key && i.sourceType!=='prono50_live').slice(0,12);
     const list=items.length?items.map(i=>qCard(i,true)).join(''):'<p class="muted" style="margin:8px 0 0;font-size:12px">Aucune question dans ce thème pour le moment.</p>';
     return `<div class="theme-box" data-theme="${esc(theme.key)}">
       <h3>${ti+1}. ${esc(theme.label)}</h3>
@@ -862,6 +899,82 @@ loadList();
 loadFiProfiles();
 loadMembers();
 loadDaily();
+loadLiveAdmin();
+
+async function loadLiveAdmin(){
+  const status=document.getElementById('liveStatus');
+  const list=document.getElementById('liveList');
+  if(!status||!list)return;
+  try{
+    const data=await api('prono-live.php?admin=1');
+    const session=data.session||null;
+    const active=Boolean(data.active);
+    status.textContent=active
+      ? 'Actif · gains x2 · participations illimitées'
+      : (session && session.status==='draft' ? 'Prêt · pas encore activé' : 'Coupé');
+    status.style.color=active?'#b7ff00':'';
+    const title=document.getElementById('liveTitle');
+    const context=document.getElementById('liveContext');
+    if(title && session && !title.value) title.value=session.title||'';
+    if(context && session && !context.value) context.value=session.context||'';
+    const items=Array.isArray(data.items)?data.items:[];
+    if(!items.length){
+      list.innerHTML='Aucun prono live pour cette session.';
+      return;
+    }
+    list.innerHTML=items.map(item=>{
+      const opts=(item.options||[]).map(o=>`${esc(o.label)} @${Number(o.odd||0).toFixed(2)} → ${o.payout||0} pts`).join(' · ');
+      return `<div class="q">
+        <strong>${esc(item.title||'—')}</strong>
+        <span class="badge">${esc(statusLabelFr(item.status))}</span>
+        <div class="meta">${esc(opts)}</div>
+        <div class="actions">
+          <button type="button" class="ghost" data-live-del="${esc(item.id)}">Supprimer</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    status.textContent=String(e.message||'Erreur');
+  }
+}
+function livePayload(extra){
+  return {
+    sessionTitle:document.getElementById('liveTitle')?.value?.trim()||'',
+    sessionContext:document.getElementById('liveContext')?.value?.trim()||'',
+    ...(extra||{})
+  };
+}
+async function liveAction(body){
+  const msg=document.getElementById('liveMsg');
+  if(msg){msg.classList.remove('err');msg.textContent='';}
+  try{
+    const data=await api('prono-live.php',body);
+    if(msg)msg.textContent=data.message||'OK';
+    await loadLiveAdmin();
+  }catch(e){
+    if(msg){msg.classList.add('err');msg.textContent=e.message;}
+  }
+}
+document.getElementById('liveActivateBtn')?.addEventListener('click',()=>liveAction({action:'activate',...livePayload()}));
+document.getElementById('liveDeactivateBtn')?.addEventListener('click',()=>liveAction({action:'deactivate'}));
+document.getElementById('liveRefreshBtn')?.addEventListener('click',loadLiveAdmin);
+document.getElementById('liveSaveQuestionBtn')?.addEventListener('click',()=>{
+  liveAction({
+    action:'saveQuestion',
+    ...livePayload(),
+    title:document.getElementById('liveQTitle')?.value?.trim()||'',
+    context:document.getElementById('liveQContext')?.value?.trim()||'',
+    coverImageUrl:document.getElementById('liveQCover')?.value?.trim()||'',
+    profileId:document.getElementById('liveQProfile')?.value?.trim()||'',
+    options:parseOptions(document.getElementById('liveQOptions')?.value||''),
+  });
+});
+document.getElementById('liveList')?.addEventListener('click',e=>{
+  const btn=e.target.closest('[data-live-del]');
+  if(!btn)return;
+  if(!confirm('Supprimer ce prono live ?'))return;
+  liveAction({action:'deleteQuestion',id:btn.getAttribute('data-live-del')});
+});
 </script>
 </body>
 </html>

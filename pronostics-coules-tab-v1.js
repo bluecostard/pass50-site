@@ -58,19 +58,27 @@ function installPronoTabs(){
   const style=document.createElement('style');
   style.id='p50PronoCoulesTabStyles';
   style.textContent=`
-    .p50-prono-mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0 16px;padding:5px;border:1px solid rgba(183,255,0,.18);border-radius:16px;background:#0b0f0b}
-    .p50-prono-mode-tabs button{min-height:44px;border:0;border-radius:12px;background:transparent;color:#aab3a7;font-weight:900;font-size:13px;padding:9px 10px}
+    .p50-prono-mode-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:8px 0 16px;padding:5px;border:1px solid rgba(183,255,0,.18);border-radius:16px;background:#0b0f0b}
+    .p50-prono-mode-tabs button{min-height:44px;border:0;border-radius:12px;background:transparent;color:#aab3a7;font-weight:900;font-size:13px;padding:9px 8px;position:relative}
     .p50-prono-mode-tabs button.active{background:linear-gradient(135deg,var(--lime,#b7ff00),#71ff00);color:#050705;box-shadow:0 8px 22px rgba(183,255,0,.16)}
-    #p50CoulesPronoPanel{display:none;margin-top:6px}
+    .p50-prono-mode-tabs button.is-live-on::after{content:"";position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;background:#ff4d4d;box-shadow:0 0 0 4px rgba(255,77,77,.18)}
+    .p50-prono-mode-tabs button.active.is-live-on::after{background:#050705;box-shadow:none}
+    #p50CoulesPronoPanel,#p50LivePronoPanel{display:none;margin-top:6px}
     #p50CoulesPronoPanel .p50-coules-frame-wrap{overflow:hidden;border:1px solid rgba(183,255,0,.18);border-radius:20px;background:#080b08;min-height:560px}
     #p50CoulesPronoFrame{display:block;width:100%;height:720px;min-height:560px;border:0;background:#050705}
     body.p50-prono-coules-view #scoreRow,
     body.p50-prono-coules-view #statusSection,
     body.p50-prono-coules-view #pubsSection,
-    body.p50-prono-coules-view #slipBar{display:none!important}
+    body.p50-prono-coules-view #slipBar,
+    body.p50-prono-live-view #scoreRow,
+    body.p50-prono-live-view #statusSection,
+    body.p50-prono-live-view #pubsSection,
+    body.p50-prono-live-view #slipBar{display:none!important}
     body.p50-prono-coules-view #p50CoulesPronoPanel{display:block}
-    body.p50-prono-coules-view .page-header .countdown-chip{display:none!important}
-    @media(max-width:430px){.p50-prono-mode-tabs{margin-top:4px}.p50-prono-mode-tabs button{font-size:12px}#p50CoulesPronoFrame{min-height:620px}}
+    body.p50-prono-live-view #p50LivePronoPanel{display:block}
+    body.p50-prono-coules-view .page-header .countdown-chip,
+    body.p50-prono-live-view .page-header .countdown-chip{display:none!important}
+    @media(max-width:430px){.p50-prono-mode-tabs{margin-top:4px}.p50-prono-mode-tabs button{font-size:11px;padding:9px 4px}#p50CoulesPronoFrame{min-height:620px}}
   `;
   document.head.appendChild(style);
 
@@ -78,7 +86,7 @@ function installPronoTabs(){
   tabs.id='p50PronoModeTabs';
   tabs.className='p50-prono-mode-tabs rise rise-1';
   tabs.setAttribute('aria-label','Modes Pronostics');
-  tabs.innerHTML='<button type="button" data-prono-mode="pronos" class="active">Pronostics</button><button type="button" data-prono-mode="coules">Vote des Coulés</button>';
+  tabs.innerHTML='<button type="button" data-prono-mode="pronos" class="active">Pronostics</button><button type="button" data-prono-mode="coules">Vote des Coulés</button><button type="button" data-prono-mode="live">Prono50 live</button>';
   header.insertAdjacentElement('afterend',tabs);
 
   const panel=document.createElement('section');
@@ -88,6 +96,12 @@ function installPronoTabs(){
   const pubs=document.getElementById('pubsSection');
   if(pubs)pubs.insertAdjacentElement('afterend',panel);else shell.appendChild(panel);
 
+  const livePanel=document.createElement('section');
+  livePanel.id='p50LivePronoPanel';
+  livePanel.setAttribute('aria-label','Prono50 live');
+  livePanel.innerHTML='<div id="p50LivePronoRoot"></div>';
+  panel.insertAdjacentElement('afterend',livePanel);
+
   const kicker=header.querySelector('.kicker');
   const title=header.querySelector('h1');
   const rules=header.querySelector('.rules-line');
@@ -95,16 +109,22 @@ function installPronoTabs(){
 
   function setMode(mode,push=true){
     const coules=mode==='coules';
+    const live=mode==='live';
     document.body.classList.toggle('p50-prono-coules-view',coules);
+    document.body.classList.toggle('p50-prono-live-view',live);
     tabs.querySelectorAll('[data-prono-mode]').forEach(btn=>btn.classList.toggle('active',btn.dataset.pronoMode===mode));
-    if(kicker)kicker.textContent=coules?'LES COULÉS':'Pronostics 24H';
-    if(title)title.textContent=coules?'Vote des Coulés':original.title;
-    if(rules)rules.textContent=coules?'Qui est le plus coulé ? Vote unique par compte, choix modifiable.':original.rules;
+    if(kicker)kicker.textContent=live?'PRONO50 LIVE':(coules?'LES COULÉS':'Pronostics 24H');
+    if(title)title.textContent=live?'Prono50 live':(coules?'Vote des Coulés':original.title);
+    if(rules)rules.textContent=live?'Gains doublés.':(coules?'Qui est le plus coulé ? Vote unique par compte, choix modifiable.':original.rules);
     if(push){
       const url=new URL(location.href);
-      if(coules)url.searchParams.set('view','coules');else url.searchParams.delete('view');
+      if(coules)url.searchParams.set('view','coules');
+      else if(live)url.searchParams.set('view','live');
+      else url.searchParams.delete('view');
       history.replaceState(null,'',url.pathname+(url.search?url.search:'')+url.hash);
     }
+    if(live)window.PASS50_PRONO_LIVE?.refresh?.();
+    else window.PASS50_PRONO_LIVE?.hide?.();
   }
 
   tabs.addEventListener('click',e=>{
@@ -119,10 +139,21 @@ function installPronoTabs(){
     if(frame)frame.style.height=h+'px';
   });
 
-  const initial=params.get('view')==='coules'?'coules':'pronos';
+  const view=params.get('view');
+  const initial=view==='coules'?'coules':(view==='live'?'live':'pronos');
   setMode(initial,false);
-  window.PASS50_PRONOSTICS_COULES={version:'1.0',setMode};
+  window.PASS50_PRONOSTICS_COULES={version:'1.1',setMode};
+  loadLiveModule();
   return true;
+}
+
+function loadLiveModule(){
+  if(window.__pass50PronoLiveTabV1||document.querySelector('script[data-pass50-prono-live-tab]'))return;
+  const script=document.createElement('script');
+  script.src='./pronostics-live-tab-v1.js?v=1.0';
+  script.async=false;
+  script.dataset.pass50PronoLiveTab='1.0';
+  document.head.appendChild(script);
 }
 
 function boot(){

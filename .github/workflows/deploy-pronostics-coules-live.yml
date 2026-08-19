@@ -6,8 +6,15 @@ on:
     paths:
       - 'pronostics.html'
       - 'pronostics-coules-tab-v1.js'
+      - 'pronostics-live-tab-v1.js'
       - 'mobile-bottom-nav-v1.js'
       - 'index.html'
+      - 'admin-pronostics.html'
+      - 'api/prono-core.php'
+      - 'api/prono-live.php'
+      - 'api/prono-slip.php'
+      - 'api/prono-feed.php'
+      - 'api/prono-vote.php'
       - '.github/workflows/deploy-pronostics-coules-live.yml'
   workflow_dispatch:
 
@@ -46,8 +53,15 @@ jobs:
           open -u "$USER","$PASSWORD" sftp://$HOST:22
           put -O "$REMOTE_DIR" pronostics.html
           put -O "$REMOTE_DIR" pronostics-coules-tab-v1.js
+          put -O "$REMOTE_DIR" pronostics-live-tab-v1.js
           put -O "$REMOTE_DIR" mobile-bottom-nav-v1.js
           put -O "$REMOTE_DIR" index.html
+          put -O "$REMOTE_DIR" admin-pronostics.html
+          put -O "$REMOTE_DIR/api" api/prono-core.php
+          put -O "$REMOTE_DIR/api" api/prono-live.php
+          put -O "$REMOTE_DIR/api" api/prono-slip.php
+          put -O "$REMOTE_DIR/api" api/prono-feed.php
+          put -O "$REMOTE_DIR/api" api/prono-vote.php
           bye
           LFTP
 
@@ -59,13 +73,16 @@ jobs:
             ok=false
             for attempt in $(seq 1 24); do
               module="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/pronostics-coules-tab-v1.js?sha=$GITHUB_SHA&n=$attempt" || true)"
+              live="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/pronostics-live-tab-v1.js?sha=$GITHUB_SHA&n=$attempt" || true)"
               prono="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/pronostics.html?sha=$GITHUB_SHA&n=$attempt" || true)"
               nav="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/mobile-bottom-nav-v1.js?sha=$GITHUB_SHA&n=$attempt" || true)"
               if grep -q 'Vote des Coulés</button>' <<<"$module" \
-                && grep -q 'pronostics-coules-tab-v1.js?v=1.0' <<<"$nav" \
-                && grep -q 'mobile-bottom-nav-v1.js?v=1.8' <<<"$prono"; then
+                && grep -q 'Prono50 live</button>' <<<"$module" \
+                && grep -q 'LIVE_MULT=2' <<<"$live" \
+                && grep -q 'pronostics-coules-tab-v1.js?v=1.1' <<<"$nav" \
+                && grep -q 'mobile-bottom-nav-v1.js?v=1.9' <<<"$prono"; then
                 ok=true
-                echo "$site : onglet Vote des Coulés présent et module chargé."
+                echo "$site : onglets Vote des Coulés et Prono50 live présents."
                 break
               fi
               sleep 5

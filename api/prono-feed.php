@@ -15,8 +15,9 @@ $now = p50_prono_now()->format('Y-m-d H:i:s');
 
 $stmt = $pdo->prepare("SELECT * FROM p50_prono_questions
   WHERE status='open' AND opens_at<=? AND closes_at>?
+    AND source_type<>? AND live_session_id=''
   ORDER BY closes_at ASC LIMIT 50");
-$stmt->execute([$now, $now]);
+$stmt->execute([$now, $now, P50_PRONO_LIVE_SOURCE]);
 $questions = $stmt->fetchAll() ?: [];
 
 $votes = [];

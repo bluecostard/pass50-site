@@ -9,10 +9,12 @@ PRONO=(ROOT/'pronostics.html').read_text(encoding='utf-8')
 INDEX=(ROOT/'index.html').read_text(encoding='utf-8')
 
 class PronosticsCoulesTabV1Tests(unittest.TestCase):
-    def test_module_exposes_two_modes(self):
+    def test_module_exposes_three_modes(self):
         self.assertIn('Pronostics</button>',MODULE)
         self.assertIn('Vote des Coulés</button>',MODULE)
+        self.assertIn('Prono50 live</button>',MODULE)
         self.assertIn('data-prono-mode="coules"',MODULE)
+        self.assertIn('data-prono-mode="live"',MODULE)
         self.assertIn("view','coules'",MODULE)
 
     def test_coules_reuses_existing_home_duel(self):
@@ -27,14 +29,15 @@ class PronosticsCoulesTabV1Tests(unittest.TestCase):
         self.assertIn('#pubsSection',MODULE)
         self.assertIn('#slipBar',MODULE)
         self.assertIn('#p50CoulesPronoPanel',MODULE)
+        self.assertIn('#p50LivePronoPanel',MODULE)
 
     def test_loader_and_cache_version_are_active(self):
         self.assertIn('function loadPronoCoulesTab()',NAV)
-        self.assertIn('pronostics-coules-tab-v1.js?v=1.0',NAV)
+        self.assertIn('pronostics-coules-tab-v1.js?v=1.1',NAV)
         self.assertIn('loadPronoCoulesTab();',NAV)
         self.assertIn('PASS50-MOBILE-BOTTOM-NAV-V1.8',NAV)
         self.assertIn('mobile-bottom-nav-v1.js?v=1.9',PRONO)
-        self.assertIn('<script src="./pronostics-coules-tab-v1.js?v=1.0" data-pass50-prono-coules-tab="1.0"></script>',INDEX)
+        self.assertIn('<script src="./pronostics-coules-tab-v1.js?v=1.1" data-pass50-prono-coules-tab="1.1"></script>',INDEX)
 
 if __name__=='__main__':
     unittest.main()
