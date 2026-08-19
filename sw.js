@@ -33,6 +33,7 @@ const ASSETS=[
   './profile-ismael-aka.js?v=1.0','./profile-apoutchou.js?v=1.0','./profile-general-camille-makosso.js?v=1.2',
   './profile-lolo-beaute.js?v=1.0','./profile-kim-makosso.js?v=1.0','./profile-kim-makosso.js?v=1.1',
   './profile-dez-cocrane225.js?v=1.0','./profile-atoule.js?v=1.0',
+  './profile-jp-nda.js?v=1.0','./profile-cahie-kunta.js?v=1.0','./profile-lise-akrassi.js?v=1.0',
   './profile-zagba-le-requin.js?v=1.0','./profile-samo-samo.js?v=1.1','./profile-samo-samo.js?v=1.0',
   './profile-lionel-pcs.js?v=1.0','./profile-yasmine-fofana.js?v=1.0',
   './live-radar-v3.js?v=1.9','./live-trust-gate-v1.js?v=1.3',
