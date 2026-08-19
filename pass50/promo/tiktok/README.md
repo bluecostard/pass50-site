@@ -9,15 +9,15 @@ Kit de production pour **12 vidéos/jour**, toutes les **2 h**, sur **30 jours**
 | [`brand-kit.json`](brand-kit.json) | Couleurs, CTA, hashtags, specs vidéo |
 | [`formats.json`](formats.json) | 12 formats × créneaux horaires (Abidjan) |
 | [`calendar-30d.csv`](calendar-30d.csv) | Calendrier complet 360 lignes |
-| [`scripts/day-01.json`](scripts/day-01.json) | 12 scripts prêts pour le jour 1 |
+| [`scripts/day-01.json`](scripts/day-01.json) | 12 scripts **remplis** (Top 50 seed : Emma, Lo Père Daloa, etc.) |
+| [`data/top50-seed.json`](data/top50-seed.json) | Top 15 + picks promo (gainer, live, spotlight) |
 | [`scripts/template.json`](scripts/template.json) | Modèle + placeholders |
 | [`export-spec.json`](export-spec.json) | Contrat JSON pour export auto depuis PASS50 |
 | [`tools/generate_calendar.py`](tools/generate_calendar.py) | Régénère le CSV |
 
 ## Démarrage rapide (jour 1)
 
-1. **Données** — Ouvre pass50.store, note Top 3 / live radar / plus grosse montée (ou export futur API).
-2. **Scripts** — Édite `scripts/day-01.json` : remplace `{{TOP1_NAME}}`, etc.
+1. **Données** — Jour 1 déjà rempli dans `scripts/day-01.json` (source : `data/top50-seed.json`). Pour J2+, copier le modèle ou régénérer depuis le classement live.
 3. **Montage** — CapCut : template 9:16, fond `#050705`, accents `#b7ff00`, sous-titres auto.
 4. **Planif** — TikTok Pro → Planifier : 12 créneaux du CSV (`timeLocal`, fuseau Abidjan).
 5. **Suivi** — Colonne `status` du CSV : `draft` → `rendered` → `scheduled` → `published`.

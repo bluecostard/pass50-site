@@ -1,0 +1,29 @@
+{
+  "version": "TOP50-SEED-V1.0",
+  "source": "index.html seedProfiles · ordre classement 24H (base)",
+  "periodDefault": "24H",
+  "profiles": [
+    { "rank": 1, "id": "emma", "name": "Emma Lohoues", "handle": "@emmalohouesofficial", "score24H": 86, "delta": 8 },
+    { "rank": 2, "id": "lopere", "name": "Lo Père Daloa", "handle": "@lopere_daloa", "score24H": 83, "delta": 15 },
+    { "rank": 3, "id": "paulyves", "name": "Paul Yves Ettien", "handle": "@paulyvesettien", "score24H": 88, "delta": 7 },
+    { "rank": 4, "id": "apoutchou", "name": "Apoutchou National", "handle": "@apoutchou_national1", "score24H": 84, "delta": 4 },
+    { "rank": 5, "id": "maabio", "name": "Maabio", "handle": "@biodetoxminceur", "score24H": 80, "delta": -2 },
+    { "rank": 6, "id": "teknoush", "name": "Teknoush", "handle": "@teknoushhh", "score24H": 75, "delta": 5 },
+    { "rank": 7, "id": "inadebelle", "name": "INadeBelle", "handle": "@inadebelle", "score24H": 71, "delta": 2 },
+    { "rank": 8, "id": "kevine", "name": "Kévine Obin", "handle": "@kevineobin", "score24H": 76, "delta": 6 },
+    { "rank": 9, "id": "edith", "name": "Edith Brou Bleu", "handle": "@edithbrou", "score24H": 71, "delta": 3 },
+    { "rank": 10, "id": "eunice", "name": "Eunice Zunon", "handle": "@eunice.zunon", "score24H": 67, "delta": -3 },
+    { "rank": 11, "id": "yvidero", "name": "Yvidero", "handle": "@yvideroofficiel", "score24H": 65, "delta": 1 },
+    { "rank": 12, "id": "braising", "name": "Braising Girl", "handle": "@braisinggirl", "score24H": 63, "delta": 4 },
+    { "rank": 13, "id": "tma", "name": "TMA Crush", "handle": "@tmacrush_officiel", "score24H": 62, "delta": 8 },
+    { "rank": 14, "id": "ivoriandoll", "name": "Ivorian Doll", "handle": "@ivoriandoll", "score24H": 60, "delta": 2 },
+    { "rank": 15, "id": "laetitia", "name": "Laetitia Ky", "handle": "@laetitiaky", "score24H": 58, "delta": -1 }
+  ],
+  "promoPicks": {
+    "top3DisplayOrder": ["Emma Lohoues", "Lo Père Daloa", "Paul Yves Ettien"],
+    "biggestGainer": { "name": "Lo Père Daloa", "handle": "@lopere_daloa", "delta": 15, "score24H": 83 },
+    "spotlight": { "name": "Apoutchou National", "handle": "@apoutchou_national1", "score24H": 84, "delta": 4 },
+    "liveExample": { "name": "Maabio", "handle": "@biodetoxminceur", "platform": "TikTok" },
+    "liveCountToday": 3
+  }
+}

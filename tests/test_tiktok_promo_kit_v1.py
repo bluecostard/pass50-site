@@ -23,10 +23,18 @@ class TikTokPromoKitTests(unittest.TestCase):
     def test_day01_has_twelve_scripts(self):
         day1 = json.loads((PROMO / "scripts" / "day-01.json").read_text(encoding="utf-8"))
         self.assertEqual(len(day1["slots"]), 12)
+        raw = (PROMO / "scripts" / "day-01.json").read_text(encoding="utf-8")
+        self.assertNotIn("{{", raw, "day-01 must use real names, not placeholders")
+        self.assertIn("Emma Lohoues", raw)
         for slot in day1["slots"]:
             self.assertIn("voiceover", slot)
             self.assertIn("onScreen", slot)
             self.assertTrue(slot["voiceover"])
+
+    def test_top50_seed_data(self):
+        top = json.loads((PROMO / "data" / "top50-seed.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(len(top["profiles"]), 10)
+        self.assertIn("biggestGainer", top["promoPicks"])
 
     def test_calendar_generator(self):
         subprocess.run(

@@ -1,11 +1,19 @@
 {
   "version": "TIKTOK-SCRIPTS-V1.0",
   "day": 1,
-  "date": "{{START_DATE}}",
+  "date": "2026-08-20",
   "week": 1,
   "theme": "decouverte",
   "themeOverlay": "C'est quoi PASS50 ? Le classement qui mesure l'activité publique.",
-  "instructions": "Remplacer les {{PLACEHOLDERS}} avec l'export du jour (export-spec.json) ou manuellement depuis pass50.store.",
+  "dataSource": "pass50/promo/tiktok/data/top50-seed.json",
+  "profilesUsed": {
+    "top3": ["Emma Lohoues", "Lo Père Daloa", "Paul Yves Ettien"],
+    "top10": ["Emma Lohoues", "Lo Père Daloa", "Paul Yves Ettien", "Apoutchou National", "Maabio", "Teknoush", "INadeBelle", "Kévine Obin", "Edith Brou Bleu", "Eunice Zunon"],
+    "top5_7j": ["Emma Lohoues", "Lo Père Daloa", "Paul Yves Ettien", "Apoutchou National", "Maabio"],
+    "gainer": "Lo Père Daloa",
+    "spotlight": "Apoutchou National",
+    "live": "Maabio"
+  },
   "slots": [
     {
       "slot": 1,
@@ -15,19 +23,13 @@
       "durationSec": 18,
       "voiceover": [
         "Top 3 PASS50 — période 24 heures.",
-        "1 — {{TOP1_NAME}} · {{TOP1_SCORE}} points",
-        "2 — {{TOP2_NAME}} · {{TOP2_SCORE}} points",
-        "3 — {{TOP3_NAME}} · {{TOP3_SCORE}} points",
+        "1 — Emma Lohoues · 86 points",
+        "2 — Lo Père Daloa · 83 points",
+        "3 — Paul Yves Ettien · 88 points",
         "Classement complet : lien en bio."
       ],
-      "onScreen": [
-        "TOP 3 · 24H",
-        "#1 {{TOP1_NAME}}",
-        "#2 {{TOP2_NAME}}",
-        "#3 {{TOP3_NAME}}",
-        "pass50.store"
-      ],
-      "broll": ["Photo TOP1", "Photo TOP2", "Photo TOP3", "Logo PASS50"],
+      "onScreen": ["TOP 3 · 24H", "#1 Emma Lohoues", "#2 Lo Père Daloa", "#3 Paul Yves Ettien", "pass50.store"],
+      "broll": ["Photo Emma Lohoues", "Photo Lo Père Daloa", "Photo Paul Yves Ettien", "Logo PASS50"],
       "hashtags": "#pass50 #pass50store #classement #influenceur #tiktokci"
     },
     {
@@ -37,18 +39,12 @@
       "hook": "Quelqu'un est en live — radar PASS50.",
       "durationSec": 15,
       "voiceover": [
-        "{{LIVE_NAME}} est en live sur {{LIVE_PLATFORM}}.",
+        "Maabio est en live sur TikTok.",
         "Le radar PASS50 vient de le détecter.",
         "Va voir le classement pendant le live."
       ],
-      "onScreen": [
-        "🔴 LIVE RADAR",
-        "{{LIVE_NAME}}",
-        "{{LIVE_PLATFORM}}",
-        "pass50.store"
-      ],
-      "broll": ["Photo profil live", "Capture écran live floutée si besoin", "Animation radar"],
-      "fallbackIfNoLive": "Aucun live ce matin — publier format fi_spotlight à la place.",
+      "onScreen": ["🔴 LIVE RADAR", "Maabio", "@biodetoxminceur", "TikTok", "pass50.store"],
+      "broll": ["Photo Maabio", "Badge LIVE", "Animation radar"],
       "hashtags": "#pass50 #live #radar #influenceur #abidjan"
     },
     {
@@ -58,19 +54,13 @@
       "hook": "Profil à suivre aujourd'hui.",
       "durationSec": 20,
       "voiceover": [
-        "FI du jour sur PASS50 : {{SPOTLIGHT_NAME}}.",
-        "Score 24 h : {{SPOTLIGHT_SCORE}}.",
-        "{{SPOTLIGHT_DELTA}} places gagnées récemment.",
+        "FI du jour sur PASS50 : Apoutchou National.",
+        "Score 24 h : 84 points.",
+        "+4 places gagnées récemment.",
         "Tu le suis déjà ?"
       ],
-      "onScreen": [
-        "FI DU JOUR",
-        "{{SPOTLIGHT_NAME}}",
-        "{{SPOTLIGHT_HANDLE}}",
-        "Score {{SPOTLIGHT_SCORE}}",
-        "pass50.store"
-      ],
-      "broll": ["Photo profil", "Courbe score si dispo", "Logo"],
+      "onScreen": ["FI DU JOUR", "Apoutchou National", "@apoutchou_national1", "Score 84", "pass50.store"],
+      "broll": ["Photo Apoutchou National", "Courbe score", "Logo PASS50"],
       "hashtags": "#pass50 #influenceurs #buzz #classement #digital"
     },
     {
@@ -81,18 +71,22 @@
       "durationSec": 22,
       "voiceover": [
         "Voici le Top 10 PASS50 sur 24 heures.",
-        "De {{TOP10_1}} à {{TOP10_10}}.",
+        "Emma Lohoues, Lo Père Daloa, Paul Yves Ettien, Apoutchou National, Maabio.",
+        "Teknoush, INadeBelle, Kévine Obin, Edith Brou Bleu, Eunice Zunon.",
         "Le détail sur pass50.store."
       ],
       "onScreen": [
         "TOP 10 · 24H",
-        "1 {{TOP10_1}}",
-        "2 {{TOP10_2}}",
-        "3 {{TOP10_3}}",
-        "…",
+        "1 Emma Lohoues",
+        "2 Lo Père Daloa",
+        "3 Paul Yves Ettien",
+        "4 Apoutchou National",
+        "5 Maabio",
+        "6 Teknoush · 7 INadeBelle · 8 Kévine Obin",
+        "9 Edith Brou Bleu · 10 Eunice Zunon",
         "pass50.store"
       ],
-      "broll": ["Liste animée Top 10", "Transitions rapides 0.8s/nom"],
+      "broll": ["Liste animée Top 10", "Transitions 0.8 s/nom"],
       "hashtags": "#pass50 #pass50store #top50 #classement #influenceur"
     },
     {
@@ -105,16 +99,16 @@
         "Débat PASS50.",
         "Qui finira numéro 1 ce soir ?",
         "Commente 1, 2 ou 3.",
-        "On compare demain matin."
+        "Emma, Lo Père Daloa ou Paul Yves Ettien — on compare demain matin."
       ],
       "onScreen": [
         "TU MISERais SUR QUI ?",
-        "1 {{TOP1_NAME}}",
-        "2 {{TOP2_NAME}}",
-        "3 {{TOP3_NAME}}",
+        "1 Emma Lohoues",
+        "2 Lo Père Daloa",
+        "3 Paul Yves Ettien",
         "Commente 👇"
       ],
-      "broll": ["Photos 3 profils côte à côte", "Sticker sondage TikTok optionnel"],
+      "broll": ["Photos des 3 profils", "Sticker sondage TikTok optionnel"],
       "hashtags": "#pass50 #debat #classement #influenceur #tiktokci"
     },
     {
@@ -124,18 +118,13 @@
       "hook": "Plus grosse montée du moment.",
       "durationSec": 18,
       "voiceover": [
-        "Buzz PASS50 : {{GAINER_NAME}} monte fort.",
-        "Plus {{GAINER_DELTA}} places.",
-        "Score actuel : {{GAINER_SCORE}}.",
+        "Buzz PASS50 : Lo Père Daloa monte fort.",
+        "Plus 15 places.",
+        "Score actuel : 83 points.",
         "Classement sur pass50.store."
       ],
-      "onScreen": [
-        "📈 MONTÉE",
-        "{{GAINER_NAME}}",
-        "+{{GAINER_DELTA}} places",
-        "pass50.store"
-      ],
-      "broll": ["Photo profil", "Flèche verte animée", "Chiffre delta"],
+      "onScreen": ["📈 MONTÉE", "Lo Père Daloa", "@lopere_daloa", "+15 places", "pass50.store"],
+      "broll": ["Photo Lo Père Daloa", "Flèche verte animée"],
       "hashtags": "#pass50 #buzz #classement #influenceurs #abidjan"
     },
     {
@@ -145,17 +134,12 @@
       "hook": "Live du soir sur le radar.",
       "durationSec": 15,
       "voiceover": [
-        "Ce soir sur le radar PASS50 : {{LIVE_NAME}}.",
-        "En live sur {{LIVE_PLATFORM}}.",
+        "Ce soir sur le radar PASS50 : Lo Père Daloa.",
+        "En live sur TikTok.",
         "Lien en bio pour le classement."
       ],
-      "onScreen": [
-        "🔴 SOIRÉE LIVE",
-        "{{LIVE_NAME}}",
-        "pass50.store"
-      ],
-      "broll": ["Photo + badge LIVE", "Fond sombre lime"],
-      "fallbackIfNoLive": "Utiliser top3_soir en avance si aucun live.",
+      "onScreen": ["🔴 SOIRÉE LIVE", "Lo Père Daloa", "@lopere_daloa", "pass50.store"],
+      "broll": ["Photo Lo Père Daloa", "Badge LIVE"],
       "hashtags": "#pass50 #live #radar #influenceur #digital"
     },
     {
@@ -166,17 +150,12 @@
       "durationSec": 18,
       "voiceover": [
         "Top 3 du soir PASS50.",
-        "1 {{TOP1_NAME}}",
-        "2 {{TOP2_NAME}}",
-        "3 {{TOP3_NAME}}",
+        "1 Emma Lohoues",
+        "2 Lo Père Daloa",
+        "3 Paul Yves Ettien",
         "Demain matin : nouvelle mise à jour."
       ],
-      "onScreen": [
-        "TOP 3 SOIR",
-        "#1 {{TOP1_NAME}}",
-        "#2 {{TOP2_NAME}}",
-        "#3 {{TOP3_NAME}}"
-      ],
+      "onScreen": ["TOP 3 SOIR", "#1 Emma Lohoues", "#2 Lo Père Daloa", "#3 Paul Yves Ettien"],
       "broll": ["Photos podium", "Animation 1-2-3"],
       "hashtags": "#pass50 #pass50store #classement #influenceur #top50"
     },
@@ -188,18 +167,12 @@
       "durationSec": 24,
       "voiceover": [
         "Récap du jour sur PASS50.",
-        "Leader : {{TOP1_NAME}}.",
-        "Plus grosse montée : {{GAINER_NAME}}.",
-        "{{LIVE_COUNT}} live(s) détecté(s) sur le radar.",
+        "Leader : Emma Lohoues.",
+        "Plus grosse montée : Lo Père Daloa.",
+        "3 lives détectés sur le radar.",
         "Rendez-vous demain 7 h."
       ],
-      "onScreen": [
-        "RÉCAP JOUR",
-        "👑 {{TOP1_NAME}}",
-        "📈 {{GAINER_NAME}}",
-        "🔴 {{LIVE_COUNT}} lives",
-        "pass50.store"
-      ],
+      "onScreen": ["RÉCAP JOUR", "👑 Emma Lohoues", "📈 Lo Père Daloa", "🔴 3 lives", "pass50.store"],
       "broll": ["Montage 3 cartes", "Logo fin"],
       "hashtags": "#pass50 #recap #classement #influenceurs #tiktokci"
     },
@@ -212,15 +185,11 @@
       "voiceover": [
         "Le classement ne dort jamais.",
         "Demain 7 h : nouveau Top 3 PASS50.",
+        "Emma, Lo Père ou Paul Yves — qui mène ?",
         "Active la cloche."
       ],
-      "onScreen": [
-        "DEMAIN 7H",
-        "NOUVEAU TOP 3",
-        "PASS50",
-        "pass50.store"
-      ],
-      "broll": ["Logo animé", "Horloge", "Fond lime subtil"],
+      "onScreen": ["DEMAIN 7H", "NOUVEAU TOP 3", "PASS50", "pass50.store"],
+      "broll": ["Logo animé", "Horloge"],
       "hashtags": "#pass50 #classement #influenceur #abidjan #digital"
     },
     {
@@ -232,16 +201,11 @@
       "voiceover": [
         "C'est quoi PASS50 ?",
         "On mesure l'activité publique : posts, vues, lives, signaux officiels.",
-        "Pas une opinion — des signaux.",
+        "Exemple aujourd'hui : Emma Lohoues en tête, Lo Père Daloa en montée.",
         "Classement sur pass50.store."
       ],
-      "onScreen": [
-        "COULISSES PASS50",
-        "Signaux publics",
-        "Scores · Périodes · Radar live",
-        "pass50.store"
-      ],
-      "broll": ["Capture site floutée", "Icônes plateformes", "Schéma simple"],
+      "onScreen": ["COULISSES PASS50", "Signaux publics", "Scores · Périodes · Radar live", "pass50.store"],
+      "broll": ["Capture site", "Icônes plateformes"],
       "hashtags": "#pass50 #pass50store #classement #digital #influenceur"
     },
     {
@@ -252,16 +216,20 @@
       "durationSec": 20,
       "voiceover": [
         "Top 5 PASS50 sur 7 jours.",
-        "1 {{TOP5_1}}",
-        "2 {{TOP5_2}}",
-        "3 {{TOP5_3}}",
+        "1 Emma Lohoues",
+        "2 Lo Père Daloa",
+        "3 Paul Yves Ettien",
+        "4 Apoutchou National",
+        "5 Maabio",
         "Le marathon compte autant que le sprint."
       ],
       "onScreen": [
         "TOP 5 · 7J",
-        "1 {{TOP5_1}}",
-        "2 {{TOP5_2}}",
-        "3 {{TOP5_3}}",
+        "1 Emma Lohoues",
+        "2 Lo Père Daloa",
+        "3 Paul Yves Ettien",
+        "4 Apoutchou National",
+        "5 Maabio",
         "pass50.store"
       ],
       "broll": ["Liste Top 5", "Badge 7J"],
