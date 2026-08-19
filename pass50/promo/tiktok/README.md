@@ -6,11 +6,11 @@ Campagne **app & confiance** — pas des slides classement.
 
 | ID | Angle | Texte |
 |----|-------|-------|
-| `live-liens-verifies` | Live + vrai compte | Si tu veux le vrai compte, ne pas rater le live → PASS50. Liens vérifiés. **Télécharge PASS50.** |
-| `anti-faux-comptes` | Anti-usurpation | Marre des faux comptes ? Sur PASS50, comptes **vérifiés tous les jours**, **certifiés**. |
+| `live-liens-verifies` | Live + vrai compte | Vrai compte, ne pas rater le live → PASS50. Liens vérifiés. **Télécharge PASS50.** |
+| `anti-faux-comptes` | Anti-usurpation | Marre des faux comptes ? Comptes **vérifiés tous les jours**, **certifiés**. |
+| `classement-2h` | Classement CI | **Vrai classement** · mis à jour **toutes les 2 h** · influenceurs tendances ivoiriens → **Télécharge l'application** |
 
-| [`scripts/campaign-core-messages.json`](scripts/campaign-core-messages.json) | Textes cœur + voix off |
-| [`assets/voice/`](assets/voice/) | **Tes enregistrements vocaux** (MP3/M4A/WAV) |
+Source : [`scripts/campaign-core-messages.json`](scripts/campaign-core-messages.json) · envois **MP4 acceptés** : [`assets/voice/`](assets/voice/)
 
 ## Fichiers principaux
 

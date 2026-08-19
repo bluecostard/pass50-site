@@ -1,18 +1,46 @@
 {
-  "version": "VOICE-INTake-V1.0",
-  "directory": "pass50/promo/tiktok/assets/voice/",
-  "acceptedFormats": ["mp3", "m4a", "wav", "aac", "ogg"],
+  "version": "MEDIA-INTake-V1.1",
+  "directories": {
+    "voiceAndCamera": "pass50/promo/tiktok/assets/voice/",
+    "screenCaptures": "pass50/promo/tiktok/assets/captures/"
+  },
+  "acceptedFormats": {
+    "video": ["mp4", "mov", "webm", "m4v"],
+    "audio": ["mp3", "m4a", "wav", "aac", "ogg"]
+  },
+  "preferredFormat": "mp4",
   "tracks": [
     {
       "id": "01-live-liens-verifies",
       "messageId": "live-liens-verifies",
-      "expectedFiles": ["01-live-liens-verifies.mp3", "01-live-liens-verifies.m4a", "01-live-liens-verifies.wav"],
+      "expectedFiles": [
+        "01-live-liens-verifies.mp4",
+        "01-live-liens-verifies.mov",
+        "01-live-liens-verifies.mp3",
+        "01-live-liens-verifies.m4a"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "02-anti-faux-comptes",
+      "messageId": "anti-faux-comptes",
+      "expectedFiles": [
+        "02-anti-faux-comptes.mp4",
+        "02-anti-faux-comptes.mov",
+        "02-anti-faux-comptes.mp3",
+        "02-anti-faux-comptes.m4a"
+      ],
       "status": "pending"
     },
     {
       "id": "03-classement-2h",
       "messageId": "classement-2h",
-      "expectedFiles": ["03-classement-2h.mp3", "03-classement-2h.m4a", "03-classement-2h.wav"],
+      "expectedFiles": [
+        "03-classement-2h.mp4",
+        "03-classement-2h.mov",
+        "03-classement-2h.mp3",
+        "03-classement-2h.m4a"
+      ],
       "status": "pending"
     }
   ],
@@ -21,9 +49,11 @@
     { "id": "hook-faux-01", "text": "Encore un faux compte à ton nom ?", "status": "pending" },
     { "id": "hook-classement-01", "text": "Qui domine la scène ivoirienne en ce moment ?", "status": "pending" }
   ],
+  "ingestCommand": "python3 pass50/promo/tiktok/tools/ingest_user_media.py --file CHEMIN.mp4",
   "postProcessing": [
-    "Normaliser volume (~ -14 LUFS si possible)",
+    "MP4 : conserver vidéo ou extraire piste audio (ffmpeg)",
+    "Normaliser volume (~ -14 LUFS)",
     "Découper silence début/fin",
-    "Sync avec captures app dans CapCut ou ffmpeg"
+    "Sync voix + captures PASS50 + musique trend"
   ]
 }

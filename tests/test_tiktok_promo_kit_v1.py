@@ -126,6 +126,16 @@ class TikTokPromoKitTests(unittest.TestCase):
         self.assertIn("vrai classement", raw.lower())
         self.assertIn("visualDirection", raw)
 
+    def test_media_intake_accepts_mp4(self):
+        manifest = json.loads(
+            (PROMO / "assets" / "voice" / "manifest.json").read_text(encoding="utf-8")
+        )
+        self.assertIn("mp4", manifest["acceptedFormats"]["video"])
+        self.assertEqual(manifest["preferredFormat"], "mp4")
+        self.assertTrue(
+            any("01-live-liens-verifies.mp4" in t["expectedFiles"] for t in manifest["tracks"])
+        )
+
     def test_render_smoke(self):
         out_dir = PROMO / "output" / "_test"
         if out_dir.exists():
