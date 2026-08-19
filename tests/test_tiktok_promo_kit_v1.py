@@ -31,10 +31,22 @@ class TikTokPromoKitTests(unittest.TestCase):
             self.assertIn("onScreen", slot)
             self.assertTrue(slot["voiceover"])
 
+    def test_days_02_to_07_filled(self):
+        for n in range(2, 8):
+            path = PROMO / "scripts" / f"day-{n:02d}.json"
+            self.assertTrue(path.exists(), f"missing {path.name}")
+            day = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(len(day["slots"]), 12)
+            raw = path.read_text(encoding="utf-8")
+            self.assertNotIn("{{", raw)
+            self.assertIn("Emma Lohoues", raw)
+
     def test_top50_seed_data(self):
         top = json.loads((PROMO / "data" / "top50-seed.json").read_text(encoding="utf-8"))
         self.assertGreaterEqual(len(top["profiles"]), 10)
         self.assertIn("biggestGainer", top["promoPicks"])
+        self.assertIn("dayRotations", top)
+        self.assertEqual(len(top["dayRotations"]), 7)
 
     def test_calendar_generator(self):
         subprocess.run(
@@ -42,10 +54,18 @@ class TikTokPromoKitTests(unittest.TestCase):
             check=True,
             cwd=ROOT,
         )
-        rows = list(csv.DictReader((PROMO / "calendar-30d.csv").open(encoding="utf-8")))
+        subprocess.run(
+            ["python3", str(PROMO / "tools" / "generate_scripts.py")],
+            check=True,
+            cwd=ROOT,
+        )
+        with (PROMO / "calendar-30d.csv").open(encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
         self.assertEqual(len(rows), 360)
         self.assertEqual(len({r["day"] for r in rows}), 30)
         self.assertEqual(len([r for r in rows if r["day"] == "1"]), 12)
+        day1_notes = [r["notes"] for r in rows if r["day"] == "1"]
+        self.assertTrue(any("Emma Lohoues" in n for n in day1_notes))
 
     def test_export_spec(self):
         spec = json.loads((PROMO / "export-spec.json").read_text(encoding="utf-8"))

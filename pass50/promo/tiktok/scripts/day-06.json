@@ -1,7 +1,7 @@
 {
   "version": "TIKTOK-SCRIPTS-V1.0",
-  "day": 1,
-  "date": "2026-08-20",
+  "day": 6,
+  "date": "2026-08-25",
   "week": 1,
   "theme": "decouverte",
   "themeOverlay": "C'est quoi PASS50 ? Le classement qui mesure l'activité publique.",
@@ -32,16 +32,16 @@
       "Maabio"
     ],
     "gainer": "Lo Père Daloa",
-    "spotlight": "Apoutchou National",
-    "liveMorning": "Teknoush",
-    "liveEvening": "Paul Yves Ettien"
+    "spotlight": "Edith Brou Bleu",
+    "liveMorning": "Yvidero",
+    "liveEvening": "Kévine Obin"
   },
   "slots": [
     {
       "slot": 1,
       "timeLocal": "07:00",
       "formatId": "top3_matin",
-      "hook": "Le classement vient de bouger.",
+      "hook": "Qui domine la période 24 h ?",
       "durationSec": 18,
       "voiceover": [
         "Top 3 PASS50 — période 24 heures.",
@@ -69,22 +69,22 @@
       "slot": 2,
       "timeLocal": "09:00",
       "formatId": "live_radar_matin",
-      "hook": "Quelqu'un est en live — radar PASS50.",
+      "hook": "Le radar vient de s'allumer.",
       "durationSec": 15,
       "voiceover": [
-        "Teknoush est en live sur TikTok.",
+        "Yvidero est en live sur TikTok.",
         "Le radar PASS50 vient de le détecter.",
         "Va voir le classement pendant le live."
       ],
       "onScreen": [
         "🔴 LIVE RADAR",
-        "Teknoush",
-        "@teknoushhh",
+        "Yvidero",
+        "@yvideroofficiel",
         "TikTok",
         "pass50.store"
       ],
       "broll": [
-        "Photo Teknoush",
+        "Photo Yvidero",
         "Badge LIVE",
         "Animation radar"
       ],
@@ -94,23 +94,23 @@
       "slot": 3,
       "timeLocal": "11:00",
       "formatId": "fi_spotlight",
-      "hook": "Profil à suivre aujourd'hui.",
+      "hook": "Tu connais ce profil PASS50 ?",
       "durationSec": 20,
       "voiceover": [
-        "FI du jour sur PASS50 : Apoutchou National.",
-        "Score 24 h : 85 points.",
-        "+4 places gagnées récemment.",
+        "FI du jour sur PASS50 : Edith Brou Bleu.",
+        "Score 24 h : 72 points.",
+        "+3 places gagnées récemment.",
         "Tu le suis déjà ?"
       ],
       "onScreen": [
         "FI DU JOUR",
-        "Apoutchou National",
-        "@apoutchou_national1",
-        "Score 85",
+        "Edith Brou Bleu",
+        "@edithbrou",
+        "Score 72",
         "pass50.store"
       ],
       "broll": [
-        "Photo Apoutchou National",
+        "Photo Edith Brou Bleu",
         "Courbe score",
         "Logo PASS50"
       ],
@@ -120,7 +120,7 @@
       "slot": 4,
       "timeLocal": "13:00",
       "formatId": "classement_24h",
-      "hook": "Classement PASS50 — période 24 h.",
+      "hook": "Les chiffres ne mentent pas… enfin presque.",
       "durationSec": 22,
       "voiceover": [
         "Voici le Top 10 PASS50 sur 24 heures.",
@@ -149,7 +149,7 @@
       "slot": 5,
       "timeLocal": "15:00",
       "formatId": "sondage",
-      "hook": "Tu mises sur qui pour ce soir ?",
+      "hook": "Débat : ce Top 3 est mérité ?",
       "durationSec": 16,
       "voiceover": [
         "Débat PASS50.",
@@ -176,7 +176,7 @@
       "slot": 6,
       "timeLocal": "17:00",
       "formatId": "buzz_montee",
-      "hook": "Plus grosse montée du moment.",
+      "hook": "Buzz PASS50 : regarde cette progression.",
       "durationSec": 18,
       "voiceover": [
         "Buzz PASS50 : Lo Père Daloa monte fort.",
@@ -201,21 +201,21 @@
       "slot": 7,
       "timeLocal": "19:00",
       "formatId": "live_radar_soir",
-      "hook": "Live du soir sur le radar.",
+      "hook": "Qui est en direct maintenant ?",
       "durationSec": 15,
       "voiceover": [
-        "Ce soir sur le radar PASS50 : Paul Yves Ettien.",
+        "Ce soir sur le radar PASS50 : Kévine Obin.",
         "En live sur TikTok.",
         "Lien en bio pour le classement."
       ],
       "onScreen": [
         "🔴 SOIRÉE LIVE",
-        "Paul Yves Ettien",
-        "@paulyvesettien",
+        "Kévine Obin",
+        "@kevineobin",
         "pass50.store"
       ],
       "broll": [
-        "Photo Paul Yves Ettien",
+        "Photo Kévine Obin",
         "Badge LIVE"
       ],
       "hashtags": "#pass50 #pass50store #classement #influenceur #tiktokci"
@@ -224,7 +224,7 @@
       "slot": 8,
       "timeLocal": "21:00",
       "formatId": "top3_soir",
-      "hook": "Top 3 avant minuit.",
+      "hook": "La course continue.",
       "durationSec": 18,
       "voiceover": [
         "Top 3 du soir PASS50.",
@@ -249,20 +249,20 @@
       "slot": 9,
       "timeLocal": "23:00",
       "formatId": "recap_jour",
-      "hook": "Récap PASS50 de la journée.",
+      "hook": "Bilan en 20 secondes.",
       "durationSec": 24,
       "voiceover": [
         "Récap du jour sur PASS50.",
         "Leader : Emma Lohoues.",
         "Plus grosse montée : Lo Père Daloa.",
-        "3 lives détectés sur le radar.",
+        "2 lives détectés sur le radar.",
         "Rendez-vous demain 7 h."
       ],
       "onScreen": [
         "RÉCAP JOUR",
         "👑 Emma Lohoues",
         "📈 Lo Père Daloa",
-        "🔴 3 lives",
+        "🔴 2 lives",
         "pass50.store"
       ],
       "broll": [
@@ -275,7 +275,7 @@
       "slot": 10,
       "timeLocal": "01:00",
       "formatId": "teaser_lendemain",
-      "hook": "Demain matin : nouveau Top 3.",
+      "hook": "Le classement ne dort jamais.",
       "durationSec": 14,
       "voiceover": [
         "Le classement ne dort jamais.",
@@ -299,7 +299,7 @@
       "slot": 11,
       "timeLocal": "03:00",
       "formatId": "coulisses",
-      "hook": "Comment PASS50 calcule un score ?",
+      "hook": "Pourquoi le classement bouge.",
       "durationSec": 20,
       "voiceover": [
         "C'est quoi PASS50 ?",
@@ -323,7 +323,7 @@
       "slot": 12,
       "timeLocal": "05:00",
       "formatId": "classement_7j",
-      "hook": "Vue 7 jours — qui tient la route ?",
+      "hook": "Top 5 sur la semaine.",
       "durationSec": 20,
       "voiceover": [
         "Top 5 PASS50 sur 7 jours.",

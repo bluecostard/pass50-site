@@ -1,7 +1,7 @@
 {
   "version": "TIKTOK-SCRIPTS-V1.0",
-  "day": 1,
-  "date": "2026-08-20",
+  "day": 7,
+  "date": "2026-08-26",
   "week": 1,
   "theme": "decouverte",
   "themeOverlay": "C'est quoi PASS50 ? Le classement qui mesure l'activité publique.",
@@ -31,10 +31,10 @@
       "Apoutchou National",
       "Maabio"
     ],
-    "gainer": "Lo Père Daloa",
-    "spotlight": "Apoutchou National",
-    "liveMorning": "Teknoush",
-    "liveEvening": "Paul Yves Ettien"
+    "gainer": "Emma Lohoues",
+    "spotlight": "Eunice Zunon",
+    "liveMorning": "Braising Girl",
+    "liveEvening": "Edith Brou Bleu"
   },
   "slots": [
     {
@@ -72,19 +72,19 @@
       "hook": "Quelqu'un est en live — radar PASS50.",
       "durationSec": 15,
       "voiceover": [
-        "Teknoush est en live sur TikTok.",
+        "Braising Girl est en live sur TikTok.",
         "Le radar PASS50 vient de le détecter.",
         "Va voir le classement pendant le live."
       ],
       "onScreen": [
         "🔴 LIVE RADAR",
-        "Teknoush",
-        "@teknoushhh",
+        "Braising Girl",
+        "@braisinggirl",
         "TikTok",
         "pass50.store"
       ],
       "broll": [
-        "Photo Teknoush",
+        "Photo Braising Girl",
         "Badge LIVE",
         "Animation radar"
       ],
@@ -97,20 +97,20 @@
       "hook": "Profil à suivre aujourd'hui.",
       "durationSec": 20,
       "voiceover": [
-        "FI du jour sur PASS50 : Apoutchou National.",
-        "Score 24 h : 85 points.",
-        "+4 places gagnées récemment.",
+        "FI du jour sur PASS50 : Eunice Zunon.",
+        "Score 24 h : 68 points.",
+        "-3 places gagnées récemment.",
         "Tu le suis déjà ?"
       ],
       "onScreen": [
         "FI DU JOUR",
-        "Apoutchou National",
-        "@apoutchou_national1",
-        "Score 85",
+        "Eunice Zunon",
+        "@eunice.zunon",
+        "Score 68",
         "pass50.store"
       ],
       "broll": [
-        "Photo Apoutchou National",
+        "Photo Eunice Zunon",
         "Courbe score",
         "Logo PASS50"
       ],
@@ -179,20 +179,20 @@
       "hook": "Plus grosse montée du moment.",
       "durationSec": 18,
       "voiceover": [
-        "Buzz PASS50 : Lo Père Daloa monte fort.",
-        "+15 places.",
-        "Score actuel : 93 points.",
+        "Buzz PASS50 : Emma Lohoues monte fort.",
+        "+8 places.",
+        "Score actuel : 88 points.",
         "Classement sur pass50.store."
       ],
       "onScreen": [
         "📈 MONTÉE",
-        "Lo Père Daloa",
-        "@lopere_daloa",
-        "+15 places",
+        "Emma Lohoues",
+        "@emmalohouesofficial",
+        "+8 places",
         "pass50.store"
       ],
       "broll": [
-        "Photo Lo Père Daloa",
+        "Photo Emma Lohoues",
         "Flèche verte animée"
       ],
       "hashtags": "#pass50 #pass50store #classement #influenceur #tiktokci"
@@ -204,18 +204,18 @@
       "hook": "Live du soir sur le radar.",
       "durationSec": 15,
       "voiceover": [
-        "Ce soir sur le radar PASS50 : Paul Yves Ettien.",
+        "Ce soir sur le radar PASS50 : Edith Brou Bleu.",
         "En live sur TikTok.",
         "Lien en bio pour le classement."
       ],
       "onScreen": [
         "🔴 SOIRÉE LIVE",
-        "Paul Yves Ettien",
-        "@paulyvesettien",
+        "Edith Brou Bleu",
+        "@edithbrou",
         "pass50.store"
       ],
       "broll": [
-        "Photo Paul Yves Ettien",
+        "Photo Edith Brou Bleu",
         "Badge LIVE"
       ],
       "hashtags": "#pass50 #pass50store #classement #influenceur #tiktokci"
@@ -254,14 +254,14 @@
       "voiceover": [
         "Récap du jour sur PASS50.",
         "Leader : Emma Lohoues.",
-        "Plus grosse montée : Lo Père Daloa.",
+        "Plus grosse montée : Emma Lohoues.",
         "3 lives détectés sur le radar.",
         "Rendez-vous demain 7 h."
       ],
       "onScreen": [
         "RÉCAP JOUR",
         "👑 Emma Lohoues",
-        "📈 Lo Père Daloa",
+        "📈 Emma Lohoues",
         "🔴 3 lives",
         "pass50.store"
       ],
@@ -304,7 +304,7 @@
       "voiceover": [
         "C'est quoi PASS50 ?",
         "On mesure l'activité publique : posts, vues, lives, signaux officiels.",
-        "Exemple aujourd'hui : Emma Lohoues en tête, Lo Père Daloa en montée.",
+        "Exemple aujourd'hui : Emma Lohoues en tête, Emma Lohoues en montée.",
         "Classement sur pass50.store."
       ],
       "onScreen": [
