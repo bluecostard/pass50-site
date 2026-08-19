@@ -1,0 +1,183 @@
+{
+  "version": "TIKTOK-FORMATS-V1.0",
+  "slotsPerDay": 12,
+  "intervalHours": 2,
+  "startTimeLocal": "07:00",
+  "timezone": "Africa/Abidjan",
+  "formats": [
+    {
+      "id": "top3_matin",
+      "slot": 1,
+      "timeLocal": "07:00",
+      "label": "Top 3 du matin",
+      "durationSec": 18,
+      "template": "top3",
+      "dataNeeds": ["top3", "period24h"],
+      "hookVariants": [
+        "Le classement vient de bouger.",
+        "Top 3 PASS50 ce matin.",
+        "Qui domine la période 24 h ?"
+      ]
+    },
+    {
+      "id": "live_radar_matin",
+      "slot": 2,
+      "timeLocal": "09:00",
+      "label": "Radar live matin",
+      "durationSec": 15,
+      "template": "live_alert",
+      "dataNeeds": ["liveProfiles"],
+      "hookVariants": [
+        "Quelqu'un est en live — radar PASS50.",
+        "Alerte live détectée.",
+        "Le radar vient de s'allumer."
+      ]
+    },
+    {
+      "id": "fi_spotlight",
+      "slot": 3,
+      "timeLocal": "11:00",
+      "label": "FI du jour",
+      "durationSec": 20,
+      "template": "profile_spotlight",
+      "dataNeeds": ["spotlightProfile", "scoreDelta"],
+      "hookVariants": [
+        "Profil à suivre aujourd'hui.",
+        "Une FI monte fort.",
+        "Tu connais ce profil PASS50 ?"
+      ]
+    },
+    {
+      "id": "classement_24h",
+      "slot": 4,
+      "timeLocal": "13:00",
+      "label": "Classement 24 h",
+      "durationSec": 22,
+      "template": "ranking_table",
+      "dataNeeds": ["top10", "period24h"],
+      "hookVariants": [
+        "Classement PASS50 — période 24 h.",
+        "Le Top 10 en un écran.",
+        "Les chiffres ne mentent pas… enfin presque."
+      ]
+    },
+    {
+      "id": "sondage",
+      "slot": 5,
+      "timeLocal": "15:00",
+      "label": "Sondage / débat",
+      "durationSec": 16,
+      "template": "poll",
+      "dataNeeds": ["top3"],
+      "hookVariants": [
+        "Tu mises sur qui pour ce soir ?",
+        "Commente 1, 2 ou 3.",
+        "Débat : ce Top 3 est mérité ?"
+      ]
+    },
+    {
+      "id": "buzz_montee",
+      "slot": 6,
+      "timeLocal": "17:00",
+      "label": "Buzz / montée",
+      "durationSec": 18,
+      "template": "momentum",
+      "dataNeeds": ["biggestGainer", "scoreDelta"],
+      "hookVariants": [
+        "Plus grosse montée du moment.",
+        "Ce profil explose le classement.",
+        "Buzz PASS50 : regarde cette progression."
+      ]
+    },
+    {
+      "id": "live_radar_soir",
+      "slot": 7,
+      "timeLocal": "19:00",
+      "label": "Radar live soir",
+      "durationSec": 15,
+      "template": "live_alert",
+      "dataNeeds": ["liveProfiles"],
+      "hookVariants": [
+        "Live du soir sur le radar.",
+        "Le soir, ça chauffe sur PASS50.",
+        "Qui est en direct maintenant ?"
+      ]
+    },
+    {
+      "id": "top3_soir",
+      "slot": 8,
+      "timeLocal": "21:00",
+      "label": "Top 3 du soir",
+      "durationSec": 18,
+      "template": "top3",
+      "dataNeeds": ["top3", "period24h"],
+      "hookVariants": [
+        "Top 3 avant minuit.",
+        "Classement du soir.",
+        "La course continue."
+      ]
+    },
+    {
+      "id": "recap_jour",
+      "slot": 9,
+      "timeLocal": "23:00",
+      "label": "Récap journée",
+      "durationSec": 24,
+      "template": "daily_recap",
+      "dataNeeds": ["top3", "biggestGainer", "liveCount"],
+      "hookVariants": [
+        "Récap PASS50 de la journée.",
+        "Ce qu'il s'est passé aujourd'hui.",
+        "Bilan en 20 secondes."
+      ]
+    },
+    {
+      "id": "teaser_lendemain",
+      "slot": 10,
+      "timeLocal": "01:00",
+      "label": "Teaser lendemain",
+      "durationSec": 14,
+      "template": "teaser",
+      "dataNeeds": [],
+      "hookVariants": [
+        "Demain matin : nouveau Top 3.",
+        "Rendez-vous dans 6 h.",
+        "Le classement ne dort jamais."
+      ]
+    },
+    {
+      "id": "coulisses",
+      "slot": 11,
+      "timeLocal": "03:00",
+      "label": "Coulisses / éducatif",
+      "durationSec": 20,
+      "template": "explainer",
+      "dataNeeds": [],
+      "hookVariants": [
+        "Comment PASS50 calcule un score ?",
+        "C'est quoi le radar live ?",
+        "Pourquoi le classement bouge."
+      ]
+    },
+    {
+      "id": "classement_7j",
+      "slot": 12,
+      "timeLocal": "05:00",
+      "label": "Classement 7 j",
+      "durationSec": 20,
+      "template": "ranking_table",
+      "dataNeeds": ["top5", "period7j"],
+      "hookVariants": [
+        "Vue 7 jours — qui tient la route ?",
+        "Le marathon, pas le sprint.",
+        "Top 5 sur la semaine."
+      ]
+    }
+  ],
+  "weeklyThemes": [
+    { "week": 1, "days": [1, 7], "theme": "decouverte", "overlay": "C'est quoi PASS50 ? Le classement qui mesure l'activité publique." },
+    { "week": 2, "days": [8, 14], "theme": "lives_montees", "overlay": "Lives + profils qui montent — suis le radar." },
+    { "week": 3, "days": [15, 21], "theme": "pronostics_debat", "overlay": "Pronostics PASS50 — tu avais vu juste ?" },
+    { "week": 4, "days": [22, 30], "theme": "bilan", "overlay": "30 jours de classement — les plus gros mouvements." }
+  ]
+}

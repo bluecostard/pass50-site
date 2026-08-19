@@ -1,0 +1,35 @@
+{
+  "version": "TIKTOK-SCRIPT-TEMPLATE-V1.0",
+  "placeholders": {
+    "TOP1_NAME": "Nom public #1",
+    "TOP1_SCORE": "Score période active",
+    "TOP2_NAME": "",
+    "TOP2_SCORE": "",
+    "TOP3_NAME": "",
+    "TOP3_SCORE": "",
+    "TOP10_1": "… TOP10_10",
+    "TOP5_1": "… TOP5_5",
+    "LIVE_NAME": "Profil détecté en live",
+    "LIVE_PLATFORM": "TikTok | Instagram | YouTube",
+    "SPOTLIGHT_NAME": "Profil FI du jour",
+    "SPOTLIGHT_HANDLE": "@handle",
+    "SPOTLIGHT_SCORE": "0",
+    "SPOTLIGHT_DELTA": "+0",
+    "GAINER_NAME": "Plus grosse montée",
+    "GAINER_DELTA": "0",
+    "GAINER_SCORE": "0",
+    "LIVE_COUNT": "0"
+  },
+  "slotTemplate": {
+    "slot": 0,
+    "timeLocal": "HH:MM",
+    "formatId": "format_id",
+    "hook": "2 secondes max — accroche visuelle + texte",
+    "durationSec": 18,
+    "voiceover": ["ligne 1", "ligne 2"],
+    "onScreen": ["texte écran lisible sans son"],
+    "broll": ["liste plans / assets"],
+    "hashtags": "#pass50 …",
+    "fallbackIfNoLive": "optionnel — format de remplacement"
+  }
+}

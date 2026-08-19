@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PASS50 TikTok Promo Daily Export",
+  "version": "TIKTOK-EXPORT-V1.0",
+  "description": "Contrat JSON pour alimenter CapCut, Creatomate, Remotion ou Canva Bulk depuis PASS50.",
+  "endpointProposal": {
+    "path": "/api/tiktok-promo-export.php",
+    "method": "GET",
+    "auth": "admin session ou clé cron dédiée",
+    "query": {
+      "date": "YYYY-MM-DD (défaut: demain)",
+      "period": "24H | 7J (défaut: 24H)"
+    }
+  },
+  "responseShape": {
+    "generatedAt": "ISO8601",
+    "campaignVersion": "TIKTOK-PROMO-V1.0",
+    "date": "YYYY-MM-DD",
+    "siteUrl": "https://pass50.store",
+    "brand": { "$ref": "brand-kit.json" },
+    "slots": [
+      {
+        "slot": 1,
+        "formatId": "top3_matin",
+        "publishAt": "YYYY-MM-DDTHH:MM",
+        "hook": "string",
+        "script": {
+          "voiceover": ["ligne 1", "ligne 2"],
+          "onScreen": ["texte écran 1", "texte écran 2"],
+          "cta": "Lien en bio → pass50.store"
+        },
+        "visuals": {
+          "template": "top3",
+          "profiles": [
+            {
+              "rank": 1,
+              "id": "census-example",
+              "name": "Nom public",
+              "handle": "@handle",
+              "photoUrl": "https://pass50.store/...",
+              "score": 88,
+              "scoreDelta": 3,
+              "badges": ["HOT"]
+            }
+          ]
+        },
+        "hashtags": ["#pass50"],
+        "assets": {
+          "backgroundColor": "#050705",
+          "accentColor": "#b7ff00",
+          "logoUrl": "https://pass50.store/assets/pass50-og.png"
+        }
+      }
+    ],
+    "dataSources": {
+      "ranking": "app_state public · scores[period] · tri eligible+classable",
+      "liveRadar": "p50_live_streams status=live ou api live-radar",
+      "spotlight": "plus grosse variation score 24h ou profil P0 rotation",
+      "liveCount": "COUNT live distincts dernières 24h"
+    }
+  },
+  "fieldMapping": {
+    "top3": {
+      "source": "ranking.top.slice(0, 3)",
+      "fields": ["name", "handle", "photoUrl", "scores.24H", "rankDelta"]
+    },
+    "top10": {
+      "source": "ranking.top.slice(0, 10)",
+      "fields": ["rank", "name", "score"]
+    },
+    "liveProfiles": {
+      "source": "liveRadar.profiles",
+      "fields": ["name", "platform", "profileUrl", "liveUrl"]
+    },
+    "biggestGainer": {
+      "source": "ranking.movers.gain.slice(0, 1)",
+      "fields": ["name", "scoreDelta", "rankBefore", "rankAfter"]
+    },
+    "spotlightProfile": {
+      "source": "ranking.spotlight OR biggestGainer[0]",
+      "fields": ["name", "bio", "photoUrl", "score"]
+    }
+  },
+  "productionPipeline": [
+    "1. Cron ou admin : GET export JSON du jour",
+    "2. Creatomate / Remotion : render 12 MP4 depuis templates",
+    "3. Revue humaine 15 min (optionnel semaine 1)",
+    "4. Import TikTok Planifier ou Metricool",
+    "5. Marquer calendar-30d.csv status=published"
+  ],
+  "capcutBatch": {
+    "note": "Exporter onScreen + photoUrl en CSV par slot pour import CapCut texte",
+    "csvColumns": ["slot", "formatId", "line1", "line2", "line3", "cta", "photo1", "photo2", "photo3"]
+  }
+}

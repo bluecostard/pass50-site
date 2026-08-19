@@ -1,0 +1,46 @@
+{
+  "version": "TIKTOK-PROMO-V1.0",
+  "product": "PASS50",
+  "tagline": "Qui dit quoi, qui va où ?",
+  "url": "https://pass50.store",
+  "ctaPrimary": "Lien en bio → pass50.store",
+  "ctaSecondary": "Classement complet sur pass50.store",
+  "colors": {
+    "background": "#050705",
+    "surface": "#0b0e0b",
+    "lime": "#b7ff00",
+    "text": "#eef2ea",
+    "muted": "#9da79b",
+    "red": "#ff4b4b",
+    "orange": "#ff9d1d"
+  },
+  "typography": {
+    "wordmark": "PASS50 — PASS blanc + 50 vert lime",
+    "titleWeight": "900-1000",
+    "safeFont": "Inter, system-ui, sans-serif"
+  },
+  "video": {
+    "aspectRatio": "9:16",
+    "resolution": "1080x1920",
+    "durationSeconds": { "min": 12, "max": 28, "ideal": 18 },
+    "fps": 30
+  },
+  "hashtags": {
+    "core": ["#pass50", "#pass50store", "#classement"],
+    "rotation": ["#influenceur", "#influenceurs", "#tiktokci", "#abidjan", "#live", "#buzz", "#top50", "#digital"],
+    "maxPerPost": 5
+  },
+  "account": {
+    "handlePlaceholder": "@pass50officiel",
+    "bioLine1": "Classement influenceurs · lives · pronostics",
+    "bioLine2": "pass50.store"
+  },
+  "music": {
+    "rule": "Bibliothèque TikTok uniquement — pas de titres sous copyright externe",
+    "mood": ["énergique", "trending instrumental", "sans paroles"]
+  },
+  "legal": {
+    "disclaimer": "Classement indicatif basé sur des signaux publics mesurés.",
+    "noDefamation": "Ne jamais présenter un classement comme un fait juridique ou une vérité absolue."
+  }
+}
