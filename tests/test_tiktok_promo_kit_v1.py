@@ -100,6 +100,30 @@ class TikTokPromoKitTests(unittest.TestCase):
         self.assertIn("Emma Lohoues", rows[0]["line2"])
         self.assertTrue(rows[0]["videoFile"].endswith(".mp4"))
 
+    def test_app_promo_core_messages(self):
+        core = json.loads(
+            (PROMO / "scripts" / "campaign-core-messages.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(len(core["messages"]), 2)
+        ids = {m["id"] for m in core["messages"]}
+        self.assertIn("live-liens-verifies", ids)
+        self.assertIn("anti-faux-comptes", ids)
+
+    def test_app_promo_day01_scripts(self):
+        subprocess.run(
+            ["python3", str(PROMO / "tools" / "generate_app_promo_scripts.py")],
+            check=True,
+            cwd=ROOT,
+        )
+        day1 = json.loads(
+            (PROMO / "scripts" / "app-promo" / "day-01.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(len(day1["slots"]), 12)
+        raw = (PROMO / "scripts" / "app-promo" / "day-01.json").read_text(encoding="utf-8")
+        self.assertIn("Télécharge PASS50", raw)
+        self.assertIn("certifiés", raw.lower())
+        self.assertIn("visualDirection", raw)
+
     def test_render_smoke(self):
         out_dir = PROMO / "output" / "_test"
         if out_dir.exists():

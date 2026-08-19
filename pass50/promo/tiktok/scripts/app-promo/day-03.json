@@ -1,0 +1,496 @@
+{
+  "version": "APP-PROMO-SCRIPTS-V1.0",
+  "day": 3,
+  "date": "2026-08-22",
+  "campaign": "app-confiance",
+  "dataSource": "pass50/promo/tiktok/scripts/campaign-core-messages.json",
+  "note": "Montage UGC / capture app — pas de rendu slide auto. Voir capcut/batch-spec-app-promo.json",
+  "slots": [
+    {
+      "slot": 1,
+      "timeLocal": "07:00",
+      "formatId": "top3_matin",
+      "messageId": "live-liens-verifies",
+      "pillar": "decouverte_live",
+      "hook": "Tu rates tous les lives de ton influenceur ?",
+      "durationSec": 15,
+      "voiceover": [
+        "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
+        "ne pas rater son live, c'est sur PASS50.",
+        "Tous les liens sont vérifiés et te ramènent directement à la bonne page.",
+        "Télécharge PASS50."
+      ],
+      "onScreen": [
+        "LE VRAI COMPTE · LE BON LIVE",
+        "PASS50",
+        "Liens vérifiés → bonne page",
+        "Télécharge PASS50"
+      ],
+      "visualDirection": {
+        "format": "UGC ou capture app",
+        "scenes": [
+          "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+          "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+          "Tap sur lien → ouverture directe du bon profil / live",
+          "Fin : logo PASS50 + CTA téléchargement"
+        ],
+        "durationSec": 15,
+        "music": "Trend TikTok · énergique · sans paroles",
+        "subtitles": "Obligatoires · gros texte"
+      },
+      "broll": [
+        "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+        "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+        "Tap sur lien → ouverture directe du bon profil / live",
+        "Fin : logo PASS50 + CTA téléchargement"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
+    },
+    {
+      "slot": 2,
+      "timeLocal": "09:00",
+      "formatId": "live_radar_matin",
+      "messageId": "anti-faux-comptes",
+      "pillar": "confiance_certification",
+      "hook": "Qui est le vrai toi sur les réseaux ?",
+      "durationSec": 12,
+      "voiceover": [
+        "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
+        "Sur PASS50, tous les comptes sont vérifiés tous les jours.",
+        "Certifiés."
+      ],
+      "onScreen": [
+        "FAUX COMPTES ?",
+        "PASS50 vérifie chaque jour",
+        "Comptes certifiés ✓",
+        "pass50.store"
+      ],
+      "visualDirection": {
+        "format": "Face cam ou split écran",
+        "scenes": [
+          "Hook : réaction frustration (notifications faux comptes)",
+          "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+          "Texte overlay : « vérifié tous les jours »",
+          "CTA : créateurs + fans → pass50.store"
+        ],
+        "durationSec": 12,
+        "music": "Trend TikTok · tension → resolve",
+        "subtitles": "Obligatoires"
+      },
+      "broll": [
+        "Hook : réaction frustration (notifications faux comptes)",
+        "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+        "Texte overlay : « vérifié tous les jours »",
+        "CTA : créateurs + fans → pass50.store"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    },
+    {
+      "slot": 3,
+      "timeLocal": "11:00",
+      "formatId": "fi_spotlight",
+      "messageId": "live-liens-verifies",
+      "pillar": "decouverte_live",
+      "hook": "Fini les faux profils — PASS50.",
+      "durationSec": 15,
+      "voiceover": [
+        "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
+        "ne pas rater son live, c'est sur PASS50.",
+        "Tous les liens sont vérifiés et te ramènent directement à la bonne page.",
+        "Télécharge PASS50."
+      ],
+      "onScreen": [
+        "LE VRAI COMPTE · LE BON LIVE",
+        "PASS50",
+        "Liens vérifiés → bonne page",
+        "Télécharge PASS50"
+      ],
+      "visualDirection": {
+        "format": "UGC ou capture app",
+        "scenes": [
+          "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+          "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+          "Tap sur lien → ouverture directe du bon profil / live",
+          "Fin : logo PASS50 + CTA téléchargement"
+        ],
+        "durationSec": 15,
+        "music": "Trend TikTok · énergique · sans paroles",
+        "subtitles": "Obligatoires · gros texte"
+      },
+      "broll": [
+        "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+        "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+        "Tap sur lien → ouverture directe du bon profil / live",
+        "Fin : logo PASS50 + CTA téléchargement"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
+    },
+    {
+      "slot": 4,
+      "timeLocal": "13:00",
+      "formatId": "classement_24h",
+      "messageId": "anti-faux-comptes",
+      "pillar": "confiance_certification",
+      "hook": "Encore un faux compte à ton nom ?",
+      "durationSec": 12,
+      "voiceover": [
+        "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
+        "Sur PASS50, tous les comptes sont vérifiés tous les jours.",
+        "Certifiés."
+      ],
+      "onScreen": [
+        "FAUX COMPTES ?",
+        "PASS50 vérifie chaque jour",
+        "Comptes certifiés ✓",
+        "pass50.store"
+      ],
+      "visualDirection": {
+        "format": "Face cam ou split écran",
+        "scenes": [
+          "Hook : réaction frustration (notifications faux comptes)",
+          "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+          "Texte overlay : « vérifié tous les jours »",
+          "CTA : créateurs + fans → pass50.store"
+        ],
+        "durationSec": 12,
+        "music": "Trend TikTok · tension → resolve",
+        "subtitles": "Obligatoires"
+      },
+      "broll": [
+        "Hook : réaction frustration (notifications faux comptes)",
+        "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+        "Texte overlay : « vérifié tous les jours »",
+        "CTA : créateurs + fans → pass50.store"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    },
+    {
+      "slot": 5,
+      "timeLocal": "15:00",
+      "formatId": "sondage",
+      "messageId": "live-liens-verifies",
+      "pillar": "decouverte_live",
+      "hook": "Le vrai compte, c'est où ?",
+      "durationSec": 15,
+      "voiceover": [
+        "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
+        "ne pas rater son live, c'est sur PASS50.",
+        "Tous les liens sont vérifiés et te ramènent directement à la bonne page.",
+        "Télécharge PASS50."
+      ],
+      "onScreen": [
+        "LE VRAI COMPTE · LE BON LIVE",
+        "PASS50",
+        "Liens vérifiés → bonne page",
+        "Télécharge PASS50"
+      ],
+      "visualDirection": {
+        "format": "UGC ou capture app",
+        "scenes": [
+          "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+          "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+          "Tap sur lien → ouverture directe du bon profil / live",
+          "Fin : logo PASS50 + CTA téléchargement"
+        ],
+        "durationSec": 15,
+        "music": "Trend TikTok · énergique · sans paroles",
+        "subtitles": "Obligatoires · gros texte"
+      },
+      "broll": [
+        "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+        "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+        "Tap sur lien → ouverture directe du bon profil / live",
+        "Fin : logo PASS50 + CTA téléchargement"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
+    },
+    {
+      "slot": 6,
+      "timeLocal": "17:00",
+      "formatId": "buzz_montee",
+      "messageId": "anti-faux-comptes",
+      "pillar": "confiance_certification",
+      "hook": "PASS50 certifie — tous les jours.",
+      "durationSec": 12,
+      "voiceover": [
+        "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
+        "Sur PASS50, tous les comptes sont vérifiés tous les jours.",
+        "Certifiés."
+      ],
+      "onScreen": [
+        "FAUX COMPTES ?",
+        "PASS50 vérifie chaque jour",
+        "Comptes certifiés ✓",
+        "pass50.store"
+      ],
+      "visualDirection": {
+        "format": "Face cam ou split écran",
+        "scenes": [
+          "Hook : réaction frustration (notifications faux comptes)",
+          "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+          "Texte overlay : « vérifié tous les jours »",
+          "CTA : créateurs + fans → pass50.store"
+        ],
+        "durationSec": 12,
+        "music": "Trend TikTok · tension → resolve",
+        "subtitles": "Obligatoires"
+      },
+      "broll": [
+        "Hook : réaction frustration (notifications faux comptes)",
+        "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+        "Texte overlay : « vérifié tous les jours »",
+        "CTA : créateurs + fans → pass50.store"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    },
+    {
+      "slot": 7,
+      "timeLocal": "19:00",
+      "formatId": "live_radar_soir",
+      "messageId": "live-liens-verifies",
+      "pillar": "decouverte_live",
+      "hook": "Tu rates tous les lives de ton influenceur ?",
+      "durationSec": 15,
+      "voiceover": [
+        "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
+        "ne pas rater son live, c'est sur PASS50.",
+        "Tous les liens sont vérifiés et te ramènent directement à la bonne page.",
+        "Télécharge PASS50."
+      ],
+      "onScreen": [
+        "LE VRAI COMPTE · LE BON LIVE",
+        "PASS50",
+        "Liens vérifiés → bonne page",
+        "Télécharge PASS50"
+      ],
+      "visualDirection": {
+        "format": "UGC ou capture app",
+        "scenes": [
+          "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+          "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+          "Tap sur lien → ouverture directe du bon profil / live",
+          "Fin : logo PASS50 + CTA téléchargement"
+        ],
+        "durationSec": 15,
+        "music": "Trend TikTok · énergique · sans paroles",
+        "subtitles": "Obligatoires · gros texte"
+      },
+      "broll": [
+        "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+        "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+        "Tap sur lien → ouverture directe du bon profil / live",
+        "Fin : logo PASS50 + CTA téléchargement"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
+    },
+    {
+      "slot": 8,
+      "timeLocal": "21:00",
+      "formatId": "top3_soir",
+      "messageId": "anti-faux-comptes",
+      "pillar": "confiance_certification",
+      "hook": "Qui est le vrai toi sur les réseaux ?",
+      "durationSec": 12,
+      "voiceover": [
+        "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
+        "Sur PASS50, tous les comptes sont vérifiés tous les jours.",
+        "Certifiés."
+      ],
+      "onScreen": [
+        "FAUX COMPTES ?",
+        "PASS50 vérifie chaque jour",
+        "Comptes certifiés ✓",
+        "pass50.store"
+      ],
+      "visualDirection": {
+        "format": "Face cam ou split écran",
+        "scenes": [
+          "Hook : réaction frustration (notifications faux comptes)",
+          "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+          "Texte overlay : « vérifié tous les jours »",
+          "CTA : créateurs + fans → pass50.store"
+        ],
+        "durationSec": 12,
+        "music": "Trend TikTok · tension → resolve",
+        "subtitles": "Obligatoires"
+      },
+      "broll": [
+        "Hook : réaction frustration (notifications faux comptes)",
+        "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+        "Texte overlay : « vérifié tous les jours »",
+        "CTA : créateurs + fans → pass50.store"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    },
+    {
+      "slot": 9,
+      "timeLocal": "23:00",
+      "formatId": "recap_jour",
+      "messageId": "live-liens-verifies",
+      "pillar": "decouverte_live",
+      "hook": "Fini les faux profils — PASS50.",
+      "durationSec": 15,
+      "voiceover": [
+        "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
+        "ne pas rater son live, c'est sur PASS50.",
+        "Tous les liens sont vérifiés et te ramènent directement à la bonne page.",
+        "Télécharge PASS50."
+      ],
+      "onScreen": [
+        "LE VRAI COMPTE · LE BON LIVE",
+        "PASS50",
+        "Liens vérifiés → bonne page",
+        "Télécharge PASS50"
+      ],
+      "visualDirection": {
+        "format": "UGC ou capture app",
+        "scenes": [
+          "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+          "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+          "Tap sur lien → ouverture directe du bon profil / live",
+          "Fin : logo PASS50 + CTA téléchargement"
+        ],
+        "durationSec": 15,
+        "music": "Trend TikTok · énergique · sans paroles",
+        "subtitles": "Obligatoires · gros texte"
+      },
+      "broll": [
+        "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+        "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+        "Tap sur lien → ouverture directe du bon profil / live",
+        "Fin : logo PASS50 + CTA téléchargement"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
+    },
+    {
+      "slot": 10,
+      "timeLocal": "01:00",
+      "formatId": "teaser_lendemain",
+      "messageId": "anti-faux-comptes",
+      "pillar": "confiance_certification",
+      "hook": "Encore un faux compte à ton nom ?",
+      "durationSec": 12,
+      "voiceover": [
+        "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
+        "Sur PASS50, tous les comptes sont vérifiés tous les jours.",
+        "Certifiés."
+      ],
+      "onScreen": [
+        "FAUX COMPTES ?",
+        "PASS50 vérifie chaque jour",
+        "Comptes certifiés ✓",
+        "pass50.store"
+      ],
+      "visualDirection": {
+        "format": "Face cam ou split écran",
+        "scenes": [
+          "Hook : réaction frustration (notifications faux comptes)",
+          "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+          "Texte overlay : « vérifié tous les jours »",
+          "CTA : créateurs + fans → pass50.store"
+        ],
+        "durationSec": 12,
+        "music": "Trend TikTok · tension → resolve",
+        "subtitles": "Obligatoires"
+      },
+      "broll": [
+        "Hook : réaction frustration (notifications faux comptes)",
+        "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+        "Texte overlay : « vérifié tous les jours »",
+        "CTA : créateurs + fans → pass50.store"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    },
+    {
+      "slot": 11,
+      "timeLocal": "03:00",
+      "formatId": "coulisses",
+      "messageId": "live-liens-verifies",
+      "pillar": "decouverte_live",
+      "hook": "Le vrai compte, c'est où ?",
+      "durationSec": 15,
+      "voiceover": [
+        "Si tu veux tomber sur le vrai compte de ton influenceur préféré,",
+        "ne pas rater son live, c'est sur PASS50.",
+        "Tous les liens sont vérifiés et te ramènent directement à la bonne page.",
+        "Télécharge PASS50."
+      ],
+      "onScreen": [
+        "LE VRAI COMPTE · LE BON LIVE",
+        "PASS50",
+        "Liens vérifiés → bonne page",
+        "Télécharge PASS50"
+      ],
+      "visualDirection": {
+        "format": "UGC ou capture app",
+        "scenes": [
+          "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+          "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+          "Tap sur lien → ouverture directe du bon profil / live",
+          "Fin : logo PASS50 + CTA téléchargement"
+        ],
+        "durationSec": 15,
+        "music": "Trend TikTok · énergique · sans paroles",
+        "subtitles": "Obligatoires · gros texte"
+      },
+      "broll": [
+        "Ouverture : scroll TikTok / recherche confuse (faux profils floutés)",
+        "PASS50 : radar live ou fiche FI avec badge lien vérifié",
+        "Tap sur lien → ouverture directe du bon profil / live",
+        "Fin : logo PASS50 + CTA téléchargement"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #live #influenceur #tiktokci #abidjan"
+    },
+    {
+      "slot": 12,
+      "timeLocal": "05:00",
+      "formatId": "classement_7j",
+      "messageId": "anti-faux-comptes",
+      "pillar": "confiance_certification",
+      "hook": "PASS50 certifie — tous les jours.",
+      "durationSec": 12,
+      "voiceover": [
+        "Toi aussi t'en as marre que les gens créent de faux comptes à ton nom ?",
+        "Sur PASS50, tous les comptes sont vérifiés tous les jours.",
+        "Certifiés."
+      ],
+      "onScreen": [
+        "FAUX COMPTES ?",
+        "PASS50 vérifie chaque jour",
+        "Comptes certifiés ✓",
+        "pass50.store"
+      ],
+      "visualDirection": {
+        "format": "Face cam ou split écran",
+        "scenes": [
+          "Hook : réaction frustration (notifications faux comptes)",
+          "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+          "Texte overlay : « vérifié tous les jours »",
+          "CTA : créateurs + fans → pass50.store"
+        ],
+        "durationSec": 12,
+        "music": "Trend TikTok · tension → resolve",
+        "subtitles": "Obligatoires"
+      },
+      "broll": [
+        "Hook : réaction frustration (notifications faux comptes)",
+        "Écran PASS50 : badge certifié / statut vérifié sur une FI",
+        "Texte overlay : « vérifié tous les jours »",
+        "CTA : créateurs + fans → pass50.store"
+      ],
+      "cta": "Télécharge PASS50 · pass50.store",
+      "hashtags": "#pass50 #pass50store #certifié #influenceur #creator #ci225"
+    }
+  ]
+}

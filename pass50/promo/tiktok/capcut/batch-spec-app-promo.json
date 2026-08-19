@@ -1,0 +1,40 @@
+{
+  "version": "CAPCUT-APP-PROMO-V1.0",
+  "description": "Template CapCut pour promo app PASS50 (UGC / capture écran) — PAS slides texte ranking.",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "aspectRatio": "9:16"
+  },
+  "templateTypes": {
+    "live-liens-verifies": {
+      "label": "Vrai compte · Live · Liens vérifiés",
+      "structure": [
+        { "sec": "0-2", "visual": "Hook face cam ou texte gros à l'écran", "audio": "Phrase choc" },
+        { "sec": "2-8", "visual": "Capture PASS50 : fiche FI ou radar live", "audio": "Voiceover message 1" },
+        { "sec": "8-12", "visual": "Tap lien vérifié → bon profil s'ouvre", "audio": "« directement à la bonne page »" },
+        { "sec": "12-15", "visual": "Logo PASS50 + « Télécharge PASS50 »", "audio": "CTA + musique monte" }
+      ],
+      "assets": ["Capture app radar live", "Capture fiche FI liens vérifiés", "Logo PASS50"]
+    },
+    "anti-faux-comptes": {
+      "label": "Anti faux comptes · Certifié",
+      "structure": [
+        { "sec": "0-2", "visual": "Hook réaction / question directe caméra", "audio": "« t'en as marre… »" },
+        { "sec": "2-7", "visual": "PASS50 badge certifié sur profil", "audio": "vérifiés tous les jours" },
+        { "sec": "7-10", "visual": "Mot « Certifiés » plein écran vert lime", "audio": "beat drop léger" },
+        { "sec": "10-12", "visual": "pass50.store", "audio": "CTA" }
+      ],
+      "assets": ["Capture badge certifié FI", "Option : split faux vs vrai compte (flouter noms)" ]
+    }
+  },
+  "rules": [
+    "Sous-titres auto sur toute la voix off",
+    "Musique bibliothèque TikTok · trend · sans paroles",
+    "Pas de fond noir statique avec liste de noms",
+    "Privilégier mouvement : scroll, tap, zoom léger",
+    "Hook ≤ 2 secondes avant première coupure"
+  ],
+  "exportCommand": "python3 pass50/promo/tiktok/tools/export_capcut_batch.py --app-promo --day 1"
+}

@@ -34,8 +34,11 @@ def _slug(s: str) -> str:
     return s[:60] or "slot"
 
 
-def export_day(day: int) -> Path:
-    script_path = SCRIPTS / f"day-{day:02d}.json"
+def export_day(day: int, app_promo: bool = False) -> Path:
+    if app_promo:
+        script_path = ROOT / "scripts" / "app-promo" / f"day-{day:02d}.json"
+    else:
+        script_path = SCRIPTS / f"day-{day:02d}.json"
     if not script_path.exists():
         raise FileNotFoundError(script_path)
 
@@ -95,13 +98,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Export CapCut batch CSV")
     parser.add_argument("--day", type=int, default=1, help="Jour (1–30)")
     parser.add_argument("--all", action="store_true", help="Exporter J1–J7")
+    parser.add_argument("--app-promo", action="store_true", help="Scripts app-promo/ (UGC)")
     args = parser.parse_args()
 
     if args.all:
         for d in range(1, 8):
-            export_day(d)
+            export_day(d, app_promo=args.app_promo)
     else:
-        export_day(args.day)
+        export_day(args.day, app_promo=args.app_promo)
 
 
 if __name__ == "__main__":
