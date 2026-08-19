@@ -55,6 +55,21 @@ jobs:
           print(f"Roseline Layo : {scanned} source(s) sondée(s) · live TikTok publié={detected}")
           '
 
+      - name: Sonder prioritairement Rach Makosso
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
+            "${ENDPOINT}?mode=profile&profileId=census-rach-makosso&force=1&batch=4&t=$(date +%s)")"
+          printf '%s' "$response" | python3 -c '
+          import json,sys
+          data=json.load(sys.stdin)
+          radar=data.get("radar") or {}
+          streams=data.get("liveStreams") or []
+          detected=any(str(s.get("profileId") or "")=="census-rach-makosso" and str(s.get("platform") or "")=="TikTok" for s in streams)
+          scanned=int(radar.get("sourcesScannedThisPass") or 0)
+          print(f"Rach Makosso : {scanned} source(s) sondée(s) · live TikTok publié={detected}")
+          '
+
       - name: Reconfirmer les directs et découvrir de nouveaux LIVE
         run: |
           set -euo pipefail
