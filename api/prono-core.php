@@ -202,6 +202,11 @@ function p50_prono_ensure_schema(): void {
         id CHAR(36) CHARACTER SET ascii PRIMARY KEY,
         title VARCHAR(180) NOT NULL DEFAULT '',
         context_text VARCHAR(500) NOT NULL DEFAULT '',
+        event_url VARCHAR(500) NOT NULL DEFAULT '',
+        gift_kind VARCHAR(16) NOT NULL DEFAULT 'soir',
+        gift_photo_url VARCHAR(500) NOT NULL DEFAULT '',
+        gift_url VARCHAR(500) NOT NULL DEFAULT '',
+        gift_text VARCHAR(800) NOT NULL DEFAULT '',
         status VARCHAR(24) NOT NULL DEFAULT 'draft',
         activated_by CHAR(36) NOT NULL DEFAULT '',
         activated_at DATETIME NULL,
@@ -210,6 +215,11 @@ function p50_prono_ensure_schema(): void {
         updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         INDEX idx_p50_prono_live_status(status,activated_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'event_url', 'VARCHAR(500) NOT NULL DEFAULT \'\' AFTER context_text');
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'gift_kind', 'VARCHAR(16) NOT NULL DEFAULT \'soir\' AFTER event_url');
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'gift_photo_url', 'VARCHAR(500) NOT NULL DEFAULT \'\' AFTER gift_kind');
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'gift_url', 'VARCHAR(500) NOT NULL DEFAULT \'\' AFTER gift_photo_url');
+    p50_prono_ensure_column($pdo, 'p50_prono_live_sessions', 'gift_text', 'VARCHAR(800) NOT NULL DEFAULT \'\' AFTER gift_url');
 
     // Prono50 live : plusieurs participations par question → unique (question, user, slip).
     p50_prono_drop_index($pdo, 'p50_prono_votes', 'uq_p50_prono_vote');
@@ -253,12 +263,68 @@ function p50_prono_live_payout(int $stake, float $odd): int {
     return p50_prono_payout($stake, $odd) * P50_PRONO_LIVE_PAYOUT_MULTIPLIER;
 }
 
+function p50_prono_live_http_url(mixed $value, string $label = 'Lien'): string {
+    $url = trim((string)$value);
+    if ($url === '') return '';
+    if (preg_match('#^https?://#i', $url) !== 1) {
+        throw new InvalidArgumentException($label.' : URL HTTPS requise.');
+    }
+    return mb_substr($url, 0, 500);
+}
+
+function p50_prono_live_gift_kind(mixed $value): string {
+    return trim((string)$value) === 'jour' ? 'jour' : 'soir';
+}
+
+function p50_prono_live_session_meta(array $input, ?array $current = null): array {
+    $current = $current ?: [];
+    $title = trim((string)($input['sessionTitle'] ?? $input['eventTitle'] ?? ''));
+    $context = trim((string)($input['sessionContext'] ?? $input['eventContext'] ?? ''));
+    if ($title === '' && trim((string)($input['action'] ?? '')) !== 'saveQuestion') {
+        $title = trim((string)($input['title'] ?? ''));
+        if ($context === '') $context = trim((string)($input['context'] ?? ''));
+    }
+    try {
+        $eventUrl = array_key_exists('eventUrl', $input)
+            ? p50_prono_live_http_url($input['eventUrl'], 'Lien de l’événement')
+            : (string)($current['event_url'] ?? '');
+        $giftPhoto = array_key_exists('giftPhotoUrl', $input)
+            ? p50_prono_live_http_url($input['giftPhotoUrl'], 'Photo du cadeau')
+            : (string)($current['gift_photo_url'] ?? '');
+        $giftUrl = array_key_exists('giftUrl', $input)
+            ? p50_prono_live_http_url($input['giftUrl'], 'Lien du cadeau')
+            : (string)($current['gift_url'] ?? '');
+    } catch (InvalidArgumentException $e) {
+        json_response(['error' => $e->getMessage()], 400);
+    }
+    $giftText = array_key_exists('giftText', $input)
+        ? mb_substr(trim((string)$input['giftText']), 0, 800)
+        : (string)($current['gift_text'] ?? '');
+    $giftKind = array_key_exists('giftKind', $input)
+        ? p50_prono_live_gift_kind($input['giftKind'])
+        : p50_prono_live_gift_kind($current['gift_kind'] ?? 'soir');
+    return [
+        'title' => $title !== '' ? mb_substr($title, 0, 180) : (trim((string)($current['title'] ?? '')) !== '' ? (string)$current['title'] : 'Prono50 live'),
+        'context' => $context !== '' ? mb_substr($context, 0, 500) : (string)($current['context_text'] ?? ''),
+        'event_url' => $eventUrl,
+        'gift_kind' => $giftKind,
+        'gift_photo_url' => $giftPhoto,
+        'gift_url' => $giftUrl,
+        'gift_text' => $giftText,
+    ];
+}
+
 function p50_prono_live_session_public(?array $row): ?array {
     if (!$row) return null;
     return [
         'id' => (string)$row['id'],
         'title' => trim((string)($row['title'] ?? '')) !== '' ? (string)$row['title'] : 'Prono50 live',
         'context' => (string)($row['context_text'] ?? ''),
+        'eventUrl' => (string)($row['event_url'] ?? ''),
+        'giftKind' => p50_prono_live_gift_kind($row['gift_kind'] ?? 'soir'),
+        'giftPhoto' => (string)($row['gift_photo_url'] ?? ''),
+        'giftUrl' => (string)($row['gift_url'] ?? ''),
+        'giftText' => (string)($row['gift_text'] ?? ''),
         'status' => (string)($row['status'] ?? 'draft'),
         'active' => (string)($row['status'] ?? '') === 'active',
         'activatedAt' => !empty($row['activated_at']) ? gmdate('c', strtotime((string)$row['activated_at'].' UTC')) : null,

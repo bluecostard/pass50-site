@@ -38,7 +38,7 @@ foreach ($required as $rel) {
 }
 
 $core = file_get_contents($root.'/api/prono-core.php');
-foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked', 'P50_PRONO_VOTE_HOURS', '[6, 12, 24]', 'P50_PRONO_MAX_OPEN_PER_SUBJECT', 'p50_prono_subject_key', 'p50_prono_resolve_cover', 'coverPhoto', 'cover_image_url', 'p50_prono_compute_odds', 'p50_prono_assert_cover', 'P50_PRONO_DAILY_COUNT', 'p50_prono_profile_photo_any', 'P50_PRONO_THEMES', 'p50_prono_map_to_product_theme', 'p50_prono_slips', 'p50_prono_settle_slips', 'slip_id', 'P50_PRONO_LIVE_SOURCE', 'P50_PRONO_LIVE_PAYOUT_MULTIPLIER', 'p50_prono_live_sessions', 'p50_prono_is_live_question', 'live_session_id'] as $needle) {
+foreach (['p50_prono_ensure_schema', 'P50_PRONO_POINTS_STATUS_LIKE', 'p50_prono_statuses', '0.25', 'measure_at', 'p50_prono_lock_closed', 'odd_locked', 'p50_prono_payout', 'P50_PRONO_STARTING_BALANCE', 'P50_PRONO_BALANCE_FLOOR', 'stake_locked', 'P50_PRONO_VOTE_HOURS', '[6, 12, 24]', 'P50_PRONO_MAX_OPEN_PER_SUBJECT', 'p50_prono_subject_key', 'p50_prono_resolve_cover', 'coverPhoto', 'cover_image_url', 'p50_prono_compute_odds', 'p50_prono_assert_cover', 'P50_PRONO_DAILY_COUNT', 'p50_prono_profile_photo_any', 'P50_PRONO_THEMES', 'p50_prono_map_to_product_theme', 'p50_prono_slips', 'p50_prono_settle_slips', 'slip_id', 'P50_PRONO_LIVE_SOURCE', 'P50_PRONO_LIVE_PAYOUT_MULTIPLIER', 'p50_prono_live_sessions', 'p50_prono_is_live_question', 'live_session_id', 'event_url', 'gift_photo_url', 'gift_text'] as $needle) {
     if (!str_contains($core, $needle)) {
         fwrite(STDERR, "CORE missing $needle\n");
         exit(1);
@@ -62,7 +62,7 @@ foreach (['prono-vote.php', 'prono-status-publish.php', 'prono-results.php', 'Sa
 }
 
 $admin = file_get_contents($root.'/admin-pronostics.html');
-foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'prono-admin-profiles.php', 'fiProfileList', 'loadFiProfiles', 'admin-membres.html', 'loadMembers', 'membersList', 'key|label|cote', 'stake', 'authGate', 'prono-daily.php', 'coverImageUrl', 'genDailyBtn', 'publishDailyBtn', 'people_influenceurs', 'data-theme-save', 'Les 3 thèmes', 'Prono50 live', 'liveActivateBtn', 'prono-live.php'] as $needle) {
+foreach (['voteHours', 'measureAt', 'prono-admin-list.php', 'prono-admin-profiles.php', 'fiProfileList', 'loadFiProfiles', 'admin-membres.html', 'loadMembers', 'membersList', 'key|label|cote', 'stake', 'authGate', 'prono-daily.php', 'coverImageUrl', 'genDailyBtn', 'publishDailyBtn', 'people_influenceurs', 'data-theme-save', 'Les 3 thèmes', 'Prono50 live', 'liveActivateBtn', 'prono-live.php', 'liveEventUrl', 'liveGiftPhoto', 'Cadeau du soir'] as $needle) {
     if (!str_contains($admin, $needle)) {
         fwrite(STDERR, "ADMIN-UI missing $needle\n");
         exit(1);
@@ -155,7 +155,7 @@ foreach (['adminMembersOpen', "adminOpen('members')"] as $needle) {
 }
 
 $live = file_get_contents($root.'/api/prono-live.php');
-foreach (["action === 'activate'", "action === 'deactivate'", 'saveQuestion', 'P50_PRONO_LIVE_SOURCE', 'livePayoutMultiplier'] as $needle) {
+foreach (["action === 'activate'", "action === 'deactivate'", 'saveQuestion', 'saveSession', 'P50_PRONO_LIVE_SOURCE', 'livePayoutMultiplier', 'event_url', 'gift_photo_url', 'gift_text'] as $needle) {
     if (!str_contains($live, $needle)) {
         fwrite(STDERR, "LIVE-API missing $needle\n");
         exit(1);

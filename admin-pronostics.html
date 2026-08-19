@@ -79,7 +79,22 @@ button.ghost{background:#0a0d0a;color:#f6f8f4;border-color:#293129;margin-top:8p
         <input id="liveContext" placeholder="Match, live, soirée…">
       </div>
     </div>
+    <label>Lien de l’événement</label>
+    <input id="liveEventUrl" placeholder="https://… TikTok, YouTube, Instagram…">
+    <label>Cadeau</label>
+    <select id="liveGiftKind">
+      <option value="soir" selected>Cadeau du soir</option>
+      <option value="jour">Cadeau du jour</option>
+    </select>
+    <label>Photo du cadeau</label>
+    <input id="liveGiftPhoto" placeholder="https://…">
+    <img id="liveGiftPreview" class="batch-cover" alt="" hidden>
+    <label>Lien du cadeau</label>
+    <input id="liveGiftUrl" placeholder="https://…">
+    <label>Texte du cadeau</label>
+    <textarea id="liveGiftText" rows="3" placeholder="Ce qui est offert, comment le récupérer…"></textarea>
     <div class="batch-actions">
+      <button type="button" id="liveSaveSessionBtn">Enregistrer</button>
       <button type="button" id="liveActivateBtn">Activer</button>
       <button type="button" class="ghost" id="liveDeactivateBtn">Couper</button>
       <button type="button" class="ghost" id="liveRefreshBtn">Rafraîchir</button>
@@ -915,8 +930,23 @@ async function loadLiveAdmin(){
     status.style.color=active?'#b7ff00':'';
     const title=document.getElementById('liveTitle');
     const context=document.getElementById('liveContext');
-    if(title && session && !title.value) title.value=session.title||'';
-    if(context && session && !context.value) context.value=session.context||'';
+    const eventUrl=document.getElementById('liveEventUrl');
+    const giftKind=document.getElementById('liveGiftKind');
+    const giftPhoto=document.getElementById('liveGiftPhoto');
+    const giftUrl=document.getElementById('liveGiftUrl');
+    const giftText=document.getElementById('liveGiftText');
+    if(title) title.value=session?session.title||'':'';
+    if(context) context.value=session?session.context||'':'';
+    if(eventUrl) eventUrl.value=session?session.eventUrl||'':'';
+    if(giftKind) giftKind.value=session&&session.giftKind==='jour'?'jour':'soir';
+    if(giftPhoto) giftPhoto.value=session?session.giftPhoto||'':'';
+    if(giftUrl) giftUrl.value=session?session.giftUrl||'':'';
+    if(giftText) giftText.value=session?session.giftText||'':'';
+    const preview=document.getElementById('liveGiftPreview');
+    if(preview){
+      const src=session&&session.giftPhoto?String(session.giftPhoto):'';
+      if(src){preview.src=src;preview.hidden=false;}else{preview.hidden=true;preview.removeAttribute('src');}
+    }
     const items=Array.isArray(data.items)?data.items:[];
     if(!items.length){
       list.innerHTML='Aucun prono live pour cette session.';
@@ -941,6 +971,11 @@ function livePayload(extra){
   return {
     sessionTitle:document.getElementById('liveTitle')?.value?.trim()||'',
     sessionContext:document.getElementById('liveContext')?.value?.trim()||'',
+    eventUrl:document.getElementById('liveEventUrl')?.value?.trim()||'',
+    giftKind:document.getElementById('liveGiftKind')?.value||'soir',
+    giftPhotoUrl:document.getElementById('liveGiftPhoto')?.value?.trim()||'',
+    giftUrl:document.getElementById('liveGiftUrl')?.value?.trim()||'',
+    giftText:document.getElementById('liveGiftText')?.value?.trim()||'',
     ...(extra||{})
   };
 }
@@ -955,9 +990,18 @@ async function liveAction(body){
     if(msg){msg.classList.add('err');msg.textContent=e.message;}
   }
 }
+document.getElementById('liveSaveSessionBtn')?.addEventListener('click',()=>liveAction({action:'saveSession',...livePayload()}));
 document.getElementById('liveActivateBtn')?.addEventListener('click',()=>liveAction({action:'activate',...livePayload()}));
 document.getElementById('liveDeactivateBtn')?.addEventListener('click',()=>liveAction({action:'deactivate'}));
 document.getElementById('liveRefreshBtn')?.addEventListener('click',loadLiveAdmin);
+document.getElementById('liveGiftPhoto')?.addEventListener('input',()=>{
+  const url=document.getElementById('liveGiftPhoto').value.trim();
+  const img=document.getElementById('liveGiftPreview');
+  if(!img)return;
+  if(!url||!/^https?:\/\//i.test(url)){img.hidden=true;img.removeAttribute('src');return;}
+  img.hidden=false;img.src=url;
+  img.onerror=()=>{img.hidden=true;};
+});
 document.getElementById('liveSaveQuestionBtn')?.addEventListener('click',()=>{
   liveAction({
     action:'saveQuestion',

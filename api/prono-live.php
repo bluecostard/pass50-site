@@ -82,6 +82,9 @@ function p50_prono_live_post(): never {
     $action = trim((string)($input['action'] ?? ''));
     $pdo = db();
 
+    if ($action === 'saveSession') {
+        p50_prono_live_save_session($pdo, $user, $input);
+    }
     if ($action === 'activate') {
         p50_prono_live_activate($pdo, $user, $input);
     }
@@ -97,36 +100,45 @@ function p50_prono_live_post(): never {
     json_response(['error' => 'Action invalide.'], 400);
 }
 
+function p50_prono_live_write_session_meta(PDO $pdo, string $id, array $meta): void {
+    $pdo->prepare('UPDATE p50_prono_live_sessions
+      SET title=?, context_text=?, event_url=?, gift_kind=?, gift_photo_url=?, gift_url=?, gift_text=?
+      WHERE id=?')
+        ->execute([
+            $meta['title'],
+            $meta['context'],
+            $meta['event_url'],
+            $meta['gift_kind'],
+            $meta['gift_photo_url'],
+            $meta['gift_url'],
+            $meta['gift_text'],
+            $id,
+        ]);
+}
+
 function p50_prono_live_ensure_session(PDO $pdo, array $user, array $input): array {
-    $title = trim((string)($input['sessionTitle'] ?? $input['eventTitle'] ?? ''));
-    $context = trim((string)($input['sessionContext'] ?? $input['eventContext'] ?? ''));
-    if ($title === '' && trim((string)($input['action'] ?? '')) !== 'saveQuestion') {
-        $title = trim((string)($input['title'] ?? ''));
-        if ($context === '') $context = trim((string)($input['context'] ?? ''));
-    }
     $current = p50_prono_live_latest_session($pdo);
+    $meta = p50_prono_live_session_meta($input, $current);
     if ($current && in_array((string)$current['status'], ['draft', 'active'], true)) {
-        if ($title !== '' || $context !== '') {
-            $pdo->prepare('UPDATE p50_prono_live_sessions SET title=?, context_text=? WHERE id=?')
-                ->execute([
-                    $title !== '' ? mb_substr($title, 0, 180) : (string)$current['title'],
-                    $context !== '' ? mb_substr($context, 0, 500) : (string)$current['context_text'],
-                    (string)$current['id'],
-                ]);
-            $fresh = $pdo->prepare('SELECT * FROM p50_prono_live_sessions WHERE id=? LIMIT 1');
-            $fresh->execute([(string)$current['id']]);
-            $row = $fresh->fetch();
-            if ($row) return $row;
-        }
-        return $current;
+        p50_prono_live_write_session_meta($pdo, (string)$current['id'], $meta);
+        $fresh = $pdo->prepare('SELECT * FROM p50_prono_live_sessions WHERE id=? LIMIT 1');
+        $fresh->execute([(string)$current['id']]);
+        $row = $fresh->fetch();
+        return $row ?: $current;
     }
     $id = p50_prono_uuid();
-    $pdo->prepare('INSERT INTO p50_prono_live_sessions(id,title,context_text,status,activated_by)
-      VALUES(?,?,?,?,?)')
+    $pdo->prepare('INSERT INTO p50_prono_live_sessions
+      (id,title,context_text,event_url,gift_kind,gift_photo_url,gift_url,gift_text,status,activated_by)
+      VALUES(?,?,?,?,?,?,?,?,?,?)')
         ->execute([
             $id,
-            $title !== '' ? mb_substr($title, 0, 180) : 'Prono50 live',
-            mb_substr($context, 0, 500),
+            $meta['title'],
+            $meta['context'],
+            $meta['event_url'],
+            $meta['gift_kind'],
+            $meta['gift_photo_url'],
+            $meta['gift_url'],
+            $meta['gift_text'],
             'draft',
             (string)$user['id'],
         ]);
@@ -135,6 +147,12 @@ function p50_prono_live_ensure_session(PDO $pdo, array $user, array $input): arr
     $row = $stmt->fetch();
     if (!$row) json_response(['error' => 'Session Prono50 live introuvable.'], 500);
     return $row;
+}
+
+function p50_prono_live_save_session(PDO $pdo, array $user, array $input): never {
+    $session = p50_prono_live_ensure_session($pdo, $user, $input);
+    $rows = p50_prono_live_questions($pdo, (string)$session['id'], false);
+    json_response(p50_prono_live_payload($pdo, $session, $rows, $user, true) + ['message' => 'Événement et cadeau enregistrés.']);
 }
 
 function p50_prono_live_activate(PDO $pdo, array $user, array $input): never {

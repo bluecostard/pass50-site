@@ -142,7 +142,7 @@ function installPronoTabs(){
   const view=params.get('view');
   const initial=view==='coules'?'coules':(view==='live'?'live':'pronos');
   setMode(initial,false);
-  window.PASS50_PRONOSTICS_COULES={version:'1.1',setMode};
+  window.PASS50_PRONOSTICS_COULES={version:'1.2',setMode};
   loadLiveModule();
   return true;
 }
@@ -150,9 +150,9 @@ function installPronoTabs(){
 function loadLiveModule(){
   if(window.__pass50PronoLiveTabV1||document.querySelector('script[data-pass50-prono-live-tab]'))return;
   const script=document.createElement('script');
-  script.src='./pronostics-live-tab-v1.js?v=1.0';
+  script.src='./pronostics-live-tab-v1.js?v=1.1';
   script.async=false;
-  script.dataset.pass50PronoLiveTab='1.0';
+  script.dataset.pass50PronoLiveTab='1.1';
   document.head.appendChild(script);
 }
 

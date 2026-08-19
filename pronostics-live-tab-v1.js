@@ -39,6 +39,19 @@ function showToast(msg){
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2800);
 }
+function installStyles(){
+  if(document.getElementById('p50LivePronoStyles'))return;
+  const style=document.createElement('style');
+  style.id='p50LivePronoStyles';
+  style.textContent=`
+    .p50-live-event{display:block;margin:0 0 12px;padding:14px 16px;border-radius:16px;border:1px solid rgba(183,255,0,.45);background:linear-gradient(135deg,rgba(183,255,0,.16),rgba(113,255,0,.06));color:#b7ff00;font-weight:900;text-align:center}
+    .p50-live-gift{margin-bottom:14px}
+    .p50-live-gift h3{color:#b7ff00;margin-top:8px}
+    .p50-live-gift p{margin:8px 0 12px;font-size:14px;line-height:1.45;font-weight:650}
+    .p50-live-gift .btn{display:inline-flex;width:auto;padding:10px 16px}
+  `;
+  document.head.appendChild(style);
+}
 function root(){return document.getElementById('p50LivePronoRoot');}
 function isLiveView(){return document.body.classList.contains('p50-prono-live-view');}
 
@@ -63,6 +76,24 @@ function potentialPayout(){
   const odd=combinedOdd();
   if(odd<=0)return 0;
   return Math.max(1,Math.round(currentStake()*odd*LIVE_MULT));
+}
+
+function eventGiftHtml(session){
+  const eventUrl=String(session?.eventUrl||'').trim();
+  const photo=String(session?.giftPhoto||'').trim();
+  const giftUrl=String(session?.giftUrl||'').trim();
+  const text=String(session?.giftText||'').trim();
+  const kind=session?.giftKind==='jour'?'Cadeau du jour':'Cadeau du soir';
+  const event=eventUrl
+    ?`<a class="p50-live-event" href="${esc(eventUrl)}" target="_blank" rel="noopener noreferrer">Événement</a>`
+    :'';
+  if(!photo&&!giftUrl&&!text){
+    return event;
+  }
+  const img=photo?`<img class="cover" src="${esc(photo)}" alt="" loading="lazy">`:'';
+  const copy=text?`<p>${esc(text)}</p>`:'';
+  const link=giftUrl?`<a class="btn primary" href="${esc(giftUrl)}" target="_blank" rel="noopener noreferrer">Ouvrir</a>`:'';
+  return `${event}<article class="pub-card p50-live-gift">${img}<h3>${kind}</h3>${copy}${link}</article>`;
 }
 
 function render(){
@@ -95,7 +126,7 @@ function render(){
       <div class="pub-opts">${opts}</div>
     </article>`;
   }).join(''):'';
-  el.innerHTML=cards;
+  el.innerHTML=eventGiftHtml(state.session)+cards;
   syncSlip();
 }
 
@@ -271,6 +302,7 @@ async function refresh(){
 function boot(){
   const el=root();
   if(!el){setTimeout(boot,120);return;}
+  installStyles();
   el.addEventListener('click',onRootClick);
   refresh();
   setInterval(()=>{

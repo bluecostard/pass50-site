@@ -166,9 +166,9 @@
   function loadPronoCoulesTab() {
     if (window.__pass50PronosticsCoulesTabV1 || document.querySelector('script[data-pass50-prono-coules-tab]')) return;
     const script = document.createElement('script');
-    script.src = './pronostics-coules-tab-v1.js?v=1.1';
+    script.src = './pronostics-coules-tab-v1.js?v=1.2';
     script.async = false;
-    script.dataset.pass50PronoCoulesTab = '1.1';
+    script.dataset.pass50PronoCoulesTab = '1.2';
     document.head.appendChild(script);
   }
 
