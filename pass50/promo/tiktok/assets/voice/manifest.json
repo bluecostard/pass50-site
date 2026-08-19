@@ -5,8 +5,19 @@
     "screenCaptures": "pass50/promo/tiktok/assets/captures/"
   },
   "acceptedFormats": {
-    "video": ["mp4", "mov", "webm", "m4v"],
-    "audio": ["mp3", "m4a", "wav", "aac", "ogg"]
+    "video": [
+      "mp4",
+      "mov",
+      "webm",
+      "m4v"
+    ],
+    "audio": [
+      "mp3",
+      "m4a",
+      "wav",
+      "aac",
+      "ogg"
+    ]
   },
   "preferredFormat": "mp4",
   "tracks": [
@@ -19,7 +30,8 @@
         "01-live-liens-verifies.mp3",
         "01-live-liens-verifies.m4a"
       ],
-      "status": "pending"
+      "status": "received",
+      "receivedFile": "assets/voice/01-live-liens-verifies.mp4"
     },
     {
       "id": "02-anti-faux-comptes",
@@ -30,7 +42,8 @@
         "02-anti-faux-comptes.mp3",
         "02-anti-faux-comptes.m4a"
       ],
-      "status": "pending"
+      "status": "received",
+      "receivedFile": "assets/voice/02-anti-faux-comptes.mp4"
     },
     {
       "id": "03-classement-2h",
@@ -45,9 +58,21 @@
     }
   ],
   "optionalHooks": [
-    { "id": "hook-live-01", "text": "Tu rates tous les lives de ton influenceur ?", "status": "pending" },
-    { "id": "hook-faux-01", "text": "Encore un faux compte à ton nom ?", "status": "pending" },
-    { "id": "hook-classement-01", "text": "Qui domine la scène ivoirienne en ce moment ?", "status": "pending" }
+    {
+      "id": "hook-live-01",
+      "text": "Tu rates tous les lives de ton influenceur ?",
+      "status": "pending"
+    },
+    {
+      "id": "hook-faux-01",
+      "text": "Encore un faux compte à ton nom ?",
+      "status": "pending"
+    },
+    {
+      "id": "hook-classement-01",
+      "text": "Qui domine la scène ivoirienne en ce moment ?",
+      "status": "pending"
+    }
   ],
   "ingestCommand": "python3 pass50/promo/tiktok/tools/ingest_user_media.py --file CHEMIN.mp4",
   "postProcessing": [
