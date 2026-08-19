@@ -1,0 +1,62 @@
+{
+  "version": "CAPTURES-V3",
+  "url": "https://pass50.store",
+  "count": 22,
+  "files": [
+    "01-header-brand.png",
+    "02-hero-buzz.png",
+    "03-filters-period.png",
+    "03b-live-header.png",
+    "04-rank-card-1.png",
+    "04-rank-card-2.png",
+    "04-rank-card-3.png",
+    "05-profile-fiche.png",
+    "08-top10-section.png",
+    "09-top10-mini-1.png",
+    "09-top10-mini-2.png",
+    "09-top10-mini-3.png",
+    "09-top10-mini-4.png",
+    "10-tendance.png",
+    "11-modal-top50.png",
+    "11b-top50-row-1.png",
+    "11b-top50-row-2.png",
+    "11b-top50-row-3.png",
+    "13-scroll-900.png",
+    "14-scroll-1400.png",
+    "15-scroll-2000.png",
+    "16-scroll-2600.png"
+  ],
+  "sequences": {
+    "02-anti-faux-comptes": [
+      "02-hero-buzz.png",
+      "04-rank-card-1.png",
+      "05-profile-fiche.png",
+      "04-rank-card-2.png",
+      "08-top10-section.png",
+      "09-top10-mini-1.png",
+      "09-top10-mini-2.png",
+      "11-modal-top50.png",
+      "11b-top50-row-1.png",
+      "11b-top50-row-2.png",
+      "10-tendance.png",
+      "04-rank-card-3.png",
+      "01-header-brand.png"
+    ],
+    "03-classement-2h": [
+      "03-filters-period.png",
+      "04-rank-card-1.png",
+      "04-rank-card-2.png",
+      "09-top10-mini-1.png",
+      "09-top10-mini-2.png",
+      "09-top10-mini-3.png",
+      "08-top10-section.png",
+      "11-modal-top50.png",
+      "11b-top50-row-1.png",
+      "13-scroll-900.png",
+      "14-scroll-1400.png",
+      "15-scroll-2000.png",
+      "16-scroll-2600.png",
+      "02-hero-buzz.png"
+    ]
+  }
+}
