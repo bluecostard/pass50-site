@@ -27,6 +27,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'dez-cocrane225',
     'census-roseline-layo',
     'census-rach-makosso',
+    'census-ange-morel',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -196,6 +197,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'dez-cocrane225|tiktok'=>'https://www.tiktok.com/@dezcocrane.225',
         'census-roseline-layo|tiktok'=>'https://www.tiktok.com/@roselinelayoofficiel',
         'census-rach-makosso|tiktok'=>'https://www.tiktok.com/@rach_makosso1',
+        'census-ange-morel|tiktok'=>'https://www.tiktok.com/@angemorel4',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
@@ -265,6 +267,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'dez-cocrane225','name'=>'Dez Cocrane 225','handle'=>'dezcocrane.225'],
         ['id'=>'census-roseline-layo','name'=>'Roseline Layo','handle'=>'roselinelayoofficiel'],
         ['id'=>'census-rach-makosso','name'=>'Rach Makosso','handle'=>'rach_makosso1'],
+        ['id'=>'census-ange-morel','name'=>'Ange-Morel Your Eyes','handle'=>'angemorel4'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
