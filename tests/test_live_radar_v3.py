@@ -148,6 +148,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('rach_makosso1', source)
         self.assertIn("'census-ange-morel'", source)
         self.assertIn('angemorel4', source)
+        self.assertIn("'census-laguepe'", source)
+        self.assertIn('laguepe03', source)
         self.assertIn('coachhamond', source)
         self.assertIn("'census-observateur-ebene'", source)
         self.assertIn('function p50_live_v4_is_p0_youtube', source)
