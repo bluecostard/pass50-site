@@ -10,12 +10,32 @@ Kit de production pour **12 vidéos/jour**, toutes les **2 h**, sur **30 jours**
 | [`formats.json`](formats.json) | 12 formats × créneaux horaires (Abidjan) |
 | [`calendar-30d.csv`](calendar-30d.csv) | Calendrier complet 360 lignes |
 | [`scripts/day-01.json` … `day-07.json`](scripts/) | 12 scripts/jour **remplis** (30 profils seed) |
-| [`data/top50-seed.json`](data/top50-seed.json) | 30 profils + picks promo + rotations J1–J7 |
+| [`output/day-NN/`](output/) | **MP4 rendus** (auto ou après CapCut) |
+| [`capcut/`](capcut/) | Spec template + CSV export CapCut |
+| [`render/README.md`](render/README.md) | Rendu auto Pillow + ffmpeg |
+| [`data/top50-seed.json`](data/top50-seed.json) | 30 profils + photos + rotations J1–J7 |
 | [`scripts/template.json`](scripts/template.json) | Modèle + placeholders |
 | [`export-spec.json`](export-spec.json) | Contrat JSON pour export auto depuis PASS50 |
 | [`tools/generate_calendar.py`](tools/generate_calendar.py) | Régénère le CSV |
 | [`tools/extract_seed_profiles.py`](tools/extract_seed_profiles.py) | Sync profils depuis `index.html` |
 | [`tools/generate_scripts.py`](tools/generate_scripts.py) | Régénère scripts J1–J7 |
+| [`tools/export_capcut_batch.py`](tools/export_capcut_batch.py) | CSV CapCut par jour |
+| [`tools/render_videos.py`](tools/render_videos.py) | **Génère les MP4** depuis les scripts |
+
+## Vidéos prêtes
+
+```bash
+# Générer 12 MP4 pour le jour 1 (≈ 1 min)
+python3 pass50/promo/tiktok/tools/render_videos.py --day 1 --all-slots
+
+# Semaine 1 complète (84 vidéos)
+for d in $(seq 1 7); do python3 pass50/promo/tiktok/tools/render_videos.py --day $d --all-slots; done
+```
+
+Sortie : `output/day-01/day-01_slot-01_top3_matin.mp4` etc.  
+Calendrier mis à jour (`status=rendered`, `videoFile`).
+
+**CapCut (optionnel)** — affiner musique / voix off : voir [`capcut/README.md`](capcut/README.md).
 
 ## Profils intégrés (seed)
 

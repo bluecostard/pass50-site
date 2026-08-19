@@ -47,6 +47,8 @@ class TikTokPromoKitTests(unittest.TestCase):
         self.assertIn("biggestGainer", top["promoPicks"])
         self.assertIn("dayRotations", top)
         self.assertEqual(len(top["dayRotations"]), 7)
+        with_photo = [p for p in top["profiles"] if p.get("photoUrl")]
+        self.assertGreaterEqual(len(with_photo), 3)
 
     def test_calendar_generator(self):
         subprocess.run(
@@ -59,6 +61,18 @@ class TikTokPromoKitTests(unittest.TestCase):
             check=True,
             cwd=ROOT,
         )
+        if (PROMO / "output" / "day-01").exists():
+            subprocess.run(
+                [
+                    "python3",
+                    str(PROMO / "tools" / "render_videos.py"),
+                    "--sync-calendar",
+                    "--day",
+                    "7",
+                ],
+                check=True,
+                cwd=ROOT,
+            )
         with (PROMO / "calendar-30d.csv").open(encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
         self.assertEqual(len(rows), 360)
@@ -71,6 +85,41 @@ class TikTokPromoKitTests(unittest.TestCase):
         spec = json.loads((PROMO / "export-spec.json").read_text(encoding="utf-8"))
         self.assertIn("responseShape", spec)
         self.assertIn("fieldMapping", spec)
+
+    def test_capcut_batch_export(self):
+        subprocess.run(
+            ["python3", str(PROMO / "tools" / "export_capcut_batch.py"), "--day", "1"],
+            check=True,
+            cwd=ROOT,
+        )
+        csv_path = PROMO / "capcut" / "exports" / "day-01-capcut.csv"
+        self.assertTrue(csv_path.exists())
+        with csv_path.open(encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        self.assertEqual(len(rows), 12)
+        self.assertIn("Emma Lohoues", rows[0]["line2"])
+        self.assertTrue(rows[0]["videoFile"].endswith(".mp4"))
+
+    def test_render_smoke(self):
+        out_dir = PROMO / "output" / "_test"
+        if out_dir.exists():
+            for p in out_dir.glob("*.mp4"):
+                p.unlink()
+        subprocess.run(
+            [
+                "python3",
+                str(PROMO / "tools" / "render_videos.py"),
+                "--day",
+                "1",
+                "--slot",
+                "1",
+            ],
+            check=True,
+            cwd=ROOT,
+        )
+        mp4 = PROMO / "output" / "day-01" / "day-01_slot-01_top3_matin.mp4"
+        self.assertTrue(mp4.exists())
+        self.assertGreater(mp4.stat().st_size, 10_000)
 
 
 if __name__ == "__main__":

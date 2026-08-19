@@ -1,5 +1,5 @@
 {
-  "version": "TOP50-SEED-V1.1",
+  "version": "TOP50-SEED-V1.2",
   "source": "index.html seedProfiles · ordre classement 24H (base)",
   "periodDefault": "24H",
   "profileCount": 30,
@@ -9,240 +9,330 @@
       "id": "emma",
       "name": "Emma Lohoues",
       "handle": "@emmalohouesofficial",
+      "initials": "EL",
       "score24H": 88,
-      "delta": 8
+      "delta": 8,
+      "photoUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d4/Emma_lohoues.jpg",
+      "photoCandidateUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d4/Emma_lohoues.jpg"
     },
     {
       "rank": 2,
       "id": "lopere",
       "name": "Lo Père Daloa",
       "handle": "@lopere_daloa",
+      "initials": "LP",
       "score24H": 93,
-      "delta": 15
+      "delta": 15,
+      "photoUrl": "https://organe.pressecotedivoire.fr/img/posts/2024/02/1707843026-19055.jpg",
+      "photoCandidateUrl": "https://organe.pressecotedivoire.fr/img/posts/2024/02/1707843026-19055.jpg"
     },
     {
       "rank": 3,
       "id": "paulyves",
       "name": "Paul Yves Ettien",
       "handle": "@paulyvesettien",
+      "initials": "PY",
       "score24H": 89,
-      "delta": 7
+      "delta": 7,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 4,
       "id": "apoutchou",
       "name": "Apoutchou National",
       "handle": "@apoutchou_national1",
+      "initials": "AN",
       "score24H": 85,
-      "delta": 4
+      "delta": 4,
+      "photoUrl": "https://www.afrique-sur7.fr/wp-content/uploads/2024/04/435066119_954580733335041_3248310947409743273_n.jpg",
+      "photoCandidateUrl": "https://www.afrique-sur7.fr/wp-content/uploads/2024/04/435066119_954580733335041_3248310947409743273_n.jpg"
     },
     {
       "rank": 5,
       "id": "maabio",
       "name": "Maabio",
       "handle": "@biodetoxminceur",
+      "initials": "M",
       "score24H": 81,
-      "delta": -2
+      "delta": -2,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 6,
       "id": "teknoush",
       "name": "Teknoush",
       "handle": "@teknoushhh",
+      "initials": "T",
       "score24H": 85,
-      "delta": 5
+      "delta": 5,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 7,
       "id": "inadebelle",
       "name": "INadeBelle",
       "handle": "@inadebelle",
+      "initials": "I",
       "score24H": 81,
-      "delta": 2
+      "delta": 2,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 8,
       "id": "kevine",
       "name": "Kévine Obin",
       "handle": "@kevineobin",
+      "initials": "KO",
       "score24H": 77,
-      "delta": 6
+      "delta": 6,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 9,
       "id": "edith",
       "name": "Edith Brou Bleu",
       "handle": "@edithbrou",
+      "initials": "EB",
       "score24H": 72,
-      "delta": 3
+      "delta": 3,
+      "photoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Edith_Brou_1.jpg/960px-Edith_Brou_1.jpg",
+      "photoCandidateUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Edith_Brou_1.jpg/960px-Edith_Brou_1.jpg"
     },
     {
       "rank": 10,
       "id": "eunice",
       "name": "Eunice Zunon",
       "handle": "@eunice.zunon",
+      "initials": "EZ",
       "score24H": 68,
-      "delta": -3
+      "delta": -3,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 11,
       "id": "yvidero",
       "name": "Yvidero",
       "handle": "@yvideroofficiel",
+      "initials": "Y",
       "score24H": 73,
-      "delta": 1
+      "delta": 1,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 12,
       "id": "braising",
       "name": "Braising Girl",
       "handle": "@braisinggirl",
+      "initials": "BG",
       "score24H": 69,
-      "delta": 4
+      "delta": 4,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 13,
       "id": "tma",
       "name": "TMA Crush",
       "handle": "@tmacrush_officiel",
+      "initials": "TC",
       "score24H": 66,
-      "delta": 8
+      "delta": 8,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 14,
       "id": "ivoriandoll",
       "name": "Ivorian Doll",
       "handle": "@ivoriandoll",
+      "initials": "ID",
       "score24H": 62,
-      "delta": 2
+      "delta": 2,
+      "photoUrl": "https://ugc.production.linktr.ee/11f929ae-cc84-4d76-8f3a-171e6c067f09_256CCD2A-60DE-4FDD-9DD1-0BA609167364.jpeg?io=true&size=avatar-v3_0",
+      "photoCandidateUrl": "https://ugc.production.linktr.ee/11f929ae-cc84-4d76-8f3a-171e6c067f09_256CCD2A-60DE-4FDD-9DD1-0BA609167364.jpeg?io=true&size=avatar-v3_0"
     },
     {
       "rank": 15,
       "id": "laetitia",
       "name": "Laetitia Ky",
       "handle": "@laetitiaky",
+      "initials": "LK",
       "score24H": 68,
-      "delta": -1
+      "delta": -1,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 16,
       "id": "adopharaon",
       "name": "Ado Pharaon",
       "handle": "@adopharaon",
+      "initials": "AP",
       "score24H": 65,
-      "delta": 5
+      "delta": 5,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 17,
       "id": "ktgorique",
       "name": "KT Gorique",
       "handle": "@ktgorique",
+      "initials": "KG",
       "score24H": 61,
-      "delta": 4
+      "delta": 4,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 18,
       "id": "mamiwatta",
       "name": "Mami Watta",
       "handle": "@mamiwatta",
+      "initials": "MW",
       "score24H": 58,
-      "delta": 3
+      "delta": 3,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 19,
       "id": "keiona",
       "name": "Keiona",
       "handle": "@keiona",
+      "initials": "K",
       "score24H": 54,
-      "delta": -2
+      "delta": -2,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 20,
       "id": "roze",
       "name": "Rōze Traore",
       "handle": "@rozetraore",
+      "initials": "RT",
       "score24H": 59,
-      "delta": 2
+      "delta": 2,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 21,
       "id": "nader",
       "name": "Nader Fakhry",
       "handle": "@naderfakhry",
+      "initials": "NF",
       "score24H": 55,
-      "delta": 1
+      "delta": 1,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 22,
       "id": "princeedja",
       "name": "Prince Edja",
       "handle": "@princeedja",
+      "initials": "PE",
       "score24H": 51,
-      "delta": -1
+      "delta": -1,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 23,
       "id": "lagouteuse",
       "name": "La Goûteuse",
       "handle": "@lagouteuse",
+      "initials": "LG",
       "score24H": 47,
-      "delta": -4
+      "delta": -4,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 24,
       "id": "zeinab",
       "name": "Zeinab Bancé",
       "handle": "@zeinabbance",
+      "initials": "ZB",
       "score24H": 52,
-      "delta": -3
+      "delta": -3,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 25,
       "id": "mylene",
       "name": "Mylène Amon",
       "handle": "@myleneamon",
+      "initials": "MA",
       "score24H": 48,
-      "delta": -5
+      "delta": -5,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 26,
       "id": "thierry",
       "name": "Thierry Yaké",
       "handle": "@djtiktok",
+      "initials": "TY",
       "score24H": 44,
-      "delta": -2
+      "delta": -2,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 27,
       "id": "justecrepin",
       "name": "Juste Crépin",
       "handle": "@justecrepin",
+      "initials": "JC",
       "score24H": 41,
-      "delta": 1
+      "delta": 1,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 28,
       "id": "holy",
       "name": "Holy Sheilla",
       "handle": "@holysheilla",
+      "initials": "HS",
       "score24H": 38,
-      "delta": 2
+      "delta": 2,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 29,
       "id": "louissette",
       "name": "Cadic N’Guessan",
       "handle": "@misscadic",
+      "initials": "CN",
       "score24H": 44,
-      "delta": 6
+      "delta": 6,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     },
     {
       "rank": 30,
       "id": "hassan",
       "name": "Hassan Hayek",
       "handle": "@hassanhayek",
+      "initials": "HH",
       "score24H": 41,
-      "delta": 3
+      "delta": 3,
+      "photoUrl": "",
+      "photoCandidateUrl": ""
     }
   ],
   "promoPicks": {

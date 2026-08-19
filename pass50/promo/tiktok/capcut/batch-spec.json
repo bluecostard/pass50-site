@@ -1,0 +1,157 @@
+{
+  "version": "CAPCUT-BATCH-V1.0",
+  "product": "PASS50 TikTok Promo",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "aspectRatio": "9:16",
+    "backgroundColor": "#050705",
+    "safeMarginPx": 80
+  },
+  "brand": {
+    "accentColor": "#b7ff00",
+    "textColor": "#eef2ea",
+    "mutedColor": "#9da79b",
+    "wordmark": "PASS50",
+    "cta": "Lien en bio → pass50.store"
+  },
+  "templateMaster": {
+    "name": "PASS50-TikTok-Master-V1",
+    "layers": [
+      {
+        "id": "bg",
+        "type": "solid",
+        "color": "#050705",
+        "locked": true
+      },
+      {
+        "id": "hook",
+        "type": "text",
+        "position": { "x": 540, "y": 280, "anchor": "center" },
+        "fontSize": 64,
+        "fontWeight": 900,
+        "color": "#b7ff00",
+        "maxWidth": 920,
+        "field": "hook",
+        "durationHintSec": 2
+      },
+      {
+        "id": "title",
+        "type": "text",
+        "position": { "x": 540, "y": 420, "anchor": "center" },
+        "fontSize": 48,
+        "fontWeight": 800,
+        "color": "#eef2ea",
+        "field": "onScreen.0"
+      },
+      {
+        "id": "line1",
+        "type": "text",
+        "position": { "x": 540, "y": 560, "anchor": "center" },
+        "fontSize": 40,
+        "color": "#eef2ea",
+        "field": "onScreen.1"
+      },
+      {
+        "id": "line2",
+        "type": "text",
+        "position": { "x": 540, "y": 640, "anchor": "center" },
+        "fontSize": 40,
+        "color": "#eef2ea",
+        "field": "onScreen.2"
+      },
+      {
+        "id": "line3",
+        "type": "text",
+        "position": { "x": 540, "y": 720, "anchor": "center" },
+        "fontSize": 36,
+        "color": "#eef2ea",
+        "field": "onScreen.3"
+      },
+      {
+        "id": "line4",
+        "type": "text",
+        "position": { "x": 540, "y": 800, "anchor": "center" },
+        "fontSize": 36,
+        "color": "#9da79b",
+        "field": "onScreen.4"
+      },
+      {
+        "id": "photo1",
+        "type": "image",
+        "position": { "x": 540, "y": 1100, "size": 320, "shape": "circle" },
+        "field": "photo1Url",
+        "fallback": "initials"
+      },
+      {
+        "id": "photo2",
+        "type": "image",
+        "position": { "x": 280, "y": 1350, "size": 200, "shape": "circle" },
+        "field": "photo2Url",
+        "optional": true
+      },
+      {
+        "id": "photo3",
+        "type": "image",
+        "position": { "x": 800, "y": 1350, "size": 200, "shape": "circle" },
+        "field": "photo3Url",
+        "optional": true
+      },
+      {
+        "id": "wordmark",
+        "type": "text",
+        "position": { "x": 540, "y": 1680, "anchor": "center" },
+        "fontSize": 44,
+        "fontWeight": 900,
+        "static": "PASS50"
+      },
+      {
+        "id": "cta",
+        "type": "text",
+        "position": { "x": 540, "y": 1760, "anchor": "center" },
+        "fontSize": 28,
+        "color": "#b7ff00",
+        "static": "pass50.store"
+      }
+    ],
+    "transitions": {
+      "betweenLines": "fade",
+      "durationSec": 0.4
+    },
+    "subtitles": {
+      "source": "voiceover",
+      "style": "bold-white-outline",
+      "autoFromVoiceover": true
+    }
+  },
+  "formatOverrides": {
+    "live_alert": {
+      "accentBadge": "🔴 LIVE",
+      "photo1Scale": 1.2
+    },
+    "momentum": {
+      "accentBadge": "📈",
+      "extraAnimation": "arrow-up"
+    },
+    "poll": {
+      "extraLayer": "choice-numbers-1-2-3"
+    }
+  },
+  "batchWorkflow": [
+    "1. Exporter CSV : python3 pass50/promo/tiktok/tools/export_capcut_batch.py --day 1",
+    "2. CapCut → Créer projet 9:16 → dupliquer master 12× (1 par slot)",
+    "3. Coller textes depuis CSV (colonnes line1…line5, hook)",
+    "4. Importer photos depuis colonnes photo1…photo3 ou glisser depuis dossier assets/",
+    "5. Voix off : lire voiceover depuis CSV ou TTS CapCut",
+    "6. Musique : bibliothèque TikTok · instrumental · -18 LUFS approx",
+    "7. Exporter 1080×1920 · 30 fps · H.264 · nom = videoFile du CSV"
+  ],
+  "exportSettings": {
+    "resolution": "1080x1920",
+    "fps": 30,
+    "codec": "H.264",
+    "bitrateMbps": 8,
+    "audio": "AAC 128k"
+  }
+}

@@ -14,6 +14,32 @@ OUT = Path(__file__).resolve().parents[1] / "data" / "top50-seed.json"
 ROW_RE = re.compile(
     r"\['([^']+)','([^']+)','([^']+)','[^']*','[^']*','[^']*',\[[^\]]+\],(\d+),(-?\d+),\d+\]"
 )
+MEDIA_RE = re.compile(
+    r"(\w+):\{[^}]*?photoUrl:'([^']*)'[^}]*?(?:photoCandidateUrl:'([^']*)')?",
+    re.DOTALL,
+)
+INITIALS_RE = re.compile(r"\['([^']+)','([^']+)','([^']+)','([^']*)'")
+
+
+def _extract_media(text: str) -> dict[str, dict]:
+    """Lit PASS50_V6_MEDIA depuis index.html."""
+    media: dict[str, dict] = {}
+    block = text.split("const PASS50_V6_MEDIA=", 1)
+    if len(block) < 2:
+        return media
+    chunk = block[1].split("};", 1)[0]
+    for m in MEDIA_RE.finditer(chunk):
+        pid, photo_url, candidate = m.group(1), m.group(2), m.group(3) or ""
+        media[pid] = {
+            "photoUrl": photo_url or candidate,
+            "photoCandidateUrl": candidate or photo_url,
+        }
+    return media
+
+
+def _initials(name: str) -> str:
+    parts = re.findall(r"\b\w", name)
+    return "".join(parts[:2]).upper() or "??"
 
 
 def score_24h(base: int, index: int) -> int:
@@ -22,18 +48,23 @@ def score_24h(base: int, index: int) -> int:
 
 def main() -> None:
     text = INDEX.read_text(encoding="utf-8")
+    media = _extract_media(text)
     block = text.split("const seedProfiles=[", 1)[1].split("];", 1)[0]
     profiles = []
     for i, m in enumerate(ROW_RE.finditer(block)):
         pid, name, handle, base, delta = m.groups()
+        photos = media.get(pid, {})
         profiles.append(
             {
                 "rank": i + 1,
                 "id": pid,
                 "name": name,
                 "handle": handle,
+                "initials": _initials(name),
                 "score24H": score_24h(int(base), i),
                 "delta": int(delta),
+                "photoUrl": photos.get("photoUrl") or "",
+                "photoCandidateUrl": photos.get("photoCandidateUrl") or "",
             }
         )
 
@@ -44,7 +75,7 @@ def main() -> None:
     live_evening = profiles[1]  # Lo Père Daloa
 
     payload = {
-        "version": "TOP50-SEED-V1.1",
+        "version": "TOP50-SEED-V1.2",
         "source": "index.html seedProfiles · ordre classement 24H (base)",
         "periodDefault": "24H",
         "profileCount": len(profiles),
