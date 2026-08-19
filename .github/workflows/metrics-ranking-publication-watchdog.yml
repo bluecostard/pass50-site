@@ -47,6 +47,7 @@ jobs:
             */metrics-cron.php)
               APPLY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-cron.php"
               HISTORY_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-publication-apply-history-cron-v1.php"
+              RANKING_URL="${CRON_URL%/metrics-cron.php}/metrics-ranking-cron-v2.php"
               ;;
             *)
               echo "::error::PASS50_METRICS_CRON_URL doit se terminer par /metrics-cron.php"
@@ -64,6 +65,12 @@ jobs:
           esac
           case "$HISTORY_URL" in
             https://www.pass50.store/*) HISTORY_URL="https://pass50.store/${HISTORY_URL#https://www.pass50.store/}" ;;
+          esac
+          case "$RANKING_URL" in
+            http://*) RANKING_URL="https://${RANKING_URL#http://}" ;;
+          esac
+          case "$RANKING_URL" in
+            https://www.pass50.store/*) RANKING_URL="https://pass50.store/${RANKING_URL#https://www.pass50.store/}" ;;
           esac
 
           signed_post() {
@@ -183,7 +190,38 @@ jobs:
           fi
 
           if [ "$eligible" != "true" ]; then
+            blocked_reasons="$(jq -r '(.summary.reasons // []) | join(" ")' watchdog-preview.json)"
+            if echo "$blocked_reasons" | grep -Eq 'successful_run|candidate_non_empty|candidate_run_consistency|run_freshness'; then
+              echo "::warning::Candidat expérimental absent ou périmé — recalcul forcé MR-V1.0."
+              rank_body="$(jq -nc --arg dispatchId "${dispatch_base}-ranking-force" '{action:"calculate",dispatchId:$dispatchId,force:true}')"
+              rank_code="$(signed_post "$RANKING_URL" "$rank_body" watchdog-ranking-force.json || true)"
+              if [ "$rank_code" != "200" ]; then
+                echo "::error::Recalcul forcé HTTP $rank_code"
+                cat watchdog-ranking-force.json || true
+                exit 1
+              fi
+              jq -e '.ok == true and (.skipped // false) == false and (.runUuid // "") != ""' watchdog-ranking-force.json >/dev/null || {
+                echo "::error::Recalcul forcé sans runUuid."
+                cat watchdog-ranking-force.json || true
+                exit 1
+              }
+              preview_code="$(signed_post "$APPLY_URL" "$preview_body" watchdog-preview.json || true)"
+              if [ "$preview_code" != "200" ]; then
+                echo "::error::Preview après recalcul HTTP $preview_code"
+                cat watchdog-preview.json || true
+                exit 1
+              fi
+              jq -e '.ok == true' watchdog-preview.json >/dev/null
+              eligible="$(jq -r '.publicationEligible // .automaticPublicationEligible // false' watchdog-preview.json)"
+              mutations="$(jq -r '.summary.mutations // .totalMutations // 0' watchdog-preview.json)"
+              candidate_run="$(jq -r '.runUuid // empty' watchdog-preview.json)"
+              newer_candidate=true
+            fi
+          fi
+
+          if [ "$eligible" != "true" ]; then
             echo "::error::Candidat non eligible (mutations=$mutations, newer=$newer_candidate, stale=$stale). Intervention requise."
+            jq -r '.summary.reasons // [] | .[]' watchdog-preview.json 2>/dev/null || true
             exit 1
           fi
 
@@ -225,6 +263,7 @@ jobs:
             watchdog-probe.json
             watchdog-history.json
             watchdog-preview.json
+            watchdog-ranking-force.json
             watchdog-apply.json
           if-no-files-found: ignore
           retention-days: 30

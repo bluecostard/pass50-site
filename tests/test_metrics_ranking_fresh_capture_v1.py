@@ -29,6 +29,8 @@ class MetricsRankingFreshCaptureV2Tests(unittest.TestCase):
         self.assertIn("METRICS-RANKING-CRON-V2.0", CRON)
         self.assertIn("metrics-ranking-fresh-capture-v2-core.php", CRON)
         self.assertIn("p50_mr_v2_calculate_if_due", CRON)
+        self.assertIn("p50_mr_v2_force_calculate", CRON)
+        self.assertIn("force:true", CRON)
         self.assertIn("freshCaptureGateVersion", CRON)
         self.assertIn("freshCaptureOverride", CRON)
         self.assertIn("latestUsableCaptureRecordedAt", CRON)

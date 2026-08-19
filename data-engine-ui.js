@@ -565,22 +565,22 @@
     if(!preview?.config?.publicationEnabled)return 'flags publication désactivés';
     return preview?.status||'bloqué';
   }
-  function dePublishOnlyStale(preview){
+  function dePublishNeedsRecalculate(preview){
     const reasons=preview?.summary?.reasons||[];
     if(!reasons.length)return false;
+    const dataGates=new Set(['run_freshness','successful_run','candidate_run_consistency','candidate_non_empty']);
     return reasons.every(raw=>{
       const gates=String(raw).split(/:(.+)/)[1]||'';
       return gates.split(',').every(g=>{
         const key=g.trim();
-        return !key||key==='run_freshness'||key==='candidate_non_empty'||key==='successful_run'||key==='skipped'||key.startsWith('skipped');
+        return !key||dataGates.has(key)||key==='skipped'||key.startsWith('skipped');
       });
-    })&&reasons.some(raw=>String(raw).includes('run_freshness'));
+    });
   }
   async function dePublishRankingLab(button){await deAction(button,async()=>{
     let preview=await apiFetch('metrics-ranking-publication-apply.php');
-    // Le sélecteur 2H/24H… ne filtre pas la publication : toutes les périodes éligibles partent ensemble.
-    if(!preview.publicationEligible&&dePublishOnlyStale(preview)){
-      toast('Calcul expérimental trop ancien — recalcul automatique…');
+    if(!preview.publicationEligible&&dePublishNeedsRecalculate(preview)){
+      toast('Calcul expérimental absent ou périmé — recalcul automatique…');
       await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});
       DE.rankingLab=null;DE.rankingCalibration=null;
       await deLoadRankingLab(true);
