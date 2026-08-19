@@ -534,7 +534,7 @@ function hasPeriodScore(p,period=ui.period){
   return Number.isFinite(value)&&value>0;
 }
 function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&!p50IsDeletedProfileId(p&&p.id)&&hasPeriodScore(p);}
-function ranking(){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));}
+function ranking(){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name)||String(a.id).localeCompare(String(b.id)));}
 function completeRanking(){
   const visible=db.profiles.filter(p=>p.alive&&!p50IsDeletedProfileId(p.id)&&regionEligible(p));
   const classable=visible.filter(isClassableProfile).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));
@@ -973,10 +973,31 @@ function p50ProfileChartHtml(p){const bars=[31,38,42,36,51,59,63,70,66,79,85,sco
 function ageText(p){if(p.agePublic===false)return'Masqué';const confidence=Number(p?.quality?.birth||0),verifiedFacts=Array.isArray(p?.dataEngine?.verifiedFacts)?p.dataEngine.verifiedFacts:[],confirmed=p.ageStatus==='confirmed'||confidence>=90||verifiedFacts.includes('birth_date');if(confirmed&&p.birthDate){const b=new Date(p.birthDate+'T00:00:00'),n=new Date();if(!Number.isNaN(b.getTime())){let age=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))age--;return `${age} ans`;}}if(p.birthYear){const a=new Date().getFullYear()-Number(p.birthYear);return confirmed?`${a} ans`:`≈ ${a-1}–${a} ans`;}return'Non confirmé'}
 function publishedAtIso(){const meta=db.metricsRankingMeta||{};return meta.publishedAt||db.publishedAt||new Date().toISOString();}
 let _renderCoalesceTimer=null,_renderForceScoreMotion=false;
-let previousTop10Order=[];
+let previousTop10Order=[],previousTop3Order=[],bootTop3Lock=null,_bootSettleTimer=null;
+function compareRankProfiles(a,b,period=ui.period){
+  const diff=Number(b.scores?.[period]||0)-Number(a.scores?.[period]||0);
+  if(diff)return diff;
+  const nameCmp=a.name.localeCompare(b.name);
+  if(nameCmp)return nameCmp;
+  return String(a.id).localeCompare(String(b.id));
+}
+function heroTop3Profiles(){
+  const ranked=ranking();
+  const top=ranked.slice(0,3);
+  if(ui.bootSettling){
+    if(CLOUD.ready&&top.length>=3&&(!bootTop3Lock||bootTop3Lock.length!==3))bootTop3Lock=top.map(p=>p.id);
+    if(bootTop3Lock&&bootTop3Lock.length===3){
+      const byId=Object.fromEntries(ranked.map(p=>[p.id,p]));
+      const locked=bootTop3Lock.map(id=>byId[id]).filter(Boolean);
+      if(locked.length===3)return locked;
+    }
+  }
+  return top;
+}
 function endBootSettling(){
   if(!ui.bootSettling&&!document.documentElement.classList.contains('is-booting'))return;
   ui.bootSettling=false;
+  bootTop3Lock=null;
   document.documentElement.classList.remove('is-booting');
   requestAnimationFrame(()=>{setTimeout(()=>{ui.allowRankMotion=true;},900);});
 }
@@ -993,14 +1014,41 @@ function render(){
   const pub=$('#lastPublished');if(pub)pub.textContent='Mise à jour : '+new Date(publishedAtIso()).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});
   ui.scoreMotion=false;
   document.querySelectorAll('.avatar img:not([data-loaded="1"])').forEach(img=>{if(img.complete&&img.naturalWidth)markAvatarReady(img);});
-  if(CLOUD.ready||!CLOUD.enabled)endBootSettling();
+  if(CLOUD.ready||!CLOUD.enabled){
+    const delay=CLOUD.enabled?520:0;
+    if(!_bootSettleTimer){
+      _bootSettleTimer=setTimeout(()=>{_bootSettleTimer=null;endBootSettling();},delay);
+    }
+  }
 }
 window.scheduleRender=scheduleRender;
 function renderHeader(){const u=currentUser();$('#accountBtn').textContent=u?'Mon espace':'Se connecter';const isStaff=!!(u&&['owner','admin'].includes(String(u.role||'')));const unread=u?db.notifications.filter(n=>n.userId===u.id&&!n.read&&(isStaff||n.kind!=='admin_todo')).length:0;$('#unreadCount').textContent=unread?`(${unread})`:'';}
 function heroCard(p,index,scoreMotion=false){const u=userPrefs(),fav=u?.favorites.includes(p.id),fol=u?.following.includes(p.id),scoreClass=scoreMotion?'score score-animate':'score';return `<article class="rank-card ${['first','second','third'][index]}" data-profile="${p.id}"><div class="rank-num">${index+1}</div>${avatarHtml(p,'',{eager:true})}<div style="min-height:26px">${(Array.isArray(p.badges)?p.badges:[]).slice(0,2).map(b=>badgeHtml(b,p.id)).join(' ')}</div><div class="rank-name"><a href="/fi/${encodeURIComponent(p.id)}" data-fi-link="${safeAttr(p.id)}">${p.name.toUpperCase()}</a></div><div class="handle">${p.handle}</div><div class="score-row"><div class="score-block"><span class="score-label">TREND SCORE <span class="score-info" tabindex="0">i</span></span><div class="${scoreClass}" data-score="${score(p)}">${formatTrendScore(score(p))}</div></div><div class="${arrowClass(p)}">${arrow(p)}</div></div><div class="card-actions"><button class="btn fav ${fav?'on':''}" data-id="${p.id}">${fav?'★ Favori':'☆ Favori'}</button><button class="btn follow ${fol?'on':''}" data-id="${p.id}">${fol?'Ne plus suivre':'＋ Suivre'}</button></div></article>`}
+function heroIdentityKey(top){return top.map(p=>`${p.id}|${publicPhoto(p)}|${p.photoPosition||''}`).sort().join('||');}
+function heroOrderKey(top){return top.map(p=>p.id).join('||');}
+function patchHeroCard(card,p,index,scoreMotion=false){
+  if(!card)return;
+  card.className=`rank-card ${['first','second','third'][index]}`;
+  const rankEl=card.querySelector('.rank-num');if(rankEl)rankEl.textContent=String(index+1);
+  const scoreEl=card.querySelector('[data-score]');
+  if(scoreEl){scoreEl.dataset.score=score(p);scoreEl.textContent=formatTrendScore(score(p));if(scoreMotion)scoreEl.classList.add('score-animate');}
+  const arrowEl=card.querySelector('.score-row .up,.score-row .down,.score-row .flat');
+  if(arrowEl){arrowEl.className=arrowClass(p);arrowEl.innerHTML=arrow(p);}
+  const nameEl=card.querySelector('.rank-name a');if(nameEl)nameEl.textContent=String(p.name||'').toUpperCase();
+  const handleEl=card.querySelector('.handle');if(handleEl)handleEl.textContent=p.handle||'';
+}
+function syncHeroCards(buzz,top,scoreMotion=false,total=0){
+  const metricNode=buzz.querySelector('.hero-intro .metric')||buzz.querySelector('.metric');
+  if(metricNode){metricNode.textContent=`${total}/300`;if(scoreMotion)metricNode.classList.add('score-animate');}
+  const eyebrow=buzz.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent=`⚡ BUZZ NOW · ${periodLabels[ui.period]}`;
+  const updated=buzz.querySelector('.up');if(updated)updated.textContent=`↗ Classement actualisé • ${publishedTime()}`;
+  top.forEach((p,i)=>patchHeroCard(buzz.querySelector(`.rank-card[data-profile="${CSS.escape(String(p.id))}"]`),p,i,scoreMotion));
+  top.forEach(p=>{const card=buzz.querySelector(`.rank-card[data-profile="${CSS.escape(String(p.id))}"]`);if(card)buzz.appendChild(card);});
+}
 function publishedTime(){return new Date(publishedAtIso()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
 function renderHero(scoreMotion=false){
-  const r=ranking(),top=r.slice(0,3),total=Math.round(top.reduce((a,p)=>a+Number(score(p)||0),0));
+  if(!Array.isArray(previousTop3Order))previousTop3Order=[];
+  const top=heroTop3Profiles(),total=Math.round(top.reduce((a,p)=>a+Number(score(p)||0),0));
   const slides=[
     'assets/hero-media-1.jpg',
     'assets/hero-media-2.jpg',
@@ -1011,30 +1059,21 @@ function renderHero(scoreMotion=false){
   ];
   const slidePositions=['center center','center center','center center','center center','center center','center center'];
   const bust=`?v=85`;
-  const structureKey=top.map(p=>`${p.id}|${publicPhoto(p)}|${p.photoPosition||''}`).join('||');
+  const identityKey=heroIdentityKey(top);
+  const orderKey=heroOrderKey(top);
   const buzz=$('#buzz');
-  if(buzz && buzz.dataset.structure===structureKey && buzz.querySelector('.rank-card') && buzz.querySelector('.hero-backdrop')){
-    const metric=buzz.querySelector('.metric,[data-score].metric,div.metric');
-    const metricNode=buzz.querySelector('.hero-intro .metric')||buzz.querySelector('.metric');
-    if(metricNode){metricNode.textContent=`${total}/300`;if(scoreMotion)metricNode.classList.add('score-animate');}
-    const eyebrow=buzz.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent=`⚡ BUZZ NOW · ${periodLabels[ui.period]}`;
-    const updated=buzz.querySelector('.up');if(updated)updated.textContent=`↗ Classement actualisé • ${publishedTime()}`;
-    top.forEach((p,i)=>{
-      const card=buzz.querySelector(`.rank-card[data-profile="${CSS.escape(String(p.id))}"]`);
-      if(!card)return;
-      const scoreEl=card.querySelector('[data-score]');
-      if(scoreEl){scoreEl.dataset.score=score(p);scoreEl.textContent=formatTrendScore(score(p));if(scoreMotion)scoreEl.classList.add('score-animate');}
-      const arrowEl=card.querySelector('.score-row .up,.score-row .down,.score-row .flat');
-      if(arrowEl){arrowEl.className=arrowClass(p);arrowEl.innerHTML=arrow(p);}
-      const nameEl=card.querySelector('.rank-name a');if(nameEl)nameEl.textContent=String(p.name||'').toUpperCase();
-      const handleEl=card.querySelector('.handle');if(handleEl)handleEl.textContent=p.handle||'';
-    });
+  if(buzz && buzz.dataset.identity===identityKey && buzz.querySelector('.rank-card') && buzz.querySelector('.hero-backdrop')){
+    syncHeroCards(buzz,top,scoreMotion,total);
+    buzz.dataset.order=orderKey;
+    previousTop3Order=top.map(p=>p.id);
     if(scoreMotion)animateScoreCounters(buzz);
     return;
   }
   const metricClass=scoreMotion?'metric score-animate':'metric';
   buzz.innerHTML=`<div class="panel hero-intro"><div class="hero-backdrop">${slides.map((src,i)=>`<div class="hero-slide" style="background-image:url('${src}${bust}');background-position:${slidePositions[i]||'center center'}"></div>`).join('')}</div><div><div class="eyebrow">⚡ BUZZ NOW · ${periodLabels[ui.period]}</div><h1 class="buzz-title">LE BUZZ<br><span>MAINTENANT</span></h1></div><div><div class="${metricClass}">${total}/300</div><div class="muted">SCORE CUMULÉ DU TOP 3</div><div class="up" style="margin-top:7px">↗ Classement actualisé • ${publishedTime()}</div></div></div>${top.map((p,i)=>heroCard(p,i,scoreMotion)).join('')}`;
-  buzz.dataset.structure=structureKey;
+  buzz.dataset.identity=identityKey;
+  buzz.dataset.order=orderKey;
+  previousTop3Order=top.map(p=>p.id);
   if(scoreMotion)animateScoreCounters(buzz);
 }
 
@@ -1248,7 +1287,7 @@ function addNotification(userId,title,body,meta){const note={id:'n_'+Date.now()+
 function followAlertStorageKey(userId){return 'pass50_follow_context_v2_'+String(userId||'guest')}
 function loadFollowAlertState(userId){try{return JSON.parse(localStorage.getItem(followAlertStorageKey(userId))||'{}')||{}}catch(_){return {}}}
 function saveFollowAlertState(userId,state){try{localStorage.setItem(followAlertStorageKey(userId),JSON.stringify(state||{}))}catch(_){}}
-function rankingForPeriod(period){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>Number(b.scores?.[period]||0)-Number(a.scores?.[period]||0)||a.name.localeCompare(b.name))}
+function rankingForPeriod(period){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>compareRankProfiles(a,b,period))}
 function syncFollowContextAlerts(){
   const u=userPrefs();if(!u||!Array.isArray(u.following)||!u.following.length)return;
   const state=loadFollowAlertState(u.id),nextRanks={},nextLives={};

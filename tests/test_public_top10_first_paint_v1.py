@@ -22,9 +22,9 @@ class PublicTop10FirstPaintTests(unittest.TestCase):
         self.assertIn("function renderTop10(", INDEX)
 
     def test_previous_top10_order_is_declared_before_render(self):
-        self.assertIn("let previousTop10Order=[];", INDEX)
+        self.assertIn("let previousTop10Order=[],previousTop3Order=[],bootTop3Lock=null,_bootSettleTimer=null;", INDEX)
         self.assertLess(
-            INDEX.index("let previousTop10Order=[];"),
+            INDEX.index("let previousTop10Order=[],previousTop3Order=[]"),
             INDEX.index("function renderTop10("),
         )
         self.assertIn("if(!Array.isArray(previousTop10Order))previousTop10Order=[];", INDEX)
