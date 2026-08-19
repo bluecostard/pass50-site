@@ -186,7 +186,7 @@ function p50_mrp_gate(string $key,string $status,string $message,mixed $value=nu
 }
 
 function p50_mrp_simulate(PDO $pdo,string $period='2H',int $limit=200,?DateTimeImmutable $now=null): array {
-    $period=p50_mrp_period($period);$limit=max(1,min(500,$limit));$now=$now??new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $period=p50_mrp_period($period);$limit=max(1,min(500,$limit));$now=$now??p50_metrics_now_utc();
     $publicEnvelope=p50_mrp_public_state($pdo);$state=$publicEnvelope['state'];$public=p50_mrp_public_rows($state,$period);
     $experimental=p50_mrp_experimental_rows($pdo,$period);$latestRun=p50_mrp_latest_successful_run($pdo,$period);
     $tombstoned=array_fill_keys(p50_tombstone_ids($state),true);
@@ -195,8 +195,8 @@ function p50_mrp_simulate(PDO $pdo,string $period='2H',int $limit=200,?DateTimeI
     $orphans=[];foreach($comparison['candidateRows'] as $row)if(!isset($public['profileIndex'][(string)$row['profileId']]))$orphans[]=(string)$row['profileId'];
     $runAgeHours=null;
     if($latestRun&&$latestRun['finishedAt']){
-        $finishedAt=new DateTimeImmutable((string)$latestRun['finishedAt'],new DateTimeZone('UTC'));
-        $runAgeHours=max(0,($now->getTimestamp()-$finishedAt->getTimestamp())/3600);
+        $finishedAt=p50_metrics_parse_utc((string)$latestRun['finishedAt']);
+        if($finishedAt)$runAgeHours=max(0,($now->getTimestamp()-$finishedAt->getTimestamp())/3600);
     }
     $exitRatio=$comparison['publicCount']?$comparison['counts']['exits']/$comparison['publicCount']*100:0.0;
     $entryRatio=$comparison['publicCount']?$comparison['counts']['entries']/$comparison['publicCount']*100:0.0;

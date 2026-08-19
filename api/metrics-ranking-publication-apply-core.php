@@ -211,7 +211,7 @@ function p50_mrp_apply_is_skippable_plan(array $plan): bool {
 function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $now=null,bool $forceBootstrap=false): array {
     $cfg=p50_mrp_apply_config();
     p50_mrp_apply_ensure_schema($pdo);
-    $now=$now??new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $now=$now??p50_metrics_now_utc();
     $periods=$periods?:P50_MRP_APPLY_PERIODS;
     $bootstrap=$cfg['bootstrapAllowed']&&($forceBootstrap||!p50_mrp_apply_has_prior_success($pdo));
     $plans=[];$publishPlans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;$skipped=[];
@@ -360,7 +360,7 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
     $appliedBy=trim((string)($options['appliedBy']??''));
     $confirm=!(empty($options['confirm']));
     $forceBootstrap=!empty($options['bootstrap']);
-    $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $now=p50_metrics_now_utc();
 
     if(!$cfg['publicationEnabled'])throw new RuntimeException('Publication du classement désactivée (metrics.ranking_publication_enabled).');
     if($mode==='automatic'&&!$cfg['automaticPublicationEnabled'])throw new RuntimeException('Publication automatique désactivée.');
