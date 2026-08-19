@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.7';
+  const CONTRACT = 'PASS50-CLASSABILITY-SYNC-V1.8';
   const METRIC_SOURCE = /(?:^|\b)MR-V1\.\d+(?:\b|$)/i;
   const PUBLISHED_MR_STATUS = 'published_mr_v1';
   const VERIFIED_LINK_STATUSES = new Set(['owner_verified', 'manual_verified', 'ok', 'verified']);
@@ -218,7 +218,16 @@
     return summary;
   }
 
-  function renderOnly() {
+  function isBootSettling() {
+    try {
+      return typeof ui !== 'undefined' && ui && ui.bootSettling === true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function renderOnly({ force = false } = {}) {
+    if (isBootSettling() && !force) return;
     try {
       if (typeof render === 'function') render();
     } catch (error) {
@@ -235,6 +244,17 @@
     renderOnly();
   }
 
+  function schedulePostCloudRepair() {
+    const attempt = () => {
+      if (isBootSettling()) {
+        setTimeout(attempt, 120);
+        return;
+      }
+      repairAll({ forceRender: true });
+    };
+    setTimeout(attempt, 150);
+  }
+
   function repairAll({ forceRender = false } = {}) {
     if (syncing) return 0;
     syncing = true;
@@ -245,7 +265,7 @@
         if (repairProfile(profileItem)) repaired += 1;
       });
       if (repaired > 0) persistAndRender();
-      else if (forceRender) renderOnly();
+      else if (forceRender) renderOnly({ force: true });
       window.PASS50_CLASSABILITY_DIAGNOSTIC = Object.freeze(diagnose());
       return repaired;
     } finally {
@@ -304,9 +324,9 @@
       repairAll();
       if (attempts >= 80 || (typeof window.__pass50CloudReady !== 'undefined' && window.__pass50CloudReady)) {
         clearInterval(timer);
-        // Le classement cloud vient d'être fusionné : réinstaller la règle puis
-        // réparer et réafficher la liste sur l'état final, pas sur l'état local initial.
-        setTimeout(() => repairAll({ forceRender: true }), 150);
+        // Le classement cloud vient d'être fusionné : attendre la fin du boot
+        // avant de réafficher, pour éviter un 3e passage Top 3 instable.
+        schedulePostCloudRepair();
       }
     }, 250);
   }
