@@ -31,7 +31,9 @@ if(!p50_mo_verify_cron_signature($secret,$timestamp,$raw,$signature))json_respon
 $input=json_decode($raw,true);
 if(!is_array($input))json_response(['error'=>'JSON invalide.'],422);
 $keys=array_keys($input);sort($keys);
-if($keys!==['action','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
+$force=!empty($input['force']);
+$allowedKeys=$force?['action','dispatchId','force']:['action','dispatchId'];
+if($keys!==$allowedKeys)json_response(['error'=>'Corps JSON invalide.'],422);
 if(($input['action']??null)!=='calculate')json_response(['error'=>'Action invalide.'],422);
 if(!is_string($input['dispatchId']??null))json_response(['error'=>'dispatchId invalide.'],422);
 $dispatchId=trim($input['dispatchId']);
@@ -45,12 +47,20 @@ try{
     $currentRuns=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_runs WHERE algorithm_version=? AND status='success'",[P50_MR_ALGORITHM_VERSION]);
     $migrationBypass=$currentRuns===0&&in_array((string)($readiness['reason']??''),['no_new_captures','recent_success'],true);
     $response=[
-        'ok'=>true,'skipped'=>false,'dispatchId'=>$dispatchId,
+        'ok'=>true,'skipped'=>false,'dispatchId'=>$dispatchId,'forced'=>$force,
         'endpointVersion'=>'METRICS-RANKING-CRON-V2.0',
         'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,'periods'=>array_keys(p50_mr_periods()),
         'freshCaptureGateVersion'=>P50_MR_FRESH_CAPTURE_GATE_V2_VERSION,
         'readiness'=>$readiness,'algorithmMigrationBypass'=>$migrationBypass,
     ];
+    if($force){
+        $result=p50_mr_v2_force_calculate($pdo,$dispatchId);
+        $response['runUuid']=(string)$result['runUuid'];
+        $response['classableCount']=(int)$result['classableCount'];
+        $response['scoresWritten']=(int)$result['scoresWritten'];
+        $response['durationMs']=(int)round((microtime(true)-$started)*1000);
+        json_response($response);
+    }
     if(empty($readiness['ready'])&&!$migrationBypass){
         $response['skipped']=true;
         $response['reason']=(string)($readiness['reason']??'data_not_ready');

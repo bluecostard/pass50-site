@@ -27,6 +27,11 @@ class RankingPublishUnblockV1Tests(unittest.TestCase):
         self.assertIn("push:", WATCHDOG)
         self.assertIn("metrics-ranking-publication-watchdog.yml", WATCHDOG)
 
+    def test_watchdog_forces_recalculate_when_experimental_data_missing(self):
+        self.assertIn("metrics-ranking-cron-v2.php", WATCHDOG)
+        self.assertIn("force:true", WATCHDOG)
+        self.assertIn("recalcul forcé MR-V1.0", WATCHDOG)
+
 
 if __name__ == "__main__":
     unittest.main()
