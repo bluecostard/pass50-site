@@ -589,7 +589,39 @@ function hasPeriodScore(p,period=ui.period){
   return Number.isFinite(value)&&value>0;
 }
 function isClassableProfile(p){return Boolean(p&&p.alive!==false)&&!p50IsDeletedProfileId(p&&p.id)&&hasPeriodScore(p);}
-function ranking(){return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name)||String(a.id).localeCompare(String(b.id)));}
+function rankingFromPublicApi(){
+  const rows=CLOUD.publicRanking?.periods?.[ui.period];
+  if(!Array.isArray(rows)||!rows.length)return null;
+  return rows
+    .map(row=>({
+      id:row.id,
+      name:row.name||'',
+      handle:row.handle||'',
+      initials:row.initials||'',
+      category:row.category||'',
+      region:row.region||'CI',
+      scores:row.scores&&typeof row.scores==='object'?{...row.scores}:{[ui.period]:Number(row.score||0)},
+      delta:Number(row.delta||0),
+      decline:0,
+      alive:true,
+      eligible:true,
+      badges:Array.isArray(row.badges)?row.badges:[],
+      photoUrl:row.photoUrl||'',
+      photoCandidateUrl:row.photoUrl||'',
+      photoStatus:row.photoStatus||(row.photoUrl?'validated':'missing'),
+      photoPosition:row.photoPosition||'50% 50%',
+    }))
+    .filter(p=>regionEligible(p)&&isClassableProfile(p));
+}
+function ranking(){
+  // App contract: préférer le snapshot public tant que l’état complet n’est pas prêt
+  // (ou en secours si le blob échoue). Desktop reste complet via state.php ensuite.
+  if(!CLOUD.ready){
+    const fromApi=rankingFromPublicApi();
+    if(fromApi&&fromApi.length)return fromApi;
+  }
+  return db.profiles.filter(p=>p.alive&&isClassableProfile(p)&&regionEligible(p)).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name)||String(a.id).localeCompare(String(b.id)));
+}
 function completeRanking(){
   const visible=db.profiles.filter(p=>p.alive&&!p50IsDeletedProfileId(p.id)&&regionEligible(p));
   const classable=visible.filter(isClassableProfile).sort((a,b)=>score(b)-score(a)||a.name.localeCompare(b.name));
@@ -1026,7 +1058,11 @@ function p50LocalPhotoShouldKeep(kept,cloud){const cloudUrl=String(cloud?.photoU
 function p50ProfileChartHtml(p){const bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)];return `<div class="chart">${bars.map((h,i)=>`<div class="bar" style="--bar-h:${Math.max(8,h)}%;--bar-delay:${i*45}ms"></div>`).join('')}</div>`}
 
 function ageText(p){if(p.agePublic===false)return'Masqué';const date=p50BirthDateValue(p),year=p50BirthYearFromDate(date)??(p.birthYear==null||p.birthYear===''?null:Number(p.birthYear));if(!p50BirthYearIsPlausible(year))return'Non confirmé';const confidence=Number(p?.quality?.birth||0),verifiedFacts=p50VerifiedFactsList(p),confirmed=p.ageStatus==='confirmed'||confidence>=90||verifiedFacts.includes('birth_date');if(confirmed&&p50BirthDateIsPlausible(date)){const b=new Date(date+'T00:00:00'),n=new Date();if(!Number.isNaN(b.getTime())){let age=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))age--;if(age>=5&&age<=110)return `${age} ans`;}}const a=new Date().getFullYear()-Number(year);if(a<5||a>110)return'Non confirmé';return confirmed?`${a} ans`:`≈ ${a-1}–${a} ans`}
-function publishedAtIso(){const meta=db.metricsRankingMeta||{};return meta.publishedAt||db.publishedAt||new Date().toISOString();}
+function publishedAtIso(){
+  if(CLOUD.publicRanking?.publishedAt)return CLOUD.publicRanking.publishedAt;
+  const meta=db.metricsRankingMeta||{};
+  return meta.publishedAt||db.publishedAt||new Date().toISOString();
+}
 let _renderCoalesceTimer=null,_renderForceScoreMotion=false;
 let previousTop10Order=[],previousTop3Order=[],bootTop3Lock=null,_bootSettleTimer=null;
 function compareRankProfiles(a,b,period=ui.period){
@@ -1582,6 +1618,7 @@ const CLOUD={
   syncTimer:null,
   stateRevision:0,
   ready:false,
+  publicRanking:null,
   coulesTotals:{},
   coulesMyVotes:{},
   coulesCandidates:[],
@@ -1646,6 +1683,22 @@ function p50RecoverableDirectLink(platform,url){
     if(p==='x')return (h==='x.com'||h.endsWith('twitter.com'))&&/^\/[A-Za-z0-9_]+$/.test(path);
     return path.length>1;
   }catch{return false}
+}
+async function loadPublicRanking(){
+  if(!CLOUD.enabled)return null;
+  try{
+    const data=await apiFetch('public-ranking.php',{auth:false,timeoutMs:12000});
+    if(data?.ok&&data?.periods){
+      CLOUD.publicRanking=data;
+      if(Number.isFinite(Number(data.stateRevision))&&!CLOUD.ready){
+        CLOUD.stateRevision=Number(data.stateRevision);
+      }
+      return data;
+    }
+  }catch(err){
+    console.warn('Classement public API indisponible',err);
+  }
+  return null;
 }
 async function loadCloudState(){
   if(!CLOUD.enabled)return;
@@ -1803,6 +1856,10 @@ async function initCloud(){
   scheduleRender({immediate:true});
   try{
     setCloudStatus('',false);
+    // Contrat app V1 : snapshot slim en parallèle (desktop + futurs clients).
+    const rankingBoot=loadPublicRanking().then(data=>{
+      if(data)scheduleRender({immediate:true});
+    });
     let loaded=false,lastError=null;
     for(let attempt=1;attempt<=3&&!loaded;attempt++){
       try{await loadCloudState();loaded=true;}
@@ -1812,6 +1869,7 @@ async function initCloud(){
         await new Promise(resolve=>setTimeout(resolve,1200*attempt));
       }
     }
+    await rankingBoot.catch(()=>{});
     if(!loaded)throw lastError||new Error('État public indisponible');
     if(CLOUD.token){
       try{const me=await apiFetch('me.php');const notes=await loadCloudNotifications();hydrateApiUser(me.user,notes);applyPass50V6Patch();await syncCloudState()}catch{CLOUD.token='';localStorage.removeItem('pass50_api_token')}
