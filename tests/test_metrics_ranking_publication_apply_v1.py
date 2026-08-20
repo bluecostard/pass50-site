@@ -29,6 +29,12 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("'health'=>p50_mrp_apply_health", core)
         # Backup d’état : rédaction au lieu d’un rejet dur (sinon 0 écriture si un profil a token=…).
         self.assertIn("p50_mr_json($state,false)", core)
+        # Preview HTTP allégée : pas de report de simulation complet (500 IONOS).
+        self.assertIn("p50_mrp_apply_preview_for_http", core)
+        self.assertIn("'gates'=>array_values(array_filter((array)($report['gates']??[]),'is_array'))", core)
+        plan_return = core.split("function p50_mrp_apply_plan_period", 1)[1].split("function p50_mrp_apply_is_skippable_plan", 1)[0]
+        self.assertNotIn("'report'=>$report", plan_return)
+        self.assertNotIn("'report' => $report", plan_return)
 
     def test_backup_json_redacts_instead_of_blocking(self):
         schema = read("api/metrics-schema-core.php")
@@ -57,6 +63,12 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("action=health", read("data-engine-ui.js"))
         self.assertIn("?action=health", read("data-engine-ui.js"))
         self.assertIn("'health'=>$health", cron)
+        self.assertIn("set_time_limit(300)", admin)
+        self.assertIn("set_time_limit(300)", cron)
+        self.assertIn("ignore_user_abort(true)", admin)
+        self.assertIn("ignore_user_abort(true)", cron)
+        self.assertIn("p50_mrp_apply_preview_for_http", admin)
+        self.assertIn("p50_mrp_apply_preview_for_http", cron)
 
     def test_one_time_bootstrap_workflow_is_retired(self):
         cron = read("api/metrics-ranking-publication-apply-cron.php")

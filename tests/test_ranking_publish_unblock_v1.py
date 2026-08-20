@@ -32,6 +32,13 @@ class RankingPublishUnblockV1Tests(unittest.TestCase):
         self.assertIn("force:true", WATCHDOG)
         self.assertIn("recalcul forcé MR-V1.0", WATCHDOG)
 
+    def test_watchdog_retries_preview_and_apply_on_ionos_flakes(self):
+        self.assertIn("signed_post_retry", WATCHDOG)
+        self.assertIn("max_time=\"${4:-180}\"", WATCHDOG)
+        self.assertIn('signed_post_retry "$APPLY_URL" "$preview_body" watchdog-preview.json 240 3 preview', WATCHDOG)
+        self.assertIn('signed_post_retry "$APPLY_URL" "$apply_body" watchdog-apply.json 300 4 apply', WATCHDOG)
+        self.assertIn('signed_post_retry "$RANKING_URL" "$rank_body" watchdog-ranking-force.json 300 3 ranking-force', WATCHDOG)
+
 
 if __name__ == "__main__":
     unittest.main()
