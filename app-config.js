@@ -244,6 +244,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Rosemark Marcel (TikTok @rosemarkmarcel · Instagram @marcel_rosemark_officiel).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-rosemark-marcel]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-rosemark-marcel.js?v=1.0';
+  script.dataset.pass50ProfileRosemarkMarcel = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Radar LIVE V4 : balayage continu de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
