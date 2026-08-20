@@ -16,11 +16,14 @@ class SiteAccessRecoveryV82Tests(unittest.TestCase):
         cls.deploy = read(".github/workflows/deploy-ionos.yml")
         cls.htaccess = read(".htaccess")
 
-    def test_service_worker_stays_disabled(self):
+    def test_service_worker_is_app_shell_network_only(self):
+        self.assertIn("PASS50-APP-SHELL-SW-V1", self.worker)
+        self.assertIn("pass50-app-shell-v1", self.worker)
         self.assertIn("pass50-v81-service-worker-disabled", self.worker)
         self.assertIn("pass50-v82-hero-ghost-covers", self.worker)
-        self.assertIn("self.registration.unregister()", self.worker)
+        self.assertNotIn("self.registration.unregister()", self.worker)
         self.assertNotIn("addEventListener('fetch'", self.worker)
+        self.assertIn("clients.claim()", self.worker)
 
     def test_public_runtime_uses_only_share_v2(self):
         self.assertIn("PASS50-PUBLIC-RUNTIME-V92", self.public_copy)
@@ -31,7 +34,7 @@ class SiteAccessRecoveryV82Tests(unittest.TestCase):
 
     def test_public_runtime_has_no_global_dom_observer_loop(self):
         self.assertIn("watchTrendScores", self.public_copy)
-        self.assertIn("new MutationObserver(()=>removePublicTrendScores(document))", self.public_copy)
+        self.assertIn("new MutationObserver(()=>{removePublicTrendScores(document);removePublicNewsLectures(document);})", self.public_copy)
         self.assertNotIn("controllerchange", self.public_copy)
         self.assertNotIn("location.reload()", self.public_copy)
         self.assertIn("setTimeout(runPublicFixes,250)", self.public_copy)
@@ -58,6 +61,7 @@ class SiteAccessRecoveryV82Tests(unittest.TestCase):
         self.assertIn("PASS50-PUBLIC-RUNTIME-V92", self.deploy)
         self.assertIn("context-share-v2.js?v=2.6", self.deploy)
         self.assertIn("pass50-v81-service-worker-disabled", self.deploy)
+        self.assertIn("app-shell-v1", self.deploy)
         self.assertIn("--only-newer", self.deploy)
         self.assertNotIn("--transfer-all", self.deploy)
 

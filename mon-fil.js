@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.22';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.23';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -277,7 +277,7 @@
   async function loadNewsFor(profileId) {
     const query = new URLSearchParams({ period: PERIODS[state.period] || '24h', profileId: String(profileId), newsLimit: String(NEWS_PER_PROFILE) });
     try {
-      const data = await apiFetch(`content-feed.php?${query}`);
+      const data = await apiFetch(`public-feed.php?${query}`);
       const items = Array.isArray(data?.news) ? data.news.slice(0, NEWS_PER_PROFILE) : [];
       return items.map(item => ({ ...item, profileId: String(profileId), feedType: 'news' }));
     } catch (error) {
@@ -751,7 +751,7 @@
   async function refreshRadar() {
     syncLiveUi();
     try {
-      const data = await apiFetch('live-status.php');
+      const data = await apiFetch('live-status.php?mode=status');
       if (data?.radar) window.PASS50_LIVE_RADAR = data.radar;
       if (Array.isArray(data?.liveStreams)) {
         persistSharedLives(data.liveStreams);

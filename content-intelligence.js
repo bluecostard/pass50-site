@@ -53,7 +53,7 @@
   async function fetchFeed(profileId=''){
     const query=new URLSearchParams({period:P50CI.period});if(profileId)query.set('profileId',profileId);
     query.set('_',String(Date.now()));
-    const response=await fetch(`./api/content-feed.php?${query}`,{headers:{Accept:'application/json'},cache:'no-store'});
+    const response=await fetch(`./api/public-feed.php?${query}`,{headers:{Accept:'application/json'},cache:'no-store'});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Flux de contenus indisponible.');return data;
   }
 

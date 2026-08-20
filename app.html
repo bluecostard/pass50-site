@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050705" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.webmanifest?v=23.0" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <title>PASS50</title>
+  <style>
+    :root { color-scheme: dark; --bg:#050705; --lime:#b7ff00; --muted:#9aa39a; --line:#1c241c; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 50% -10%, #142014, var(--bg));
+      color: #f2f7f2; display: grid; place-items: center; padding: 24px;
+    }
+    main {
+      width: min(420px, 100%); text-align: center;
+      border: 1px solid var(--line); border-radius: 24px; padding: 28px 22px 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.2));
+    }
+    h1 { margin: 0 0 8px; font-size: 2rem; letter-spacing: .04em; }
+    p { margin: 0 0 22px; color: var(--muted); line-height: 1.45; }
+    nav { display: grid; gap: 10px; }
+    a {
+      display: block; text-decoration: none; color: #061006; background: var(--lime);
+      font-weight: 700; padding: 14px 16px; border-radius: 14px;
+    }
+    a.secondary { background: transparent; color: #e8f0e8; border: 1px solid var(--line); }
+    .note { margin-top: 16px; font-size: .85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>PASS50</h1>
+    <p>Plateforme complète — même produit sur desktop et sur mobile.</p>
+    <nav aria-label="Navigation PASS50">
+      <a href="./">Classement</a>
+      <a class="secondary" href="./mon-fil.html">Mon fil</a>
+      <a class="secondary" href="./pronostics.html">Pronostics</a>
+      <a class="secondary" href="./?open=account">Mon espace</a>
+    </nav>
+    <p class="note">API app : <code>/api/app-bootstrap.php</code></p>
+  </main>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('./sw.js?v=90').catch(function () {});
+    }
+  </script>
+</body>
+</html>

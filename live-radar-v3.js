@@ -154,10 +154,11 @@ async function fetchRadar(params){
 }
 
 async function runQuick(){
+  // Poll cache-only : les scrapes massifs restent sur cron / bouton full / admin.
   if(runningMode||document.hidden)return null;
-  runningMode='quick';
-  try{return await fetchRadar({mode:'quick',batch:RADAR_BATCH_SIZE});}
-  catch(error){console.warn('Radar LIVE rapide',error);return null;}
+  runningMode='status';
+  try{return await fetchRadar({mode:'status',batch:RADAR_BATCH_SIZE});}
+  catch(error){console.warn('Radar LIVE statut',error);return null;}
   finally{runningMode='';}
 }
 

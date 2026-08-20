@@ -25,7 +25,7 @@ class FollowFeedV2Tests(unittest.TestCase):
     def test_feed_uses_only_followed_profiles_and_validated_news(self):
         feed = read("mon-fil.js")
         self.assertIn("state.following.map(loadNewsFor)", feed)
-        self.assertIn("content-feed.php", feed)
+        self.assertIn("public-feed.php", feed)
         self.assertIn("INFORMATION VALIDÉE", feed)
         self.assertIn("SOURCE OFFICIELLE", feed)
         self.assertIn("state.news.map(feedCard)", feed)

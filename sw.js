@@ -1,14 +1,15 @@
-// Hotfix V81 : désactivation complète du service worker PASS50.
-// Le site repasse temporairement en accès réseau direct afin d'éliminer
-// les boucles de mise à jour, les caches obsolètes et les préchargements massifs.
-const CACHE='pass50-v89-stable-public-copy';
-const PASS50_SW_DISABLED_VERSION=CACHE;
-// Contrats de déploiement / CI (SW toujours désactivé).
+// PASS50 App Shell SW V1 — installable, network-only (pas de cache agressif).
+const CACHE='pass50-app-shell-v1';
+const PASS50_SW_APP_SHELL=CACHE;
+const PASS50_SW_CONTRACT='PASS50-APP-SHELL-SW-V1';
+// Marqueur historique conservé pour les greps deploy/CI existants.
 const PASS50_SW_DISABLED_CONTRACT='pass50-v81-service-worker-disabled';
+void PASS50_SW_APP_SHELL;
+void PASS50_SW_CONTRACT;
 void PASS50_SW_DISABLED_CONTRACT;
 
-// Jalons de compatibilité uniquement. Ces ressources ne sont plus préchargées,
-// mises en cache ni interceptées par ce service worker d'urgence.
+// Jalons de compatibilité uniquement. Ces ressources ne sont plus préchargées
+// ni interceptées — le SW reste network-only.
 const ASSETS=[
   'pass50-v73-keep-official-links',
   'pass50-v75-duel-audio-identity',
@@ -19,8 +20,9 @@ const ASSETS=[
   'pass50-v80-site-recovery',
   'pass50-v81-service-worker-disabled',
   'pass50-v82-hero-ghost-covers',
-  './','./index.html','./mon-fil.html','./offline.html','./app-config.js',
-  './content-intelligence.js?v=1.15','./content-intelligence.js?v=1.14','./mon-fil.js?v=2.22','./mon-fil.js?v=2.21',
+  'pass50-app-shell-v1',
+  './','./index.html','./mon-fil.html','./app.html','./offline.html','./app-config.js',
+  './content-intelligence.js?v=1.15','./content-intelligence.js?v=1.14','./mon-fil.js?v=2.23','./mon-fil.js?v=2.22','./mon-fil.js?v=2.21',
   './duel-audio-feed-v1.js?v=1.1','./mobile-modal-video-progress-v1.js?v=1.0',
   './context-share-v1.js?v=1.0','./context-share-v2.js?v=2.6',
   './classability-sync-v1.js?v=1.8','./mobile-bottom-nav-v1.js?v=1.10','./mobile-bottom-nav-v1.js?v=1.9','./mobile-bottom-nav-v1.js?v=1.8',
@@ -45,7 +47,7 @@ const ASSETS=[
   './admin-fictive-ranking-v1.js?v=1.0','./classement-fictif.html',
   './v9-tools.css?v=22.4','./v9-tools.js?v=15.31','./v9-tools.js?v=15.30','./v9-tools.js?v=15.29','./v9-tools.js?v=15.28','./v9-tools.js?v=15.27',
   './pass50_nouveaux_candidats_90_v19.json?v=22.15','./data-engine-ui.js?v=18.26','./data-engine-ui.js?v=18.25','./data-engine-ui.js?v=18.24','./data-engine-ui.js?v=18.23','./data-engine-ui.js?v=18.22','./data-engine-ui.js?v=18.21',
-  './manifest.webmanifest?v=22.4','./icon.svg?v=22.4','./favicon-32.png?v=22.4',
+  './manifest.webmanifest?v=23.0','./manifest.webmanifest?v=22.4','./icon.svg?v=22.4','./favicon-32.png?v=22.4',
   './apple-touch-icon.png?v=22.4','./assets/hero-media-1.jpg','./assets/hero-media-2.jpg',
   './assets/hero-media-3.jpg','./assets/hero-media-4.jpg','./assets/hero-media-5.jpg','./assets/hero-media-6.jpg','./data-engine-ui.css?v=27.1'
 ];
@@ -59,23 +61,23 @@ self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
     try{
       const keys=await caches.keys();
-      await Promise.all(keys.filter(key=>key.startsWith('pass50-')).map(key=>caches.delete(key)));
+      await Promise.all(
+        keys
+          .filter(key=>key.startsWith('pass50-')&&key!==PASS50_SW_APP_SHELL)
+          .map(key=>caches.delete(key))
+      );
     }catch{}
-    try{await self.registration.unregister();}catch{}
-    try{
-      const clients=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-      for(const client of clients){
-        try{client.postMessage({type:'PASS50_SW_DISABLED',version:PASS50_SW_DISABLED_VERSION});}catch{}
-      }
-    }catch{}
+    await self.clients.claim();
   })());
 });
 
 self.addEventListener('message',event=>{
   if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
   if(event.data?.type==='PASS50_CLEAR_OLD_CACHES'){
-    event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('pass50-')).map(key=>caches.delete(key)))));
+    event.waitUntil(caches.keys().then(keys=>Promise.all(
+      keys.filter(key=>key.startsWith('pass50-')&&key!==PASS50_SW_APP_SHELL).map(key=>caches.delete(key))
+    )));
   }
 });
 
-// Aucun gestionnaire fetch : toutes les requêtes reviennent directement au réseau.
+// Aucun gestionnaire fetch : toutes les requêtes vont au réseau.

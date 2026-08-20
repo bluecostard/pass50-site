@@ -1,12 +1,19 @@
 {
   "name": "PASS50 — Qui dit quoi, qui va où ?",
   "short_name": "PASS50",
-  "start_url": "./",
+  "description": "Classement, fil, pronostics et lives des influenceurs ivoiriens.",
+  "id": "/",
+  "start_url": "./?source=pwa",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#050705",
   "theme_color": "#050705",
+  "lang": "fr",
   "icons": [
-    {"src":"./icon-192.png","sizes":"192x192","type":"image/png"},
-    {"src":"./icon-512.png","sizes":"512x512","type":"image/png"}
+    {"src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+    {"src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
   ]
 }

@@ -36,7 +36,7 @@ jobs:
             --exclude '*.zip' \
             --exclude '*.md'
           jq -nc --arg commit "$GITHUB_SHA" --arg deployedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{commit:$commit,deployedAt:$deployedAt,environment:"production",serviceWorker:"disabled-v81",frontend:"v82-share-v2-only"}' > .deploy/deployment-version.json
+            '{commit:$commit,deployedAt:$deployedAt,environment:"production",serviceWorker:"app-shell-v1",frontend:"v82-share-v2-only"}' > .deploy/deployment-version.json
 
       - name: Installer SFTP
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
@@ -103,6 +103,11 @@ jobs:
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-feed.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/public-ranking.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/public-ranking-core.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/public-feed.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/app-bootstrap.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/live-status.php
+          put -O ${REMOTE_DIR@Q} .deploy/app.html
+          put -O ${REMOTE_DIR@Q} .deploy/manifest.webmanifest
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-platform-audit-cron-v2.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-cron-v4.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-core.php
@@ -220,7 +225,7 @@ jobs:
             echo '- Vidéos reconnues : bouton `Lire la vidéo`'
             echo '- Publications photo/post : bouton `Voir dans Pass50`'
             echo '- Runtimes actualité V4 + pronos daily : déploiement prioritaire forcé'
-            echo '- Service worker : désactivé (`pass50-v81-service-worker-disabled`)'
+            echo '- Service worker : app-shell V1 network-only (`PASS50-APP-SHELL-SW-V1`)'
             echo '- Cache HTTP HTML/JS/CSS : désactivé temporairement'
           } >> "$GITHUB_STEP_SUMMARY"
 

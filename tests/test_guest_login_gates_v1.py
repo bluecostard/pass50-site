@@ -29,7 +29,7 @@ class GuestLoginGatesV1Tests(unittest.TestCase):
     def test_mon_fil_requires_login(self):
         self.assertIn("location.replace('./?open=account')", FEED)
         self.assertIn("if (!state.user)", FEED)
-        self.assertIn("PASS50-FOLLOW-FEED-PAGE-V2.22", FEED)
+        self.assertIn("PASS50-FOLLOW-FEED-PAGE-V2.23", FEED)
 
     def test_prono_requires_login(self):
         self.assertIn("function requireLogin()", PRONO)

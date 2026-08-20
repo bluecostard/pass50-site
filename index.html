@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#050705" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="manifest" href="./manifest.webmanifest?v=22.2" />
+  <link rel="manifest" href="./manifest.webmanifest?v=23.0" />
   <link rel="icon" type="image/svg+xml" href="./icon.svg?v=22.2" />
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=22.2" />
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=22.2" />
@@ -580,7 +580,7 @@ function openLives(){
   }).join('')}</div>`:`<div class="live-empty"><strong>Aucun direct détecté pour le moment.</strong><div style="margin-top:6px">Cette fenêtre se met à jour automatiquement.</div></div>`;
   open('liveModal');
 }
-async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){const changed=JSON.stringify(db.liveStreams||[])!==JSON.stringify(data.liveStreams);db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));if(CLOUD.ready){if(changed){render();syncFollowContextAlerts();}else renderLiveHeader();}}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
+async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php?mode=status',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){const changed=JSON.stringify(db.liveStreams||[])!==JSON.stringify(data.liveStreams);db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));if(CLOUD.ready){if(changed){render();syncFollowContextAlerts();}else renderLiveHeader();}}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
 function hasPeriodScore(p,period=ui.period){
   const scores=p&&typeof p==='object'?p.scores:null;
   if(!scores||typeof scores!=='object')return false;
@@ -1554,7 +1554,7 @@ document.addEventListener('click',async e=>{
   if(e.target.matches('.media-detect-cover')){const ev=db.events.find(x=>x.id===e.target.dataset.id),thumb=youtubeThumb(ev?.url||'');if(!thumb)return toast('Lien YouTube avec identifiant requis');ev.coverCandidateUrl=thumb;ev.coverUrl='';ev.coverStatus='pending';ev.coverSource='Miniature YouTube détectée depuis le lien original';save();renderAdminPane();toast('Couverture détectée : à valider')}
   if(e.target.id==='resetBtn')resetDemo();
   if(e.target.id==='liveBtn')openLives();
-  if(e.target.id==='liveRadarRefresh'){e.target.disabled=true;e.target.textContent='RADAR EN COURS…';const data=await refreshLiveStatus();renderAdminPane();toast(data?.radar?.profilesScanned?`${data.radar.profilesScanned} chaîne(s) contrôlée(s)`:'Radar actualisé');}
+  if(e.target.id==='liveRadarRefresh'){e.target.disabled=true;e.target.textContent='RADAR EN COURS…';try{const r=await fetch('./api/live-status.php?mode=quick&force=1',{cache:'no-store'});const data=r.ok?await r.json():null;if(data?.ok){window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));}}renderAdminPane();toast(data?.radar?.profilesScanned?`${data.radar.profilesScanned} chaîne(s) contrôlée(s)`:'Radar actualisé');}catch{toast('Radar indisponible');}finally{e.target.disabled=false;e.target.textContent='🔴 LANCER LE RADAR MAINTENANT';}}
   if(e.target.matches('.live-stop'))stopLive(e.target.dataset.id);
   if(e.target.id==='accountBtn'){currentUser()?openUser():openAuth('login')}if(e.target.id==='top50Btn')openTop50();if(e.target.id==='shareBtn')share();if(e.target.id==='notificationCenterBtn')openNotifications();
   if(e.target.id==='logoutBtn'){if(CLOUD.enabled&&CLOUD.token){try{await apiFetch('logout.php',{method:'POST',body:{}})}catch{}}CLOUD.token='';localStorage.removeItem('pass50_api_token');session.userId=null;sessionStorage.removeItem('pass50_session');close('userModal');render();toast('Déconnecté')}
@@ -1607,7 +1607,7 @@ document.addEventListener('keydown',e=>{
 });
 window.addEventListener('storage',()=>{db=load();render()});
 normalizeLiveStreams();refreshLiveStatus();setInterval(refreshLiveStatus,60000);setInterval(()=>{normalizeLiveStreams();renderLiveHeader();if($('#liveModal')?.classList.contains('show'))openLives();},30000);
-if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=89').catch(()=>{});
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js?v=90').catch(()=>{});
 
 // --- Adaptateur IONOS + MySQL + Brevo ---
 const apiConfig=window.PASS50_API||{};

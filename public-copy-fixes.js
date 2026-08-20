@@ -94,16 +94,13 @@
     window.__pass50TrendScoreObserver=observer;
   }
 
-  async function disableServiceWorkers(){
+  async function reconcileServiceWorkers(){
     if(!('serviceWorker' in navigator)||!location.protocol.startsWith('http'))return;
-    try{
-      const registrations=await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map(registration=>registration.unregister()));
-    }catch(error){console.warn('PASS50 service worker unregister',error);}
+    // Nettoie uniquement les vieux caches SW ; laisse l’app-shell V1 actif.
     if('caches' in window){
       try{
         const keys=await caches.keys();
-        await Promise.all(keys.filter(key=>key.startsWith('pass50-')).map(key=>caches.delete(key)));
+        await Promise.all(keys.filter(key=>key.startsWith('pass50-')&&!key.includes('app-shell')).map(key=>caches.delete(key)));
       }catch(error){console.warn('PASS50 cache cleanup',error);}
     }
   }
@@ -174,7 +171,7 @@
     installDuelAudioShareHotfix();
     runPublicFixes();
     watchTrendScores();
-    disableServiceWorkers();
+    reconcileServiceWorkers();
     loadScript('script[data-pass50-duel-audio-share-intercept]','./duel-audio-share-intercept-v1.js?v=1.0','pass50DuelAudioShareIntercept','1.0',false);
     loadContextShareV2();
     setTimeout(runPublicFixes,250);
