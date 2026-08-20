@@ -34,11 +34,13 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-ange-morel',
     'census-laguepe',
     'census-rosemark-marcel',
+    'census-jiaan-wu',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
     'census-observateur-ebene',
     'census-rosemark-marcel',
+    'census-jiaan-wu',
 ];
 /** Délai minimum entre deux sondes TikTok vérifié (secondes). */
 const P50_LIVE_V4_P0_RESCAN_SECONDS = 120;
@@ -213,6 +215,10 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-rosemark-marcel|tiktok'=>'https://www.tiktok.com/@rosemarkmarcel',
         'census-rosemark-marcel|youtube'=>'https://www.youtube.com/@RosemarkMarcelOfficiel',
         'census-rosemark-marcel|facebook'=>'https://www.facebook.com/p/Rosemark-Marcel-100064043561730/',
+        'census-jiaan-wu|tiktok'=>'https://www.tiktok.com/@jiaaan.wu',
+        'census-jiaan-wu|youtube'=>'https://www.youtube.com/@jiaaanwu',
+        'census-jiaan-wu|facebook'=>'https://www.facebook.com/jiaan.wu.203389/',
+        'census-jiaan-wu|instagram'=>'https://www.instagram.com/jiaaan.wu/',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
@@ -289,6 +295,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-ange-morel','name'=>'Ange-Morel Your Eyes','handle'=>'angemorel4'],
         ['id'=>'census-laguepe','name'=>'Laguepe','handle'=>'laguepe03'],
         ['id'=>'census-rosemark-marcel','name'=>'Rosemark Marcel','handle'=>'rosemarkmarcel'],
+        ['id'=>'census-jiaan-wu','name'=>'Jiaan Wu','handle'=>'jiaaan.wu'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
@@ -319,6 +326,30 @@ function p50_live_v4_sources(array $state): array {
         $seen[$rosemarkFbKey]=true;$out[]=[
             'profile_id'=>'census-rosemark-marcel','public_name'=>'Rosemark Marcel','handle'=>'Rosemark Marcel',
             'platform'=>'Facebook','url'=>'https://www.facebook.com/p/Rosemark-Marcel-100064043561730/','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $jiaanYtKey='YouTube|census-jiaan-wu';
+    if(!isset($seen[$jiaanYtKey])){
+        $seen[$jiaanYtKey]=true;$out[]=[
+            'profile_id'=>'census-jiaan-wu','public_name'=>'Jiaan Wu','handle'=>'@jiaaanwu',
+            'platform'=>'YouTube','url'=>'https://www.youtube.com/@jiaaanwu','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $jiaanFbKey='Facebook|census-jiaan-wu';
+    if(!isset($seen[$jiaanFbKey])){
+        $seen[$jiaanFbKey]=true;$out[]=[
+            'profile_id'=>'census-jiaan-wu','public_name'=>'Jiaan Wu','handle'=>'jiaan.wu.203389',
+            'platform'=>'Facebook','url'=>'https://www.facebook.com/jiaan.wu.203389/','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $jiaanIgKey='Instagram|census-jiaan-wu';
+    if(!isset($seen[$jiaanIgKey])){
+        $seen[$jiaanIgKey]=true;$out[]=[
+            'profile_id'=>'census-jiaan-wu','public_name'=>'Jiaan Wu','handle'=>'@jiaaan.wu',
+            'platform'=>'Instagram','url'=>'https://www.instagram.com/jiaaan.wu/','confidence'=>100,
             'verification_status'=>'manual_verified',
         ];
     }
