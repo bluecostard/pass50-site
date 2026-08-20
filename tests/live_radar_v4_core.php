@@ -138,7 +138,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -151,7 +151,7 @@ must(p50_live_v4_is_p0_youtube($rosemarkYt),'Rosemark Marcel YouTube doit être 
 must(p50_live_v4_is_p0_source($rosemarkYt),'Rosemark Marcel YouTube doit être une source P0.');
 must(p50_live_v4_needs_p0_rescan($rosemarkYt),'Un P0 YouTube Rosemark Marcel unknown depuis 130 s doit être rescané.');
 
-$unknownTikTok=['profile_id'=>'census-samuella-kouassi','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+$unknownTikTok=['profile_id'=>'census-nadiani','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_unknown_tiktok($unknownTikTok),'Un TikTok unknown doit être reconnu comme tel.');
 must(!p50_live_v4_needs_tiktok_rescan($unknownTikTok),'Un unknown hors P0 ne doit pas saturer le rescan 2 min.');
 $metaUnknown=['profile_id'=>'ig-unknown','platform'=>'Instagram','verification_status'=>'verified','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
@@ -219,6 +219,15 @@ $jiaanSource=['profile_id'=>'census-jiaan-wu','public_name'=>'Jiaan Wu','platfor
 $jiaanLive=p50_live_v4_parse_tiktok($jiaanSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223345111,"id_str":"7675480011223345111","title":"En direct","user_count":1500,"owner":{"display_id":"jiaaan.wu","nickname":"Jiaan Wu"}},"status_code":0}')]);
 must($jiaanLive['state']==='live','Jiaan Wu webcast status=2 doit publier le LIVE.');
 must(($jiaanLive['live']['metadata']['roomId']??'')==='7675480011223345111','Le roomId Jiaan Wu doit être conservé.');
+
+$samuellaP0=['profile_id'=>'census-samuella-kouassi','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_p0_tiktok($samuellaP0),'Samuella Kouassi TikTok doit être en watchlist P0.');
+must(p50_live_v4_needs_tiktok_rescan($samuellaP0),'Un P0 TikTok Samuella Kouassi unknown depuis 130 s doit être rescané.');
+
+$samuellaSource=['profile_id'=>'census-samuella-kouassi','public_name'=>'Samuella Kouassi','platform'=>'TikTok','url'=>'https://www.tiktok.com/@samuellakouassiofficiel'];
+$samuellaLive=p50_live_v4_parse_tiktok($samuellaSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223345222,"id_str":"7675480011223345222","title":"En direct","user_count":2400,"owner":{"display_id":"samuellakouassiofficiel","nickname":"Samuella Kouassi"}},"status_code":0}')]);
+must($samuellaLive['state']==='live','Samuella Kouassi webcast status=2 doit publier le LIVE.');
+must(($samuellaLive['live']['metadata']['roomId']??'')==='7675480011223345222','Le roomId Samuella Kouassi doit être conservé.');
 
 $embedOnlyBlocked=p50_live_v4_parse_tiktok($jordanSource,[
     'api'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'http_403','timeMs'=>8],

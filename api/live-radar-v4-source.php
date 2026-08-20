@@ -35,6 +35,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-laguepe',
     'census-rosemark-marcel',
     'census-jiaan-wu',
+    'census-samuella-kouassi',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -219,6 +220,8 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-jiaan-wu|youtube'=>'https://www.youtube.com/@jiaaanwu',
         'census-jiaan-wu|facebook'=>'https://www.facebook.com/jiaan.wu.203389/',
         'census-jiaan-wu|instagram'=>'https://www.instagram.com/jiaaan.wu/',
+        'census-samuella-kouassi|tiktok'=>'https://www.tiktok.com/@samuellakouassiofficiel',
+        'census-samuella-kouassi|instagram'=>'https://www.instagram.com/samuellakouassiofficiel/',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
@@ -296,6 +299,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-laguepe','name'=>'Laguepe','handle'=>'laguepe03'],
         ['id'=>'census-rosemark-marcel','name'=>'Rosemark Marcel','handle'=>'rosemarkmarcel'],
         ['id'=>'census-jiaan-wu','name'=>'Jiaan Wu','handle'=>'jiaaan.wu'],
+        ['id'=>'census-samuella-kouassi','name'=>'Samuella Kouassi','handle'=>'samuellakouassiofficiel'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
@@ -350,6 +354,14 @@ function p50_live_v4_sources(array $state): array {
         $seen[$jiaanIgKey]=true;$out[]=[
             'profile_id'=>'census-jiaan-wu','public_name'=>'Jiaan Wu','handle'=>'@jiaaan.wu',
             'platform'=>'Instagram','url'=>'https://www.instagram.com/jiaaan.wu/','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $samuellaIgKey='Instagram|census-samuella-kouassi';
+    if(!isset($seen[$samuellaIgKey])){
+        $seen[$samuellaIgKey]=true;$out[]=[
+            'profile_id'=>'census-samuella-kouassi','public_name'=>'Samuella Kouassi','handle'=>'@samuellakouassiofficiel',
+            'platform'=>'Instagram','url'=>'https://www.instagram.com/samuellakouassiofficiel/','confidence'=>100,
             'verification_status'=>'manual_verified',
         ];
     }

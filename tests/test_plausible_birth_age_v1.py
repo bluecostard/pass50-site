@@ -12,6 +12,7 @@ FACTS = (ROOT / "api/facts.php").read_text(encoding="utf-8")
 V9 = (ROOT / "v9-tools.js").read_text(encoding="utf-8")
 ROSEMARK = (ROOT / "profile-rosemark-marcel.js").read_text(encoding="utf-8")
 JIAAN = (ROOT / "profile-jiaan-wu.js").read_text(encoding="utf-8")
+SAMUELLA = (ROOT / "profile-samuella-kouassi.js").read_text(encoding="utf-8")
 LEXES = (ROOT / "profile-lexes.js").read_text(encoding="utf-8")
 ANGE = (ROOT / "profile-ange-morel.js").read_text(encoding="utf-8")
 JPNDA = (ROOT / "profile-jp-nda.js").read_text(encoding="utf-8")
@@ -60,12 +61,13 @@ class PlausibleBirthAgeV1Tests(unittest.TestCase):
         self.assertIn("p50BirthDateIsPlausible(date)", UI)
 
     def test_new_census_fiches_do_not_seed_2026_as_birth(self):
-        for source in (ROSEMARK, JIAAN, LEXES, ANGE, JPNDA):
+        for source in (ROSEMARK, JIAAN, SAMUELLA, LEXES, ANGE, JPNDA):
             self.assertIn("birthDate:null", source)
             self.assertIn("birthYear:null", source)
             self.assertIn("ageStatus:'unconfirmed'", source)
         self.assertIn("p50ClearImplausibleBirth(profile)", ROSEMARK)
         self.assertIn("p50ClearImplausibleBirth(profile)", JIAAN)
+        self.assertIn("p50ClearImplausibleBirth(profile)", SAMUELLA)
 
     def test_age_text_runtime_hides_2026_and_year_one(self):
         helpers = "\n".join(
