@@ -10,6 +10,7 @@ declare(strict_types=1);
 require_once __DIR__.'/metrics-ranking-publication-core.php';
 require_once __DIR__.'/metrics-orchestrator-core.php';
 require_once __DIR__.'/data-engine-core.php';
+require_once __DIR__.'/public-ranking-core.php';
 
 const P50_MRP_APPLY_VERSION='PUBAPPLY-V1.0';
 const P50_MRP_APPLY_LOCK='pass50_metrics_ranking_publication_apply_v1';
@@ -534,6 +535,16 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
 
                 // Snapshot ranking history (best-effort, hors transaction critique)
                 try{p50_de_capture_snapshots('2H');}catch(Throwable){}
+                // Snapshot public slim pour l’API app (desktop + futurs clients)
+                try{
+                    $publicSnap=p50_public_ranking_build($newState,[
+                        'stateRevision'=>$currentRevision+1,
+                        'runUuid'=>$runUuid,
+                        'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
+                        'publishedAt'=>gmdate('c'),
+                    ]);
+                    p50_public_ranking_persist($pdo,$publicSnap);
+                }catch(Throwable){}
 
                 return [
                     'ok'=>true,

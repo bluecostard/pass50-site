@@ -101,6 +101,8 @@ jobs:
           put -O ${REMOTE_DIR@Q} .deploy/admin-membres.html
           put -O ${REMOTE_DIR@Q} .deploy/deployment-version.json
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-feed.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/public-ranking.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/public-ranking-core.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-platform-audit-cron-v2.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-cron-v4.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-core.php
