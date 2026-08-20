@@ -183,9 +183,11 @@ function p50_mrp_apply_plan_period(PDO $pdo,string $period,bool $bootstrap,?Date
         if(is_array($gate)&&(($gate['status']??'')==='block'))$blockedGates[]=(string)($gate['key']??'');
     }
     $blockedGates=array_values(array_filter($blockedGates));
+    // Ne pas embarquer le rapport de simulation complet (mouvements × top500) :
+    // il faisait gonfler la preview HTTP à ~800 Ko et provoquait des 500 vides IONOS.
+    // On conserve uniquement les gates (légers) pour les diagnostics / workflows.
     return [
         'period'=>$period,
-        'report'=>$report,
         'mutations'=>$mutations,
         'counts'=>['entries'=>$entries,'exits'=>$exits,'updates'=>$updates,'mutations'=>count($mutations)],
         'runUuid'=>(string)(($report['source']['experimentalRun']['runUuid']??'')?:''),
@@ -194,7 +196,21 @@ function p50_mrp_apply_plan_period(PDO $pdo,string $period,bool $bootstrap,?Date
         'publicStateRevision'=>(int)($report['source']['publicStateRevision']??0),
         'status'=>(string)$report['status'],
         'blockedGates'=>$blockedGates,
+        'gates'=>array_values(array_filter((array)($report['gates']??[]),'is_array')),
     ];
+}
+
+/** Retire les tableaux mutations du payload HTTP (l’apply les recalcule côté serveur). */
+function p50_mrp_apply_preview_for_http(array $preview): array {
+    foreach(['plans','publishPlans'] as $key){
+        if(!isset($preview[$key])||!is_array($preview[$key]))continue;
+        foreach($preview[$key] as $period=>$plan){
+            if(!is_array($plan))continue;
+            unset($plan['mutations']);
+            $preview[$key][$period]=$plan;
+        }
+    }
+    return $preview;
 }
 
 /** Périodes sans candidat classable : on les saute au lieu de bloquer toute la publication. */

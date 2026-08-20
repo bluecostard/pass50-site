@@ -96,7 +96,7 @@ jobs:
           p24_entries="$(jq -r '.plans["24H"].counts.entries // 0' publication-preview.json)"
           p24_exits="$(jq -r '.plans["24H"].counts.exits // 0' publication-preview.json)"
           p24_blocks="$(jq -r '(.plans["24H"].blockedGates // []) | join(", ")' publication-preview.json)"
-          p24_relaxed="$(jq '[.plans["24H"].report.gates[]? | select(.bootstrapRelaxed == true)] | length' publication-preview.json)"
+          p24_relaxed="$(jq '[.plans["24H"].gates[]? | select(.bootstrapRelaxed == true)] | length' publication-preview.json)"
 
           {
             echo '### Preview bootstrap MR-V1.0 → app_state'

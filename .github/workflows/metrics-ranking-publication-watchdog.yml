@@ -77,6 +77,7 @@ jobs:
             local url="$1"
             local body="$2"
             local out="$3"
+            local max_time="${4:-180}"
             local timestamp signature code st
             timestamp="$(date +%s)"
             signature="$(
@@ -86,7 +87,7 @@ jobs:
             )"
             set +e
             code="$(
-              curl --silent --show-error --max-time 180 \
+              curl --silent --show-error --max-time "$max_time" \
                 --output "$out" \
                 --write-out '%{http_code}' \
                 -H "Content-Type: application/json" \
@@ -99,6 +100,37 @@ jobs:
             set -e
             echo "$code"
             return "$st"
+          }
+
+          # IONOS coupe parfois preview/apply (500 corps vide / timeout). On retente.
+          signed_post_retry() {
+            local url="$1"
+            local body="$2"
+            local out="$3"
+            local max_time="${4:-180}"
+            local attempts="${5:-3}"
+            local label="${6:-request}"
+            local attempt=1
+            local delay=8
+            local code="000"
+            while [ "$attempt" -le "$attempts" ]; do
+              : > "$out"
+              code="$(signed_post "$url" "$body" "$out" "$max_time" || true)"
+              if [ "$code" = "200" ] && [ -s "$out" ] && jq -e '.ok == true' "$out" >/dev/null 2>&1; then
+                echo "$code"
+                return 0
+              fi
+              echo "::warning::$label tentative $attempt/$attempts → HTTP ${code:-000} (bytes=$(wc -c < "$out" | tr -d ' '))"
+              if [ "$attempt" -ge "$attempts" ]; then
+                echo "$code"
+                return 1
+              fi
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay + 10))
+            done
+            echo "$code"
+            return 1
           }
 
           dispatch_base="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-watchdog"
@@ -140,8 +172,8 @@ jobs:
           echo "Derniere ecriture : $latest_at (rev. $latest_rev) / age ${age_hours}h"
 
           preview_body="$(jq -nc --arg dispatchId "${dispatch_base}-preview" '{action:"preview",dispatchId:$dispatchId}')"
-          preview_code="$(signed_post "$APPLY_URL" "$preview_body" watchdog-preview.json || true)"
-          if [ "$preview_code" != "200" ]; then
+          preview_code="$(signed_post_retry "$APPLY_URL" "$preview_body" watchdog-preview.json 240 3 preview || true)"
+          if [ "$preview_code" != "200" ] || [ ! -s watchdog-preview.json ]; then
             echo "::error::Preview HTTP $preview_code"
             cat watchdog-preview.json || true
             exit 1
@@ -194,7 +226,7 @@ jobs:
             if echo "$blocked_reasons" | grep -Eq 'successful_run|candidate_non_empty|candidate_run_consistency|run_freshness'; then
               echo "::warning::Candidat expérimental absent ou périmé — recalcul forcé MR-V1.0."
               rank_body="$(jq -nc --arg dispatchId "${dispatch_base}-ranking-force" '{action:"calculate",dispatchId:$dispatchId,force:true}')"
-              rank_code="$(signed_post "$RANKING_URL" "$rank_body" watchdog-ranking-force.json || true)"
+              rank_code="$(signed_post_retry "$RANKING_URL" "$rank_body" watchdog-ranking-force.json 300 3 ranking-force || true)"
               if [ "$rank_code" != "200" ]; then
                 echo "::error::Recalcul forcé HTTP $rank_code"
                 cat watchdog-ranking-force.json || true
@@ -205,8 +237,8 @@ jobs:
                 cat watchdog-ranking-force.json || true
                 exit 1
               }
-              preview_code="$(signed_post "$APPLY_URL" "$preview_body" watchdog-preview.json || true)"
-              if [ "$preview_code" != "200" ]; then
+              preview_code="$(signed_post_retry "$APPLY_URL" "$preview_body" watchdog-preview.json 240 3 preview-after-force || true)"
+              if [ "$preview_code" != "200" ] || [ ! -s watchdog-preview.json ]; then
                 echo "::error::Preview après recalcul HTTP $preview_code"
                 cat watchdog-preview.json || true
                 exit 1
@@ -226,8 +258,8 @@ jobs:
           fi
 
           apply_body="$(jq -nc --arg dispatchId "${dispatch_base}-apply" '{action:"apply",dispatchId:$dispatchId,confirm:true}')"
-          apply_code="$(signed_post "$APPLY_URL" "$apply_body" watchdog-apply.json || true)"
-          if [ "$apply_code" != "200" ]; then
+          apply_code="$(signed_post_retry "$APPLY_URL" "$apply_body" watchdog-apply.json 300 4 apply || true)"
+          if [ "$apply_code" != "200" ] || [ ! -s watchdog-apply.json ]; then
             echo "::error::Recovery apply HTTP $apply_code"
             cat watchdog-apply.json || true
             exit 1

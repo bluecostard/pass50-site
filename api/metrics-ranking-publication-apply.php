@@ -4,6 +4,9 @@ declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-ranking-publication-apply-core.php';
 
+set_time_limit(300);
+ignore_user_abort(true);
+
 $user=auth_user();
 require_role($user,'owner','admin');
 
@@ -16,7 +19,7 @@ try{
             p50_mrp_apply_ensure_schema($pdo);
             json_response(['ok'=>true,'health'=>p50_mrp_apply_health($pdo)]);
         }
-        $preview=p50_mrp_apply_preview($pdo);
+        $preview=p50_mrp_apply_preview_for_http(p50_mrp_apply_preview($pdo));
         $preview['forcedBootstrapEnabled']=false;
         json_response($preview);
     }
@@ -33,7 +36,7 @@ try{
         json_response(['ok'=>true,'health'=>p50_mrp_apply_health($pdo)]);
     }
     if($action==='preview'){
-        $preview=p50_mrp_apply_preview($pdo);
+        $preview=p50_mrp_apply_preview_for_http(p50_mrp_apply_preview($pdo));
         $preview['forcedBootstrapEnabled']=false;
         json_response($preview);
     }

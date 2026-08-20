@@ -4,6 +4,9 @@ declare(strict_types=1);
 require __DIR__.'/bootstrap.php';
 require __DIR__.'/metrics-ranking-publication-apply-core.php';
 
+set_time_limit(300);
+ignore_user_abort(true);
+
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $contentType=strtolower(trim((string)($_SERVER['CONTENT_TYPE']??'')));
@@ -44,7 +47,7 @@ try{
     $pdo=db();
     if($action==='preview'){
         if($keys!==['action','dispatchId'])json_response(['error'=>'Corps JSON invalide.'],422);
-        $preview=p50_mrp_apply_preview($pdo);
+        $preview=p50_mrp_apply_preview_for_http(p50_mrp_apply_preview($pdo));
         $preview['ok']=true;$preview['dispatchId']=$dispatchId;
         $preview['forcedBootstrapEnabled']=false;
         $preview['durationMs']=(int)round((microtime(true)-$started)*1000);

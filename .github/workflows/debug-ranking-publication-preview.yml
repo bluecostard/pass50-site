@@ -34,7 +34,7 @@ jobs:
           jq '{
             status, publicationEligible, bootstrap, runUuid,
             config, summary,
-            periodStatuses: (.plans|to_entries|map({period:.key,status:.value.status,mutations:.value.counts.mutations,runUuid:.value.runUuid,blockedGates:[.value.report.gates[]?|select(.status=="block")|.key]})),
+            periodStatuses: (.plans|to_entries|map({period:.key,status:.value.status,mutations:.value.counts.mutations,runUuid:.value.runUuid,blockedGates:(.value.blockedGates // [.value.gates[]?|select(.status=="block")|.key])})),
           }' preview.json | tee summary.json
           {
             printf '### Preview publication\n'
