@@ -38,6 +38,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
     'census-observateur-ebene',
+    'census-rosemark-marcel',
 ];
 /** Délai minimum entre deux sondes TikTok vérifié (secondes). */
 const P50_LIVE_V4_P0_RESCAN_SECONDS = 120;
@@ -210,6 +211,8 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-ange-morel|tiktok'=>'https://www.tiktok.com/@angemorel4',
         'census-laguepe|tiktok'=>'https://www.tiktok.com/@laguepe03',
         'census-rosemark-marcel|tiktok'=>'https://www.tiktok.com/@rosemarkmarcel',
+        'census-rosemark-marcel|youtube'=>'https://www.youtube.com/@RosemarkMarcelOfficiel',
+        'census-rosemark-marcel|facebook'=>'https://www.facebook.com/p/Rosemark-Marcel-100064043561730/',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
@@ -300,6 +303,22 @@ function p50_live_v4_sources(array $state): array {
         $seen[$observateurKey]=true;$out[]=[
             'profile_id'=>'census-observateur-ebene','public_name'=>'Observateur Ébène','handle'=>'@Observateur',
             'platform'=>'YouTube','url'=>'https://www.youtube.com/@Observateur','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $rosemarkYtKey='YouTube|census-rosemark-marcel';
+    if(!isset($seen[$rosemarkYtKey])){
+        $seen[$rosemarkYtKey]=true;$out[]=[
+            'profile_id'=>'census-rosemark-marcel','public_name'=>'Rosemark Marcel','handle'=>'@RosemarkMarcelOfficiel',
+            'platform'=>'YouTube','url'=>'https://www.youtube.com/@RosemarkMarcelOfficiel','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $rosemarkFbKey='Facebook|census-rosemark-marcel';
+    if(!isset($seen[$rosemarkFbKey])){
+        $seen[$rosemarkFbKey]=true;$out[]=[
+            'profile_id'=>'census-rosemark-marcel','public_name'=>'Rosemark Marcel','handle'=>'Rosemark Marcel',
+            'platform'=>'Facebook','url'=>'https://www.facebook.com/p/Rosemark-Marcel-100064043561730/','confidence'=>100,
             'verification_status'=>'manual_verified',
         ];
     }

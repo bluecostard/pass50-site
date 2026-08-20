@@ -146,6 +146,10 @@ $observateurYt=['profile_id'=>'census-observateur-ebene','platform'=>'YouTube','
 must(p50_live_v4_is_p0_youtube($observateurYt),'Observateur Ébène YouTube doit être en watchlist P0.');
 must(p50_live_v4_is_p0_source($observateurYt),'Observateur Ébène YouTube doit être une source P0.');
 must(p50_live_v4_needs_p0_rescan($observateurYt),'Un P0 YouTube unknown depuis 130 s doit être rescané.');
+$rosemarkYt=['profile_id'=>'census-rosemark-marcel','platform'=>'YouTube','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_p0_youtube($rosemarkYt),'Rosemark Marcel YouTube doit être en watchlist P0.');
+must(p50_live_v4_is_p0_source($rosemarkYt),'Rosemark Marcel YouTube doit être une source P0.');
+must(p50_live_v4_needs_p0_rescan($rosemarkYt),'Un P0 YouTube Rosemark Marcel unknown depuis 130 s doit être rescané.');
 
 $unknownTikTok=['profile_id'=>'census-samuella-kouassi','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_unknown_tiktok($unknownTikTok),'Un TikTok unknown doit être reconnu comme tel.');

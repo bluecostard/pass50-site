@@ -4,6 +4,8 @@
 const PROFILE_ID='census-rosemark-marcel';
 const TIKTOK_URL='https://www.tiktok.com/@rosemarkmarcel';
 const INSTAGRAM_URL='https://www.instagram.com/marcel_rosemark_officiel/';
+const FACEBOOK_URL='https://www.facebook.com/p/Rosemark-Marcel-100064043561730/';
+const YOUTUBE_URL='https://www.youtube.com/@RosemarkMarcelOfficiel';
 let attempts=0;
 
 function verifiedLink(message){
@@ -18,7 +20,7 @@ function baseProfile(){
     initials:'RM',
     region:'CI',
     category:'Humour / Divertissement',
-    platforms:['TikTok','Instagram'],
+    platforms:['TikTok','Instagram','Facebook','YouTube'],
     scores:{'2H':0,'24H':0,'48H':0,'7J':0,'15J':0},
     delta:0,
     decline:0,
@@ -40,16 +42,18 @@ function baseProfile(){
     photoManualLocked:false,
     photoManualUpdatedAt:null,
     badges:[],
-    links:{TikTok:TIKTOK_URL,Instagram:INSTAGRAM_URL},
+    links:{TikTok:TIKTOK_URL,Instagram:INSTAGRAM_URL,Facebook:FACEBOOK_URL,YouTube:YOUTUBE_URL},
     linkChecks:{
       TikTok:verifiedLink('Compte TikTok @rosemarkmarcel confirmé — humoriste ivoirien (~247 K abonnés), recensé le 20 août 2026.'),
-      Instagram:verifiedLink('Compte Instagram @marcel_rosemark_officiel recensé (Rosemark Marcel).')
+      Instagram:verifiedLink('Compte Instagram @marcel_rosemark_officiel recensé (Rosemark Marcel).'),
+      Facebook:verifiedLink('Page Facebook Rosemark Marcel (id 100064043561730) recensée.'),
+      YouTube:verifiedLink('Chaîne YouTube @RosemarkMarcelOfficiel recensée.')
     },
     verifiedPass50:false,
     censusStatus:'Recensé confirmé',
     verificationPriority:'P0',
     source:{publisher:'Signalement PASS50 — profil TikTok Rosemark Marcel',date:'2026-08-20',url:TIKTOK_URL},
-    notes:'Rosemark Marcel, créateur ivoirien (humour). TikTok @rosemarkmarcel · Instagram @marcel_rosemark_officiel. Compte TikTok relié au Radar LIVE P0 PASS50.'
+    notes:'Rosemark Marcel, créateur ivoirien (humour). TikTok @rosemarkmarcel · Instagram @marcel_rosemark_officiel · Facebook Rosemark Marcel · YouTube @RosemarkMarcelOfficiel. Comptes reliés au Radar LIVE P0 PASS50.'
   };
 }
 
@@ -80,15 +84,16 @@ function applyProfile(){
     profile.links=profile.links||{};
     if(profile.links.TikTok!==TIKTOK_URL){profile.links.TikTok=TIKTOK_URL;changed=true;}
     if(profile.links.Instagram!==INSTAGRAM_URL){profile.links.Instagram=INSTAGRAM_URL;changed=true;}
+    if(profile.links.Facebook!==FACEBOOK_URL){profile.links.Facebook=FACEBOOK_URL;changed=true;}
+    if(profile.links.YouTube!==YOUTUBE_URL){profile.links.YouTube=YOUTUBE_URL;changed=true;}
     profile.linkChecks=profile.linkChecks||{};
-    if(!profile.linkChecks.TikTok||profile.linkChecks.TikTok.status!=='manual_verified'){
-      profile.linkChecks.TikTok=patch.linkChecks.TikTok;changed=true;
-    }
-    if(!profile.linkChecks.Instagram||profile.linkChecks.Instagram.status!=='manual_verified'){
-      profile.linkChecks.Instagram=patch.linkChecks.Instagram;changed=true;
-    }
+    ['TikTok','Instagram','Facebook','YouTube'].forEach(p=>{
+      if(!profile.linkChecks[p]||profile.linkChecks[p].status!=='manual_verified'){
+        profile.linkChecks[p]=patch.linkChecks[p];changed=true;
+      }
+    });
     profile.platforms=Array.isArray(profile.platforms)?profile.platforms:[];
-    ['TikTok','Instagram'].forEach(p=>{if(!profile.platforms.includes(p)){profile.platforms.push(p);changed=true;}});
+    ['TikTok','Instagram','Facebook','YouTube'].forEach(p=>{if(!profile.platforms.includes(p)){profile.platforms.push(p);changed=true;}});
   }
   if(changed){
     try{if(typeof save==='function')save();else if(typeof APP_KEY!=='undefined')localStorage.setItem(APP_KEY,JSON.stringify(db));}catch{}
