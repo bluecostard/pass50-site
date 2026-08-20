@@ -107,6 +107,7 @@ jobs:
           put -O ${REMOTE_DIR@Q}/api .deploy/api/app-bootstrap.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/live-status.php
           put -O ${REMOTE_DIR@Q} .deploy/app.html
+          put -O ${REMOTE_DIR@Q} .deploy/app-client.js
           put -O ${REMOTE_DIR@Q} .deploy/manifest.webmanifest
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-platform-audit-cron-v2.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-cron-v4.php

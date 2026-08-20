@@ -21,7 +21,7 @@ const ASSETS=[
   'pass50-v81-service-worker-disabled',
   'pass50-v82-hero-ghost-covers',
   'pass50-app-shell-v1',
-  './','./index.html','./mon-fil.html','./app.html','./offline.html','./app-config.js',
+  './','./index.html','./mon-fil.html','./app.html','./app-client.js?v=1.0','./offline.html','./app-config.js',
   './content-intelligence.js?v=1.15','./content-intelligence.js?v=1.14','./mon-fil.js?v=2.23','./mon-fil.js?v=2.22','./mon-fil.js?v=2.21',
   './duel-audio-feed-v1.js?v=1.1','./mobile-modal-video-progress-v1.js?v=1.0',
   './context-share-v1.js?v=1.0','./context-share-v2.js?v=2.6',
@@ -47,7 +47,7 @@ const ASSETS=[
   './admin-fictive-ranking-v1.js?v=1.0','./classement-fictif.html',
   './v9-tools.css?v=22.4','./v9-tools.js?v=15.31','./v9-tools.js?v=15.30','./v9-tools.js?v=15.29','./v9-tools.js?v=15.28','./v9-tools.js?v=15.27',
   './pass50_nouveaux_candidats_90_v19.json?v=22.15','./data-engine-ui.js?v=18.26','./data-engine-ui.js?v=18.25','./data-engine-ui.js?v=18.24','./data-engine-ui.js?v=18.23','./data-engine-ui.js?v=18.22','./data-engine-ui.js?v=18.21',
-  './manifest.webmanifest?v=23.0','./manifest.webmanifest?v=22.4','./icon.svg?v=22.4','./favicon-32.png?v=22.4',
+  './manifest.webmanifest?v=24.0','./manifest.webmanifest?v=23.0','./manifest.webmanifest?v=22.4','./icon.svg?v=22.4','./favicon-32.png?v=22.4',
   './apple-touch-icon.png?v=22.4','./assets/hero-media-1.jpg','./assets/hero-media-2.jpg',
   './assets/hero-media-3.jpg','./assets/hero-media-4.jpg','./assets/hero-media-5.jpg','./assets/hero-media-6.jpg','./data-engine-ui.css?v=27.1'
 ];
