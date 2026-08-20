@@ -31,6 +31,9 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("p50_mr_json($state,false)", core)
         # Preview HTTP allégée : pas de report de simulation complet (500 IONOS).
         self.assertIn("p50_mrp_apply_preview_for_http", core)
+        self.assertIn("p50_mrp_apply_save_preview_cache", core)
+        self.assertIn("p50_mrp_apply_load_preview_cache", core)
+        self.assertIn("p50_metric_publication_preview_cache", core)
         self.assertIn("'gates'=>array_values(array_filter((array)($report['gates']??[]),'is_array'))", core)
         plan_return = core.split("function p50_mrp_apply_plan_period", 1)[1].split("function p50_mrp_apply_is_skippable_plan", 1)[0]
         self.assertNotIn("'report'=>$report", plan_return)

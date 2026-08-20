@@ -549,8 +549,10 @@
     successful_run:'aucun cycle MR‑V1.0 réussi pour la période',
     public_ranking_non_empty:'classement public vide pour la période',
     candidate_run_consistency:'lignes candidates incohérentes avec le dernier cycle',
+    candidate_profiles_exist:'profils candidats absents de l’état public (ignorés à la publication)',
     exit_ratio:'trop de sorties vs classement public',
     entry_ratio:'trop d’entrées vs classement public',
+    maximum_rank_movement:'mouvements de rang élevés (avertissement, non bloquant)',
   };
   function dePublishReasons(preview){
     const reasons=preview?.summary?.reasons||[];
@@ -578,13 +580,13 @@
     });
   }
   async function dePublishRankingLab(button){await deAction(button,async()=>{
-    let preview=await apiFetch('metrics-ranking-publication-apply.php');
+    let preview=await apiFetch('metrics-ranking-publication-apply.php',{timeoutMs:240000});
     if(!preview.publicationEligible&&dePublishNeedsRecalculate(preview)){
       toast('Calcul expérimental absent ou périmé — recalcul automatique…');
-      await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});
+      await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']},timeoutMs:300000});
       DE.rankingLab=null;DE.rankingCalibration=null;
       await deLoadRankingLab(true);
-      preview=await apiFetch('metrics-ranking-publication-apply.php');
+      preview=await apiFetch('metrics-ranking-publication-apply.php',{timeoutMs:240000});
     }
     if(!preview.publicationEligible){
       throw new Error(`Publication non éligible — ${dePublishReasons(preview)}`);
@@ -595,7 +597,7 @@
       ?`BOOTSTRAP : publier ${periods}${skipped} — ${preview.summary?.entries||0} entrées / ${preview.summary?.exits||0} sorties / ${preview.summary?.mutations||0} scores. Continuer ?`
       :`Publier MR‑V1.0 (${periods}${skipped}, ${preview.summary?.mutations||0} scores) vers le classement public ? Un backup sera créé.`;
     if(!confirm(msg))return;
-    const result=await apiFetch('metrics-ranking-publication-apply.php',{method:'POST',body:{action:'apply',confirm:true,dispatchId:'admin-'+Date.now()}});
+    const result=await apiFetch('metrics-ranking-publication-apply.php',{method:'POST',body:{action:'apply',confirm:true,dispatchId:'admin-'+Date.now()},timeoutMs:300000});
     DE.rankingLab=null;DE.rankingHealth=null;await deLoadRankingLab(true);
     await loadCloudState?.();render?.();
     const skipNote=(result.skippedPeriods||[]).length?` · ignoré ${result.skippedPeriods.join(', ')}`:'';

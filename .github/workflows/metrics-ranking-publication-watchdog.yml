@@ -103,6 +103,7 @@ jobs:
           }
 
           # IONOS coupe parfois preview/apply (500 corps vide / timeout). On retente.
+          # Les warnings vont sur stderr pour ne pas polluer le code HTTP capturé.
           signed_post_retry() {
             local url="$1"
             local body="$2"
@@ -116,11 +117,12 @@ jobs:
             while [ "$attempt" -le "$attempts" ]; do
               : > "$out"
               code="$(signed_post "$url" "$body" "$out" "$max_time" || true)"
+              code="$(printf '%s' "$code" | tr -d '\r' | tail -n1)"
               if [ "$code" = "200" ] && [ -s "$out" ] && jq -e '.ok == true' "$out" >/dev/null 2>&1; then
                 echo "$code"
                 return 0
               fi
-              echo "::warning::$label tentative $attempt/$attempts → HTTP ${code:-000} (bytes=$(wc -c < "$out" | tr -d ' '))"
+              echo "::warning::$label tentative $attempt/$attempts → HTTP ${code:-000} (bytes=$(wc -c < "$out" | tr -d ' '))" >&2
               if [ "$attempt" -ge "$attempts" ]; then
                 echo "$code"
                 return 1
@@ -258,9 +260,29 @@ jobs:
           fi
 
           apply_body="$(jq -nc --arg dispatchId "${dispatch_base}-apply" '{action:"apply",dispatchId:$dispatchId,confirm:true}')"
-          apply_code="$(signed_post_retry "$APPLY_URL" "$apply_body" watchdog-apply.json 300 4 apply || true)"
-          if [ "$apply_code" != "200" ] || [ ! -s watchdog-apply.json ]; then
-            echo "::error::Recovery apply HTTP $apply_code"
+          apply_ok=false
+          apply_attempt=1
+          while [ "$apply_attempt" -le 3 ]; do
+            apply_dispatch="${dispatch_base}-apply-a${apply_attempt}"
+            apply_body="$(jq -nc --arg dispatchId "$apply_dispatch" '{action:"apply",dispatchId:$dispatchId,confirm:true}')"
+            apply_code="$(signed_post_retry "$APPLY_URL" "$apply_body" watchdog-apply.json 300 4 apply || true)"
+            apply_code="$(printf '%s' "$apply_code" | tr -d '\r' | tail -n1)"
+            if [ "$apply_code" = "200" ] && [ -s watchdog-apply.json ] && jq -e '.ok == true' watchdog-apply.json >/dev/null 2>&1; then
+              skipped="$(jq -r '.skipped // false' watchdog-apply.json)"
+              writes="$(jq -r '.publicStateWrites // 0' watchdog-apply.json)"
+              if [ "$skipped" != "true" ] && [ "$writes" != "0" ]; then
+                apply_ok=true
+                break
+              fi
+              echo "::warning::Apply skip/écriture nulle (tentative $apply_attempt/3) — $(jq -r '.reason // .error // "-"' watchdog-apply.json)"
+            else
+              echo "::warning::Apply HTTP ${apply_code:-000} (tentative $apply_attempt/3)"
+            fi
+            apply_attempt=$((apply_attempt + 1))
+            sleep 10
+          done
+          if [ "$apply_ok" != "true" ]; then
+            echo "::error::Recovery apply HTTP ${apply_code:-000}"
             cat watchdog-apply.json || true
             exit 1
           fi

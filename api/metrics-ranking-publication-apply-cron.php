@@ -7,6 +7,19 @@ require __DIR__.'/metrics-ranking-publication-apply-core.php';
 set_time_limit(300);
 ignore_user_abort(true);
 
+register_shutdown_function(static function(): void {
+    $err=error_get_last();
+    if(!$err||!in_array((int)$err['type'],[E_ERROR,E_PARSE,E_CORE_ERROR,E_COMPILE_ERROR],true))return;
+    if(headers_sent())return;
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'ok'=>false,
+        'error'=>'Publication automatique interrompue (fatal serveur).',
+        'detail'=>mb_substr((string)($err['message']??''),0,300),
+    ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+});
+
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
 $contentType=strtolower(trim((string)($_SERVER['CONTENT_TYPE']??'')));
