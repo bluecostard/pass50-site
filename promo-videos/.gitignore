@@ -1,0 +1,6 @@
+.deps/
+.deps/**
+captures/scroll-frames/
+output/*.mp4
+output/*.jpg
+**/node_modules/
