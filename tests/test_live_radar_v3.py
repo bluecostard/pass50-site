@@ -132,6 +132,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("'census-no-limit'", source)
         self.assertIn("'census-amour-ruth-poopy'", source)
         self.assertIn("'census-jordan-evraa'", source)
+        self.assertIn("'census-jp-nda'", source)
         self.assertIn("'dbz'", source)
         self.assertIn("'maabio'", source)
         self.assertIn("'census-el-profesor'", source)

@@ -294,3 +294,39 @@ document.addEventListener('DOMContentLoaded', function () {
   script.dataset.pass50ProfileClaims = '1.0';
   document.head.appendChild(script);
 })();
+
+// Profil recensé : JP N'da (TikTok @jpnda_1 — live signalé).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-jp-nda]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-jp-nda.js?v=1.0';
+  script.dataset.pass50ProfileJpNda = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Cahié kunta.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-cahie-kunta]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-cahie-kunta.js?v=1.0';
+  script.dataset.pass50ProfileCahieKunta = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Lise Akrassi.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-lise-akrassi]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-lise-akrassi.js?v=1.0';
+  script.dataset.pass50ProfileLiseAkrassi = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : L'Exès (Stéphane Sacré) — TikTok @stephanesacre.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-lexes]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-lexes.js?v=1.0';
+  script.dataset.pass50ProfileLexes = '1.0';
+  document.head.appendChild(script);
+})();

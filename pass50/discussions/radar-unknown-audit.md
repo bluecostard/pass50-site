@@ -11,6 +11,27 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-20 08:08 UTC
+
+- Unknown sondés : **118**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **1**
+
+Vraiment en live :
+- TikTok `holy` @holysheilla — Bonjour Je suis au Bénin 🇧🇯 · 157 viewers
+
+Nouveaux P0 :
+- TikTok `holy`
+
+### 2026-08-20 03:26 UTC
+
+- Unknown sondés : **111**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-08-19 22:01 UTC
 
 - Unknown sondés : **104**
