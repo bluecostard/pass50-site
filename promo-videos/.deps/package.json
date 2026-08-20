@@ -1,0 +1,8 @@
+{
+  "name": "pass50-promo-deps",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "ws": "8.18.3"
+  }
+}

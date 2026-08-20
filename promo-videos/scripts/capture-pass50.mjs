@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 /**
- * Capture mobile screenshots + scroll frames from the live PASS50 site.
- * Uses Chrome DevTools Protocol (no puppeteer dependency).
+ * Capture mobile sequences from live PASS50:
+ * - home classement scroll
+ * - fiches influenceurs (?profile=)
+ * - pronostics scroll
  */
 import { spawn } from 'node:child_process';
-import { createWriteStream, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import net from 'node:net';
 import http from 'node:http';
 
@@ -15,10 +18,15 @@ const ROOT = join(__dirname, '..');
 const OUT = join(ROOT, 'captures');
 const CHROME = process.env.CHROME_PATH || 'google-chrome';
 const TARGET = process.env.PASS50_URL || 'https://pass50.store/';
+const PRONO_URL = process.env.PASS50_PRONO_URL || 'http://127.0.0.1:8080/pronostics.html';
+const PROMO_TOKEN = process.env.PASS50_PROMO_TOKEN || '';
 const WIDTH = Number(process.env.VW || 390);
 const HEIGHT = Number(process.env.VH || 844);
 
 mkdirSync(OUT, { recursive: true });
+
+const require = createRequire(join(ROOT, '.deps', 'package.json'));
+const WebSocket = require('ws');
 
 function findFreePort() {
   return new Promise((resolve, reject) => {
@@ -30,11 +38,7 @@ function findFreePort() {
     s.on('error', reject);
   });
 }
-
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function httpGetJson(url) {
   return new Promise((resolve, reject) => {
     http.get(url, (res) => {
@@ -51,68 +55,10 @@ function httpGetJson(url) {
   });
 }
 
-class Cdp {
-  constructor(wsUrl) {
-    this.wsUrl = wsUrl;
-    this.id = 0;
-    this.pending = new Map();
-    this.events = new Map();
-  }
-
-  async connect() {
-    const { default: WebSocket } = await import('ws').catch(() => ({ default: null }));
-    if (!WebSocket) {
-      // Minimal WS via undici/global if available — fallback: use chrome remote over HTTP only
-      throw new Error('WebSocket client missing — will install ws');
-    }
-    this.ws = new WebSocket(this.wsUrl);
-    await new Promise((resolve, reject) => {
-      this.ws.once('open', resolve);
-      this.ws.once('error', reject);
-    });
-    this.ws.on('message', (raw) => {
-      const msg = JSON.parse(String(raw));
-      if (msg.id && this.pending.has(msg.id)) {
-        const { resolve, reject } = this.pending.get(msg.id);
-        this.pending.delete(msg.id);
-        if (msg.error) reject(new Error(JSON.stringify(msg.error)));
-        else resolve(msg.result);
-      } else if (msg.method) {
-        const handlers = this.events.get(msg.method) || [];
-        handlers.forEach((h) => h(msg.params));
-      }
-    });
-  }
-
-  on(method, handler) {
-    if (!this.events.has(method)) this.events.set(method, []);
-    this.events.get(method).push(handler);
-  }
-
-  send(method, params = {}) {
-    const id = ++this.id;
-    return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.ws.send(JSON.stringify({ id, method, params }));
-    });
-  }
-
-  close() {
-    try {
-      this.ws?.close();
-    } catch {}
-  }
-}
-
 async function main() {
-  const { createRequire } = await import('node:module');
-  const require = createRequire(join(ROOT, '.deps', 'package.json'));
-  const WebSocket = require('ws');
-
   const port = await findFreePort();
-  const userData = join('/tmp', `pass50-chrome-${port}`);
+  const userData = join('/tmp', `pass50-chrome-cap-${port}`);
   mkdirSync(userData, { recursive: true });
-
   const chrome = spawn(
     CHROME,
     [
@@ -128,13 +74,12 @@ async function main() {
     ],
     { stdio: ['ignore', 'pipe', 'pipe'] }
   );
-
   let stderr = '';
   chrome.stderr.on('data', (d) => (stderr += d.toString()));
 
   try {
     let version;
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 50; i++) {
       try {
         version = await httpGetJson(`http://127.0.0.1:${port}/json/version`);
         break;
@@ -142,39 +87,38 @@ async function main() {
         await sleep(200);
       }
     }
-    if (!version?.webSocketDebuggerUrl) {
-      throw new Error('Chrome CDP not ready: ' + stderr.slice(-500));
-    }
+    if (!version?.webSocketDebuggerUrl) throw new Error('CDP not ready: ' + stderr.slice(-500));
 
-    const cdp = new (class extends Cdp {
-      async connect() {
-        this.ws = new WebSocket(this.wsUrl);
-        await new Promise((resolve, reject) => {
-          this.ws.once('open', resolve);
-          this.ws.once('error', reject);
-        });
-        this.ws.on('message', (raw) => {
-          const msg = JSON.parse(String(raw));
-          if (msg.id && this.pending.has(msg.id)) {
-            const { resolve, reject } = this.pending.get(msg.id);
-            this.pending.delete(msg.id);
-            if (msg.error) reject(new Error(JSON.stringify(msg.error)));
-            else resolve(msg.result);
-          }
-        });
+    const ws = new WebSocket(version.webSocketDebuggerUrl);
+    await new Promise((resolve, reject) => {
+      ws.once('open', resolve);
+      ws.once('error', reject);
+    });
+    let id = 0;
+    const pending = new Map();
+    ws.on('message', (raw) => {
+      const msg = JSON.parse(String(raw));
+      if (msg.id && pending.has(msg.id)) {
+        const { resolve, reject } = pending.get(msg.id);
+        pending.delete(msg.id);
+        if (msg.error) reject(new Error(JSON.stringify(msg.error)));
+        else resolve(msg.result);
       }
-    })(version.webSocketDebuggerUrl);
-
-    await cdp.connect();
-
-    const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
-    const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
-
-    const send = (method, params = {}) => {
-      const id = ++cdp.id;
+    });
+    const rootSend = (method, params = {}) => {
+      const mid = ++id;
       return new Promise((resolve, reject) => {
-        cdp.pending.set(id, { resolve, reject });
-        cdp.ws.send(JSON.stringify({ id, method, params, sessionId }));
+        pending.set(mid, { resolve, reject });
+        ws.send(JSON.stringify({ id: mid, method, params }));
+      });
+    };
+    const { targetId } = await rootSend('Target.createTarget', { url: 'about:blank' });
+    const { sessionId } = await rootSend('Target.attachToTarget', { targetId, flatten: true });
+    const send = (method, params = {}) => {
+      const mid = ++id;
+      return new Promise((resolve, reject) => {
+        pending.set(mid, { resolve, reject });
+        ws.send(JSON.stringify({ id: mid, method, params, sessionId }));
       });
     };
 
@@ -190,126 +134,200 @@ async function main() {
       userAgent:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     });
+    if (PROMO_TOKEN) {
+      await send('Page.addScriptToEvaluateOnNewDocument', {
+        source: `try{localStorage.setItem('pass50_api_token',${JSON.stringify(PROMO_TOKEN)});sessionStorage.setItem('pass50_session','1');}catch(e){}
+          const block=(u)=>String(u||'').includes('open=account');
+          const _a=location.assign.bind(location), _r=location.replace.bind(location);
+          location.assign=(u)=>{if(block(u))return;return _a(u);};
+          location.replace=(u)=>{if(block(u))return;return _r(u);};`,
+      });
+    }
 
-    console.log('Navigating to', TARGET);
-    await send('Page.navigate', { url: TARGET });
-    await send('Page.loadEventFired').catch(() => {});
-    // Wait for load via Runtime
-    await sleep(4500);
+    const closeAuth = async () => {
+      await send('Runtime.evaluate', {
+        expression: `(() => {
+          [...document.querySelectorAll('button,.close,[data-close]')].forEach(b => {
+            const t = (b.textContent||'').trim();
+            const dc = b.getAttribute('data-close')||'';
+            if (t === '×' || t === 'X' || /authModal|login/i.test(dc)) try { b.click(); } catch(e) {}
+          });
+          ['authModal','loginModal'].forEach(id => {
+            const m = document.getElementById(id);
+            if (m) { m.classList.remove('show'); m.style.display='none'; }
+          });
+          return true;
+        })()`,
+      });
+      await sleep(300);
+    };
 
-    // Dismiss cookie/demo banners if any
-    await send('Runtime.evaluate', {
-      expression: `(() => {
-        document.querySelectorAll('button,[role=button]').forEach(b => {
-          const t = (b.textContent||'').toLowerCase();
-          if (/accepter|accept|ok|fermer|close|continuer/.test(t)) try { b.click(); } catch(e) {}
-        });
-        return true;
-      })()`,
-    });
-    await sleep(800);
-
-    // Hero / home screenshot
-    const shot = async (name) => {
+    const shotStill = async (name) => {
       const { data } = await send('Page.captureScreenshot', { format: 'png', fromSurface: true });
       writeFileSync(join(OUT, name), Buffer.from(data, 'base64'));
       console.log('wrote', name);
     };
 
-    await shot('01-home.png');
+    const captureScrollSequence = async (dirName, frameCount = 36) => {
+      const dir = join(OUT, dirName);
+      rmSync(dir, { recursive: true, force: true });
+      mkdirSync(dir, { recursive: true });
+      await send('Runtime.evaluate', { expression: `window.scrollTo({top:0,behavior:'instant'})` });
+      await sleep(200);
+      const metrics = await send('Page.getLayoutMetrics');
+      const contentHeight = Math.ceil(
+        metrics.cssContentSize?.height || metrics.contentSize?.height || HEIGHT * 3
+      );
+      const maxScroll = Math.max(0, Math.min(contentHeight - HEIGHT, 3200));
+      for (let i = 0; i < frameCount; i++) {
+        const y = Math.round((i / Math.max(1, frameCount - 1)) * maxScroll);
+        await send('Runtime.evaluate', {
+          expression: `window.scrollTo({top:${y},behavior:'instant'})`,
+        });
+        await sleep(70);
+        const { data } = await send('Page.captureScreenshot', {
+          format: 'jpeg',
+          quality: 84,
+          fromSurface: true,
+        });
+        writeFileSync(join(dir, `frame-${String(i).padStart(3, '0')}.jpg`), Buffer.from(data, 'base64'));
+        process.stdout.write(`\r${dirName} ${i + 1}/${frameCount}`);
+      }
+      console.log(`\n${dirName} done (scroll ${maxScroll}px)`);
+      return { frameCount, maxScroll, contentHeight };
+    };
 
-    // Long full-page capture for scroll strip
-    const metrics = await send('Page.getLayoutMetrics');
-    const contentHeight = Math.min(
-      Math.ceil(metrics.cssContentSize?.height || metrics.contentSize?.height || HEIGHT * 4),
-      6000
-    );
-    console.log('content height', contentHeight);
+    // ——— HOME ———
+    console.log('Navigating home', TARGET);
+    await send('Page.navigate', { url: TARGET });
+    await sleep(4500);
+    await closeAuth();
+    await shotStill('01-home.png');
+    const homeMeta = await captureScrollSequence('scroll-frames', 48);
 
-    await send('Emulation.setDeviceMetricsOverride', {
-      width: WIDTH,
-      height: contentHeight,
-      deviceScaleFactor: 2,
-      mobile: true,
+    // Rank cards visible — collect top profile ids from DOM
+    const idsResult = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const ids = [];
+        document.querySelectorAll('[data-profile],[data-id]').forEach(el => {
+          const id = el.getAttribute('data-profile') || el.getAttribute('data-id');
+          if (id && !ids.includes(id)) ids.push(id);
+        });
+        // also try rank cards / fav buttons
+        document.querySelectorAll('.rank-card .fav,.rank-card .follow,button.fav,button.follow').forEach(el => {
+          const id = el.getAttribute('data-id');
+          if (id && !ids.includes(id)) ids.push(id);
+        });
+        return ids.slice(0, 12);
+      })()`,
+      returnByValue: true,
     });
-    await sleep(600);
-    await shot('02-fullpage.png');
+    let profileIds = idsResult.result?.value || [];
+    console.log('profile ids from DOM', profileIds);
 
-    // Reset viewport and capture scroll frames
-    await send('Emulation.setDeviceMetricsOverride', {
-      width: WIDTH,
-      height: HEIGHT,
-      deviceScaleFactor: 2,
-      mobile: true,
-    });
-    await sleep(400);
-
-    const framesDir = join(OUT, 'scroll-frames');
-    mkdirSync(framesDir, { recursive: true });
-    const maxScroll = Math.max(0, contentHeight - HEIGHT);
-    const frameCount = 48;
-    for (let i = 0; i < frameCount; i++) {
-      const y = Math.round((i / (frameCount - 1)) * maxScroll);
-      await send('Runtime.evaluate', {
-        expression: `window.scrollTo({ top: ${y}, behavior: 'instant' })`,
-      });
-      await sleep(80);
-      const { data } = await send('Page.captureScreenshot', { format: 'jpeg', quality: 82, fromSurface: true });
-      writeFileSync(join(framesDir, `frame-${String(i).padStart(3, '0')}.jpg`), Buffer.from(data, 'base64'));
-      process.stdout.write(`\rframe ${i + 1}/${frameCount}`);
+    // Fallback known popular ids if DOM empty
+    if (profileIds.length < 3) {
+      profileIds = ['emma', 'lopere', 'apoutchou', 'paulyves', 'didi-b', 'sarara-messan'];
     }
-    console.log('\nscroll frames done');
 
-    // Close auth modal if it appeared
-    const closeAuth = async () => {
+    // ——— FICHES INFLUENCEURS ———
+    const ficheDir = join(OUT, 'fiche-frames');
+    rmSync(ficheDir, { recursive: true, force: true });
+    mkdirSync(ficheDir, { recursive: true });
+    let ficheFrame = 0;
+    const ficheMeta = [];
+
+    for (const pid of profileIds.slice(0, 4)) {
+      const url = new URL(TARGET);
+      url.searchParams.set('profile', pid);
+      console.log('Opening fiche', pid);
+      await send('Page.navigate', { url: url.href });
+      await sleep(4200);
+      await closeAuth();
+
+      // Ensure profile modal is open
       await send('Runtime.evaluate', {
         expression: `(() => {
-          const close = document.querySelector('.modal .close, .modal-box .close, [data-close], button[aria-label*="ferm" i], .modal button');
-          const xBtns = [...document.querySelectorAll('button, a, span')].filter(b => (b.textContent||'').trim() === '×' || (b.textContent||'').trim() === 'X');
-          (xBtns[0] || close)?.click?.();
-          document.querySelectorAll('.modal, .modal-backdrop, [class*=modal]').forEach(m => {
-            if (m.classList.contains('show') || getComputedStyle(m).display !== 'none') {
-              m.classList.remove('show');
-              m.style.display = 'none';
-            }
-          });
-          return true;
+          if (typeof openProfile === 'function') { try { openProfile(${JSON.stringify(pid)}); } catch(e) {} }
+          const m = document.getElementById('profileModal');
+          if (m) { m.classList.add('show'); m.style.display='grid'; }
+          return !!(m && m.classList.contains('show'));
         })()`,
       });
-      await sleep(400);
-    };
-    await closeAuth();
+      await sleep(1200);
+      await closeAuth();
 
-    // Scroll to Top 10 / ranking list without triggering auth CTA
+      // Still of fiche
+      await shotStill(`fiche-${pid}.png`);
+
+      // Scroll inside profile modal body if possible, else page
+      const scrollFiche = async (steps) => {
+        for (let i = 0; i < steps; i++) {
+          await send('Runtime.evaluate', {
+            expression: `(() => {
+              const body = document.querySelector('#profileBody, #profileModal .modal-body, #profileModal .modal-box');
+              const host = body || document.scrollingElement || document.documentElement;
+              const max = Math.max(0, (host.scrollHeight || 0) - (host.clientHeight || ${HEIGHT}));
+              const y = Math.round((${i} / ${Math.max(1, steps - 1)}) * Math.min(max, 1400));
+              if (host === document.scrollingElement || host === document.documentElement) window.scrollTo(0, y);
+              else host.scrollTop = y;
+              // also nudge modal box
+              const box = document.querySelector('#profileModal .modal-box');
+              if (box) box.scrollTop = y;
+              return y;
+            })()`,
+          });
+          await sleep(80);
+          const { data } = await send('Page.captureScreenshot', {
+            format: 'jpeg',
+            quality: 84,
+            fromSurface: true,
+          });
+          writeFileSync(
+            join(ficheDir, `frame-${String(ficheFrame).padStart(3, '0')}.jpg`),
+            Buffer.from(data, 'base64')
+          );
+          ficheFrame += 1;
+        }
+      };
+      await scrollFiche(12);
+      ficheMeta.push({ id: pid, frames: 12 });
+    }
+    console.log('fiche frames', ficheFrame);
+
+    // ——— PRONOSTICS (auth token / URL locale si fournis) ———
+    const pronoUrl = new URL(PRONO_URL);
+    pronoUrl.searchParams.set('v', String(Date.now()));
+    console.log('Navigating pronostics', pronoUrl.href);
+    await send('Page.navigate', { url: pronoUrl.href });
+    await sleep(5500);
+    await closeAuth();
+    await shotStill('05-pronostics.png');
+    await send('Runtime.evaluate', {
+      expression: `window.scrollTo({top:0,behavior:'instant'})`,
+    });
+    await sleep(400);
+    const pronoMeta = await captureScrollSequence('prono-frames', 40);
+    await send('Runtime.evaluate', {
+      expression: `window.scrollTo({top:500,behavior:'instant'})`,
+    });
+    await sleep(500);
+    await shotStill('05b-pronostics-mid.png');
+
+    // Classement still (no auth)
+    await send('Page.navigate', { url: TARGET });
+    await sleep(3500);
+    await closeAuth();
     await send('Runtime.evaluate', {
       expression: `(() => {
-        const el = document.querySelector('#top10, .top10, #classement, .rank-card');
-        if (el) el.scrollIntoView({ block: 'start' });
-        else window.scrollTo(0, 700);
+        const el = document.querySelector('.rank-card, #top10, .top10');
+        if (el) el.scrollIntoView({block:'start'});
+        else window.scrollTo(0, 650);
         return true;
       })()`,
     });
-    await sleep(900);
-    await shot('03-classement.png');
-
-    // Capture duel / coules section
-    await closeAuth();
-    await send('Runtime.evaluate', {
-      expression: `(() => {
-        const el = document.querySelector('#coules, [id*=coule], .sunk-duel');
-        if (el) el.scrollIntoView({ block: 'start' });
-        else window.scrollTo(0, Math.min(1600, document.body.scrollHeight));
-        return !!el;
-      })()`,
-    });
-    await sleep(900);
-    await shot('04-duel.png');
-
-    // Pronostics page
-    await send('Page.navigate', { url: new URL('/pronostics.html', TARGET).href });
-    await sleep(3500);
-    await closeAuth();
-    await shot('05-pronostics.png');
+    await sleep(700);
+    await shotStill('03-classement.png');
 
     writeFileSync(
       join(OUT, 'meta.json'),
@@ -318,25 +336,29 @@ async function main() {
           url: TARGET,
           capturedAt: new Date().toISOString(),
           viewport: { width: WIDTH, height: HEIGHT, dpr: 2 },
-          contentHeight,
-          frameCount,
+          home: homeMeta,
+          fiches: { frameCount: ficheFrame, profiles: ficheMeta },
+          pronostics: pronoMeta,
+          profileIds,
+          audio: false,
+          targetDurationSec: 15,
         },
         null,
         2
       )
     );
 
-    cdp.close();
+    ws.close();
   } finally {
     chrome.kill('SIGTERM');
-    await sleep(300);
+    await sleep(250);
     try {
       chrome.kill('SIGKILL');
     } catch {}
   }
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((e) => {
+  console.error(e);
   process.exit(1);
 });

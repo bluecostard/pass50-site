@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Render PASS50 promo HTML compositions to MP4 via Chrome CDP + ffmpeg.
+ * Render 15s PASS50 promo videos (mute) with:
+ * classement scroll + fiches influenceurs + pronostics.
  */
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, existsSync, rmSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import net from 'node:net';
 import http from 'node:http';
-import { pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -19,6 +19,8 @@ const CHROME = process.env.CHROME_PATH || 'google-chrome';
 const WIDTH = 1080;
 const HEIGHT = 1920;
 const FPS = 24;
+const DURATION_SEC = 15;
+const TOTAL_FRAMES = DURATION_SEC * FPS; // 360
 
 mkdirSync(OUT, { recursive: true });
 mkdirSync(TMP, { recursive: true });
@@ -36,11 +38,7 @@ function findFreePort() {
     s.on('error', reject);
   });
 }
-
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function httpGetJson(url) {
   return new Promise((resolve, reject) => {
     http.get(url, (res) => {
@@ -56,19 +54,63 @@ function httpGetJson(url) {
     }).on('error', reject);
   });
 }
-
-function run(cmd, args, opts = {}) {
+function run(cmd, args) {
   return new Promise((resolve, reject) => {
-    const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], ...opts });
-    let out = '';
+    const p = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let err = '';
-    p.stdout.on('data', (d) => (out += d));
     p.stderr.on('data', (d) => (err += d));
     p.on('close', (code) => {
-      if (code === 0) resolve({ out, err });
+      if (code === 0) resolve();
       else reject(new Error(`${cmd} failed (${code}): ${err.slice(-800)}`));
     });
   });
+}
+
+/**
+ * 15s timeline (mute):
+ * 0.0–1.2s  intro hold home
+ * 1.2–5.5s  scroll classement
+ * 5.5–6.0s  hold end of classement
+ * 6.0–10.2s fiches influenceurs
+ * 10.2–14.0s pronostics scroll
+ * 14.0–15.0s end hold CTA
+ */
+function buildTimeline(seqCounts) {
+  const homeN = seqCounts.home || 48;
+  const ficheN = seqCounts.fiche || 1;
+  const pronoN = seqCounts.prono || 1;
+
+  const plan = [];
+  const pushHold = (seq, frame, frames) => {
+    for (let i = 0; i < frames; i++) plan.push({ seq, frame });
+  };
+  const pushScroll = (seq, count, frames) => {
+    for (let i = 0; i < frames; i++) {
+      const t = frames === 1 ? 0 : i / (frames - 1);
+      const frame = Math.min(count - 1, Math.round(t * (count - 1)));
+      plan.push({ seq, frame });
+    }
+  };
+
+  // Exact frame budgets summing to 360
+  pushHold('home', 0, 29); // ~1.2s
+  pushScroll('home', homeN, 103); // ~4.3s
+  pushHold('home', homeN - 1, 12); // ~0.5s
+  if (ficheN > 0) {
+    pushScroll('fiche', ficheN, 101); // ~4.2s
+  } else {
+    pushScroll('home', homeN, 101);
+  }
+  if (pronoN > 0) {
+    pushScroll('prono', pronoN, 91); // ~3.8s
+  } else {
+    pushScroll('home', homeN, 91);
+  }
+  pushHold(pronoN > 0 ? 'prono' : 'home', Math.max(0, (pronoN || homeN) - 1), 24); // 1.0s
+
+  // Normalize length
+  while (plan.length < TOTAL_FRAMES) plan.push(plan[plan.length - 1]);
+  return plan.slice(0, TOTAL_FRAMES);
 }
 
 async function withChrome(fn) {
@@ -128,7 +170,6 @@ async function withChrome(fn) {
         ws.send(JSON.stringify({ id: mid, method, params }));
       });
     };
-
     const { targetId } = await rootSend('Target.createTarget', { url: 'about:blank' });
     const { sessionId } = await rootSend('Target.attachToTarget', { targetId, flatten: true });
     const send = (method, params = {}) => {
@@ -148,8 +189,7 @@ async function withChrome(fn) {
       mobile: false,
     });
 
-    const api = { send, rootSend, ws };
-    await fn(api);
+    await fn({ send, ws });
     ws.close();
   } finally {
     chrome.kill('SIGTERM');
@@ -160,30 +200,23 @@ async function withChrome(fn) {
   }
 }
 
-async function renderComposition({
-  name,
-  htmlFile,
-  query = '',
-  introHoldSec = 1.2,
-  endHoldSec = 1.4,
-  scrollFrameHold = 2,
-}) {
+async function renderComposition({ name, query = '' }) {
   const framesDir = join(TMP, name);
   rmSync(framesDir, { recursive: true, force: true });
   mkdirSync(framesDir, { recursive: true });
 
+  const htmlFile = join(ROOT, 'templates', 'person-using-pass50.html');
   const fileUrl = pathToFileURL(htmlFile).href + (query ? `?${query}` : '');
-  console.log(`\n▶ Rendering ${name}`);
+  console.log(`\n▶ Rendering ${name} (${DURATION_SEC}s mute)`);
   console.log('  ', fileUrl);
 
   let videoFrame = 0;
+  let lastSeq = null;
 
   await withChrome(async ({ send }) => {
     await send('Page.navigate', { url: fileUrl });
-    await sleep(800);
-
-    // Wait for promo API
-    for (let i = 0; i < 40; i++) {
+    await sleep(1000);
+    for (let i = 0; i < 50; i++) {
       const r = await send('Runtime.evaluate', {
         expression: `!!(window.__PASS50_PROMO__ && document.documentElement.dataset.ready === '1')`,
         returnByValue: true,
@@ -191,56 +224,43 @@ async function renderComposition({
       if (r.result?.value) break;
       await sleep(150);
     }
-
-    await send('Runtime.evaluate', {
+    const seqInfo = await send('Runtime.evaluate', {
       expression: `window.__PASS50_PROMO__.preload()`,
       awaitPromise: true,
-    });
-
-    const meta = await send('Runtime.evaluate', {
-      expression: `({ frameCount: window.__PASS50_PROMO__.frameCount })`,
       returnByValue: true,
     });
-    const scrollCount = meta.result?.value?.frameCount || 48;
+    const sequences = seqInfo.result?.value || [];
+    const counts = Object.fromEntries(sequences.map((s) => [s.id, s.count || 0]));
+    console.log('  sequences', counts);
+    const plan = buildTimeline(counts);
 
-    const shot = async () => {
+    for (let i = 0; i < plan.length; i++) {
+      const step = plan[i];
+      if (step.seq !== lastSeq) {
+        await send('Runtime.evaluate', {
+          expression: `window.__PASS50_PROMO__.setSequence(${JSON.stringify(step.seq)})`,
+        });
+        lastSeq = step.seq;
+      }
+      await send('Runtime.evaluate', {
+        expression: `window.__PASS50_PROMO__.setFrame(${step.frame})`,
+      });
+      if (i === 0 || step.seq !== plan[i - 1]?.seq) await sleep(30);
       const { data } = await send('Page.captureScreenshot', {
         format: 'jpeg',
-        quality: 90,
+        quality: 88,
         fromSurface: true,
         clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT, scale: 1 },
       });
-      const path = join(framesDir, `v-${String(videoFrame).padStart(5, '0')}.jpg`);
-      writeFileSync(path, Buffer.from(data, 'base64'));
+      writeFileSync(join(framesDir, `v-${String(videoFrame).padStart(5, '0')}.jpg`), Buffer.from(data, 'base64'));
       videoFrame += 1;
-    };
-
-    // Intro hold on first scroll frame
-    await send('Runtime.evaluate', {
-      expression: `window.__PASS50_PROMO__.setFrame(0)`,
-    });
-    const introFrames = Math.round(introHoldSec * FPS);
-    for (let i = 0; i < introFrames; i++) await shot();
-
-    // Scroll through real Pass50 frames
-    for (let s = 0; s < scrollCount; s++) {
-      await send('Runtime.evaluate', {
-        expression: `window.__PASS50_PROMO__.setFrame(${s})`,
-      });
-      // tiny paint settle
-      await sleep(20);
-      for (let h = 0; h < scrollFrameHold; h++) await shot();
-      if (s % 8 === 0) process.stdout.write(`\r  scroll ${s + 1}/${scrollCount} → video frames ${videoFrame}`);
+      if (i % 24 === 0) process.stdout.write(`\r  ${i}/${plan.length} (${(i / FPS).toFixed(1)}s)`);
     }
-    process.stdout.write('\n');
-
-    // End hold
-    const endFrames = Math.round(endHoldSec * FPS);
-    for (let i = 0; i < endFrames; i++) await shot();
+    process.stdout.write(`\r  ${plan.length}/${plan.length} (${DURATION_SEC}s)\n`);
   });
 
   const mp4 = join(OUT, `${name}.mp4`);
-  // Vidéo muette volontairement : la voix / musique sera ajoutée à la publication.
+  // Vidéo muette volontairement — voix ajoutée à la publication
   await run('ffmpeg', [
     '-y',
     '-framerate',
@@ -262,24 +282,78 @@ async function renderComposition({
     String(FPS),
     mp4,
   ]);
-  console.log('  ✓', mp4, `(${videoFrame} frames)`);
+  console.log('  ✓', mp4);
   return mp4;
 }
 
-async function alsoEncodeFromScrollFramesOnly() {
-  // Pure real-UI scroll (9:16 crop already mobile) — fast secondary asset
-  const frames = join(ROOT, 'captures', 'scroll-frames');
+async function renderConcatReel() {
+  // 15s fullscreen reel: home + fiche + prono stitched via ffmpeg (mute)
+  const home = join(ROOT, 'captures', 'scroll-frames');
+  const fiche = join(ROOT, 'captures', 'fiche-frames');
+  const prono = join(ROOT, 'captures', 'prono-frames');
+  const list = join(TMP, 'reel-list.txt');
+  const parts = [];
+
+  async function encodePart(name, pattern, frames, seconds) {
+    if (!existsSync(pattern.replace('%03d', '000'))) return null;
+    const out = join(TMP, `${name}.mp4`);
+    // Map available frames across target duration
+    await run('ffmpeg', [
+      '-y',
+      '-framerate',
+      String(Math.max(1, frames / seconds)),
+      '-i',
+      pattern,
+      '-an',
+      '-vf',
+      'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-crf',
+      '18',
+      '-t',
+      String(seconds),
+      '-r',
+      String(FPS),
+      out,
+    ]);
+    return out;
+  }
+
+  const { readdirSync } = await import('node:fs');
+  const countFrames = (dir) => {
+    try {
+      return readdirSync(dir).filter((f) => f.endsWith('.jpg')).length;
+    } catch {
+      return 0;
+    }
+  };
+
+  const homeN = countFrames(home);
+  const ficheN = countFrames(fiche);
+  const pronoN = countFrames(prono);
+
+  // Budget: 5.5s home + 4.5s fiche + 5s prono = 15s
+  if (homeN) parts.push(await encodePart('part-home', join(home, 'frame-%03d.jpg'), homeN, 5.5));
+  if (ficheN) parts.push(await encodePart('part-fiche', join(fiche, 'frame-%03d.jpg'), ficheN, 4.5));
+  if (pronoN) parts.push(await encodePart('part-prono', join(prono, 'frame-%03d.jpg'), pronoN, 5.0));
+  // If fiche missing, extend home
+  if (!ficheN && homeN) parts.push(await encodePart('part-home2', join(home, 'frame-%03d.jpg'), homeN, 4.5));
+
+  const valid = parts.filter(Boolean);
+  writeFileSync(list, valid.map((p) => `file '${p}'`).join('\n'));
   const mp4 = join(OUT, 'pass50-scroll-reel.mp4');
-  // Pad intro/end by duplicating first/last via ffmpeg filter
   await run('ffmpeg', [
     '-y',
-    '-framerate',
-    '12',
+    '-f',
+    'concat',
+    '-safe',
+    '0',
     '-i',
-    join(frames, 'frame-%03d.jpg'),
+    list,
     '-an',
-    '-vf',
-    "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,tpad=start_mode=clone:start_duration=1:stop_mode=clone:stop_duration=1.2",
     '-c:v',
     'libx264',
     '-pix_fmt',
@@ -288,8 +362,8 @@ async function alsoEncodeFromScrollFramesOnly() {
     '18',
     '-movflags',
     '+faststart',
-    '-r',
-    '24',
+    '-t',
+    '15',
     mp4,
   ]);
   console.log('  ✓', mp4);
@@ -297,36 +371,24 @@ async function alsoEncodeFromScrollFramesOnly() {
 }
 
 async function main() {
-  const template = join(ROOT, 'templates', 'person-using-pass50.html');
   if (!existsSync(join(ROOT, 'captures', 'scroll-frames', 'frame-000.jpg'))) {
-    throw new Error('Missing captures — run scripts/capture-pass50.mjs first');
+    throw new Error('Missing captures — run capture-pass50.mjs first');
   }
 
   const outputs = [];
-
   outputs.push(
     await renderComposition({
       name: 'pass50-personne-defilement',
-      htmlFile: template,
-      query: 'mode=person&count=48&title=' + encodeURIComponent('Le buzz|maintenant') + '&sub=' + encodeURIComponent('Vraies images · vrai classement PASS50'),
-      introHoldSec: 1.3,
-      endHoldSec: 1.6,
-      scrollFrameHold: 2,
+      query: 'mode=person',
     })
   );
-
   outputs.push(
     await renderComposition({
       name: 'pass50-fullscreen-scroll',
-      htmlFile: template,
-      query: 'mode=fullscreen&count=48',
-      introHoldSec: 0.6,
-      endHoldSec: 0.8,
-      scrollFrameHold: 2,
+      query: 'mode=fullscreen',
     })
   );
-
-  outputs.push(await alsoEncodeFromScrollFramesOnly());
+  outputs.push(await renderConcatReel());
 
   writeFileSync(
     join(OUT, 'manifest.json'),
@@ -334,15 +396,17 @@ async function main() {
       {
         generatedAt: new Date().toISOString(),
         source: 'https://pass50.store/',
+        durationSec: 15,
+        audio: false,
         videos: outputs.map((p) => p.replace(ROOT + '/', '')),
-        note: 'Captures réelles du site + composition personne/téléphone. Vidéos muettes (sans voix) — audio à ajouter à la publication.',
+        scenes: ['classement', 'fiches influenceurs', 'pronostics'],
+        note: 'Vidéos 15s muettes (sans voix). Contient classement, fiches et pronostics capturés sur le site réel.',
       },
       null,
       2
     )
   );
-
-  console.log('\nDone:', outputs.length, 'videos');
+  console.log('\nDone:', outputs.length, 'videos × 15s mute');
 }
 
 main().catch((e) => {

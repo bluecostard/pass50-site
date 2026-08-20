@@ -1,11 +1,17 @@
 {
-  "generatedAt": "2026-08-20T13:13:01.128Z",
+  "generatedAt": "2026-08-20T13:27:49.001Z",
   "source": "https://pass50.store/",
+  "durationSec": 15,
+  "audio": false,
   "videos": [
     "output/pass50-personne-defilement.mp4",
     "output/pass50-fullscreen-scroll.mp4",
     "output/pass50-scroll-reel.mp4"
   ],
-  "note": "Captures réelles du site + composition personne/téléphone. Vidéos muettes (sans voix) — audio à ajouter à la publication.",
-  "audio": false
+  "scenes": [
+    "classement",
+    "fiches influenceurs",
+    "pronostics"
+  ],
+  "note": "Vidéos 15s muettes (sans voix). Contient classement, fiches et pronostics capturés sur le site réel."
 }

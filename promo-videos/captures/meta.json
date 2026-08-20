@@ -1,11 +1,56 @@
 {
   "url": "https://pass50.store/",
-  "capturedAt": "2026-08-20T13:10:19.229Z",
+  "capturedAt": "2026-08-20T13:21:09.898Z",
   "viewport": {
     "width": 390,
     "height": 844,
     "dpr": 2
   },
-  "contentHeight": 3185,
-  "frameCount": 48
+  "home": {
+    "frameCount": 48,
+    "maxScroll": 2341,
+    "contentHeight": 3185
+  },
+  "fiches": {
+    "frameCount": 48,
+    "profiles": [
+      {
+        "id": "census-sarara-messan",
+        "frames": 12
+      },
+      {
+        "id": "census-roseline-layo",
+        "frames": 12
+      },
+      {
+        "id": "dolpho",
+        "frames": 12
+      },
+      {
+        "id": "census-himra",
+        "frames": 12
+      }
+    ]
+  },
+  "pronostics": {
+    "frameCount": 40,
+    "maxScroll": 3200,
+    "contentHeight": 4292
+  },
+  "profileIds": [
+    "census-sarara-messan",
+    "census-roseline-layo",
+    "dolpho",
+    "census-himra",
+    "census-didi-b",
+    "census-awao-officiel",
+    "samuella-kouassi",
+    "maabio",
+    "african-ryou",
+    "census-ange-freddy",
+    "census-dougoutigui-lobeh",
+    "census-eudoxie-yao"
+  ],
+  "audio": false,
+  "targetDurationSec": 15
 }
