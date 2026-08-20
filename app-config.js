@@ -230,8 +230,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-ange-morel]')) return;
   var script = document.createElement('script');
-  script.src = './profile-ange-morel.js?v=1.0';
-  script.dataset.pass50ProfileAngeMorel = '1.0';
+  script.src = './profile-ange-morel.js?v=1.1';
+  script.dataset.pass50ProfileAngeMorel = '1.1';
   document.head.appendChild(script);
 })();
 
@@ -299,8 +299,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-jp-nda]')) return;
   var script = document.createElement('script');
-  script.src = './profile-jp-nda.js?v=1.0';
-  script.dataset.pass50ProfileJpNda = '1.0';
+  script.src = './profile-jp-nda.js?v=1.1';
+  script.dataset.pass50ProfileJpNda = '1.1';
   document.head.appendChild(script);
 })();
 
@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-lexes]')) return;
   var script = document.createElement('script');
-  script.src = './profile-lexes.js?v=1.0';
-  script.dataset.pass50ProfileLexes = '1.0';
+  script.src = './profile-lexes.js?v=1.1';
+  script.dataset.pass50ProfileLexes = '1.1';
   document.head.appendChild(script);
 })();

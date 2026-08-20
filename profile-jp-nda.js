@@ -52,28 +52,17 @@ function baseProfile(){
   };
 }
 
-function ensureManualLive(){
+function closeStuckManualLive(){
   if(typeof db==='undefined')return false;
   db.liveStreams=Array.isArray(db.liveStreams)?db.liveStreams:[];
-  const fresh=(stream)=>{
-    if(!stream||stream.profileId!==PROFILE_ID||stream.platform!=='TikTok'||stream.status!=='live')return false;
-    const ends=new Date(stream.endsAt||'').getTime();
-    return Number.isFinite(ends)&&ends>Date.now();
-  };
-  if(db.liveStreams.some(fresh))return false;
-  db.liveStreams=db.liveStreams.filter(s=>!(s.profileId===PROFILE_ID&&s.platform==='TikTok'&&s.status==='live'));
-  db.liveStreams.push({
-    id:'live_jpnda_'+Date.now(),
-    profileId:PROFILE_ID,
-    platform:'TikTok',
-    url:TIKTOK_LIVE_URL,
-    title:'Direct en cours — Canapé de PIJ',
-    status:'live',
-    source:'manual',
-    startedAt:new Date().toISOString(),
-    endsAt:new Date(Date.now()+180*60000).toISOString()
+  const before=db.liveStreams.length;
+  db.liveStreams=db.liveStreams.filter(stream=>{
+    if(!stream||stream.profileId!==PROFILE_ID||stream.platform!=='TikTok')return true;
+    if(stream.source==='manual')return false;
+    const id=String(stream.id||'');
+    return !id.startsWith('live_jpnda_');
   });
-  return true;
+  return db.liveStreams.length!==before;
 }
 
 function applyProfile(){
@@ -100,7 +89,7 @@ function applyProfile(){
     profile.platforms=Array.isArray(profile.platforms)?profile.platforms:[];
     if(!profile.platforms.includes('TikTok')){profile.platforms.push('TikTok');changed=true;}
   }
-  if(ensureManualLive())changed=true;
+  if(closeStuckManualLive())changed=true;
   if(changed){
     try{if(typeof save==='function')save();else if(typeof APP_KEY!=='undefined')localStorage.setItem(APP_KEY,JSON.stringify(db));}catch{}
     try{if(typeof render==='function')render();}catch{}

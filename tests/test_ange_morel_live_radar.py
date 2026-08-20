@@ -11,7 +11,9 @@ class AngeMorelLiveRadarTests(unittest.TestCase):
     def test_profile_loader_tiktok(self):
         self.assertIn("const PROFILE_ID='census-ange-morel'", PROFILE)
         self.assertIn('https://www.tiktok.com/@angemorel4', PROFILE)
-        self.assertIn('ensureManualLive', PROFILE)
+        self.assertIn('closeStuckManualLive', PROFILE)
+        self.assertNotIn('ensureManualLive', PROFILE)
+        self.assertNotIn("source:'manual'", PROFILE)
 
     def test_radar_p0_and_forced_probe(self):
         self.assertIn("'census-ange-morel'", SOURCE)
