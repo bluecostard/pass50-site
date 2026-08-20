@@ -24,7 +24,7 @@ class PublicRankingAppV1Tests(unittest.TestCase):
         endpoint = read("api/public-ranking.php")
         self.assertIn("Access-Control-Allow-Origin: *", endpoint)
         self.assertIn("p50_public_ranking_response", endpoint)
-        self.assertIn("Cache-Control: public, max-age=30", endpoint)
+        self.assertIn("Cache-Control: public, max-age=60", endpoint)
         self.assertIn("action'] ?? 'rebuild'", endpoint)
         self.assertIn("require_role($user, 'owner', 'admin')", endpoint)
 

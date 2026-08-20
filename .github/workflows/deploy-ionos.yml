@@ -106,6 +106,8 @@ jobs:
           put -O ${REMOTE_DIR@Q}/api .deploy/api/public-feed.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/app-bootstrap.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/live-status.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/live-status-cache-core.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/live-status-v4.php
           put -O ${REMOTE_DIR@Q} .deploy/app.html
           put -O ${REMOTE_DIR@Q} .deploy/app-client.js
           put -O ${REMOTE_DIR@Q} .deploy/manifest.webmanifest

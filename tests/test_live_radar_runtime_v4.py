@@ -10,6 +10,8 @@ CLIENT = (ROOT / 'live-radar-v3.js').read_text(encoding='utf-8')
 class LiveRadarRuntimeV4Tests(unittest.TestCase):
     def test_legacy_endpoint_defaults_to_cache_only_status(self):
         self.assertIn("mode'] = 'status'", LEGACY)
+        self.assertIn("live-status-cache-core.php", LEGACY)
+        self.assertIn("p50_live_status_cache_respond", LEGACY)
         self.assertIn("require __DIR__ . '/live-status-v4.php'", LEGACY)
 
     def test_legacy_endpoint_cannot_overwrite_v4_results(self):

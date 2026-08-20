@@ -190,7 +190,7 @@ $coverageStats=p50_live_v4_coverage_stats($sources);
 $coverage=(int)$coverageStats['coveragePercent'];
 $lastFull=p50_de_get_setting('live_radar_v4_last_full_sweep',null);
 
-json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
+$payload=['ok'=>true,'liveStreams'=>$streams,'radar'=>[
     'version'=>'4.6','mode'=>$mode,'scanPerformed'=>$scanPerformed,'busy'=>$busy,'forced'=>$force,'lastScanAt'=>$lastScan?:null,'serverNow'=>gmdate(DATE_ATOM),
     'cycleId'=>$cycleId,'cycleComplete'=>$cycleComplete,'cycleTotal'=>$cycleTotal,'cycleScanned'=>$cycleScanned,
     'sourcesScannedThisPass'=>count($selected),'livesFoundThisPass'=>$foundThisPass,'candidatesFoundThisPass'=>$candidatesThisPass,'replaysFoundThisPass'=>$replaysThisPass,
@@ -201,4 +201,29 @@ json_response(['ok'=>true,'liveStreams'=>$streams,'radar'=>[
     'officialSourcesKnown'=>count($sources),'activeAutomaticConfirmed'=>count($automatic),'platforms'=>$platformStats,'health'=>$healthSummary,'lastFullSweep'=>$lastFull,
     'refreshSeconds'=>$refresh,'batchSize'=>$batch,'discoveryQuota'=>$discoveryQuota,'confidenceThreshold'=>p50_de_threshold(),'platformPriority'=>['TikTok','Facebook','YouTube','Instagram'],
     'graceMinutes'=>p50_live_v4_reconfirm_grace_map(),'trustSeconds'=>p50_live_v4_trust_seconds_map(),'trustGate'=>P50_LIVE_V4_TRUST_REVISION,'diagnostics'=>$diagnostics,
-]]);
+],'generatedAt'=>gmdate('c')];
+
+// Réchauffe le snapshot public après un scan pour que mode=status reste instantané.
+if($scanPerformed){
+    require_once __DIR__.'/live-status-cache-core.php';
+    p50_live_status_cache_store([
+        'ok'=>true,
+        'contract'=>P50_LIVE_STATUS_CACHE_CONTRACT,
+        'cached'=>true,
+        'liveStreams'=>$streams,
+        'radar'=>array_merge($payload['radar'],[
+            'mode'=>'status',
+            'scanPerformed'=>false,
+            'busy'=>false,
+            'forced'=>false,
+            'diagnostics'=>[],
+            'sourcesScannedThisPass'=>0,
+            'livesFoundThisPass'=>0,
+            'candidatesFoundThisPass'=>0,
+            'replaysFoundThisPass'=>0,
+        ]),
+        'generatedAt'=>gmdate('c'),
+    ]);
+}
+
+json_response($payload);
