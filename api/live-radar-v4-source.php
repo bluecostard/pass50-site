@@ -31,6 +31,8 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-cahie-kunta',
     'census-lise-akrassi',
     'census-lexes',
+    'census-ange-morel',
+    'census-laguepe',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -204,6 +206,8 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-cahie-kunta|tiktok'=>'https://www.tiktok.com/@cahiekunta',
         'census-lise-akrassi|tiktok'=>'https://www.tiktok.com/@lise.akrassi.offi',
         'census-lexes|tiktok'=>'https://www.tiktok.com/@stephanesacre',
+        'census-ange-morel|tiktok'=>'https://www.tiktok.com/@angemorel4',
+        'census-laguepe|tiktok'=>'https://www.tiktok.com/@laguepe03',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
@@ -277,6 +281,8 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-cahie-kunta','name'=>'Cahié kunta','handle'=>'cahiekunta'],
         ['id'=>'census-lise-akrassi','name'=>'Lise Akrassi','handle'=>'lise.akrassi.offi'],
         ['id'=>'census-lexes','name'=>'L\'Exès','handle'=>'stephanesacre'],
+        ['id'=>'census-ange-morel','name'=>'Ange-Morel Your Eyes','handle'=>'angemorel4'],
+        ['id'=>'census-laguepe','name'=>'Laguepe','handle'=>'laguepe03'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;

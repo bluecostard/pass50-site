@@ -138,7 +138,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -190,6 +190,16 @@ $rachSource=['profile_id'=>'census-rach-makosso','public_name'=>'Rach Makosso','
 $rachLive=p50_live_v4_parse_tiktok($rachSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344666,"id_str":"7675480011223344666","title":"En direct","user_count":1800,"owner":{"display_id":"rach_makosso1","nickname":"Rach Makosso"}},"status_code":0}')]);
 must($rachLive['state']==='live','Rach Makosso webcast status=2 doit publier le LIVE.');
 must(($rachLive['live']['metadata']['roomId']??'')==='7675480011223344666','Le roomId Rach Makosso doit être conservé.');
+
+$angeMorelSource=['profile_id'=>'census-ange-morel','public_name'=>'Ange-Morel Your Eyes','platform'=>'TikTok','url'=>'https://www.tiktok.com/@angemorel4'];
+$angeMorelLive=p50_live_v4_parse_tiktok($angeMorelSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344777,"id_str":"7675480011223344777","title":"En direct","user_count":2100,"owner":{"display_id":"angemorel4","nickname":"Ange-Morel Your Eyes"}},"status_code":0}')]);
+must($angeMorelLive['state']==='live','Ange-Morel Your Eyes webcast status=2 doit publier le LIVE.');
+must(($angeMorelLive['live']['metadata']['roomId']??'')==='7675480011223344777','Le roomId Ange-Morel Your Eyes doit être conservé.');
+
+$laguepeSource=['profile_id'=>'census-laguepe','public_name'=>'Laguepe','platform'=>'TikTok','url'=>'https://www.tiktok.com/@laguepe03'];
+$laguepeLive=p50_live_v4_parse_tiktok($laguepeSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344888,"id_str":"7675480011223344888","title":"En direct","user_count":890,"owner":{"display_id":"laguepe03","nickname":"Laguepe"}},"status_code":0}')]);
+must($laguepeLive['state']==='live','Laguepe webcast status=2 doit publier le LIVE.');
+must(($laguepeLive['live']['metadata']['roomId']??'')==='7675480011223344888','Le roomId Laguepe doit être conservé.');
 
 $embedOnlyBlocked=p50_live_v4_parse_tiktok($jordanSource,[
     'api'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'http_403','timeMs'=>8],

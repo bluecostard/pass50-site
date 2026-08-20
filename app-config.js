@@ -226,6 +226,24 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Ange-Morel Your Eyes (TikTok @angemorel4 — live signalé).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-ange-morel]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-ange-morel.js?v=1.0';
+  script.dataset.pass50ProfileAngeMorel = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Laguepe (TikTok @laguepe03).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-laguepe]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-laguepe.js?v=1.0';
+  script.dataset.pass50ProfileLaguepe = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Radar LIVE V4 : balayage continu de tous les liens officiels validés.
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
