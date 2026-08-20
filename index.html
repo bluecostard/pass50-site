@@ -106,6 +106,9 @@
     .score-animate{animation:scorePop .55s cubic-bezier(.2,.8,.2,1)}
     @keyframes scorePop{0%{transform:translateY(4px) scale(.98)}100%{transform:none}}
     .top10{scroll-behavior:smooth}.mini{transition:border-color .25s,box-shadow .25s,background .25s}
+    #top10.p50-guest-locked{position:relative}
+    #top10.p50-guest-locked .top10{overflow-x:auto}
+    #top10.p50-guest-locked::after{content:"";position:absolute;right:0;top:42px;bottom:0;width:min(72px,18%);pointer-events:none;background:linear-gradient(90deg,transparent,rgba(9,12,9,.92));border-radius:0 18px 18px 0;z-index:3}
     .mini.moved-up{border-color:rgba(183,255,0,.7);box-shadow:0 0 26px rgba(183,255,0,.14)}
     .mini.moved-down{border-color:rgba(255,75,75,.65);box-shadow:0 0 24px rgba(255,75,75,.11)}
     .mini.new-top10{animation:newTopTen 1.25s ease-out}
@@ -1011,6 +1014,7 @@ function scheduleRender(opts={}){
 function render(){
   const scoreMotion=ui.scoreMotion||_renderForceScoreMotion;_renderForceScoreMotion=false;
   normalizeLiveStreams();renderLiveHeader();renderHero(scoreMotion);renderTop10(scoreMotion);renderContent();renderSunk();renderHeader();
+  syncGuestRankingGate();
   const pub=$('#lastPublished');if(pub)pub.textContent='Mise à jour : '+new Date(publishedAtIso()).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});
   ui.scoreMotion=false;
   document.querySelectorAll('.avatar img:not([data-loaded="1"])').forEach(img=>{if(img.complete&&img.naturalWidth)markAvatarReady(img);});
@@ -1198,6 +1202,34 @@ function close(id){
   if(id==='voteShareModal')voteShareCleanup();
 }
 function requireAuth(){if(currentUser())return true;openAuth('login');return false}
+let _guestTop10GateBound=false;
+function syncGuestRankingGate(){
+  const guest=!currentUser();
+  const section=$('#top10');
+  const grid=$('#top10Grid');
+  document.documentElement.classList.toggle('p50-guest',guest);
+  if(section)section.classList.toggle('p50-guest-locked',guest);
+  if(!grid)return;
+  if(guest)grid.scrollLeft=0;
+  if(_guestTop10GateBound)return;
+  _guestTop10GateBound=true;
+  const askLogin=()=>{if(currentUser())return false;openAuth('login');grid.scrollLeft=0;return true;};
+  grid.addEventListener('wheel',e=>{
+    if(currentUser())return;
+    if(Math.abs(e.deltaX)<1&&Math.abs(e.deltaY)<1)return;
+    e.preventDefault();
+    askLogin();
+  },{passive:false});
+  grid.addEventListener('touchmove',e=>{
+    if(currentUser())return;
+    e.preventDefault();
+    askLogin();
+  },{passive:false});
+  grid.addEventListener('scroll',()=>{
+    if(currentUser())return;
+    if(grid.scrollLeft>2){askLogin();grid.scrollLeft=0;}
+  });
+}
 function openAuth(mode='login'){
   const cloudNote=CLOUD.enabled?'Un e-mail de confirmation ou de récupération peut être envoyé à ton adresse.':'La récupération par e-mail n’est pas disponible pour le moment.';
   let content='';
@@ -1206,7 +1238,7 @@ function openAuth(mode='login'){
   }else{
     content=`<div class="auth-tabs"><button class="btn ${mode==='login'?'primary':''}" data-auth-tab="login">Connexion</button><button class="btn ${mode==='signup'?'primary':''}" data-auth-tab="signup">Créer un compte</button></div><div class="note">${cloudNote}</div><form class="form" id="authForm" data-mode="${mode}" style="margin-top:14px"><div class="field"><label>Adresse e-mail</label><input type="email" name="email" required autocomplete="email"></div><div class="field"><label>Mot de passe</label><input type="password" name="password" minlength="8" required autocomplete="${mode==='login'?'current-password':'new-password'}"></div>${mode==='signup'?'<div class="field"><label>Pseudo</label><input name="displayName" maxlength="40" required></div>':''}<button class="btn primary" type="submit">${mode==='login'?'Se connecter':'Créer mon compte'}</button>${mode==='login'?'<button class="btn" type="button" data-auth-tab="forgot">Mot de passe oublié ?</button>':''}</form>`;
   }
-  $('#authBody').innerHTML=content+accountLegalLinksHtml();open('authModal');
+  $('#authBody').innerHTML=content;open('authModal');
 }
 async function submitAuth(form){
   const fd=new FormData(form),email=String(fd.get('email')).trim().toLowerCase(),password=String(fd.get('password')),mode=form.dataset.mode,displayName=String(fd.get('displayName')||'').trim();
@@ -1256,6 +1288,7 @@ function isUserFoldCollapsed(key,fallback=false){const s=userFoldState();return 
 function accountLegalLinksHtml(){return `<div class="account-legal-links"><a class="btn" href="./informations-legales.html">Informations légales<span>→</span></a><a class="btn" href="./conditions-utilisation.html">Conditions d’utilisation<span>→</span></a><a class="btn" href="./politique-confidentialite.html">Politique de confidentialité<span>→</span></a><a class="btn" href="./privacy.html">Confidentialité<span>→</span></a><a class="btn" href="./terms.html">Terms<span>→</span></a><a class="btn" href="./data-deletion.html">Suppression des données<span>→</span></a><a class="btn" href="./verification-pass50.html">Vérification PASS50<span>→</span></a></div>`}
 function openUser(){if(!requireAuth())return;const u=userPrefs(),admin=['owner','admin'].includes(u.role)?`<div class="pref"><div><strong>Administration</strong><div class="muted">Membres inscrits, pronostics, profils et classements.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="adminMembersOpen">Membres</button><button class="btn" id="adminOpen">Ouvrir</button></div></div>`:'';const avatar=String(u.avatarUrl||'').trim();const initials=(String(u.displayName||'M').trim().split(/\s+/).map(x=>x[0]).join('')||'M').slice(0,2).toUpperCase();const birth=u.birthDate?String(u.birthDate).slice(0,10):'';const profileFold=isUserFoldCollapsed('profile',false),favFold=isUserFoldCollapsed('favorites',false),followFold=isUserFoldCollapsed('following',false),notifyFold=isUserFoldCollapsed('notifications',true),legalFold=isUserFoldCollapsed('legal',true),accountFold=isUserFoldCollapsed('account',false);$('#userBody').innerHTML=`<div class="user-grid"><section class="user-section full is-collapsible${profileFold?' is-collapsed':''}" data-user-fold="profile"><button type="button" class="user-title" data-user-fold-toggle="profile" aria-expanded="${profileFold?'false':'true'}"><span>Mon profil</span><span class="user-fold-right"><span class="muted">Visible sur Pronos / Mon fil</span><span class="user-chevron" aria-hidden="true">▼</span></span></button><div class="user-panel"><div class="member-profile"><div class="member-avatar" id="memberAvatarPreview">${avatar?`<img src="${safeAttr(avatar)}" alt="" referrerpolicy="no-referrer">`:`<span>${safeAttr(initials)}</span>`}</div><div class="member-profile-fields"><div class="field"><label>Photo de profil</label><input type="file" id="memberAvatarInput" accept="image/jpeg,image/png,image/webp"><small>Galerie ou appareil photo · JPEG, PNG ou WebP · max 2 Mo</small></div><div class="field"><label>Pseudo</label><input id="memberDisplayName" maxlength="40" value="${safeAttr(u.displayName||'')}"></div><div class="field"><label>Date de naissance</label><input id="memberBirthDate" type="date" value="${safeAttr(birth)}"><small>Privée · utilisée pour ton compte (13 ans minimum)</small></div><div class="member-profile-actions"><button class="btn primary" id="memberProfileSave" type="button">Enregistrer</button>${avatar?`<button class="btn" id="memberAvatarClear" type="button">Retirer la photo</button>`:''}</div></div></div></div></section><section class="user-section is-collapsible${favFold?' is-collapsed':''}" data-user-fold="favorites"><button type="button" class="user-title" data-user-fold-toggle="favorites" aria-expanded="${favFold?'false':'true'}"><span>★ Mes favoris</span><span class="user-fold-right"><span>${u.favorites.length}/3</span><span class="user-chevron" aria-hidden="true">▼</span></span></button><div class="user-panel">${u.favorites.length?u.favorites.map(id=>personRow(id,'favorite')).join(''):'<div class="empty">Aucun favori sélectionné.</div>'}</div></section><section class="user-section is-collapsible${followFold?' is-collapsed':''}" data-user-fold="following"><button type="button" class="user-title" data-user-fold-toggle="following" aria-expanded="${followFold?'false':'true'}"><span>🔔 Mes suivis</span><span class="user-fold-right"><span>${u.following.length}/5</span><span class="user-chevron" aria-hidden="true">▼</span></span></button><div class="user-panel">${u.following.length?u.following.map(id=>personRow(id,'follow')).join(''):'<div class="empty">Aucun influenceur suivi.</div>'}</div></section><section class="user-section full is-collapsible${notifyFold?' is-collapsed':''}" data-user-fold="notifications"><button type="button" class="user-title" data-user-fold-toggle="notifications" aria-expanded="${notifyFold?'false':'true'}"><span>Notifications</span><span class="user-fold-right"><span class="muted">Maximum 3 par jour</span><span class="user-chevron" aria-hidden="true">▼</span></span></button><div class="user-panel"><div class="pref"><div><strong>Fréquence</strong><div class="muted">Immédiates, résumé quotidien ou désactivées.</div></div><div class="seg" id="notificationModes"><button data-mode="instant" class="${u.notificationMode==='instant'?'active':''}">Immédiates</button><button data-mode="daily" class="${u.notificationMode==='daily'?'active':''}">Résumé</button><button data-mode="off" class="${u.notificationMode==='off'?'active':''}">Off</button></div></div><div class="pref"><div><strong>Notifications iOS / navigateur</strong></div><button class="btn" id="browserNotify">Activer</button></div><div class="pref"><div><strong>Effets sonores</strong><div class="muted">Nouveau n°1, LIVE et record uniquement.</div></div><button class="btn" id="soundToggle">${u.soundEnabled?'Activés':'Désactivés'}</button></div></div></section><section class="user-section full" id="p50MesComptesHub" data-user-fold="mes-comptes"><div class="user-title user-title-static"><span>Mes comptes</span><span class="muted">YouTube · Meta · TikTok</span></div><p class="user-section-lead">Connectez vos comptes officiels en lecture seule. PASS50 ne publie rien à votre place.</p><div class="p50-mes-comptes-panel" id="p50MesComptesPanel"></div></section><section class="user-section full is-collapsible${legalFold?' is-collapsed':''}" data-user-fold="legal"><button type="button" class="user-title" data-user-fold-toggle="legal" aria-expanded="${legalFold?'false':'true'}"><span>Infos légales</span><span class="user-fold-right"><span class="muted">7 documents</span><span class="user-chevron" aria-hidden="true">▼</span></span></button><div class="user-panel"><p class="user-section-lead">Conditions d’utilisation, confidentialité, suppression des données et vérification PASS50.</p>${accountLegalLinksHtml()}</div></section><section class="user-section full is-collapsible${accountFold?' is-collapsed':''}" data-user-fold="account"><button type="button" class="user-title" data-user-fold-toggle="account" aria-expanded="${accountFold?'false':'true'}"><span>Mon compte</span><span class="user-fold-right"><span class="muted">${u.role==='owner'?'Propriétaire':u.role==='admin'?'Admin':'Membre'}</span><span class="user-chevron" aria-hidden="true">▼</span></span></button><div class="user-panel"><div class="pref"><div><strong>${safeAttr(u.displayName||'')}</strong><div class="muted">${safeAttr(u.email||'')}</div></div><button class="btn" id="logoutBtn">Déconnexion</button></div>${admin}<div class="pref" data-p50-account-danger><div><strong>Supprimer le compte</strong><div class="muted">Action définitive sur vos données PASS50.</div></div><button class="btn danger" id="deleteAccountBtn">Supprimer</button></div></div></section></div>`;open('userModal');}
 function openTop50(){
+  if(!requireAuth())return;
   const r=completeRanking();
   const classableCount=r.filter(isClassableProfile).length;
   const heatSpan=Math.max(1,Math.min(50,classableCount)-1);

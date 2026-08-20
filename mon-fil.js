@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.21';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.22';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -869,6 +869,10 @@
     const [user, profiles] = await Promise.all([loadUser(), loadProfiles()]);
     state.user = user;
     state.profiles = profiles;
+    if (!state.user) {
+      location.replace('./?open=account');
+      return;
+    }
     state.following = [...new Set(Array.isArray(user?.following) ? user.following.map(String) : [])].slice(0, MAX_FOLLOWED);
     syncLiveUi();
     await Promise.all([refreshFeed(), refreshRadar()]);
