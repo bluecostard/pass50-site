@@ -41,7 +41,9 @@ function p50_content_feed_facebook_playable(string $platform,string $contentType
 
 $pdo=db();
 if(!p50_ci_table_ready($pdo))json_response([
-    'ok'=>true,'ready'=>false,'version'=>P50_CONTENT_INTELLIGENCE_VERSION,'period'=>$period,
+    'ok'=>true,'ready'=>false,'version'=>P50_CONTENT_INTELLIGENCE_VERSION,
+    'contract'=>defined('P50_PUBLIC_FEED_CONTRACT')?P50_PUBLIC_FEED_CONTRACT:'PASS50-PUBLIC-FEED-V1',
+    'period'=>$period,
     'trends'=>[],'news'=>[],'generatedAt'=>gmdate('c'),'message'=>'Le premier calcul des contenus tendance est en attente.'
 ]);
 
@@ -140,7 +142,9 @@ $runFinishedAt=$lastRun&&$lastRun['finished_at']?strtotime((string)$lastRun['fin
 $trendAgeMinutes=$runFinishedAt===false?null:max(0,(int)floor((time()-$runFinishedAt)/60));
 $trendDataStale=$trendAgeMinutes!==null&&$trendAgeMinutes>30;
 json_response([
-    'ok'=>true,'ready'=>true,'version'=>P50_CONTENT_INTELLIGENCE_VERSION,'period'=>$period,
+    'ok'=>true,'ready'=>true,'version'=>P50_CONTENT_INTELLIGENCE_VERSION,
+    'contract'=>defined('P50_PUBLIC_FEED_CONTRACT')?P50_PUBLIC_FEED_CONTRACT:'PASS50-PUBLIC-FEED-V1',
+    'period'=>$period,
     'periods'=>array_keys(p50_ci_periods()),'trends'=>$trends,'news'=>$news,
     'trendDataStale'=>$trendDataStale,'trendAgeMinutes'=>$trendAgeMinutes,
     'message'=>$trendDataStale?'Mise à jour des tendances en attente. Le dernier Top 5 valide reste affiché.':null,
