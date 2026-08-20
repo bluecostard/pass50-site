@@ -72,13 +72,25 @@ class FollowFeedV2Tests(unittest.TestCase):
         self.assertIn('id="feedLiveRadarBtn"', page)
         self.assertIn('id="feedLiveModal"', page)
         self.assertIn("live-status.php", feed)
-        self.assertIn("state.liveStreams = normalizeLives(data?.liveStreams)", feed)
+        self.assertIn("live-trust-gate-v1.js", page)
+        self.assertIn("live-radar-v3.js", page)
+        self.assertIn("syncLiveUi()", feed)
+        self.assertIn("PASS50_LIVE_FILTER_PUBLIC", feed)
+        self.assertIn("persistSharedLives", feed)
         self.assertIn('id="liveBtn"', index)
         self.assertIn("header>nav{display:none!important}", nav)
         self.assertNotIn("header>.actions{display:none!important}", nav)
         self.assertNotIn('id="liveSection"', page)
 
-    def test_loader_and_cache_use_the_centered_menu_without_live_regression(self):
+    def test_feed_live_radar_uses_shared_cache_with_ranking(self):
+        page = read("mon-fil.html")
+        feed = read("mon-fil.js")
+        self.assertIn("window.db.liveStreams", page)
+        self.assertIn("sharedLiveSource()", feed)
+        self.assertIn("persistSharedLives", feed)
+        self.assertIn("setInterval(syncLiveUi, 5000)", feed)
+        self.assertNotIn("state.liveStreams = []", feed)
+
         loader = read("public-copy-fixes.js")
         worker = read("sw.js")
         page = read("mon-fil.html")

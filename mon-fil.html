@@ -150,8 +150,17 @@
 
   <div class="toast" id="toast"></div>
   <script src="./public-ui-sanitizer-v1.js?v=1.1"></script>
+  <script>
+    (function () {
+      window.APP_KEY = 'pass50.ionos.v1';
+      try { window.db = JSON.parse(localStorage.getItem(window.APP_KEY) || '{}'); } catch (_) { window.db = {}; }
+      if (!Array.isArray(window.db.liveStreams)) window.db.liveStreams = [];
+    })();
+  </script>
+  <script src="./live-trust-gate-v1.js?v=1.3"></script>
+  <script src="./live-radar-v3.js?v=1.9"></script>
   <script src="./mobile-bottom-nav-v1.js?v=1.9"></script>
   <script src="./prono-share-v1.js?v=1.7"></script>
-  <script src="./mon-fil.js?v=2.20"></script>
+  <script src="./mon-fil.js?v=2.21"></script>
 </body>
 </html>
