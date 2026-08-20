@@ -31,8 +31,8 @@ try {
             $payload['period'] = $period;
             $payload['rows'] = array_slice($payload['periods'][$period], 0, $limit);
         }
-        // Clients app / desktop : cache courte (invalidée naturellement à la prochaine pub).
-        header('Cache-Control: public, max-age=30, stale-while-revalidate=60');
+        // Clients app / desktop : cache courte pour encaisser un pic de lectures.
+        header('Cache-Control: public, max-age=60, stale-while-revalidate=120');
         json_response($payload);
     }
 

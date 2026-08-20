@@ -12,6 +12,12 @@ const P50_APP_PLATFORM_CONTRACT = 'PASS50-APP-PLATFORM-V1';
 $user = auth_user(false);
 $session = $user ? user_payload($user) : null;
 
+if ($session === null) {
+    header('Cache-Control: public, max-age=60, stale-while-revalidate=120');
+} else {
+    header('Cache-Control: private, no-store');
+}
+
 json_response([
     'ok' => true,
     'contract' => P50_APP_PLATFORM_CONTRACT,

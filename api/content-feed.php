@@ -40,12 +40,19 @@ function p50_content_feed_facebook_playable(string $platform,string $contentType
 }
 
 $pdo=db();
-if(!p50_ci_table_ready($pdo))json_response([
+if(!p50_ci_table_ready($pdo)){
+  if($profileId===''){
+    header('Cache-Control: public, max-age=30, stale-while-revalidate=60');
+  }else{
+    header('Cache-Control: private, max-age=15');
+  }
+  json_response([
     'ok'=>true,'ready'=>false,'version'=>P50_CONTENT_INTELLIGENCE_VERSION,
     'contract'=>defined('P50_PUBLIC_FEED_CONTRACT')?P50_PUBLIC_FEED_CONTRACT:'PASS50-PUBLIC-FEED-V1',
     'period'=>$period,
     'trends'=>[],'news'=>[],'generatedAt'=>gmdate('c'),'message'=>'Le premier calcul des contenus tendance est en attente.'
 ]);
+}
 
 $trendStmt=$pdo->prepare("SELECT t.rank_position,t.previous_rank,t.rank_delta,t.score,t.confidence,t.view_delta,t.interaction_delta,
   t.share_delta,t.velocity,t.acceleration,t.follower_count,t.cluster_platform_count,t.badge,t.calculated_at,
@@ -141,6 +148,11 @@ $lastRun=$pdo->query("SELECT run_uuid,status,contents_considered,rows_written,fi
 $runFinishedAt=$lastRun&&$lastRun['finished_at']?strtotime((string)$lastRun['finished_at'].' UTC'):false;
 $trendAgeMinutes=$runFinishedAt===false?null:max(0,(int)floor((time()-$runFinishedAt)/60));
 $trendDataStale=$trendAgeMinutes!==null&&$trendAgeMinutes>30;
+if($profileId===''){
+  header('Cache-Control: public, max-age=30, stale-while-revalidate=60');
+}else{
+  header('Cache-Control: private, max-age=15');
+}
 json_response([
     'ok'=>true,'ready'=>true,'version'=>P50_CONTENT_INTELLIGENCE_VERSION,
     'contract'=>defined('P50_PUBLIC_FEED_CONTRACT')?P50_PUBLIC_FEED_CONTRACT:'PASS50-PUBLIC-FEED-V1',
