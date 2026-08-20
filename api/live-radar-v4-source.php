@@ -146,6 +146,65 @@ function p50_live_v4_identity(string $platform,string $url): array {
     return ['handle'=>'','profileUrl'=>$url,'liveUrl'=>$url];
 }
 
+/** Un handle TikTok officiel ne doit alimenter qu’une seule fiche. */
+function p50_live_v4_tiktok_handle_canonicals(): array {
+    return [
+        'samuellakouassiofficiel'=>'census-samuella-kouassi',
+    ];
+}
+
+function p50_live_v4_canonical_profile_id(string $profileId,string $platform,string $handleOrUrl=''): string {
+    if(strcasecmp($platform,'TikTok')!==0)return $profileId;
+    $handle=strtolower(trim($handleOrUrl,'@'));
+    if($handle!==''&&(str_contains($handle,'tiktok.com')||str_starts_with($handle,'http'))){
+        $identity=p50_live_v4_identity('TikTok',$handleOrUrl);
+        $handle=strtolower(trim((string)($identity['handle']??''),'@'));
+    }
+    $handle=strtolower(trim($handle,'@'));
+    $map=p50_live_v4_tiktok_handle_canonicals();
+    return $map[$handle]??$profileId;
+}
+
+function p50_live_v4_prefer_source(array $a,array $b): array {
+    $aP0=p50_live_v4_is_p0_source($a)?1:0;
+    $bP0=p50_live_v4_is_p0_source($b)?1:0;
+    if($aP0!==$bP0)return $aP0>$bP0?$a:$b;
+    $generic=static function(array $source): bool {
+        $name=trim((string)($source['public_name']??''));
+        return $name===''||strcasecmp($name,'Influenceur')===0;
+    };
+    $aGeneric=$generic($a);$bGeneric=$generic($b);
+    if($aGeneric!==$bGeneric)return $aGeneric?$b:$a;
+    return ((int)($b['confidence']??0))>((int)($a['confidence']??0))?$b:$a;
+}
+
+function p50_live_v4_collapse_identity_sources(array $sources): array {
+    $kept=[];
+    foreach($sources as $source){
+        if(!is_array($source))continue;
+        $platform=(string)($source['platform']??'');
+        $url=(string)($source['url']??'');
+        $id=(string)($source['profile_id']??'');
+        $identity=p50_live_v4_identity($platform,$url);
+        $handle=strtolower(trim((string)($identity['handle']??''),'@'));
+        if($handle!==''){
+            $canonical=p50_live_v4_canonical_profile_id($id,$platform,$handle);
+            if($canonical!==$id){
+                $source['profile_id']=$canonical;
+                if($canonical==='census-samuella-kouassi'){
+                    $source['public_name']='Samuella Kouassi';
+                    $source['handle']='@samuellakouassiofficiel';
+                }
+                $id=$canonical;
+            }
+        }
+        $key=$handle!==''?strtolower($platform).'|h:'.$handle:strtolower($platform).'|id:'.strtolower($id);
+        if(!isset($kept[$key])){$kept[$key]=$source;continue;}
+        $kept[$key]=p50_live_v4_prefer_source($kept[$key],$source);
+    }
+    return array_values($kept);
+}
+
 function p50_live_v4_youtube_live_url(string $url): string {
     $parts=parse_url($url);
     if(!$parts||empty($parts['host']))return '';
@@ -375,6 +434,7 @@ function p50_live_v4_sources(array $state): array {
             'verification_status'=>'manual_verified',
         ];
     }
+    $out=p50_live_v4_collapse_identity_sources($out);
     $manual=p50_live_v4_manual_priority_ids($state);$automatic=p50_live_v4_active_auto_ids();$health=p50_live_v4_health_map();
     $platformOrder=['TikTok'=>0,'YouTube'=>1,'Instagram'=>2,'Facebook'=>3];
     foreach($out as &$source){

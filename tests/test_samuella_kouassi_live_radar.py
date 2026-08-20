@@ -20,7 +20,9 @@ class SamuellaKouassiLiveRadarTests(unittest.TestCase):
         self.assertNotIn('ensureManualLive', PROFILE)
         self.assertNotIn("source:'manual'", PROFILE)
         self.assertNotIn('facebook.com', PROFILE.lower())
-        self.assertNotIn('youtube.com', PROFILE.lower())
+        self.assertIn('matchesSamuella', PROFILE)
+        self.assertIn("live.profileId=PROFILE_ID", PROFILE)
+        self.assertIn("value==='SA'", PROFILE)
 
     def test_radar_p0_and_forced_probe(self):
         p0_tiktok = SOURCE.split('P50_LIVE_V4_P0_TIKTOK', 1)[1].split('];', 1)[0]
@@ -34,7 +36,7 @@ class SamuellaKouassiLiveRadarTests(unittest.TestCase):
         self.assertNotIn("$unknownTikTok=['profile_id'=>'census-samuella-kouassi'", CORE)
 
     def test_cache_bust_loader(self):
-        self.assertIn('./profile-samuella-kouassi.js?v=1.0', CONFIG)
+        self.assertIn('./profile-samuella-kouassi.js?v=1.1', CONFIG)
 
 
 if __name__ == '__main__':

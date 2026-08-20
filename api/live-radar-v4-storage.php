@@ -112,9 +112,11 @@ function p50_live_v4_active_rows(): array {
         if(!is_array($meta))$meta=[];
         $handle=trim((string)($meta['handle']??''));
         if($handle!==''&&!str_starts_with($handle,'@'))$handle='@'.$handle;
+        $platform=(string)$row['platform'];
+        $profileId=p50_live_v4_canonical_profile_id((string)$row['profile_id'],$platform,$handle!==''?$handle:(string)$row['url']);
         $candidate=[
             'id'=>($source==='meta_authorized'?'meta_':'auto_').substr((string)$row['stream_key'],0,18),
-            'profileId'=>(string)$row['profile_id'],'platform'=>(string)$row['platform'],'title'=>(string)$row['title'],
+            'profileId'=>$profileId,'platform'=>$platform,'title'=>(string)$row['title'],
             'url'=>(string)$row['url'],'thumbnail'=>(string)($row['thumbnail_url']??''),'status'=>'live','source'=>$source,
             'confidence'=>(int)$row['confidence'],'viewers'=>$row['viewers']!==null?(int)$row['viewers']:null,
             'startedAt'=>p50_live_v4_iso($row['started_at']??null),'lastSeenAt'=>p50_live_v4_iso($row['last_seen_at']??null),
@@ -140,9 +142,65 @@ function p50_live_v4_active_rows(): array {
     return $out;
 }
 function p50_live_v4_manual_streams(array $state): array {$now=time();$out=[];foreach((array)($state['liveStreams']??[]) as $live){if(!is_array($live)||($live['source']??'')!=='manual'||str_starts_with((string)($live['id']??''),'auto_')||($live['status']??'')!=='live'||empty($live['profileId'])||!p50_public_http_url((string)($live['url']??'')))continue;$end=strtotime((string)($live['endsAt']??''));if($end===false||$end<=$now)continue;$live['id']=(string)($live['id']??('manual_'.substr(hash('sha256',(string)$live['url']),0,16)));$live['source']='manual';$out[]=$live;}return $out;}
+function p50_live_v4_public_identity_keys(array $stream): array {
+    $platform=strtolower(trim((string)($stream['platform']??'')));
+    $keys=[];
+    $event=strtolower(p50_live_v4_event_identity($stream));
+    if($event!=='')$keys[]=$platform.'|event:'.$event;
+    $handle=strtolower(trim((string)($stream['handle']??''),'@'));
+    if($handle===''){
+        $meta=is_array($stream['metadata']??null)?$stream['metadata']:[];
+        $handle=strtolower(trim((string)($meta['handle']??''),'@'));
+    }
+    if($handle!=='')$keys[]=$platform.'|handle:'.$handle;
+    $url=strtolower(rtrim((string)($stream['url']??''),'/'));
+    if($url!=='')$keys[]=$platform.'|url:'.$url;
+    $profile=strtolower(trim((string)($stream['profileId']??'')));
+    if($profile!=='')$keys[]=$platform.'|profile:'.$profile;
+    return $keys;
+}
 function p50_live_v4_dedup(array $automatic,array $manual): array {
     usort($automatic,static fn($a,$b)=>(($b['source']??'')==='meta_authorized')<=>(($a['source']??'')==='meta_authorized'));
-    $out=[];$seen=[];foreach(array_merge($automatic,$manual) as $stream){$key=strtolower(trim((string)($stream['profileId']??'')).'|'.trim((string)($stream['platform']??'')));if($key==='|'||isset($seen[$key]))continue;$seen[$key]=true;$out[]=$stream;}usort($out,static fn($a,$b)=>strcmp((string)($b['startedAt']??$b['lastSeenAt']??''),(string)($a['startedAt']??$a['lastSeenAt']??'')));return $out;
+    $normalized=[];
+    foreach(array_merge($automatic,$manual) as $stream){
+        if(!is_array($stream))continue;
+        $platform=(string)($stream['platform']??'');
+        $handle=(string)($stream['handle']??'');
+        $url=(string)($stream['url']??'');
+        $id=(string)($stream['profileId']??'');
+        $canonical=p50_live_v4_canonical_profile_id($id,$platform,$handle!==''?$handle:$url);
+        if($canonical!==$id){
+            $stream['profileId']=$canonical;
+            if($canonical==='census-samuella-kouassi'){
+                $stream['profileName']='Samuella Kouassi';
+                if(trim($handle)==='')$stream['handle']='@samuellakouassiofficiel';
+            }
+        }
+        $normalized[]=$stream;
+    }
+    $canonicalIds=array_flip(p50_live_v4_tiktok_handle_canonicals());
+    $named=static function(array $stream) use($canonicalIds): int {
+        $id=(string)($stream['profileId']??'');
+        if(isset($canonicalIds[$id]))return 2;
+        $name=trim((string)($stream['profileName']??''));
+        return ($name!==''&&strcasecmp($name,'Influenceur')!==0)?1:0;
+    };
+    usort($normalized,static function(array $a,array $b) use($named): int {
+        $rank=$named($b)<=>$named($a);
+        return $rank!==0?$rank:strcmp((string)($b['startedAt']??$b['lastSeenAt']??''),(string)($a['startedAt']??$a['lastSeenAt']??''));
+    });
+    $out=[];$seen=[];
+    foreach($normalized as $stream){
+        $keys=p50_live_v4_public_identity_keys($stream);
+        if(!$keys)continue;
+        $duplicate=false;
+        foreach($keys as $key){if(isset($seen[$key])){$duplicate=true;break;}}
+        if($duplicate)continue;
+        foreach($keys as $key)$seen[$key]=true;
+        $out[]=$stream;
+    }
+    usort($out,static fn($a,$b)=>strcmp((string)($b['startedAt']??$b['lastSeenAt']??''),(string)($a['startedAt']??$a['lastSeenAt']??'')));
+    return $out;
 }
 function p50_live_v4_health_summary(array $sources,array $activeAutomatic): array {
     $summary=[];foreach(P50_LIVE_V4_PLATFORMS as $platform)$summary[$platform]=['live'=>0,'offline'=>0,'replay'=>0,'unknown'=>0,'unconfirmed'=>0,'never_checked'=>0];$official=[];$active=[];$health=[];$streams=[];

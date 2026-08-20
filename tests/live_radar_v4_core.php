@@ -233,6 +233,20 @@ $samuellaLive=p50_live_v4_parse_tiktok($samuellaSource,['api_webcast'=>response(
 must($samuellaLive['state']==='live','Samuella Kouassi webcast status=2 doit publier le LIVE.');
 must(($samuellaLive['live']['metadata']['roomId']??'')==='7675480011223345222','Le roomId Samuella Kouassi doit être conservé.');
 
+must(p50_live_v4_canonical_profile_id('p_ghost_sa','TikTok','samuellakouassiofficiel')==='census-samuella-kouassi','Le handle @samuellakouassiofficiel doit fusionner sur la fiche officielle.');
+must(p50_live_v4_canonical_profile_id('other','TikTok','jiaaan.wu')==='other','Un handle hors table canonique reste inchangé.');
+$collapsed=p50_live_v4_collapse_identity_sources([
+    ['profile_id'=>'p_ghost_sa','public_name'=>'','platform'=>'TikTok','url'=>'https://www.tiktok.com/@samuellakouassiofficiel','verification_status'=>'ok','confidence'=>90],
+    ['profile_id'=>'census-samuella-kouassi','public_name'=>'Samuella Kouassi','platform'=>'TikTok','url'=>'https://www.tiktok.com/@samuellakouassiofficiel','verification_status'=>'manual_verified','confidence'=>100],
+]);
+must(count($collapsed)===1,'Un seul sondage TikTok Samuella doit rester après fusion.');
+must(($collapsed[0]['profile_id']??'')==='census-samuella-kouassi','La source fusionnée doit rester la fiche officielle Samuella.');
+$dupGhost=['profileId'=>'p_ghost_sa','platform'=>'TikTok','url'=>'https://www.tiktok.com/@samuellakouassiofficiel/live','handle'=>'@samuellakouassiofficiel','title'=>'Samuella Kouassi est en direct','metadata'=>['roomId'=>'7675480011223345222','handle'=>'@samuellakouassiofficiel']];
+$dupOfficial=['profileId'=>'census-samuella-kouassi','platform'=>'TikTok','url'=>'https://www.tiktok.com/@samuellakouassiofficiel/live','handle'=>'@samuellakouassiofficiel','title'=>'Samuella Kouassi est en direct','metadata'=>['roomId'=>'7675480011223345222','handle'=>'@samuellakouassiofficiel']];
+$deduped=p50_live_v4_dedup([$dupGhost,$dupOfficial],[]);
+must(count($deduped)===1,'Un même live TikTok Samuella ne doit publier qu’une carte.');
+must(($deduped[0]['profileId']??'')==='census-samuella-kouassi','La carte publique doit rester sur Samuella Kouassi, pas Influenceur.');
+
 $embedOnlyBlocked=p50_live_v4_parse_tiktok($jordanSource,[
     'api'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'http_403','timeMs'=>8],
     'live'=>['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>'https://www.tiktok.com/@realjordanevraa/live','error'=>'blocked_or_challenged','timeMs'=>8],
@@ -255,4 +269,4 @@ must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un mêm
 must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
 must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
 
-echo json_encode(['ok'=>true,'cases'=>63],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>69],JSON_UNESCAPED_SLASHES).PHP_EOL;
