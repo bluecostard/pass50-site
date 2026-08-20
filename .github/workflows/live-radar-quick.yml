@@ -38,9 +38,10 @@ jobs:
           data=json.load(sys.stdin)
           radar=data.get("radar") or {}
           streams=data.get("liveStreams") or []
-          detected=any(str(s.get("profileId") or "")=="oustaz-diane" and str(s.get("platform") or "")=="TikTok" for s in streams)
+          detected_tt=any(str(s.get("profileId") or "")=="oustaz-diane" and str(s.get("platform") or "")=="TikTok" for s in streams)
+          detected_yt=any(str(s.get("profileId") or "")=="oustaz-diane" and str(s.get("platform") or "")=="YouTube" for s in streams)
           scanned=int(radar.get("sourcesScannedThisPass") or 0)
-          print(f"Oustaz Diané : {scanned} source(s) sondée(s) · live TikTok publié={detected}")
+          print(f"Oustaz Diané : {scanned} source(s) sondée(s) · live TikTok={detected_tt} · live YouTube={detected_yt}")
           '
 
       - name: Sonder prioritairement Roseline Layo

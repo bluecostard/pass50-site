@@ -214,6 +214,10 @@ $jiaanYt=['profile_id'=>'census-jiaan-wu','platform'=>'YouTube','verification_st
 must(p50_live_v4_is_p0_youtube($jiaanYt),'Jiaan Wu YouTube doit être en watchlist P0.');
 must(p50_live_v4_is_p0_source($jiaanYt),'Jiaan Wu YouTube doit être une source P0.');
 must(p50_live_v4_needs_p0_rescan($jiaanYt),'Un P0 YouTube Jiaan Wu unknown depuis 130 s doit être rescané.');
+$oustazYt=['profile_id'=>'oustaz-diane','platform'=>'YouTube','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_p0_youtube($oustazYt),'Oustaz Diané YouTube doit être en watchlist P0.');
+must(p50_live_v4_is_p0_source($oustazYt),'Oustaz Diané YouTube doit être une source P0.');
+must(p50_live_v4_needs_p0_rescan($oustazYt),'Un P0 YouTube Oustaz Diané unknown depuis 130 s doit être rescané.');
 
 $jiaanSource=['profile_id'=>'census-jiaan-wu','public_name'=>'Jiaan Wu','platform'=>'TikTok','url'=>'https://www.tiktok.com/@jiaaan.wu'];
 $jiaanLive=p50_live_v4_parse_tiktok($jiaanSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223345111,"id_str":"7675480011223345111","title":"En direct","user_count":1500,"owner":{"display_id":"jiaaan.wu","nickname":"Jiaan Wu"}},"status_code":0}')]);
@@ -251,4 +255,4 @@ must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un mêm
 must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
 must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
 
-echo json_encode(['ok'=>true,'cases'=>60],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>63],JSON_UNESCAPED_SLASHES).PHP_EOL;

@@ -140,8 +140,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-oustaz-diane]')) return;
   var script = document.createElement('script');
-  script.src = './profile-oustaz-diane.js?v=1.0';
-  script.dataset.pass50ProfileOustazDiane = '1.0';
+  script.src = './profile-oustaz-diane.js?v=1.1';
+  script.dataset.pass50ProfileOustazDiane = '1.1';
   document.head.appendChild(script);
 })();
 

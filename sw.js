@@ -29,7 +29,7 @@ const ASSETS=[
   './fi-engagement-v3.js?v=1.4','./live-modal-layout-v1.js?v=1.0',
   './profile-ennemi-des-djandjou.js?v=1.1','./profile-kawaii-nanami.js?v=1.1',
   './profile-melanie-tms.js?v=1.0','./profile-ivorian-kid.js?v=1.0',
-  './profile-obre-marie-pascale.js?v=1.2','./profile-oustaz-diane.js?v=1.0',
+  './profile-obre-marie-pascale.js?v=1.2','./profile-oustaz-diane.js?v=1.1','./profile-oustaz-diane.js?v=1.0',
   './profile-ismael-aka.js?v=1.0','./profile-apoutchou.js?v=1.0','./profile-general-camille-makosso.js?v=1.2',
   './profile-lolo-beaute.js?v=1.0','./profile-kim-makosso.js?v=1.0','./profile-kim-makosso.js?v=1.1',
   './profile-dez-cocrane225.js?v=1.0','./profile-atoule.js?v=1.0',

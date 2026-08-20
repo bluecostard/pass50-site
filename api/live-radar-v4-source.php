@@ -42,6 +42,7 @@ const P50_LIVE_V4_P0_YOUTUBE = [
     'census-observateur-ebene',
     'census-rosemark-marcel',
     'census-jiaan-wu',
+    'oustaz-diane',
 ];
 /** Délai minimum entre deux sondes TikTok vérifié (secondes). */
 const P50_LIVE_V4_P0_RESCAN_SECONDS = 120;
@@ -223,6 +224,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-samuella-kouassi|tiktok'=>'https://www.tiktok.com/@samuellakouassiofficiel',
         'census-samuella-kouassi|instagram'=>'https://www.instagram.com/samuellakouassiofficiel/',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
+        'oustaz-diane|youtube'=>'https://www.youtube.com/@OustazDianeofficiel',
     ];
     return $overrides[$key]??$url;
 }
@@ -362,6 +364,14 @@ function p50_live_v4_sources(array $state): array {
         $seen[$samuellaIgKey]=true;$out[]=[
             'profile_id'=>'census-samuella-kouassi','public_name'=>'Samuella Kouassi','handle'=>'@samuellakouassiofficiel',
             'platform'=>'Instagram','url'=>'https://www.instagram.com/samuellakouassiofficiel/','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $oustazYtKey='YouTube|oustaz-diane';
+    if(!isset($seen[$oustazYtKey])){
+        $seen[$oustazYtKey]=true;$out[]=[
+            'profile_id'=>'oustaz-diane','public_name'=>'Oustaz Diané','handle'=>'@OustazDianeofficiel',
+            'platform'=>'YouTube','url'=>'https://www.youtube.com/@OustazDianeofficiel','confidence'=>100,
             'verification_status'=>'manual_verified',
         ];
     }

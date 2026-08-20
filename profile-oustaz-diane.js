@@ -4,7 +4,7 @@
 const PROFILE_ID='oustaz-diane';
 const TIKTOK_URL='https://www.tiktok.com/@oustazdianeofficiel1';
 const FACEBOOK_URL='https://www.facebook.com/coraniquebiblique/';
-const YOUTUBE_URL='https://www.youtube.com/channel/UCkNi90ORn66edC-hB5sBbnQ';
+const YOUTUBE_URL='https://www.youtube.com/@OustazDianeofficiel';
 const INSTAGRAM_URL='https://www.instagram.com/la_ddr/';
 const ISLAMINFO_SOURCE='https://islaminfo.org/oustaz-diane-mory-artisan-du-dialogue-interreligieux-et-cofondateur-de-la-ddr/';
 const DDR_SOURCE='https://groupeddr.com/video.php';
@@ -55,7 +55,7 @@ function baseProfile(){
     linkChecks:{
       TikTok:verifiedLink('Compte personnel @oustazdianeofficiel1 concordant avec des directs publics récents.'),
       Facebook:verifiedLink('Page reliée comme page Facebook officielle d’Oustaz Diané par le site officiel de la DDR.'),
-      YouTube:verifiedLink('Chaîne collective DDR La Vraie Chaîne reliée par le site officiel de la DDR.'),
+      YouTube:verifiedLink('Chaîne YouTube officielle @OustazDianeofficiel recensée (Oustaz Diané).'),
       Instagram:verifiedLink('Compte collectif @la_ddr relié par le site officiel de la DDR.')
     },
     verifiedPass50:false,
@@ -67,7 +67,7 @@ function baseProfile(){
       {publisher:'DDR — site officiel et réseaux associés',date:'2026-07-28',url:DDR_SOURCE},
       {publisher:'LivestreamRecorder — activité TikTok publique',date:'2026-07-28',url:LIVE_SOURCE}
     ],
-    notes:'Diané Mory, connu publiquement sous le nom Oustaz Diané, est un prédicateur ivoirien et cofondateur de la DDR. Ses contenus portent principalement sur l’islam, la prédication et le dialogue interreligieux. Le TikTok et la page Facebook sont personnels ; YouTube et Instagram sont des comptes collectifs DDR associés. Profil recensé, non classable tant que les métriques récentes ne sont pas validées par PASS50.'
+    notes:'Diané Mory, connu publiquement sous le nom Oustaz Diané, est un prédicateur ivoirien et cofondateur de la DDR. Ses contenus portent principalement sur l’islam, la prédication et le dialogue interreligieux. TikTok, Facebook et YouTube @OustazDianeofficiel sont personnels ; Instagram @la_ddr reste un compte collectif DDR. Profil recensé, non classable tant que les métriques récentes ne sont pas validées par PASS50.'
   };
 }
 
@@ -115,13 +115,27 @@ function applyProfile(){
 
     profile.links=profile.links||{};
     Object.entries(patch.links).forEach(([platform,url])=>{
+      if(platform==='YouTube'){
+        if(profile.links.YouTube!==YOUTUBE_URL){profile.links.YouTube=YOUTUBE_URL;changed=true;}
+        return;
+      }
       if(!profile.links[platform]){profile.links[platform]=url;changed=true;}
     });
 
     profile.linkChecks=profile.linkChecks||{};
     Object.entries(patch.linkChecks).forEach(([platform,check])=>{
+      if(platform==='YouTube'){
+        const message=String((profile.linkChecks.YouTube&&profile.linkChecks.YouTube.message)||'');
+        if(!profile.linkChecks.YouTube||profile.linkChecks.YouTube.status!=='manual_verified'||!message.includes('@OustazDianeofficiel')){
+          profile.linkChecks.YouTube=check;changed=true;
+        }
+        return;
+      }
       if(!profile.linkChecks[platform]){profile.linkChecks[platform]=check;changed=true;}
     });
+    if(String(profile.notes||'').includes('YouTube et Instagram sont des comptes collectifs')){
+      profile.notes=patch.notes;changed=true;
+    }
 
     profile.scores=profile.scores||patch.scores;
     profile.badges=Array.isArray(profile.badges)?profile.badges:[];
