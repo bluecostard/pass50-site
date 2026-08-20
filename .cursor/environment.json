@@ -1,0 +1,23 @@
+{
+  "name": "PASS50",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "user": "ubuntu",
+  "install": "mkdir -p uploads/profile uploads/event uploads/avatars",
+  "start": "bash scripts/cloud-agent-start.sh",
+  "terminals": [
+    {
+      "name": "php-server",
+      "command": "php -S 0.0.0.0:8080 -t /workspace",
+      "description": "Serveur PHP intégré (site + API) sur le port 8080"
+    }
+  ],
+  "ports": [
+    {
+      "name": "PASS50 web",
+      "port": 8080
+    }
+  ]
+}
