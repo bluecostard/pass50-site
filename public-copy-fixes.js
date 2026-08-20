@@ -24,6 +24,24 @@
   void LEGACY_CONTEXT_SHARE_DISABLED;
   void FACEBOOK_VIEWER_DEPLOY_TRIGGER;
 
+  function removePublicNewsLectures(root=document){
+    root.querySelectorAll('.trigger-empty').forEach(node=>{
+      if(node.closest('#adminModal,#adminPane,[data-admin]'))return;
+      node.remove();
+    });
+    root.querySelectorAll('#p50ciProfileNews .p50ci-empty,#p50ciProfileNews .muted').forEach(node=>node.remove());
+    const news=root.querySelector('#p50ciProfileNews');
+    if(news&&!news.querySelector('.p50ci-news-card'))news.remove();
+  }
+
+  function hideFiPhotoAgrandirLabel(){
+    if(document.getElementById('p50HideAgrandirLabel'))return;
+    const style=document.createElement('style');
+    style.id='p50HideAgrandirLabel';
+    style.textContent='.profile-grid>.left .avatar.is-zoomable::after{content:none!important;display:none!important}';
+    document.head.appendChild(style);
+  }
+
   function replaceInternalCopy(root=document){
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
     while(walker.nextNode())nodes.push(walker.currentNode);
@@ -71,7 +89,7 @@
 
   function watchTrendScores(){
     if(window.__pass50TrendScoreObserver)return;
-    const observer=new MutationObserver(()=>removePublicTrendScores(document));
+    const observer=new MutationObserver(()=>{removePublicTrendScores(document);removePublicNewsLectures(document);});
     observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
     window.__pass50TrendScoreObserver=observer;
   }
@@ -126,6 +144,8 @@
 
   function runPublicFixes(){
     replaceInternalCopy(document);
+    removePublicNewsLectures(document);
+    hideFiPhotoAgrandirLabel();
     installLegalLinks();
     removeLegacyShareUi();
     removePublicTrendScores(document);
@@ -176,15 +196,17 @@
   loadScript('script[data-pass50-profile-lionel-pcs]','./profile-lionel-pcs.js?v=1.0','pass50ProfileLionelPcs','1.0');
   loadScript('script[data-pass50-profile-yasmine-fofana]','./profile-yasmine-fofana.js?v=1.0','pass50ProfileYasmineFofana','1.0');
   loadScript('script[data-pass50-fictive-ranking-admin]','./admin-fictive-ranking-v1.js?v=1.0','pass50FictiveRankingAdmin','1.0');
-  loadScript('script[data-pass50-classability-sync]','./classability-sync-v1.js?v=1.7','pass50ClassabilitySync','1.7',false);
-  loadScript('script[data-pass50-mobile-bottom-nav]','./mobile-bottom-nav-v1.js?v=1.8','pass50MobileBottomNav','1.8',false);
+  loadScript('script[data-pass50-classability-sync]','./classability-sync-v1.js?v=1.8','pass50ClassabilitySync','1.8',false);
+  loadScript('script[data-pass50-mobile-bottom-nav]','./mobile-bottom-nav-v1.js?v=1.9','pass50MobileBottomNav','1.9',false);
+  loadScript('script[data-pass50-account-mobile-nav]','./account-mobile-nav-v1.js?v=1.1','pass50AccountMobileNav','1.1',false);
   loadScript('script[data-pass50-duel-audio-feed]','./duel-audio-feed-v1.js?v=1.1','pass50DuelAudioFeed','1.1',false);
   loadScript('script[data-pass50-mobile-modal-video-progress]','./mobile-modal-video-progress-v1.js?v=1.0','pass50MobileModalVideoProgress','1.0',false);
   loadScript('script[data-pass50-facebook-video-player]','./facebook-video-player-v1.js?v=1.2','pass50FacebookVideoPlayer','1.2',false);
   loadScript('script[data-pass50-coules-admin]','./coules-admin-v1.js?v=1.0','pass50CoulesAdmin','1.0',false);
-  loadScript('script[data-pass50-admin-profile-alphabetical]','./admin-profile-alphabetical-v1.js?v=1.6','pass50AdminProfileAlphabetical','1.6',false);
+  loadScript('script[data-pass50-admin-fi-edit-preserve]','./admin-fi-edit-preserve-v1.js?v=1.0','pass50AdminFiEditPreserve','1.0',false);
+  loadScript('script[data-pass50-admin-profile-alphabetical]','./admin-profile-alphabetical-v1.js?v=1.7','pass50AdminProfileAlphabetical','1.7',false);
   loadScript('script[data-pass50-admin-news-hotfix]','./admin-news-hotfix-v1.js?v=1.2','pass50AdminNewsHotfix','1.2',false);
-  loadScript('script[data-pass50-intelligence-signals-ui]','./intelligence-signals-ui-v1.js?v=1.1','pass50IntelligenceSignalsUi','1.1',false);
+  loadScript('script[data-pass50-intelligence-signals-ui]','./intelligence-signals-ui-v1.js?v=1.2','pass50IntelligenceSignalsUi','1.2',false);
   loadScript('script[data-pass50-intelligence-signals-diagnostic]','./intelligence-signals-diagnostic-v1.js?v=1.0','pass50IntelligenceSignalsDiagnostic','1.0',false);
-  loadScript('script[data-pass50-official-links-protection-v4]','./official-links-protection-v4.js?v=4.3','pass50OfficialLinksProtectionV4','4.3',false);
+  loadScript('script[data-pass50-official-links-protection-v4]','./official-links-protection-v4.js?v=4.5','pass50OfficialLinksProtectionV4','4.5',false);
 })();

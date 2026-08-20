@@ -7,7 +7,7 @@ window.PASS50_API = {
 (function () {
   if (document.querySelector('script[data-pass50-share-center]')) return;
   var script = document.createElement('script');
-  script.src = './share-center-v1.js?v=1.4';
+  script.src = './share-center-v1.js?v=1.5';
   script.async = false;
   script.dataset.pass50ShareCenter = '1.0';
   document.head.appendChild(script);
@@ -77,8 +77,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-public-copy]')) return;
   var script = document.createElement('script');
-  script.src = './public-copy-fixes.js?v=1.11';
-  script.dataset.pass50PublicCopy = '1.9';
+  script.src = './public-copy-fixes.js?v=1.14';
+  script.dataset.pass50PublicCopy = '1.10';
   document.head.appendChild(script);
 })();
 
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-fi-navigation]')) return;
   var script = document.createElement('script');
-  script.src = './fi-navigation-v3.js?v=1.2';
+  script.src = './fi-navigation-v3.js?v=1.3';
   script.dataset.pass50FiNavigation = '3.2';
   document.head.appendChild(script);
 })();
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-kim-makosso]')) return;
   var script = document.createElement('script');
-  script.src = './profile-kim-makosso.js?v=1.0';
+  script.src = './profile-kim-makosso.js?v=1.1';
   script.dataset.pass50ProfileKimMakosso = '1.0';
   document.head.appendChild(script);
 })();
@@ -221,8 +221,26 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-samo-samo]')) return;
   var script = document.createElement('script');
-  script.src = './profile-samo-samo.js?v=1.0';
+  script.src = './profile-samo-samo.js?v=1.1';
   script.dataset.pass50ProfileSamoSamo = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Ange-Morel Your Eyes (TikTok @angemorel4 — live signalé).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-ange-morel]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-ange-morel.js?v=1.0';
+  script.dataset.pass50ProfileAngeMorel = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Laguepe (TikTok @laguepe03).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-laguepe]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-laguepe.js?v=1.0';
+  script.dataset.pass50ProfileLaguepe = '1.0';
   document.head.appendChild(script);
 })();
 
@@ -248,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-observateur-link-locks]')) return;
   var script = document.createElement('script');
-  script.src = './observateur-official-links-lock-v1.js?v=1.0';
+  script.src = './observateur-official-links-lock-v1.js?v=1.1';
   script.dataset.pass50ObservateurLinkLocks = '1.0';
   document.head.appendChild(script);
 })();
@@ -259,12 +277,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function loadContentIntelligence() {
     if (document.querySelector('script[data-pass50-content-intelligence]')) return;
     var script = document.createElement('script');
-    script.src = './content-intelligence.js?v=1.10';
-    script.dataset.pass50ContentIntelligence = '1.2';
+    script.src = './content-intelligence.js?v=1.15';
+    script.dataset.pass50ContentIntelligence = '1.3';
     document.body.appendChild(script);
   }
-  if (document.readyState === 'complete') loadContentIntelligence();
-  else window.addEventListener('load', loadContentIntelligence, { once: true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadContentIntelligence, { once: true });
+  else loadContentIntelligence();
 })();
 
 
@@ -274,5 +292,41 @@ document.addEventListener('DOMContentLoaded', function () {
   var script = document.createElement('script');
   script.src = './profile-claims-v1.js?v=1.1';
   script.dataset.pass50ProfileClaims = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : JP N'da (TikTok @jpnda_1 — live signalé).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-jp-nda]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-jp-nda.js?v=1.0';
+  script.dataset.pass50ProfileJpNda = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Cahié kunta.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-cahie-kunta]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-cahie-kunta.js?v=1.0';
+  script.dataset.pass50ProfileCahieKunta = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Lise Akrassi.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-lise-akrassi]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-lise-akrassi.js?v=1.0';
+  script.dataset.pass50ProfileLiseAkrassi = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : L'Exès (Stéphane Sacré) — TikTok @stephanesacre.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-lexes]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-lexes.js?v=1.0';
+  script.dataset.pass50ProfileLexes = '1.0';
   document.head.appendChild(script);
 })();

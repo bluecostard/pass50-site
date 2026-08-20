@@ -54,3 +54,16 @@ function p50_mr_v2_calculate_if_due(PDO $pdo,DateTimeImmutable $now,int $minimum
         'latestUsableCaptureRecordedAt'=>$latestRecordedAt->format(DATE_ATOM),
     ],$result);
 }
+
+/** Recalcul forcé (admin / recovery watchdog) — ignore recent_success et readiness P1. */
+function p50_mr_v2_force_calculate(PDO $pdo,string $dispatchId): array {
+    p50_mr_ensure_schema($pdo);
+    $result=p50_mr_calculate($pdo,array_keys(p50_mr_periods()),'cron_2h',[
+        'scheduled'=>true,'cadence'=>'2h','dispatchId'=>$dispatchId,'forced'=>true,
+    ]);
+    return array_merge([
+        'skipped'=>false,
+        'forced'=>true,
+        'freshCaptureGateVersion'=>P50_MR_FRESH_CAPTURE_GATE_V2_VERSION,
+    ],$result);
+}

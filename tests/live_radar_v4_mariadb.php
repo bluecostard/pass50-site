@@ -31,7 +31,18 @@ must(count($active)===0,'Trust Gate : un unknown retire immédiatement le LIVE p
 $status=$pdo->query("SELECT status FROM p50_live_streams WHERE profile_id='tiktok-test'")->fetchColumn();
 must($status==='live','Le flux peut rester live en base pour reconfirmation.');
 
-$pdo->prepare("UPDATE p50_live_source_health SET last_state='offline',last_checked_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
+p50_live_v4_store_live($live);
+$pdo->prepare("UPDATE p50_live_source_health SET last_state='live',last_checked_at=UTC_TIMESTAMP(),last_live_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
+p50_live_v4_health_update(
+    ['profile_id'=>'tiktok-test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@test'],
+    ['state'=>'unknown','error'=>'tiktok_embed_uninformative','confidence'=>0,'responseMs'=>12,'probes'=>[],'evidence'=>[]]
+);
+$kept=$pdo->query("SELECT last_state FROM p50_live_source_health WHERE profile_id='tiktok-test' AND platform='TikTok'")->fetchColumn();
+must($kept==='live','Un unknown IONOS après un LIVE frais conserve last_state=live.');
+$active=p50_live_v4_active_rows();
+must(count($active)===1,'Le LIVE public reste visible pendant la fenêtre si la sonde est unknown.');
+
+$pdo->prepare("UPDATE p50_live_source_health SET last_state='unknown',last_checked_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
 $active=p50_live_v4_active_rows();
 must(count($active)===0,'Un offline explicite retire immédiatement le live public.');
 $status=$pdo->query("SELECT status FROM p50_live_streams WHERE profile_id='tiktok-test'")->fetchColumn();

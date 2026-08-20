@@ -28,6 +28,7 @@ $now = p50_prono_now()->format('Y-m-d H:i:s');
 $legs = [];
 $seenQ = [];
 $combined = 1.0;
+$liveCount = 0;
 
 foreach ($legsIn as $raw) {
     if (!is_array($raw)) continue;
@@ -49,10 +50,20 @@ foreach ($legsIn as $raw) {
         json_response(['error' => 'Prono plus ouvert: '.(string)$question['title']], 409);
     }
 
-    $dup = $pdo->prepare('SELECT id FROM p50_prono_votes WHERE question_id=? AND user_id=? LIMIT 1');
-    $dup->execute([$questionId, $userId]);
-    if ($dup->fetch()) {
-        json_response(['error' => 'Deja valide sur: '.(string)$question['title']], 409);
+    $isLiveQuestion = p50_prono_is_live_question($question);
+    if ($isLiveQuestion) {
+        $liveCount++;
+        $activeLive = p50_prono_live_active_session($pdo);
+        $sessionId = trim((string)($question['live_session_id'] ?? ''));
+        if (!$activeLive || $sessionId === '' || (string)$activeLive['id'] !== $sessionId) {
+            json_response(['error' => 'Prono50 live n’est plus actif.'], 409);
+        }
+    } else {
+        $dup = $pdo->prepare('SELECT id FROM p50_prono_votes WHERE question_id=? AND user_id=? LIMIT 1');
+        $dup->execute([$questionId, $userId]);
+        if ($dup->fetch()) {
+            json_response(['error' => 'Deja valide sur: '.(string)$question['title']], 409);
+        }
     }
 
     $options = p50_prono_options($question['options_json'] ?? []);
@@ -70,17 +81,23 @@ foreach ($legsIn as $raw) {
         'optionLabel' => p50_prono_option_label($question, $optionKey),
         'odd' => $odd,
         'coverPhoto' => p50_prono_question_cover($question),
+        'live' => $isLiveQuestion,
     ];
 }
 
 if ($legs === []) {
     json_response(['error' => 'Aucune selection valide.'], 400);
 }
+if ($liveCount > 0 && $liveCount !== count($legs)) {
+    json_response(['error' => 'Les pronos live ne se mélangent pas à la grille du jour.'], 400);
+}
 
 $combined = round($combined, 4);
 if ($combined < 1.01) $combined = 1.01;
+$isLive = $liveCount > 0;
 $isCombo = count($legs) >= 2;
-$potential = p50_prono_payout($stakeDesired, $combined);
+$settledOdd = $isLive ? round($combined * P50_PRONO_LIVE_PAYOUT_MULTIPLIER, 4) : $combined;
+$potential = p50_prono_payout($stakeDesired, $settledOdd);
 
 $pdo->beginTransaction();
 try {
@@ -89,10 +106,10 @@ try {
     $stakeLocked = 0;
     $voteIds = [];
 
-    if ($isCombo) {
+    if ($isCombo || $isLive) {
         $slipId = p50_prono_uuid();
         $stakeLocked = p50_prono_debit_stake($pdo, $userId, $stakeDesired, $slipId);
-        $potential = p50_prono_payout($stakeLocked > 0 ? $stakeLocked : $stakeDesired, $combined);
+        $potential = p50_prono_payout($stakeLocked > 0 ? $stakeLocked : $stakeDesired, $settledOdd);
         $pdo->prepare('INSERT INTO p50_prono_slips(id,user_id,stake,stake_locked,combined_odd,potential_payout,status,legs_json)
           VALUES(?,?,?,?,?,?,?,?)')
             ->execute([
@@ -100,7 +117,7 @@ try {
                 $userId,
                 $stakeDesired,
                 $stakeLocked,
-                $combined,
+                $settledOdd,
                 $potential,
                 'open',
                 json_encode($legs, JSON_UNESCAPED_UNICODE),
@@ -123,6 +140,7 @@ try {
             ->execute([$voteId, $leg['questionId'], $userId, $leg['optionKey'], $leg['odd'], $stakeLocked, '']);
         $voteIds[] = ['questionId' => $leg['questionId'], 'voteId' => $voteId];
         $combined = (float)$leg['odd'];
+        $settledOdd = $combined;
     }
 
     $pdo->commit();
@@ -133,17 +151,21 @@ try {
 }
 
 $balance = p50_prono_balance($pdo, $userId);
-$msg = $isCombo
-    ? 'Grille validee · '.count($legs).' pronos · cote combinee '.$combined.' · mise '.($stakeLocked ?: $stakeDesired).' · +'.$potential.' pts si tout est correct.'
-    : 'Prono enregistre · cote '.$combined.' · mise '.($stakeLocked ?: $stakeDesired).' · +'.$potential.' pts si correct.';
+$msg = $isLive
+    ? 'Prono50 live · gains x'.P50_PRONO_LIVE_PAYOUT_MULTIPLIER.' · mise '.($stakeLocked ?: $stakeDesired).' · +'.$potential.' pts si correct.'
+    : ($isCombo
+        ? 'Grille validee · '.count($legs).' pronos · cote combinee '.$combined.' · mise '.($stakeLocked ?: $stakeDesired).' · +'.$potential.' pts si tout est correct.'
+        : 'Prono enregistre · cote '.$combined.' · mise '.($stakeLocked ?: $stakeDesired).' · +'.$potential.' pts si correct.');
 
 json_response([
     'ok' => true,
-    'mode' => $isCombo ? 'grille' : 'single',
+    'mode' => $isLive ? 'prono50_live' : ($isCombo ? 'grille' : 'single'),
+    'live' => $isLive,
+    'livePayoutMultiplier' => $isLive ? P50_PRONO_LIVE_PAYOUT_MULTIPLIER : 1,
     'slipId' => $slipId !== '' ? $slipId : null,
     'legs' => $legs,
     'voteIds' => $voteIds,
-    'combinedOdd' => $combined,
+    'combinedOdd' => $settledOdd,
     'stake' => $stakeDesired,
     'stakeLocked' => $stakeLocked,
     'potentialPayout' => $potential,

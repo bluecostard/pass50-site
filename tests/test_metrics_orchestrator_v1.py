@@ -30,6 +30,9 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
         self.assertIn("s.status='verified'", CORE)
         self.assertIn("s.confidence>=?", CORE)
         self.assertIn("p50_mc_public_access", CORE)
+        self.assertIn("function p50_mo_fair_rotation_profiles", CORE)
+        self.assertIn("function p50_mo_exploration_profiles", CORE)
+        self.assertIn("p1ExplorationRatio", CORE)
         self.assertIn("p50_ranking_snapshots", CORE)
         self.assertIn("BETWEEN 1 AND ?", CORE)
         self.assertNotIn("localStorage", CORE)
@@ -128,7 +131,8 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
 
     def test_server_configuration_has_no_real_secret(self):
         for key in ("cron_secret", "orchestrator_enabled", "p0_max_profiles",
-                    "p1_max_profiles", "p1_max_rank", "p2_max_profiles",
+                    "p1_max_profiles", "p1_max_rank", "p1_exploration_ratio",
+                    "p2_max_profiles", "fair_rotation_enabled", "p0_use_priority_ids",
                     "priority_profile_ids", "p0_min_freshness_minutes",
                     "p1_min_freshness_minutes", "p2_min_freshness_minutes",
                     "worker_lock_timeout_minutes"):

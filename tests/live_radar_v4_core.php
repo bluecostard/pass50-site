@@ -47,7 +47,7 @@ must($apiFreshStructure['state']==='probable','Une structure LiveRoom seule ne p
 
 $staleRoom=room_id_for(time()-P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS-3600);
 $apiStale=p50_live_v4_parse_tiktok($source,['api'=>response('{"LiveRoom":{"id":"'.$staleRoom.'"},"webcastRoomId":"'.$staleRoom.'"}')]);
-must($apiStale['state']==='probable','Une ancienne structure LiveRoom sans identité propriétaire ne doit pas redevenir un faux direct.');
+must($apiStale['state']!=='live','Une ancienne structure LiveRoom sans identité propriétaire ne doit pas redevenir un faux direct.');
 
 $html='<!doctype html><title>Coach Test LIVE | TikTok</title><script>{"LiveRoom":{"id":"741234567891"},"isLive":true}</script>';
 $multi=p50_live_v4_parse_tiktok($source,['live'=>response($html,200,'https://www.tiktok.com/@coachtest/live'),'embed'=>response($html,200,'https://www.tiktok.com/embed/live/@coachtest')]);
@@ -123,4 +123,104 @@ must($instagram['state']==='live','Signal Instagram actif explicite.');
 $facebook=p50_live_v4_parse_facebook(['profile_id'=>'fb','public_name'=>'FB','platform'=>'Facebook','url'=>'https://www.facebook.com/test'],['live'=>response('{"is_live_streaming":true,"video_id":"123456789"} https://www.facebook.com/test/videos/123456789')]);
 must($facebook['state']==='live','Signal Facebook actif et vidéo spécifique.');
 
-echo json_encode(['ok'=>true,'cases'=>24],JSON_UNESCAPED_SLASHES).PHP_EOL;
+$verifiedOffline=['profile_id'=>'apoutchou','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-7200),'last_live_at'=>gmdate('Y-m-d H:i:s',time()-86400)];
+$genericOffline=['profile_id'=>'other','platform'=>'TikTok','verification_status'=>'verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-120)];
+must(p50_live_v4_needs_tiktok_rescan($verifiedOffline),'Un TikTok vérifié offline depuis 2 h doit être rescané.');
+must(!p50_live_v4_needs_tiktok_rescan($genericOffline),'Un TikTok vérifié contrôlé il y a 2 min ne doit pas saturer le rescan.');
+must(p50_live_v4_discovery_rank($verifiedOffline)<p50_live_v4_discovery_rank($genericOffline),'Le TikTok vérifié stale doit passer avant un offline récent non prioritaire.');
+
+$p0Stale=['profile_id'=>'general-camille-makosso','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_p0_tiktok($p0Stale),'Général Makosso doit être en watchlist P0 TikTok.');
+must(p50_live_v4_needs_tiktok_rescan($p0Stale),'Un P0 TikTok offline depuis 130 s doit être rescané.');
+$p0Fresh=['profile_id'=>'general-camille-makosso','platform'=>'TikTok','verification_status'=>'owner_verified','last_state'=>'offline','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-60)];
+must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 60 s ne doit pas être resondé.');
+
+$noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
+must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe'] as $liveId){
+    $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+    must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
+}
+$observateurYt=['profile_id'=>'census-observateur-ebene','platform'=>'YouTube','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_p0_youtube($observateurYt),'Observateur Ébène YouTube doit être en watchlist P0.');
+must(p50_live_v4_is_p0_source($observateurYt),'Observateur Ébène YouTube doit être une source P0.');
+must(p50_live_v4_needs_p0_rescan($observateurYt),'Un P0 YouTube unknown depuis 130 s doit être rescané.');
+
+$unknownTikTok=['profile_id'=>'census-samuella-kouassi','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_is_unknown_tiktok($unknownTikTok),'Un TikTok unknown doit être reconnu comme tel.');
+must(!p50_live_v4_needs_tiktok_rescan($unknownTikTok),'Un unknown hors P0 ne doit pas saturer le rescan 2 min.');
+$metaUnknown=['profile_id'=>'ig-unknown','platform'=>'Instagram','verification_status'=>'verified','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
+must(p50_live_v4_discovery_rank($unknownTikTok)<p50_live_v4_discovery_rank($metaUnknown),'Un TikTok unknown passe avant un Instagram unknown.');
+
+$noLimitSource=['profile_id'=>'census-no-limit','public_name'=>'No Limit','platform'=>'TikTok','url'=>'https://www.tiktok.com/@nolimit_vousdv'];
+$noLimitApi=p50_live_v4_parse_tiktok($noLimitSource,['api'=>response('{"data":{"user":{"uniqueId":"nolimit_vousdv","roomId":"7675157318859639573","status":2},"liveRoom":{"status":2,"startTime":1787011835}},"statusCode":0}')]);
+must($noLimitApi['state']==='live','L’API TikTok No Limit status=2 + uniqueId doit publier le LIVE.');
+
+$jordanSource=['profile_id'=>'census-jordan-evraa','public_name'=>'Jordan Evraa','platform'=>'TikTok','url'=>'https://www.tiktok.com/@realjordanevraa'];
+$webcastLive=p50_live_v4_parse_tiktok($jordanSource,['api_webcast'=>response('{"data":{"status":2,"id":7675133122324843295,"id_str":"7675133122324843295","title":"Goumin tv","user_count":147,"owner":{"display_id":"realjordanevraa","nickname":"JORDAN EVRAA"}},"status_code":0}')]);
+must($webcastLive['state']==='live','L’API webcast status=2 + display_id doit publier le LIVE même sans www.tiktok.com/api-live.');
+must(($webcastLive['live']['metadata']['roomId']??'')==='7675133122324843295','Le roomId webcast doit être lu depuis id_str.');
+must(($webcastLive['live']['metadata']['strictApiLabels'][0]??'')==='api_webcast','La preuve stricte peut venir de api_webcast.');
+must(($webcastLive['live']['title']??'')==='Goumin tv est en direct'||str_contains((string)($webcastLive['live']['title']??''),'Goumin tv'),'Le titre webcast doit primer sur l’embed.');
+
+$hamondSource=['profile_id'=>'hamondchic','public_name'=>'Coach Hamond Chic','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachhamond'];
+$hamondLive=p50_live_v4_parse_tiktok($hamondSource,['api_webcast'=>response('{"data":{"status":2,"id":7675380840767048470,"id_str":"7675380840767048470","title":"Allô yougoss","user_count":13346,"owner":{"display_id":"coachhamond","nickname":"coachhamondchic"}},"status_code":0}'),'embed'=>response('<!doctype html><title>TikTok Embed LIVE</title>',200,'https://www.tiktok.com/embed/live/@coachhamond')]);
+must($hamondLive['state']==='live','Coach Hamond Chic webcast status=2 doit publier le LIVE.');
+must(str_contains((string)($hamondLive['live']['title']??''),'Allô yougoss'),'Le titre Allô yougoss doit primer sur TikTok Embed LIVE.');
+
+$hamondApiDown=p50_live_v4_parse_tiktok($hamondSource,[
+    'api'=>['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'timeout','timeMs'=>4000],
+    'api_webcast'=>['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>'https://webcast.tiktok.com/webcast/room/info_by_user/','error'=>'timeout','timeMs'=>4000],
+    'embed'=>response('<!doctype html><title>TikTok</title><p>This live has ended</p>',200,'https://www.tiktok.com/embed/live/@coachhamond'),
+]);
+must($hamondApiDown['state']==='unknown','Un embed « ended » sans API ne doit pas clôturer Coach Hamond.');
+
+$dezSource=['profile_id'=>'dez-cocrane225','public_name'=>'Dez Cocrane 225','platform'=>'TikTok','url'=>'https://www.tiktok.com/@dezcocrane.225'];
+$dezLive=p50_live_v4_parse_tiktok($dezSource,['api_webcast'=>response('{"data":{"status":2,"id":7675422496225168161,"id_str":"7675422496225168161","title":"","user_count":504,"owner":{"display_id":"dezcocrane.225","nickname":"Dez Cocrane 225"}},"status_code":0}')]);
+must($dezLive['state']==='live','Dez Cocrane 225 webcast status=2 doit publier le LIVE.');
+must(($dezLive['live']['metadata']['roomId']??'')==='7675422496225168161','Le roomId Dez Cocrane doit être conservé.');
+
+$roselineSource=['profile_id'=>'census-roseline-layo','public_name'=>'Roseline Layo','platform'=>'TikTok','url'=>'https://www.tiktok.com/@roselinelayoofficiel'];
+$roselineLive=p50_live_v4_parse_tiktok($roselineSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344556,"id_str":"7675480011223344556","title":"En direct","user_count":3200,"owner":{"display_id":"roselinelayoofficiel","nickname":"Roseline Layo"}},"status_code":0}')]);
+must($roselineLive['state']==='live','Roseline Layo webcast status=2 doit publier le LIVE.');
+must(($roselineLive['live']['metadata']['roomId']??'')==='7675480011223344556','Le roomId Roseline Layo doit être conservé.');
+
+$rachSource=['profile_id'=>'census-rach-makosso','public_name'=>'Rach Makosso','platform'=>'TikTok','url'=>'https://www.tiktok.com/@rach_makosso1'];
+$rachLive=p50_live_v4_parse_tiktok($rachSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344666,"id_str":"7675480011223344666","title":"En direct","user_count":1800,"owner":{"display_id":"rach_makosso1","nickname":"Rach Makosso"}},"status_code":0}')]);
+must($rachLive['state']==='live','Rach Makosso webcast status=2 doit publier le LIVE.');
+must(($rachLive['live']['metadata']['roomId']??'')==='7675480011223344666','Le roomId Rach Makosso doit être conservé.');
+
+$angeMorelSource=['profile_id'=>'census-ange-morel','public_name'=>'Ange-Morel Your Eyes','platform'=>'TikTok','url'=>'https://www.tiktok.com/@angemorel4'];
+$angeMorelLive=p50_live_v4_parse_tiktok($angeMorelSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344777,"id_str":"7675480011223344777","title":"En direct","user_count":2100,"owner":{"display_id":"angemorel4","nickname":"Ange-Morel Your Eyes"}},"status_code":0}')]);
+must($angeMorelLive['state']==='live','Ange-Morel Your Eyes webcast status=2 doit publier le LIVE.');
+must(($angeMorelLive['live']['metadata']['roomId']??'')==='7675480011223344777','Le roomId Ange-Morel Your Eyes doit être conservé.');
+
+$laguepeSource=['profile_id'=>'census-laguepe','public_name'=>'Laguepe','platform'=>'TikTok','url'=>'https://www.tiktok.com/@laguepe03'];
+$laguepeLive=p50_live_v4_parse_tiktok($laguepeSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344888,"id_str":"7675480011223344888","title":"En direct","user_count":890,"owner":{"display_id":"laguepe03","nickname":"Laguepe"}},"status_code":0}')]);
+must($laguepeLive['state']==='live','Laguepe webcast status=2 doit publier le LIVE.');
+must(($laguepeLive['live']['metadata']['roomId']??'')==='7675480011223344888','Le roomId Laguepe doit être conservé.');
+
+$embedOnlyBlocked=p50_live_v4_parse_tiktok($jordanSource,[
+    'api'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'http_403','timeMs'=>8],
+    'live'=>['ok'=>false,'status'=>0,'body'=>'','finalUrl'=>'https://www.tiktok.com/@realjordanevraa/live','error'=>'blocked_or_challenged','timeMs'=>8],
+    'embed'=>response('<!doctype html><title>TikTok</title><div id="app"></div>',200,'https://www.tiktok.com/embed/live/@realjordanevraa'),
+]);
+must($embedOnlyBlocked['state']==='unknown','Un embed sans JSON live + API 403 ne doit pas classer un direct comme hors ligne.');
+
+$readableOffline=p50_live_v4_parse_tiktok($source,['profile'=>response('<!doctype html><title>Coach Test | TikTok</title><script>{"uniqueId":"coachtest","videoCount":12}</script>',200,'https://www.tiktok.com/@coachtest')]);
+must($readableOffline['state']==='offline','Une page profil lisible sans signal live reste hors ligne.');
+
+$requests=p50_live_v4_probe_requests($jordanSource);
+must(isset($requests['api_webcast']),'Jordan Evraa doit être sondé via webcast.tiktok.com.');
+must(str_contains((string)$requests['api_webcast']['url'],'webcast.tiktok.com/webcast/room/info_by_user'),'La sonde webcast doit viser info_by_user.');
+
+$merged=p50_live_v4_merge_p0_watch(
+    [['profileId'=>'census-jordan-evraa','platform'=>'TikTok','handle'=>'realjordanevraa']],
+    [['profileId'=>'census-jordan-evraa','platform'=>'TikTok'],['profileId'=>'yt-coach','platform'=>'YouTube']]
+);
+must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un même compte.');
+must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
+must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
+
+echo json_encode(['ok'=>true,'cases'=>55],JSON_UNESCAPED_SLASHES).PHP_EOL;

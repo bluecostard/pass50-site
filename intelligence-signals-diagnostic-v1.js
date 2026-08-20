@@ -32,7 +32,7 @@
         shell.insertBefore(diagnostic,content);
       }
       diagnostic.style.borderColor=errors.length?'#805d26':'#355b35';
-      diagnostic.innerHTML=`<strong>Synchronisation vérifiée :</strong> ${number(refresh.activitySignalsImported)} événement(s) récent(s) relié(s) aux fiches · ${number(refresh.manualSignalsImported)} ancien(s) signal(aux) repris · ${number(refresh.processed)} profil(s) recalculé(s) à l’ouverture · ${number(errors.length)} erreur(s).`;
+      diagnostic.innerHTML=`<strong>Synchronisation vérifiée :</strong> ${number(refresh.liveSignalsImported)} live(s) radar relié(s) · ${number(refresh.activitySignalsImported)} événement(s) récent(s) · ${number(refresh.manualSignalsImported)} ancien(s) signal(aux) repris · ${number(refresh.processed)} profil(s) recalculé(s) à l’ouverture · ${number(errors.length)} erreur(s).`;
       diagnostic.title=errors.length?errors.map(item=>String(item.error||item.profileId||'Erreur')).join('\n'):RUNTIME;
       lastPane=shell;
     }catch(error){

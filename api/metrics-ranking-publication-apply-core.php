@@ -211,7 +211,7 @@ function p50_mrp_apply_is_skippable_plan(array $plan): bool {
 function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $now=null,bool $forceBootstrap=false): array {
     $cfg=p50_mrp_apply_config();
     p50_mrp_apply_ensure_schema($pdo);
-    $now=$now??new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $now=$now??p50_metrics_now_utc();
     $periods=$periods?:P50_MRP_APPLY_PERIODS;
     $bootstrap=$cfg['bootstrapAllowed']&&($forceBootstrap||!p50_mrp_apply_has_prior_success($pdo));
     $plans=[];$publishPlans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;$skipped=[];
@@ -288,7 +288,7 @@ function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): 
         $id=trim((string)($profile['id']??''));
         if($id!=='')$index[$id]=$i;
     }
-    $profilesUpdated=[];$scoresWritten=0;$primaryPeriod='2H';
+    $profilesUpdated=[];$scoresWritten=0;$primaryPeriod='24H';
     foreach($plans as $period=>$plan){
         foreach((array)($plan['mutations']??[]) as $mutation){
             if(!is_array($mutation))continue;
@@ -314,7 +314,7 @@ function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): 
                     if($score>=82)$badges[]='UP';
                     $state['profiles'][$i]['badges']=array_values(array_unique($badges));
                 }else{
-                    // Sortie 2H : retirer le score principal, conserver l’historique des autres périodes.
+                    // Sortie 24H : retirer le score principal, conserver l’historique des autres périodes.
                     // Ne pas renvoyer la fiche « Non classé / à recenser » tant qu’un score 24H+ existe.
                     unset($state['profiles'][$i]['score']);
                     $hasOtherScore=false;
@@ -360,7 +360,7 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
     $appliedBy=trim((string)($options['appliedBy']??''));
     $confirm=!(empty($options['confirm']));
     $forceBootstrap=!empty($options['bootstrap']);
-    $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $now=p50_metrics_now_utc();
 
     if(!$cfg['publicationEnabled'])throw new RuntimeException('Publication du classement désactivée (metrics.ranking_publication_enabled).');
     if($mode==='automatic'&&!$cfg['automaticPublicationEnabled'])throw new RuntimeException('Publication automatique désactivée.');

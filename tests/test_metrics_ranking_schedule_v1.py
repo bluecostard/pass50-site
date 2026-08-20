@@ -138,7 +138,7 @@ class MetricsRankingScheduleV2Tests(unittest.TestCase):
         self.assertIn("jq -nc", WORKFLOW)
         self.assertIn("printf '%s\\n%s' \"$timestamp\" \"$body\"", WORKFLOW)
         self.assertIn('openssl dgst -sha256 -hmac "$CRON_SECRET" -r', WORKFLOW)
-        self.assertIn("curl --fail-with-body --silent --show-error --max-time 55", WORKFLOW)
+        self.assertIn("curl --fail-with-body --silent --show-error --max-time 180", WORKFLOW)
         self.assertIn('-H "X-P50-Signature: $signature"', WORKFLOW)
         self.assertIn('--data "$body"', WORKFLOW)
         self.assertNotIn("?signature", WORKFLOW.lower())

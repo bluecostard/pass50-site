@@ -44,6 +44,8 @@
       .news-refresh-progress.is-active:not(.is-done):not(.is-error) .news-refresh-fill{background-size:200% 100%;animation:p50ciProgressShine 1.2s linear infinite}
       .news-refresh-progress-detail{margin-top:8px;font-size:11px;font-weight:750;color:#aeb7ab;line-height:1.4}
       @keyframes p50ciProgressShine{from{filter:brightness(.95)}to{filter:brightness(1.15)}}
+      #contentGrid.p50-content-grid-loading,#contentGrid:empty{display:block!important;min-height:0;overflow:hidden}
+      #contentGrid:has(.p50ci-card)>.content-card:not(.p50ci-card),#contentGrid [data-content="c1"],#contentGrid [data-content="c2"],#contentGrid [data-content="c3"],#contentGrid [data-content="c4"],#contentGrid [data-content="c5"],#contentGrid .p50ci-empty,#contentGrid .p50-content-wait{display:none!important}
       @media(max-width:680px){.p50ci-periods{justify-content:flex-start}.p50ci-card-cover{height:150px}.p50ci-news-card{grid-template-columns:62px minmax(0,1fr)}.p50ci-news-thumb{width:62px;height:58px}.p50ci-news-card>a{grid-column:1/-1;width:100%;text-align:center}}
     `;
   }
@@ -62,12 +64,28 @@
     controls.innerHTML=Object.entries(PERIODS).map(([key,label])=>`<button class="p50ci-period ${P50CI.period===key?'active':''}" data-p50ci-period="${key}">${label}</button>`).join('');
   }
 
+  function stripLegacyTrendCards(grid){
+    grid.querySelectorAll('.content-card:not(.p50ci-card),[data-content="c1"],[data-content="c2"],[data-content="c3"],[data-content="c4"],[data-content="c5"]').forEach(el=>{
+      if(!el.classList.contains('p50ci-card'))el.remove();
+    });
+  }
+
+  function paintTrendWait(grid){
+    if(grid.querySelector('.p50ci-card'))return;
+    grid.classList.add('p50-content-grid-loading');
+    grid.setAttribute('aria-busy','true');
+    grid.innerHTML='';
+  }
+
   function renderTrends(){
     ensurePeriodControls();const grid=document.getElementById('contentGrid');if(!grid)return;
-    if(P50CI.loading&&!P50CI.data){grid.innerHTML='<div class="p50ci-empty">Calcul du Top 5 en cours…</div>';return;}
-    const data=P50CI.data;if(!data?.ready){grid.innerHTML='<div class="p50ci-empty">Le premier calcul automatique est en préparation.</div>';return;}
+    stripLegacyTrendCards(grid);
+    if(P50CI.loading&&!P50CI.data){paintTrendWait(grid);return;}
+    const data=P50CI.data;if(!data?.ready){paintTrendWait(grid);return;}
     const items=data.trends||[];
-    if(!items.length){grid.innerHTML='<div class="p50ci-empty">Aucun contenu suffisamment récent ne progresse sur cette période.</div>';return;}
+    grid.classList.remove('p50-content-grid-loading');
+    grid.removeAttribute('aria-busy');
+    if(!items.length){grid.innerHTML='';return;}
     grid.innerHTML=items.map(item=>{
       const cover=item.thumbnailUrl||fallbackCover(item.profileId),title=item.title||`Contenu récent de ${item.name}`,facebook=isFacebook(item);
       return `<article class="content-card p50ci-card" data-content="${item.contentId}">
@@ -83,35 +101,43 @@
   async function refreshTrends(force=false){
     if(P50CI.loading)return;if(!force&&Date.now()-P50CI.lastRefresh<30000)return;
     P50CI.loading=true;renderTrends();
-    try{P50CI.data=await fetchFeed();P50CI.lastRefresh=Date.now();}
+    try{P50CI.data=await fetchFeed();P50CI.lastRefresh=Date.now();
+      for(const item of (P50CI.data?.trends||[])){
+        if(typeof window.p50SyncTriggerFromOfficialNews==='function'){
+          window.p50SyncTriggerFromOfficialNews(item.profileId,{...item,official:true,itemType:item.contentType});
+        }
+      }
+      if(typeof render==='function')render();}
     catch(error){console.warn('PASS50 Content Intelligence',error);}
     finally{P50CI.loading=false;renderTrends();}
   }
 
   function newsCard(item,index){
     const cover=item.thumbnailUrl||fallbackCover(item.profileId),extra=index>=3,facebook=isFacebook(item);
-    return `<article class="p50ci-news-card ${facebook?'facebook':''} ${extra?'is-extra':''}"><div class="p50ci-news-thumb">${cover?`<img src="${attr(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:'📰'}</div><div><h4>${esc(item.title||'Actualité récente')}</h4><div class="p50ci-news-meta"><span class="${item.official?'p50ci-official':''}">${item.official?'SOURCE OFFICIELLE':esc(item.sourceType)}</span> · ${esc(item.platform)} · ${esc(relative(item.publishedAt))}${item.trendBadge?` · ${esc(item.trendBadge)}`:''}</div>${facebook?'<div class="p50ci-facebook-note" style="margin-top:6px">Aperçu lisible dans Pass50.</div>':''}</div><a class="btn small" href="${attr(item.url)}" target="_blank" rel="noopener">${facebook?'Ouvrir Facebook':'Voir'} ↗</a></article>`;
+    return `<article class="p50ci-news-card ${facebook?'facebook':''} ${extra?'is-extra':''}"><div class="p50ci-news-thumb">${cover?`<img src="${attr(cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:'📰'}</div><div><h4>${esc(item.title||'Actualité récente')}</h4><div class="p50ci-news-meta"><span class="${item.official?'p50ci-official':''}">${item.official?'SOURCE OFFICIELLE':esc(item.sourceType)}</span> · ${esc(item.platform)} · ${esc(relative(item.publishedAt))}${item.trendBadge?` · ${esc(item.trendBadge)}`:''}</div></div><a class="btn small" href="${attr(item.url)}" target="_blank" rel="noopener">${facebook?'Ouvrir Facebook':'Voir'} ↗</a></article>`;
   }
 
   async function renderProfileNews(profileId){
     const body=document.getElementById('profileBody');if(!body)return;
     body.querySelector('#p50ciProfileNews')?.remove();
-    const shell=document.createElement('section');shell.id='p50ciProfileNews';shell.className='p50ci-news';shell.innerHTML='<div class="p50ci-news-head"><div class="p50ci-news-title">📰 Actualité récente</div></div><div class="p50ci-empty">Chargement des publications officielles…</div>';body.appendChild(shell);
     try{
       const key=`${profileId}:${P50CI.period}`,cached=P50CI.news.get(key);let data;
       if(cached&&Date.now()-cached.fetchedAt<NEWS_TTL)data=cached.data;
       else{data=await fetchFeed(profileId);P50CI.news.set(key,{data,fetchedAt:Date.now()});}
-      if(!document.body.contains(shell))return;const items=data.news||[];
-      const hours=Number(data.rules?.officialNewsHoursApplied||72);
-      const fallback=!!data.rules?.officialNewsUsedFallback;
-      const windowLabel=fallback
-        ? `Aucune actu en 72 h → publications des ${hours} dernières heures`
-        : `Publications officielles des ${hours} dernières heures`;
-      const emptyLabel=fallback
-        ? 'Aucune actualité récente de moins de 7 jours pour cette fiche.'
-        : 'Aucune actualité récente de moins de 72 heures pour cette fiche.';
-      shell.innerHTML=`<div class="p50ci-news-head"><div><div class="p50ci-news-title">📰 Actualité récente</div><div class="muted" style="font-size:11px">${esc(windowLabel)} · contenus officiels + validations</div></div>${items.length>3?'<button class="btn small" data-p50ci-expand>Voir toute l’actualité</button>':''}</div><div class="p50ci-news-list">${items.length?items.map(newsCard).join(''):`<div class="p50ci-empty">${esc(emptyLabel)}</div>`}</div>`;
-    }catch(error){shell.innerHTML='<div class="p50ci-news-head"><div class="p50ci-news-title">📰 Actualité récente</div></div><div class="p50ci-empty">Actualité momentanément indisponible.</div>';}
+      const host=document.getElementById('profileBody');if(!host)return;
+      const items=data.news||[];
+      const isVideoItem=item=>/video|reel|live|short/i.test(String(item?.itemType||item?.contentType||''))||['YouTube','TikTok'].includes(String(item?.platform||''));
+      const official=items.find(item=>item.official&&isVideoItem(item))||items.find(item=>item.official)||items.find(isVideoItem)||items[0];
+      if(official&&typeof window.p50SyncTriggerFromOfficialNews==='function'){
+        if(window.p50SyncTriggerFromOfficialNews(profileId,official)&&typeof render==='function')render();
+      }
+      if(!items.length)return;
+      const current=document.getElementById('profileBody');if(!current)return;
+      current.querySelector('#p50ciProfileNews')?.remove();
+      const shell=document.createElement('section');shell.id='p50ciProfileNews';shell.className='p50ci-news';
+      shell.innerHTML=`<div class="p50ci-news-head"><div class="p50ci-news-title">📰 Actualité récente</div>${items.length>3?'<button class="btn small" data-p50ci-expand>Voir toute l’actualité</button>':''}</div><div class="p50ci-news-list">${items.map(newsCard).join('')}</div>`;
+      current.appendChild(shell);
+    }catch(error){}
   }
 
   function installProfileHook(){
@@ -127,9 +153,11 @@
   }
 
   function installRenderHook(){
-    if(typeof window.renderContent!=='function'||window.renderContent.__p50ci)return;
-    const original=window.renderContent;
-    const wrapped=function(){if(P50CI.data){renderTrends();return;}const result=original.apply(this,arguments);ensurePeriodControls();refreshTrends();return result;};
+    if(typeof window.renderContent==='function'&&window.renderContent.__p50ci)return;
+    const wrapped=function(){
+      renderTrends();
+      if(!P50CI.data&&!P50CI.loading)refreshTrends();
+    };
     wrapped.__p50ci=true;window.renderContent=wrapped;
   }
 

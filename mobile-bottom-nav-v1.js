@@ -166,9 +166,9 @@
   function loadPronoCoulesTab() {
     if (window.__pass50PronosticsCoulesTabV1 || document.querySelector('script[data-pass50-prono-coules-tab]')) return;
     const script = document.createElement('script');
-    script.src = './pronostics-coules-tab-v1.js?v=1.0';
+    script.src = './pronostics-coules-tab-v1.js?v=1.2';
     script.async = false;
-    script.dataset.pass50PronoCoulesTab = '1.0';
+    script.dataset.pass50PronoCoulesTab = '1.2';
     document.head.appendChild(script);
   }
 
@@ -183,6 +183,17 @@
     }, 80);
   }
 
+  function isReloadNavigation() {
+    try {
+      if (typeof window.p50IsReloadNavigation === 'function') return window.p50IsReloadNavigation();
+      const nav = performance.getEntriesByType?.('navigation')?.[0];
+      if (nav && nav.type) return nav.type === 'reload';
+      return typeof performance.navigation === 'object' && Number(performance.navigation.type) === 1;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function routeQuery() {
     if (isFeed || isProno) return;
     const params = new URLSearchParams(location.search);
@@ -192,6 +203,10 @@
       if (current()) callWhenReady('openUser', fn => fn());
       else callWhenReady('openAuth', fn => fn('login'));
     });
+    if (isReloadNavigation()) {
+      if (typeof window.p50ClearProfileQuery === 'function') window.p50ClearProfileQuery();
+      return;
+    }
     if (profileId) callWhenReady('openProfile', fn => fn(profileId));
   }
 

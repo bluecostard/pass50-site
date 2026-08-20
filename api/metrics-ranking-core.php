@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
 
-const P50_MR_ALGORITHM_VERSION='MR-V1.3';
+const P50_MR_ALGORITHM_VERSION='MR-V1.4';
 const P50_MR_LOCK='pass50_metrics_ranking_experimental_v1';
+const P50_MR_MIN_PERCENTILE_POOL=20;
 
 function p50_mr_periods(): array {
     return ['2H'=>2,'24H'=>24,'48H'=>48,'7J'=>168,'15J'=>360];
@@ -189,11 +190,33 @@ function p50_mr_percentiles(array $values): array {
     return $out;
 }
 
+/** Percentiles globaux quand le vivier dynamique est trop petit — évite qu'une poignée de profils monopolisent le haut du classement. */
+function p50_mr_assign_feature_percentiles(array &$raw,array $weights,int $minPool=P50_MR_MIN_PERCENTILE_POOL): void {
+    foreach(array_keys($weights) as $feature){
+        $values=[];
+        foreach($raw as $key=>$item){
+            if(!empty($item['raw']['availability'][$feature]))$values[$key]=$item['raw']['features'][$feature];
+        }
+        if(!$values)continue;
+        if(count($values)<$minPool){
+            foreach(p50_mr_percentiles($values) as $key=>$percentile)$raw[$key]['percentiles'][$feature]=$percentile;
+            continue;
+        }
+        $byPlatform=[];
+        foreach($raw as $key=>$item){
+            if(!empty($item['raw']['availability'][$feature]))$byPlatform[$item['account']['platform']][$key]=$item['raw']['features'][$feature];
+        }
+        foreach($byPlatform as $platformValues){
+            foreach(p50_mr_percentiles($platformValues) as $key=>$percentile)$raw[$key]['percentiles'][$feature]=$percentile;
+        }
+    }
+}
+
 function p50_mr_metric_delta(array $captures,string $metric,DateTimeImmutable $start,DateTimeImmutable $end,?DateTimeImmutable $publishedAt): array {
     $usable=[];
     foreach($captures as $capture){
         if(!array_key_exists($metric,$capture)||$capture[$metric]===null||!is_numeric($capture[$metric]))continue;
-        $at=new DateTimeImmutable((string)$capture['observed_at'],new DateTimeZone('UTC'));
+        $at=p50_metrics_parse_utc((string)$capture['observed_at']);if(!$at)continue;
         if($at>$end)continue;$usable[]=['id'=>(int)$capture['id'],'at'=>$at,'observed_at'=>(string)$capture['observed_at'],'value'=>(float)$capture[$metric],'confidence'=>(float)$capture['confidence']];
     }
     usort($usable,fn($a,$b)=>$a['at']<=>$b['at']);
@@ -259,7 +282,7 @@ function p50_mr_is_official_account(array $account): bool {
 
 function p50_mr_platform_raw(array $account,array $contents,array $captures,DateTimeImmutable $start,DateTimeImmutable $end): array {
     $accountCaptures=array_values(array_filter($captures,fn($c)=>(int)$c['account_id']===(int)$account['id']&&$c['content_id']===null));
-    $latestFollower=null;foreach($accountCaptures as $capture)if($capture['followers']!==null&&is_numeric($capture['followers'])&&new DateTimeImmutable($capture['observed_at'],new DateTimeZone('UTC'))<=$end&&($latestFollower===null||(string)$capture['observed_at']>(string)$latestFollower['observed_at']))$latestFollower=$capture;
+    $latestFollower=null;foreach($accountCaptures as $capture){$observedAt=p50_metrics_parse_utc((string)$capture['observed_at']);if($capture['followers']===null||!is_numeric($capture['followers'])||!$observedAt||$observedAt>$end)continue;if($latestFollower===null||(string)$capture['observed_at']>(string)$latestFollower['observed_at'])$latestFollower=$capture;}
     $features=['audience'=>$latestFollower?log1p((float)$latestFollower['followers']):null,'reach'=>null,'engagementVolume'=>null,'engagementRate'=>null,'velocity'=>null,'acceleration'=>null,'live'=>null];
     $availability=array_fill_keys(array_keys($features),false);if($latestFollower)$availability['audience']=true;
     $viewSum=0.0;$interaction=0.0;$velocity=0.0;$viewAvailable=false;$interactionAvailable=false;$contentCount=0;$usedCaptures=[];$fallback=false;
@@ -268,7 +291,7 @@ function p50_mr_platform_raw(array $account,array $contents,array $captures,Date
     foreach($contents as $content){
         if((int)$content['account_id']!==(int)$account['id'])continue;
         $series=array_values(array_filter($captures,fn($c)=>(int)($c['content_id']??0)===(int)$content['id']));
-        $published=$content['published_at']?new DateTimeImmutable($content['published_at'],new DateTimeZone('UTC')):null;
+        $published=$content['published_at']?p50_metrics_parse_utc((string)$content['published_at']):null;
         $deltas=[];foreach(['views','likes','comments','shares','saves'] as $metric)$deltas[$metric]=p50_mr_metric_delta($series,$metric,$start,$end,$published);
         $measured=array_filter($deltas,fn($delta)=>$delta['available']);
         if(!$measured)continue;$contentCount++;
@@ -288,12 +311,12 @@ function p50_mr_platform_raw(array $account,array $contents,array $captures,Date
     $oldReach=0.0;$newReach=0.0;$oldMeasured=false;$newMeasured=false;$accelerationCaptures=[];
     foreach($contents as $content){
         if((int)$content['account_id']!==(int)$account['id'])continue;$series=array_values(array_filter($captures,fn($c)=>(int)($c['content_id']??0)===(int)$content['id']));
-        $published=$content['published_at']?new DateTimeImmutable($content['published_at'],new DateTimeZone('UTC')):null;
+        $published=$content['published_at']?p50_metrics_parse_utc((string)$content['published_at']):null;
         $old=p50_mr_metric_delta($series,'views',$start,$middle,$published);$new=p50_mr_metric_delta($series,'views',$middle,$end,$published);
         if($old['available']){$oldReach+=(float)$old['value'];$oldMeasured=true;$accelerationCaptures[]=$old;}if($new['available']){$newReach+=(float)$new['value'];$newMeasured=true;$accelerationCaptures[]=$new;}
     }
     if($oldMeasured&&$newMeasured){$features['acceleration']=log((1+$newReach)/(1+$oldReach));$availability['acceleration']=true;foreach($accelerationCaptures as $delta)$rememberDelta($delta);}
-    $liveMax=null;$liveCapture=null;foreach($accountCaptures as $capture){$at=new DateTimeImmutable($capture['observed_at'],new DateTimeZone('UTC'));if($at<$start||$at>$end||$capture['live_viewers']===null||!is_numeric($capture['live_viewers']))continue;$value=(float)$capture['live_viewers'];if($liveMax===null||$value>$liveMax||($value===$liveMax&&(string)$capture['observed_at']>(string)$liveCapture['observed_at'])){$liveMax=$value;$liveCapture=$capture;}}
+    $liveMax=null;$liveCapture=null;foreach($accountCaptures as $capture){$at=p50_metrics_parse_utc((string)$capture['observed_at']);if(!$at||$at<$start||$at>$end||$capture['live_viewers']===null||!is_numeric($capture['live_viewers']))continue;$value=(float)$capture['live_viewers'];if($liveMax===null||$value>$liveMax||($value===$liveMax&&(string)$capture['observed_at']>(string)$liveCapture['observed_at'])){$liveMax=$value;$liveCapture=$capture;}}
     if($liveMax!==null){$features['live']=log1p($liveMax);$availability['live']=true;}
     if($liveCapture)$remember($liveCapture);if($latestFollower)$remember($latestFollower);
     $captureCount=count($usedCaptures);$quality=$captureCount?array_sum(array_column($usedCaptures,'confidence'))/$captureCount:0;$latestAt=null;
@@ -310,10 +333,7 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
         $key=$profile['profile_id'].'|'.$account['platform'];
         $raw[$key]=['profile'=>$profile,'account'=>$account,'raw'=>p50_mr_platform_raw($account,$loaded['contents'],$loaded['captures'],$start,$now)];
     }
-    foreach(array_keys($weights) as $feature){
-        $byPlatform=[];foreach($raw as $key=>$item)if($item['raw']['availability'][$feature])$byPlatform[$item['account']['platform']][$key]=$item['raw']['features'][$feature];
-        foreach($byPlatform as $values)foreach(p50_mr_percentiles($values) as $key=>$percentile)$raw[$key]['percentiles'][$feature]=$percentile;
-    }
+    p50_mr_assign_feature_percentiles($raw,$weights);
     $platformsByProfile=[];
     foreach($raw as $item){
         $available=$item['percentiles']??[];$weightSum=0.0;$dynamicWeightSum=0.0;$dynamicWeighted=0.0;
@@ -331,7 +351,7 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
             $base=$dynamicBase*(1-$weights['audience'])+($audiencePercentile===null?0.0:$audiencePercentile*$weights['audience']);
         }
         $coverage=$weightSum*100;$quality=max(0,min(100,$item['raw']['quality']));
-        $latest=$item['raw']['latestCaptureAt'];$age=$latest?max(0,($now->getTimestamp()-(new DateTimeImmutable($latest,new DateTimeZone('UTC')))->getTimestamp())/3600):INF;
+        $latest=$item['raw']['latestCaptureAt'];$parsedLatest=p50_metrics_parse_utc($latest);$age=$parsedLatest?max(0,($now->getTimestamp()-$parsedLatest->getTimestamp())/3600):INF;
         $freshness=is_finite($age)?max(0,min(100,100*(1-$age/$freshLimit))):0;
         $confidence=0.45*$coverage+0.35*$quality+0.20*$freshness;$score=max(0,min(100,$base*(0.72+0.28*$confidence/100)));
         $platformsByProfile[$item['profile']['profile_id']][]=['platform'=>$item['account']['platform'],'score'=>$score,'baseScore'=>$base,'coverage'=>$coverage,'confidence'=>$confidence,'freshness'=>$freshness,'raw'=>$item['raw'],'percentiles'=>$available];
@@ -348,7 +368,7 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
             ||!empty($loaded['verifiedOfficialIds'][$profileId]);
         $recentActivity=p50_mr_has_recent_activity($platforms);
         $reasons=[];if(!(bool)$profile['editorial_eligible']||!(bool)$profile['alive'])$reasons[]='editorial_not_eligible';if(!$official)$reasons[]='no_official_metric_account';if($periodKey==='2H'&&!$recentActivity)$reasons[]='no_recent_activity';elseif($contentCount<1)$reasons[]='no_measurable_content';if($coverage<$thresholds['coverage'])$reasons[]=$periodKey==='2H'?'coverage_below_5':'coverage_below_30';if($confidence<$thresholds['confidence'])$reasons[]=$periodKey==='2H'?'confidence_below_35':'confidence_below_40';
-        $age=$latest?($now->getTimestamp()-(new DateTimeImmutable($latest,new DateTimeZone('UTC')))->getTimestamp())/3600:INF;if($age>$freshLimit)$reasons[]='stale_captures';
+        $parsedLatest=p50_metrics_parse_utc($latest);$age=$parsedLatest?($now->getTimestamp()-$parsedLatest->getTimestamp())/3600:INF;if($age>$freshLimit)$reasons[]='stale_captures';
         if($score===null&&$official&&(bool)$profile['alive']){
             $score=0.1;if($base===null)$base=0.1;$reasons[]='awaiting_measurable_capture';
         }
@@ -366,7 +386,7 @@ function p50_mr_calculate(PDO $pdo,array $periods,string $triggerType,array $met
     $allowed=p50_mr_periods();$selected=[];foreach($periods as $period)if(isset($allowed[$period]))$selected[$period]=$allowed[$period];
     if(!$selected)throw new InvalidArgumentException('Aucune période valide.');
     if((int)p50_metrics_value($pdo,"SELECT GET_LOCK(?,10)",[P50_MR_LOCK])!==1)throw new RuntimeException('Un calcul expérimental est déjà en cours.');
-    $runUuid=p50_mr_uuid();$now=new DateTimeImmutable('now',new DateTimeZone('UTC'));$runCreated=false;$runMetadata=p50_mr_run_metadata($metadata);
+    $runUuid=p50_mr_uuid();$now=p50_metrics_now_utc();$runCreated=false;$runMetadata=p50_mr_run_metadata($metadata);
     try{
         p50_mr_ensure_schema($pdo);
         $stmt=$pdo->prepare("INSERT INTO p50_metric_ranking_runs(run_uuid,algorithm_version,trigger_type,status,periods_json,metadata_json,started_at) VALUES(?,?,?,'running',?,?,?)");
@@ -422,8 +442,8 @@ function p50_mr_calculate_if_due(PDO $pdo,DateTimeImmutable $now,int $minimumMin
         ORDER BY finished_at DESC,id DESC LIMIT 1");
     $stmt->execute([P50_MR_ALGORITHM_VERSION]);$latest=$stmt->fetchColumn();
     if($latest){
-        $finishedAt=new DateTimeImmutable((string)$latest,new DateTimeZone('UTC'));
-        if($finishedAt>$now->modify("-$minimumMinutes minutes"))return [
+        $finishedAt=p50_metrics_parse_utc((string)$latest);
+        if($finishedAt&&$finishedAt>$now->modify("-$minimumMinutes minutes"))return [
             'ok'=>true,'skipped'=>true,'reason'=>'recent_success',
             'latestFinishedAt'=>$finishedAt->format(DATE_ATOM),'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
         ];

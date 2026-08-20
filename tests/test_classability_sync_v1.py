@@ -193,6 +193,7 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("form.id !== 'profileForm'", SYNC)
         self.assertIn("setTimeout(() => repairSavedProfile(profileId), 0)", SYNC)
         self.assertIn("repairAll({ forceRender: true })", SYNC)
+        self.assertIn("schedulePostCloudRepair()", SYNC)
         self.assertIn("profileItem.classable = expected", SYNC)
         self.assertIn("profileItem.editorialEligible = editorialEligible", SYNC)
         self.assertIn("PASS50_CLASSABILITY_DIAGNOSTIC", SYNC)
@@ -210,10 +211,10 @@ class ClassabilitySyncV1Tests(unittest.TestCase):
         self.assertIn("published_mr_v1", SYNC)
 
     def test_loader_and_cache_are_versioned(self):
-        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.7", SYNC)
-        self.assertIn("classability-sync-v1.js?v=1.7", LOADER)
+        self.assertIn("PASS50-CLASSABILITY-SYNC-V1.8", SYNC)
+        self.assertIn("classability-sync-v1.js?v=1.8", LOADER)
         self.assertIn("data-pass50-classability-sync", LOADER)
-        self.assertIn("classability-sync-v1.js?v=1.7", SW)
+        self.assertIn("classability-sync-v1.js?v=1.8", SW)
         self.assertIn("pass50-v73-keep-official-links", SW)
         self.assertIn("PASS50_LINK_SAVE_RUNNING", SYNC)
         self.assertNotIn("repairAll({ forceRender: true }), 80", SYNC)

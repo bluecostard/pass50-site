@@ -14,7 +14,7 @@ WORKFLOW = (ROOT / ".github/workflows/validate-metrics-ranking-experimental-v1.y
 
 class MetricsRankingExperimentalV1Tests(unittest.TestCase):
     def test_algorithm_periods_and_exact_weights(self):
-        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.3'", CORE)
+        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.4'", CORE)
         for key, hours in (("2H", 2), ("24H", 24), ("48H", 48), ("7J", 168), ("15J", 360)):
             self.assertIn(f"'{key}'=>{hours}", CORE)
         weights = [0.05, 0.28, 0.18, 0.16, 0.18, 0.12, 0.03]
@@ -54,6 +54,8 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("75.0", percentiles)
         self.assertIn("50.0", percentiles)
         self.assertIn("/($n-1)*100", percentiles)
+        self.assertIn("function p50_mr_assign_feature_percentiles", CORE)
+        self.assertIn("P50_MR_MIN_PERCENTILE_POOL=20", CORE)
         raw = self._function("p50_mr_platform_raw")
         self.assertIn("log((1+$newReach)/(1+$oldReach))", raw)
         self.assertIn("$oldMeasured&&$newMeasured", raw)

@@ -37,6 +37,12 @@ $lockedOfficialLinks=[
     'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     'census-observateur-ebene|facebook'=>'https://www.facebook.com/observateurofficiel/',
     'census-observateur-ebene|x'=>'https://x.com/FlorentAMANY',
+    'samo-samo|instagram'=>'https://www.instagram.com/kommander_samo_samo/',
+];
+$ownerExactLocks=[
+    'samosamo'=>[
+        'instagram'=>'https://www.instagram.com/kommander_samo_samo/',
+    ],
 ];
 $lockKey=strtolower($profileId).'|'.strtolower($platform);
 $lockedOfficialUrl=$lockedOfficialLinks[$lockKey]??'';
@@ -54,6 +60,8 @@ if($lockedOfficialUrl===''&&in_array($normalizedProfileName,$ownerLockedNames,tr
         if(is_array($types)&&in_array('manual_owner',$types,true))$lockedOfficialUrl=(string)($lockedRow['normalized_url']??'');
     }
 }
+$exactOwnerUrl=$ownerExactLocks[$normalizedProfileName][strtolower($platform)]??'';
+if($exactOwnerUrl!=='')$lockedOfficialUrl=$exactOwnerUrl;
 
 if($lockedOfficialUrl!==''&&in_array($action,['delete','reject'],true)){
     json_response([
@@ -84,9 +92,13 @@ if($action==='delete'){
     json_response(['ok'=>true,'deleted'=>true,'links'=>p50_de_social_links($profileId,false)]);
 }
 $url=trim((string)($in['url']??''));
-if($lockedOfficialUrl!==''){
+$incomingNormalized=p50_de_normalize_social_url($platform,$url);
+$ownerReplace=$user['role']==='owner'&&!empty($in['confirmedOfficial'])&&$incomingNormalized!==''&&$incomingNormalized!==$lockedOfficialUrl;
+if($lockedOfficialUrl!==''&&!$ownerReplace){
     $url=$lockedOfficialUrl;
     $in['confirmedOfficial']=true;
+    $in['replaceExisting']=true;
+}elseif($ownerReplace){
     $in['replaceExisting']=true;
 }
 if($url==='')json_response(['error'=>'URL requise.'],422);

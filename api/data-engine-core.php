@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/http-tools.php';
 require_once __DIR__ . '/profile-tombstone-core.php';
+require_once __DIR__ . '/scoring-15c-core.php';
 
 const P50_DATA_CONFIDENCE_THRESHOLD = 80;
 /** Seuils 15C pour publier un score classable (assouplis : ne plus bloquer ~la moitié de la base). */
@@ -894,7 +895,11 @@ function p50_de_collect_page_enrichment(array $profile,string $url,string $sourc
     }
     if($official||$identityScore>=60)$birthDates=array_merge($birthDates,p50_de_birth_context_dates($plain));
     $birthDates=array_values(array_unique($birthDates));
-    foreach($birthDates as $date){p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$sourceType,$sourceName,$final,$weight);$found++;}
+    $stateProfile=p50_de_state_profile($profileId);
+    foreach($birthDates as $date){
+        if(is_array($stateProfile)&&p50_de_profile_birth_frozen($stateProfile)&&p50_de_profile_birth_value($stateProfile)!==$date)continue;
+        p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$sourceType,$sourceName,$final,$weight);$found++;
+    }
     $description=p50_de_text_excerpt($description!==''?$description:(string)($meta['description']??''),500);
     if($description!==''&&($official||$identityScore>=60)){p50_de_add_fact_evidence($profileId,'bio',$description,$description,$sourceType,$sourceName,$final,min(98,$weight));$found++;}
     if($occupation!==''){p50_de_add_fact_evidence($profileId,'occupation',$occupation,$occupation,$sourceType,$sourceName,$final,min(98,$weight));$found++;}
@@ -1368,8 +1373,8 @@ function p50_de_state_metric_values(array $event): array {
     return $metrics;
 }
 
-function p50_de_import_state_activities(string $profileId): int {
-    $state=p50_de_load_public_state();$count=0;
+function p50_de_import_state_activities(string $profileId, ?array $state=null): int {
+    $state=$state??p50_de_load_public_state();$count=0;
     foreach((array)($state['events']??[]) as $event){
         if(!is_array($event)||(string)($event['profileId']??'')!==$profileId)continue;
         if(($event['originalLinkValidated']??false)!==true)continue;
@@ -1389,12 +1394,25 @@ function p50_de_import_state_activities(string $profileId): int {
     return $count;
 }
 
+function p50_de_import_all_state_activities(array $state): int {
+    $count=0;
+    $seen=[];
+    foreach((array)($state['events']??[]) as $event){
+        if(!is_array($event))continue;
+        $profileId=trim((string)($event['profileId']??''));
+        if($profileId===''||isset($seen[$profileId]))continue;
+        $seen[$profileId]=true;
+        $count+=p50_de_import_state_activities($profileId,$state);
+    }
+    return $count;
+}
+
 /** Algorithme PASS50 15 critères — données publiques réellement disponibles. */
 function p50_de_15c_window(string $profileId,int $hours): array {
     $windowHours=max(1,min(168,$hours));
     $stmt=db()->prepare("SELECT id,profile_id,platform,event_type,url,published_at,collected_at,metrics,confidence FROM p50_activity_events WHERE profile_id=? AND status='verified' AND confidence>=? AND COALESCE(published_at,collected_at)>=DATE_SUB(NOW(),INTERVAL ? HOUR) ORDER BY COALESCE(published_at,collected_at) ASC");
     $stmt->execute([$profileId,p50_de_threshold(),$windowHours]);$events=p50_de_unique_activity_rows($stmt->fetchAll());$links=p50_de_social_links($profileId,true);
-    $views=$likes=$comments=$shares=$saves=0.0;$latest=0;$platforms=[];$conf=[];$velocities=[];$now=time();$eventWeight=0.0;$freshWeight=0.0;
+    $views=$likes=$comments=$shares=$saves=0.0;$latest=0;$platforms=[];$conf=[];$velocities=[];$followerSamples=[];$liveWeight=0.0;$now=time();$eventWeight=0.0;$freshWeight=0.0;
     foreach($events as $e){
         $m=p50_de_normalize_score_metrics(decode_json_column($e['metrics']??null,[]));
         $ts=strtotime((string)($e['published_at']?:$e['collected_at']))?:0;
@@ -1409,6 +1427,9 @@ function p50_de_15c_window(string $profileId,int $hours): array {
         $extraPlatforms=max(0,(int)($m['platformCount']??0)-1);
         for($i=0;$i<$extraPlatforms;$i++)$platforms['signal_'.$e['id'].'_'.$i]=$timeWeight;
         $conf[]=(int)$e['confidence'];
+        $rawFollowers=(float)($m['followers']??0);
+        if($rawFollowers>0&&$ts>0)$followerSamples[]=['v'=>$rawFollowers,'t'=>$ts];
+        if(p50_15c_is_live_event_type((string)($e['event_type']??'')))$liveWeight+=$timeWeight;
     }
     foreach($links as $l){
         $conf[]=(int)$l['confidence'];
@@ -1425,29 +1446,12 @@ function p50_de_15c_window(string $profileId,int $hours): array {
         $weight=$ts?p50_de_time_weight(max(0,($now-$ts)/3600)):0;
         $followers=max($followers,(float)($m['followers']??0)*$weight);
     }
-    $engagement=$views>0?($likes+3*$comments+5*$shares+4*$saves)/$views:null;
-    $shareRate=$views>0?($shares+$saves)/$views:null;
-    $velocity=$velocities?array_sum($velocities)/count($velocities):null;
     $freshHours=$latest?max(0,($now-$latest)/3600):null;
-    $raw=[
-      'c1'=>$followers>0?log10(1+$followers):null,
-      'c2'=>$views>0?log10(1+$views):null,
-      'c3'=>null,
-      'c4'=>$engagement,
-      'c5'=>$shareRate,
-      'c6'=>$comments>0?log10(1+$comments):null,
-      'c7'=>$velocity!==null?log10(1+$velocity):null,
-      'c8'=>$platforms?array_sum($platforms):null,
-      'c9'=>$shares>0?log10(1+$shares):null,
-      'c10'=>null,'c11'=>null,'c12'=>null,
-      'c13'=>$eventWeight>0?$eventWeight:null,
-      'c14'=>($views>0&&($likes+$comments+$shares)>0)?max(0,min(100,70+min(25,log10(1+$views)*3)-min(20,abs(($likes+$comments+$shares)/max(1,$views)-0.08)*100))):null,
-      'c15'=>$shares>0?log10(1+$shares):null,
-    ];
-    $weights=['c1'=>.06,'c2'=>.08,'c3'=>.07,'c4'=>.08,'c5'=>.09,'c6'=>.05,'c7'=>.10,'c8'=>.08,'c9'=>.06,'c10'=>.06,'c11'=>.05,'c12'=>.04,'c13'=>.04,'c14'=>.07,'c15'=>.07];
-    $scores=[];$sum=0.0;$available=0.0;
-    foreach($raw as $k=>$v){if($v===null||!is_finite((float)$v))continue;$x=(float)$v;$score=match($k){'c2','c6','c7','c9','c15'=>max(0,min(100,20+$x*16)),'c4'=>max(0,min(100,$x*500)),'c5'=>max(0,min(100,$x*1000)),'c8'=>max(0,min(100,$x*20)),'c13'=>max(0,min(100,$x*8)),'c14'=>max(0,min(100,$x)),default=>max(0,min(100,50+$x*10))};$scores[$k]=round($score,2);$sum+=$score*$weights[$k];$available+=$weights[$k];}
-    $base=$available>0?$sum/$available:0;$coverage=$available*100;$confidenceSource=$conf?(array_sum($conf)/count($conf)):0;$fresh=$freshWeight*100;$confidence=.5*($coverage/100)+.3*($fresh/100)+.2*($confidenceSource/100);$score=max(0,min(100,$base*(.75+.25*$confidence)));
+    $platformSum=$platforms?array_sum($platforms):null;
+    $raw=p50_15c_build_raw($followers,$views,$likes,$comments,$shares,$saves,$platformSum,$eventWeight,$velocities,$followerSamples,$liveWeight);
+    $scored=p50_15c_score_raw($raw);
+    $scores=$scored['scores'];$base=$scored['base'];$coverage=$scored['coverage'];
+    $confidenceSource=$conf?(array_sum($conf)/count($conf)):0;$fresh=$freshWeight*100;$confidence=.5*($coverage/100)+.3*($fresh/100)+.2*($confidenceSource/100);$score=max(0,min(100,$base*(.75+.25*$confidence)));
     arsort($scores);$top=array_slice(array_keys($scores),0,3);
     return ['score'=>(int)round($score),'baseScore'=>round($base,2),'confidence'=>(int)round($confidence*100),'coverage'=>round($coverage,2),'criteria'=>$scores,'raw'=>$raw,'measuredCriteria'=>count($scores),'topCriteria'=>$top,'events'=>count($events),'platforms'=>array_keys($platforms),'latestAt'=>$latest?gmdate('c',$latest):null,'freshHours'=>$freshHours,'freshWeight'=>$freshWeight];
 }
@@ -1485,22 +1489,26 @@ function p50_de_collect_enrichment(array $profile,bool $deep=true): array {
 }
 
 
-function p50_de_collect_state_facts(array $profile): int {
-    $state=p50_de_load_public_state();
+function p50_de_collect_state_facts(array $profile, ?array $state=null): int {
+    $state=$state??p50_de_load_public_state();
     $map=p50_de_profile_state_map($state);
     $p=$map[(string)$profile['profile_id']]??null;
     if(!is_array($p))return 0;
     $count=0;$profileId=(string)$profile['profile_id'];
     $date=trim((string)($p['birthDate']??''));
     if($date!==''&&preg_match('/^\d{4}-\d{2}-\d{2}$/',$date)){
-        $manual=!empty($p['birthManualLocked']);
+        $manual=p50_de_profile_birth_frozen($p);
         p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$manual?'manual_owner':'state_import',$manual?'Administrateur PASS50':'État PASS50','',$manual?100:70);$count++;
     }
     $allowed=['real_name','education','occupation','nationality','bio','category','official_website','birth_date'];
     foreach((array)($p['curatedFacts']??[]) as $key=>$seed){
         if(!in_array((string)$key,$allowed,true)||!is_array($seed))continue;
         $value=trim((string)($seed['value']??''));if($value==='')continue;
-        if($key==='birth_date'){$value=p50_de_normalize_iso_date($value);if($value==='')continue;}
+        if($key==='birth_date'){
+            $value=p50_de_normalize_iso_date($value);if($value==='')continue;
+            $existing=p50_de_profile_birth_value($p);
+            if($existing!==''&&p50_de_profile_birth_frozen($p)&&$existing!==$value)continue;
+        }
         $weight=max(90,min(96,(int)($seed['confidence']??94)));
         p50_de_add_fact_evidence($profileId,(string)$key,$value,$value,'curated_research_v22',(string)($seed['source_name']??'Recherche PASS50 V22'),(string)($seed['source_url']??''),$weight);$count++;
     }
@@ -1566,13 +1574,79 @@ function p50_de_social_links(string $profileId, bool $verifiedOnly=false): array
     return $rows;
 }
 
+function p50_de_state_profile(string $profileId): ?array {
+    $state=p50_de_load_public_state();
+    if(!is_array($state))return null;
+    $map=p50_de_profile_state_map($state);
+    $p=$map[$profileId]??null;
+    return is_array($p)?$p:null;
+}
+
+function p50_de_profile_birth_value(array $p): string {
+    return trim((string)($p['birthDate']??''));
+}
+
+function p50_de_fact_is_manual($fact): bool {
+    if(!is_array($fact))return false;
+    $types=$fact['source_types']??$fact['sourceTypes']??[];
+    if(is_string($types)){
+        $decoded=json_decode($types,true);
+        $types=is_array($decoded)?$decoded:array_values(array_filter(explode(',',$types)));
+    }
+    if(!is_array($types))return false;
+    foreach($types as $type){
+        $type=(string)$type;
+        if(in_array($type,['manual_owner','manual_admin'],true)||str_starts_with($type,'manual_source'))return true;
+    }
+    return false;
+}
+
+function p50_de_profile_birth_frozen(array $p): bool {
+    if(p50_de_profile_birth_value($p)==='')return false;
+    if(!empty($p['birthManualLocked']))return true;
+    if(strtolower((string)($p['ageStatus']??''))==='confirmed')return true;
+    $quality=is_array($p['quality']??null)?$p['quality']:[];
+    if((int)($quality['birth']??0)>=90)return true;
+    $facts=$p['dataEngine']['verifiedFacts']??[];
+    return is_array($facts)&&in_array('birth_date',$facts,true);
+}
+
+function p50_de_lock_birth_date(array &$p, bool $adminConfirmed=false): void {
+    if(p50_de_profile_birth_value($p)==='')return;
+    $p['birthYear']=(int)substr((string)$p['birthDate'],0,4);
+    $p['ageStatus']='confirmed';
+    $p['agePublic']=($p['agePublic']??true)!==false;
+    $p['birthManualLocked']=true;
+    if(empty($p['birthManualUpdatedAt']))$p['birthManualUpdatedAt']=gmdate('c');
+    $p['quality']=is_array($p['quality']??null)?$p['quality']:[];
+    $current=(int)($p['quality']['birth']??0);
+    $p['quality']['birth']=$adminConfirmed?max(100,$current):max(90,$current);
+    $p['dataEngine']=is_array($p['dataEngine']??null)&&!array_is_list($p['dataEngine']??[])?$p['dataEngine']:[];
+    $verified=$p['dataEngine']['verifiedFacts']??[];
+    $keys=[];
+    if(is_array($verified)){
+        $list=array_is_list($verified)?$verified:array_keys($verified);
+        foreach($list as $item){if(is_string($item)&&$item!==''&&!is_numeric($item))$keys[]=$item;}
+    }
+    $p['dataEngine']['verifiedFacts']=array_values(array_unique(array_merge($keys,['birth_date'])));
+}
+
+function p50_de_freeze_existing_birth(array &$p): bool {
+    if(!p50_de_profile_birth_frozen($p))return false;
+    $was=!empty($p['birthManualLocked']);
+    p50_de_lock_birth_date($p, (int)(($p['quality']['birth']??0))>=100);
+    return !$was;
+}
+
 function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array &$sharedState=null): bool {
     $ownsState=$sharedState===null;
     $state=$ownsState?p50_de_load_public_state():$sharedState;
     if(!$state)return false;
     $registry=p50_de_registry_profiles($profileId,1,0,false);
-    if($registry){p50_de_collect_state_facts($registry[0]);p50_de_collect_curated_evidence_v221($registry[0]);}
-    p50_de_import_state_activities($profileId);
+    if($ownsState){
+        if($registry){p50_de_collect_state_facts($registry[0],$state);p50_de_collect_curated_evidence_v221($registry[0]);}
+        p50_de_import_state_activities($profileId,$state);
+    }
     p50_de_rebuild_profile_facts($profileId);
     $facts=p50_de_verified_facts($profileId);
     $photoCandidate=p50_de_best_fact($profileId,'photo_url',60);
@@ -1597,15 +1671,26 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
         $p['quality']['identity']=max(90,(int)($p['quality']['identity']??0));
         $p['quality']['social']=$maxSocial;
 
+        if(p50_de_freeze_existing_birth($p))$changed=true;
+        $existingBirth=p50_de_profile_birth_value($p);
+        $birthFrozen=p50_de_profile_birth_frozen($p);
         if(isset($facts['birth_date'])){
             $date=(string)$facts['birth_date']['normalized_value'];
-            if(($p['birthDate']??null)!==$date){$p['birthDate']=$date;$changed=true;}
-            $p['birthYear']=(int)substr($date,0,4);
-            $p['ageStatus']='confirmed';
-            $p['quality']['birth']=(int)$facts['birth_date']['confidence'];
+            $manual=p50_de_fact_is_manual($facts['birth_date']);
+            if($existingBirth!==''&&$birthFrozen&&!$manual&&$existingBirth!==$date){
+                p50_de_lock_birth_date($p);
+            }else{
+                if(($p['birthDate']??null)!==$date){$p['birthDate']=$date;$changed=true;}
+                $p['birthYear']=(int)substr($date,0,4);
+                $p['ageStatus']='confirmed';
+                $p['quality']['birth']=(int)$facts['birth_date']['confidence'];
+                p50_de_lock_birth_date($p,$manual);
+                $changed=true;
+            }
         }else{
             // Ne jamais effacer une information déjà saisie : elle reste simplement non confirmée.
-            if(empty($p['birthDate'])){$p['ageStatus']=$p['ageStatus']??'unconfirmed';$p['quality']['birth']=0;}
+            if($existingBirth===''){$p['ageStatus']=$p['ageStatus']??'unconfirmed';$p['quality']['birth']=0;}
+            elseif($birthFrozen)p50_de_lock_birth_date($p);
         }
 
         $autoBioValue=(string)($previousEngine['autoBioValue']??'');
@@ -1666,13 +1751,13 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
         $p['dataEngine']=[
             'threshold'=>p50_de_threshold(),
             'publishedAt'=>gmdate('c'),
-            'verifiedFacts'=>array_keys($facts),
+            'verifiedFacts'=>(p50_de_profile_birth_frozen($p)?array_values(array_unique(array_merge(array_keys($facts),['birth_date']))):array_keys($facts)),
             'verifiedSocialLinks'=>count($links),
             'photoCandidate'=>(bool)$photoCandidate,
             'autoBioValue'=>$autoBioValue,
             'autoCategoryValue'=>$autoCategoryValue,
             'autoScore'=>(bool)$trend['classable'],'scoreStatus'=>$trend['classable']?'recalculated':'not_recalculated','scoresPreserved'=>!$trend['classable'],'scoreUpdated'=>$scoreUpdated,'previousScores'=>$previousScores,
-            'trend'=>$trend,'algorithmVersion'=>'15C-v1','dataConfidence'=>(int)($trend['confidence']??0),'measuredCoverage'=>(float)($trend['coverage']??0),'measuredCriteria'=>(int)($trend['measuredCriteria']??0),
+            'trend'=>$trend,'algorithmVersion'=>P50_15C_ALGORITHM_VERSION,'dataConfidence'=>(int)($trend['confidence']??0),'measuredCoverage'=>(float)($trend['coverage']??0),'measuredCriteria'=>(int)($trend['measuredCriteria']??0),
             'priorityWave'=>p50_de_is_priority_profile($profileId)?'V22-16':'',
         ];
         $changed=true;
@@ -1720,10 +1805,12 @@ function p50_de_publish_score_pipeline(?string $userId=null,string $period='2H')
     try{
         $state=p50_de_load_public_state_for_update();
         if(!$state)throw new RuntimeException('État public introuvable.');
+        p50_de_import_all_state_activities($state);
+        $registryProfiles=p50_de_registry_profiles(null,1000,0,false);
         $beforeScores=[];foreach((array)($state['profiles']??[]) as $p)if(is_array($p)&&!empty($p['id']))$beforeScores[(string)$p['id']]=(array)($p['scores']??[]);
         $beforeRanks=p50_de_rank_map($state,$period);
         $published=0;$recalculated=0;$notRecalculated=0;
-        foreach(p50_de_registry_profiles(null,1000,0,false) as $registry){
+        foreach($registryProfiles as $registry){
             $id=(string)$registry['profile_id'];
             if(p50_de_publish_profile($id,$userId,$state))$published++;
             $profile=null;foreach((array)($state['profiles']??[]) as $candidate)if((string)($candidate['id']??'')===$id){$profile=$candidate;break;}

@@ -38,9 +38,10 @@ class CanonicalLionelYasmineV24Tests(unittest.TestCase):
         self.assertRegex(SW, r"const CACHE='pass50-v\d+-[a-z0-9-]+'")
 
     def test_public_loader_is_cache_busted(self):
-        self.assertIn('public-copy-fixes.js?v=1.11', APP_CONFIG)
-        self.assertIn("pass50PublicCopy = '1.9'", APP_CONFIG)
-        self.assertIn('public-copy-fixes.js?v=1.11', SW)
+        self.assertIn('public-copy-fixes.js?v=1.14', APP_CONFIG)
+        self.assertIn("pass50PublicCopy = '1.10'", APP_CONFIG)
+        self.assertIn('public-copy-fixes.js?v=1.14', SW)
+        self.assertIn('public-copy-fixes.js?v=1.13', SW)
 
 
 if __name__ == '__main__':

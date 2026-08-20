@@ -27,12 +27,16 @@ def score_from_metrics(metrics):
         return None
     raw = {
         "c2": math.log10(1 + views),
+        "c3": 0.05,
         "c4": (likes + 3 * comments + 5 * shares) / views,
         "c5": shares / views,
         "c6": math.log10(1 + comments) if comments else None,
         "c7": math.log10(1 + views),
         "c8": 1,
         "c9": math.log10(1 + shares) if shares else None,
+        "c10": math.log10(1 + likes) if likes else None,
+        "c11": None,
+        "c12": 1,
         "c13": 1,
         "c14": max(
             0,
@@ -43,24 +47,29 @@ def score_from_metrics(metrics):
                 - min(20, abs((likes + comments + shares) / views - 0.08) * 100),
             ),
         ),
-        "c15": math.log10(1 + shares) if shares else None,
+        "c15": math.log10(1.5),
     }
     weights = {
-        "c2": 0.08, "c4": 0.08, "c5": 0.09, "c6": 0.05, "c7": 0.10,
-        "c8": 0.08, "c9": 0.06, "c13": 0.04, "c14": 0.07, "c15": 0.07,
+        "c2": 0.09, "c3": 0.07, "c4": 0.07, "c5": 0.07, "c6": 0.05, "c7": 0.11,
+        "c8": 0.07, "c9": 0.06, "c10": 0.06, "c11": 0.05, "c12": 0.06,
+        "c13": 0.04, "c14": 0.07, "c15": 0.07,
     }
     values = {}
     for key, value in raw.items():
         if value is None:
             continue
-        if key in {"c2", "c6", "c7", "c9", "c15"}:
+        if key in {"c2", "c6", "c7", "c9", "c10", "c11", "c15"}:
             values[key] = max(0, min(100, 20 + value * 16))
+        elif key == "c3":
+            values[key] = max(0, min(100, 50 + value * 100))
         elif key == "c4":
             values[key] = max(0, min(100, value * 500))
         elif key == "c5":
             values[key] = max(0, min(100, value * 1000))
         elif key == "c8":
             values[key] = max(0, min(100, value * 20))
+        elif key == "c12":
+            values[key] = max(0, min(100, value * 25))
         elif key == "c13":
             values[key] = max(0, min(100, value * 8))
         else:
@@ -270,6 +279,23 @@ class PipelineSourceContractTests(unittest.TestCase):
         self.assertIn("'hub'=>$includeHub?p50_de_hub_payload():null", COLLECT)
         self.assertIn("if($preview)", COLLECT)
         self.assertIn("Erreur serveur (${res.status})", INDEX)
+
+    def test_final_publish_avoids_ionos_500_after_full_collection(self):
+        self.assertIn("set_time_limit(300)", PUBLISH)
+        self.assertIn("ignore_user_abort(true)", PUBLISH)
+        self.assertIn("'hub'=>$includeHub?p50_de_hub_payload():null", PUBLISH)
+        self.assertNotIn("'hub'=>p50_de_hub_payload()", PUBLISH)
+        self.assertNotIn("p50_de_sync_registry_from_state()", PUBLISH)
+        self.assertIn("function deMajPublish", UI)
+        self.assertIn("includeHub:false", UI)
+        self.assertIn("timeoutMs:180000", UI)
+        self.assertIn("Hub MAJ non bloquant", UI)
+        self.assertIn("function p50_de_import_all_state_activities", CORE)
+        self.assertIn("if($ownsState)", CORE)
+        start = UI.index("DE.majStage='4/7 · Publication des scores'")
+        chunk = UI[start:UI.index("DE.majStage='5/7 · Rechargement et reclassement'")]
+        self.assertIn("deMajPublish()", chunk)
+        self.assertNotIn("apiFetch('data-publish.php'", chunk)
 
     def test_maj_display_refresh_does_not_fail_the_completed_collection(self):
         start = UI.index("DE.majStage='5/7 · Rechargement et reclassement'")

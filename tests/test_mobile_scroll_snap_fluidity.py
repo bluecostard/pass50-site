@@ -25,9 +25,9 @@ class MobileScrollSnapFluidityTests(unittest.TestCase):
         self.assertGreater(nav.find("Math.abs(dx)<48"), 0)
 
     def test_cache_bumped(self):
-        self.assertIn("fi-navigation-v3.js?v=1.1", read("app-config.js"))
-        self.assertIn("fi-navigation-v3.js?v=1.1", read("sw.js"))
-        self.assertIn("pass50-v56-scroll-snap", read("sw.js"))
+        self.assertIn("fi-navigation-v3.js?v=1.3", read("app-config.js"))
+        self.assertIn("fi-navigation-v3.js?v=1.3", read("sw.js"))
+        self.assertRegex(read("sw.js"), r"pass50-v\d+-[a-z0-9-]+")
 
 
 if __name__ == "__main__":

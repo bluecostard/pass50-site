@@ -12,10 +12,13 @@ function p50_mo_config(): array {
     $secret=trim((string)($m['cron_secret']??(getenv('PASS50_METRICS_CRON_SECRET')?:'')));
     return [
       'enabled'=>(bool)($m['orchestrator_enabled']??false),'cronSecret'=>$secret,
-      'p0Max'=>max(1,min(100,(int)($m['p0_max_profiles']??20))),
+      'p0Max'=>max(1,min(100,(int)($m['p0_max_profiles']??40))),
       'p1Max'=>max(1,min(500,(int)($m['p1_max_profiles']??200))),
       'p1Rank'=>max(50,min(500,(int)($m['p1_max_rank']??200))),
       'p2Max'=>max(1,min(1000,(int)($m['p2_max_profiles']??500))),
+      'p1ExplorationRatio'=>max(0.0,min(0.5,(float)($m['p1_exploration_ratio']??0.25))),
+      'p0UsePriorityIds'=>filter_var($m['p0_use_priority_ids']??false,FILTER_VALIDATE_BOOLEAN),
+      'fairRotationEnabled'=>filter_var($m['fair_rotation_enabled']??true,FILTER_VALIDATE_BOOLEAN),
       'priorityIds'=>array_values(array_unique(array_filter(array_map('strval',(array)($m['priority_profile_ids']??[]))))),
       'fresh'=>['p0'=>max(1,(int)($m['p0_min_freshness_minutes']??12)),'p1'=>max(1,(int)($m['p1_min_freshness_minutes']??90)),'p2'=>max(1,(int)($m['p2_min_freshness_minutes']??600))],
       'lockTimeout'=>max(2,min(60,(int)($m['worker_lock_timeout_minutes']??10))),
@@ -80,18 +83,80 @@ function p50_mo_authorized_oauth_profiles(PDO $pdo): array {
     return array_values(array_unique(array_filter($ids)));
 }
 
+function p50_mo_fair_rotation_profiles(PDO $pdo,int $limit,array $excludeIds=[]): array {
+    if($limit<=0)return [];
+    $excludeIds=array_values(array_unique(array_filter(array_map('strval',$excludeIds))));
+    $threshold=p50_mc_threshold();
+    $sql="SELECT r.profile_id,MAX(c.captured_at) last_capture FROM p50_profile_registry r
+      JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
+      LEFT JOIN p50_metric_captures c ON c.profile_id=r.profile_id AND c.platform=s.platform AND c.quality_status='usable'
+      WHERE r.alive=1 AND s.status='verified' AND s.confidence>=?
+      AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')";
+    $params=[$threshold];
+    if($excludeIds){$sql.=" AND r.profile_id NOT IN (".implode(',',array_fill(0,count($excludeIds),'?')).")";$params=array_merge($params,$excludeIds);}
+    $sql.=" GROUP BY r.profile_id ORDER BY last_capture IS NULL DESC,last_capture ASC,r.profile_id ASC LIMIT ?";
+    $params[]=$limit;
+    $stmt=$pdo->prepare($sql);$stmt->execute($params);
+    return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
+function p50_mo_top_ranked_profile_ids(PDO $pdo,int $maxRank,int $limit): array {
+    if($limit<=0)return [];
+    if(p50_metrics_table_exists($pdo,'p50_ranking_snapshots')){
+        $stmt=$pdo->prepare("SELECT r.profile_id FROM p50_profile_registry r JOIN p50_ranking_snapshots s ON s.profile_id=r.profile_id
+          JOIN (SELECT profile_id,MAX(captured_at) captured_at FROM p50_ranking_snapshots GROUP BY profile_id) latest
+            ON latest.profile_id=s.profile_id AND latest.captured_at=s.captured_at
+          WHERE r.alive=1 AND s.rank_position BETWEEN 1 AND ? ORDER BY s.rank_position LIMIT ?");
+    }elseif(p50_metrics_column_exists($pdo,'p50_profile_registry','rank_position')){
+        $stmt=$pdo->prepare("SELECT profile_id FROM p50_profile_registry WHERE alive=1 AND rank_position BETWEEN 1 AND ? ORDER BY rank_position LIMIT ?");
+    }else return [];
+    $stmt->bindValue(1,$maxRank,PDO::PARAM_INT);$stmt->bindValue(2,$limit,PDO::PARAM_INT);$stmt->execute();
+    return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
+function p50_mo_exploration_profiles(PDO $pdo,int $limit,int $topRankCutoff,array $excludeIds=[]): array {
+    if($limit<=0)return [];
+    if(!p50_metrics_table_exists($pdo,'p50_ranking_snapshots')&&!p50_metrics_column_exists($pdo,'p50_profile_registry','rank_position')){
+        return p50_mo_fair_rotation_profiles($pdo,$limit,$excludeIds);
+    }
+    $excludeIds=array_values(array_unique(array_filter(array_map('strval',$excludeIds))));
+    $threshold=p50_mc_threshold();
+    if(p50_metrics_table_exists($pdo,'p50_ranking_snapshots')){
+        $topSub="SELECT DISTINCT s.profile_id FROM p50_ranking_snapshots s
+          JOIN (SELECT profile_id,MAX(captured_at) captured_at FROM p50_ranking_snapshots GROUP BY profile_id) latest
+            ON latest.profile_id=s.profile_id AND latest.captured_at=s.captured_at
+          WHERE s.rank_position BETWEEN 1 AND ".(int)$topRankCutoff;
+    }else{
+        $topSub="SELECT profile_id FROM p50_profile_registry WHERE alive=1 AND rank_position BETWEEN 1 AND ".(int)$topRankCutoff;
+    }
+    $sql="SELECT r.profile_id,MAX(c.captured_at) last_capture FROM p50_profile_registry r
+      JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
+      LEFT JOIN p50_metric_captures c ON c.profile_id=r.profile_id AND c.platform=s.platform AND c.quality_status='usable'
+      WHERE r.alive=1 AND s.status='verified' AND s.confidence>=?
+      AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')
+      AND r.profile_id NOT IN ($topSub)";
+    $params=[$threshold];
+    if($excludeIds){$sql.=" AND r.profile_id NOT IN (".implode(',',array_fill(0,count($excludeIds),'?')).")";$params=array_merge($params,$excludeIds);}
+    $sql.=" GROUP BY r.profile_id ORDER BY last_capture IS NULL DESC,last_capture ASC,r.profile_id ASC LIMIT ?";
+    $params[]=$limit;
+    $stmt=$pdo->prepare($sql);$stmt->execute($params);
+    return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
 function p50_mo_candidate_ids(PDO $pdo,array $cadence,array $live,array $cfg): array {
-    if($cadence['key']==='p0')return array_values(array_unique(array_merge($live['profileIds'],p50_mo_viral_profiles($pdo),$cfg['priorityIds'],p50_mo_authorized_oauth_profiles($pdo))));
+    if($cadence['key']==='p0'){
+        $reserved=array_values(array_unique(array_merge($live['profileIds'],p50_mo_viral_profiles($pdo),p50_mo_authorized_oauth_profiles($pdo))));
+        if(!empty($cfg['p0UsePriorityIds'])&&$cfg['priorityIds'])$reserved=array_values(array_unique(array_merge($reserved,$cfg['priorityIds'])));
+        $fairMax=max(0,$cfg['p0Max']-count($reserved));
+        $fair=!empty($cfg['fairRotationEnabled'])?p50_mo_fair_rotation_profiles($pdo,$fairMax,$reserved):[];
+        return array_values(array_unique(array_merge($reserved,$fair)));
+    }
     if($cadence['key']==='p1'){
-        if(p50_metrics_table_exists($pdo,'p50_ranking_snapshots')){
-            $stmt=$pdo->prepare("SELECT r.profile_id FROM p50_profile_registry r JOIN p50_ranking_snapshots s ON s.profile_id=r.profile_id
-              JOIN (SELECT profile_id,MAX(captured_at) captured_at FROM p50_ranking_snapshots GROUP BY profile_id) latest
-                ON latest.profile_id=s.profile_id AND latest.captured_at=s.captured_at
-              WHERE r.alive=1 AND s.rank_position BETWEEN 1 AND ? ORDER BY s.rank_position LIMIT ?");
-        }elseif(p50_metrics_column_exists($pdo,'p50_profile_registry','rank_position')){
-            $stmt=$pdo->prepare("SELECT profile_id FROM p50_profile_registry WHERE alive=1 AND rank_position BETWEEN 1 AND ? ORDER BY rank_position LIMIT ?");
-        }else return [];
-        $stmt->bindValue(1,$cfg['p1Rank'],PDO::PARAM_INT);$stmt->bindValue(2,$cfg['p1Max'],PDO::PARAM_INT);$stmt->execute();return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
+        $exploreMax=!empty($cfg['fairRotationEnabled'])?(int)round($cfg['p1Max']*(float)$cfg['p1ExplorationRatio']):0;
+        $topMax=max(1,$cfg['p1Max']-$exploreMax);
+        $topIds=p50_mo_top_ranked_profile_ids($pdo,$cfg['p1Rank'],$topMax);
+        $exploreIds=$exploreMax>0?p50_mo_exploration_profiles($pdo,$exploreMax,$cfg['p1Rank'],$topIds):[];
+        return array_values(array_unique(array_merge($topIds,$exploreIds)));
     }
     $stmt=$pdo->prepare("SELECT profile_id FROM p50_profile_registry WHERE alive=1 ORDER BY profile_id LIMIT ?");$stmt->bindValue(1,$cfg['p2Max'],PDO::PARAM_INT);$stmt->execute();
     return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));

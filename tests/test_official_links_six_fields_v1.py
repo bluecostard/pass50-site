@@ -13,5 +13,9 @@ class OfficialLinksSixFieldsTests(unittest.TestCase):
     def test_zeinab_tiktok_is_registered(self):
         self.assertIn("TikTok:'https://www.tiktok.com/@cheffezeinabbance'",RUNTIME)
 
+    def test_samo_instagram_is_the_official_handle(self):
+        self.assertIn("Instagram:'https://www.instagram.com/kommander_samo_samo/'",RUNTIME)
+        self.assertIn("const source={...current,...(OWNER_LOCK_EXACT[key]||{})};",RUNTIME)
+
 if __name__=='__main__':
     unittest.main()

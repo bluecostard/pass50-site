@@ -3,7 +3,7 @@
 
 const PROFILE_ID='samo-samo';
 const TIKTOK_URL='https://www.tiktok.com/@kommandersamosamo';
-const INSTAGRAM_URL='https://www.instagram.com/kommandersamosamo/';
+const INSTAGRAM_URL='https://www.instagram.com/kommander_samo_samo/';
 const JOURNAL_SOURCE='https://journaldabidjan.com/du-micro-a-loctogone-kommander-samo-rejoint-officiellement-pfl-africa-et-passe-au-mma-professionnel/';
 const MONDIAL_SOURCE='https://mondialsport.ci/kommander-samo-samo-rejoint-pfl-africa-31773.sport';
 const RFI_SOURCE='https://www.rfi.fr/fr/podcasts/afro-club-et-afro-club-deluxe/20260701-kommander-samo-samo-ambassadeur-du-logobi-et-du-gnaman-gnaman-ivoiriens';
@@ -47,7 +47,7 @@ function baseProfile(){
     links:{TikTok:TIKTOK_URL,Instagram:INSTAGRAM_URL},
     linkChecks:{
       TikTok:verifiedLink('Compte TikTok public actif @kommandersamosamo (Kommander Samo Samo), rattaché à l’identité publique de Samo Samo.'),
-      Instagram:verifiedLink('Compte Instagram public @kommandersamosamo.')
+      Instagram:verifiedLink('Compte Instagram public @kommander_samo_samo.')
     },
     verifiedPass50:false,
     censusStatus:'Recensé confirmé',
@@ -58,9 +58,9 @@ function baseProfile(){
       {publisher:'Mondial Sport — Kommander Samo Samo rejoint PFL Africa',date:'2025',url:MONDIAL_SOURCE},
       {publisher:'RFI Afro-Club — Kommander Samo Samo',date:'2026-07-01',url:RFI_SOURCE},
       {publisher:'TikTok public — @kommandersamosamo',date:'2026-08-12',url:TIKTOK_URL},
-      {publisher:'Instagram public — @kommandersamosamo',date:'2026-08-12',url:INSTAGRAM_URL}
+      {publisher:'Instagram public — @kommander_samo_samo',date:'2026-08-18',url:INSTAGRAM_URL}
     ],
-    notes:'Zigui Dona Salim, connu publiquement comme Samo Samo / Kommander Samo Samo, est un artiste ivoirien (Team Paiya) et combattant MMA. Compte TikTok principal : @kommandersamosamo. Profil recensé, non classable tant que les métriques récentes ne sont pas consolidées par PASS50.'
+    notes:'Zigui Dona Salim, connu publiquement comme Samo Samo / Kommander Samo Samo, est un artiste ivoirien (Team Paiya) et combattant MMA. Compte TikTok principal : @kommandersamosamo. Compte Instagram officiel : @kommander_samo_samo. Profil recensé, non classable tant que les métriques récentes ne sont pas consolidées par PASS50.'
   };
 }
 
@@ -78,6 +78,8 @@ function applyProfile(){
       ||name==='zigui dona salim'
       ||handle==='@kommandersamosamo'
       ||handle==='kommandersamosamo'
+      ||handle==='@kommander_samo_samo'
+      ||handle==='kommander_samo_samo'
       ||handle==='@samosamo'
       ||handle==='samosamo'
     );
@@ -95,7 +97,17 @@ function applyProfile(){
     profile.platforms=Array.isArray(profile.platforms)?profile.platforms:[];
     patch.platforms.forEach(platform=>{if(!profile.platforms.includes(platform)){profile.platforms.push(platform);changed=true;}});
     profile.links=profile.links||{};
-    Object.entries(patch.links).forEach(([platform,url])=>{if(!profile.links[platform]){profile.links[platform]=url;changed=true;}});
+    Object.entries(patch.links).forEach(([platform,url])=>{
+      const current=String(profile.links[platform]||'');
+      const staleInstagram=platform==='Instagram'&&/instagram\.com\/kommandersamosamo\/?$/i.test(current);
+      if(!current||staleInstagram){
+        profile.links[platform]=url;changed=true;
+        if(staleInstagram&&patch.linkChecks[platform]){
+          profile.linkChecks=profile.linkChecks||{};
+          profile.linkChecks[platform]=patch.linkChecks[platform];
+        }
+      }
+    });
     profile.linkChecks=profile.linkChecks||{};
     Object.entries(patch.linkChecks).forEach(([platform,check])=>{if(!profile.linkChecks[platform]){profile.linkChecks[platform]=check;changed=true;}});
     profile.scores=profile.scores||patch.scores;

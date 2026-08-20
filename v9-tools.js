@@ -5,8 +5,18 @@ const PASS50_V9={photoCandidates:[],photoProfileId:null,preview:null,previewEven
 function p50v9IsGenericLink(url=''){
   try{
     const u=new URL(url),path=u.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
+    const host=u.hostname.toLowerCase().replace(/^www\./,'');
+    if(host.includes('youtube.com')||host==='youtu.be'){
+      if(host==='youtu.be'&&path.length>1)return false;
+      if(path==='watch'&&u.searchParams.get('v'))return false;
+      if(/^shorts\/[^/]+/.test(path)||/^live(\/[^/]+)?$/.test(path)||/^embed\//.test(path))return false;
+    }
+    if(host.includes('tiktok.com')&&/\/video\//.test(u.pathname))return false;
+    if(host.includes('instagram.com')&&/^\/(p|reel|reels|tv)\//.test(u.pathname))return false;
+    if(host.includes('facebook.com')&&(u.searchParams.get('v')||/\/(reel|share|watch|videos)\//.test(u.pathname)))return false;
     const searchPath=/(^|\/)(search|results|explore\/search)(\/|$)/i.test(path);
-    if(!path||searchPath||/^(accounts\/)?login(\/|$)/i.test(path)||/^(home|feed|watch)(\/|$)/i.test(path))return true;
+    if(!path||searchPath||/^(accounts\/)?login(\/|$)/i.test(path)||/^(home|feed)(\/|$)/i.test(path))return true;
+    if(/^(watch)(\/|$)/i.test(path))return true;
     if(u.searchParams.has('search_query'))return true;
     // `q` n'est une recherche que sur les chemins de recherche, pas sur un profil.
     if(u.searchParams.has('q')&&(searchPath||/(^|\/)(search|explore)(\/|$)/i.test(path)))return true;
@@ -89,12 +99,88 @@ function p50v20SyncTrendContent(profileId,ev,platform='Réseau social'){
   c.badge=c.badge||'HOT';
   c.time=c.time||'Récent';
 }
+function p50TriggerIsStale(event){
+  if(!event)return true;
+  const validated=Date.parse(event.originalLinkValidatedAt||'');
+  const age=Number.isFinite(validated)?Date.now()-validated:Infinity;
+  if(event.autoSynced)return age>168*3600*1000;
+  if(event.manualDataValidated)return age>7*24*3600*1000;
+  if(Number.isFinite(validated)&&age>24*3600*1000)return true;
+  const label=String(event.publishedLabel||'').toLowerCase();
+  if(!event.autoSynced&&!event.manualDataValidated&&/\b3\s*j|\b72\s*h|trois jour|il y a 3/.test(label))return true;
+  return false;
+}
+function p50TriggerRank(profileId){
+  const r=typeof completeRanking==='function'?completeRanking():[];
+  const ix=r.findIndex(p=>p.id===profileId);
+  return ix>=0?ix+1:null;
+}
+function p50IsTop50Profile(id){
+  const rank=p50TriggerRank(id);
+  const p=typeof profile==='function'?profile(id):null;
+  return rank!==null&&rank<=50&&p&&score(p)>0;
+}
+function p50TriggerKicker(profileId){
+  const rank=p50TriggerRank(profileId);
+  if(rank&&rank<=10)return '⚡ POURQUOI DANS LE TOP 10 ?';
+  return '⚡ POURQUOI DANS LE TOP 50 ?';
+}
+function p50TriggerReason(profileId){
+  const rank=p50TriggerRank(profileId);
+  if(rank&&rank<=10)return 'Ce contenu récent explique la progression de cette fiche dans le Top 10.';
+  return 'Ce contenu récent explique la progression de cette fiche dans le Top 50.';
+}
+function p50SyncTriggerFromOfficialNews(profileId,item){
+  if(!profileId||!item||!item.url)return false;
+  if(!p50IsTop50Profile(profileId))return false;
+  const itemTs=Date.parse(item.publishedAt||'');
+  const itemUrl=String(item.url||'').trim();
+  let ev=primaryEvent(profileId);
+  if(ev?.manualDataValidated&&!p50TriggerIsStale(ev)){
+    const evTs=Date.parse(ev.originalLinkValidatedAt||'');
+    if(Number.isFinite(evTs)&&(!Number.isFinite(itemTs)||evTs>=itemTs))return false;
+  }
+  if(ev&&!p50TriggerIsStale(ev)&&String(ev.url||'').trim()===itemUrl)return false;
+  const p=profile(profileId);
+  const typeHint=String(item.itemType||item.contentType||'').toLowerCase();
+  const platform=String(item.platform||'Web');
+  const isVideo=/video|reel|live|short/.test(typeHint)||['YouTube','TikTok'].includes(platform);
+  const patch={
+    type:isVideo?'Vidéo':'Article',
+    title:item.title||`Contenu récent de ${p?.name||'cette FI'}`,
+    platforms:[platform],
+    metric:item.official?'Contenu officiel détecté':'Contenu validé',
+    publishedLabel:item.publishedAt?String(item.publishedAt).slice(0,10):'Récent',
+    reason:p50TriggerReason(profileId),
+    url:itemUrl,submittedUrl:itemUrl,resolvedUrl:itemUrl,
+    icon:isVideo?'▶':'📰',
+    confidence:(Number(item.confidence||0)>=80)?'élevée':'moyenne',
+    originalLinkValidated:true,
+    originalLinkValidatedAt:item.publishedAt||new Date().toISOString(),
+    autoSynced:true,manualDataValidated:false,
+    coverCandidateUrl:item.thumbnailUrl||'',
+    coverUrl:'',
+    coverStatus:item.thumbnailUrl?'validated':'missing',
+    coverSource:'content_intelligence',
+    coverNote:'Synchronisé depuis la collecte officielle PASS50.'
+  };
+  if(ev){Object.assign(ev,patch);db.events=db.events.filter(x=>x.profileId!==profileId||x.id===ev.id);}
+  else{ev={id:'trigger_auto_'+profileId+'_'+Date.now(),profileId,...patch};db.events.push(ev);}
+  p50v20SyncTrendContent(profileId,ev,platform);
+  save();
+  return true;
+}
+window.p50TriggerIsStale=p50TriggerIsStale;
+window.p50SyncTriggerFromOfficialNews=p50SyncTriggerFromOfficialNews;
 function p50v9ApplyPatch(){
   db.profiles.forEach(p=>{
     p.linkChecks=p.linkChecks||{};p.links=p.links||{};
     Object.entries(p.links).forEach(([platform,url])=>{if(!p.linkChecks[platform])p.linkChecks[platform]={status:p50v9IsDirectPlatformLink(platform,url)?'pending':'search_not_official',checkedAt:null};});
     if(!p.photoPosition)p.photoPosition='50% 50%';
     p.photoManualLocked=Boolean(p.photoManualLocked);p.photoManualUpdatedAt=p.photoManualUpdatedAt||null;
+    p.birthManualLocked=Boolean(p.birthManualLocked);p.birthManualUpdatedAt=p.birthManualUpdatedAt||null;
+    if(typeof p50FreezeExistingBirth==='function')p50FreezeExistingBirth(p);
+    else if((p.birthDate||p.birthYear)&&(p.ageStatus==='confirmed'||Number(p?.quality?.birth||0)>=90)){p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();p.ageStatus='confirmed';}
   });
   db.events=(db.events||[]).map(e=>({...e,coverStatus:e.coverStatus||'missing',coverUrl:e.coverUrl||'',coverCandidateUrl:e.coverCandidateUrl||'',coverSource:e.coverSource||'',coverNote:e.coverNote||''}));
   db.content.forEach(c=>{const ev=primaryEvent(c.profileId);if(ev&&p50v9ExactContentLink(ev.url)&&!p50v9ExactContentLink(c.url))c.url=ev.url;});
@@ -142,10 +228,10 @@ async function p50v9BulkPhotos(){const list=ranking().slice(0,10).filter(p=>!['v
 async function p50v9BulkCovers(){const ids=ranking().slice(0,10).map(p=>primaryEvent(p.id)).filter(Boolean);let found=0;for(const ev of ids){if(!p50v9ExactContentLink(ev.url))continue;try{const d=await p50v9PreviewEvent(ev.id,false);if(d?.thumbnail){ev.coverCandidateUrl=d.thumbnail;ev.coverUrl='';ev.coverStatus='pending';ev.coverSource=d.source||d.platform;ev.coverNote='Proposition automatique, non téléchargée.';found++}}catch(e){console.warn(e)}}save();render();renderAdminPane();toast(`${found} couverture${found>1?'s':''} à valider`)}
 
 const p50v8OpenProfile=openProfile;
-openProfile=function(id){close('top50Modal');const p=profile(id);if(!p){toast('Profil introuvable');return;}const u=userPrefs(),links=p50v9OfficialLinks(p),badges=Array.isArray(p.badges)?p.badges:[];$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category||''}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name||'Influenceur'}</h2><div class="handle">${p.handle||''}</div><div style="margin-top:11px">${badges.map(b=>badgeHtml(b,id)).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}${p50ProfileChartHtml(p)}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé. Les liens de recherche ne sont pas affichés au public.</div>':''}</div></div>`;open('profileModal')}
+openProfile=function(id){close('top50Modal');const p=profile(id);if(!p){toast('Profil introuvable');return;}const u=userPrefs(),links=p50v9OfficialLinks(p),badges=Array.isArray(p.badges)?p.badges:[];$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p,'',{zoomable:true})}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category||''}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name||'Influenceur'}</h2><div class="handle">${p.handle||''}</div><div style="margin-top:11px">${badges.map(b=>badgeHtml(b,id)).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}${p50ProfileChartHtml(p)}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé. Les liens de recherche ne sont pas affichés au public.</div>':''}</div></div>`;open('profileModal')}
 
-eventHtml=function(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigger-empty"><strong>Aucune actualité récente mise en avant</strong><div style="margin-top:5px">Les nouvelles publications apparaîtront ici dès qu’elles seront disponibles.</div></div>`;const link=p50v9ExactContentLink(e.url)?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'<span class="muted">Lien original à valider</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${p50v20EventThumbHtml(p,e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${e.platforms.join(' · ')} · ${e.publishedLabel} · Confiance ${e.confidence}</div><div class="trigger-reason">${e.reason}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric}</span>${link}</div></section>`}
-renderContent=function(){const content=[...db.content].sort((a,b)=>{const pa=profile(a.profileId),pb=profile(b.profileId);return score(pb)-score(pa)}).slice(0,5);$('#contentGrid').innerHTML=content.map((c,i)=>{const p=profile(c.profileId),ev=primaryEvent(c.profileId),detected=p50v20DetectedCover(ev),cover=p50v20TrendCover(p,ev),fallback=Boolean(cover&&!detected),url=p50v9ExactContentLink(ev?.url)?ev.url:(p50v9ExactContentLink(c.url)?c.url:'');const body=`${cover?`<img class="cover-bg" src="${safeAttr(cover)}" alt="Visuel ${safeAttr(p.name)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">`:''}${fallback?'<span class="content-cover-fallback">VISUEL DU PROFIL</span>':''}<div><strong>#${i+1} · ${p.name}</strong><div style="margin-top:8px">${badgeHtml(c.badge)}</div></div><div class="play">▶</div><div class="content-meta"><span>${c.platform}</span><span>${c.views} · ${c.time}</span></div>`;return url?`<a class="content-card ${cover?'has-cover':''}" href="${safeAttr(url)}" target="_blank" rel="noopener" data-content="${c.id}">${body}</a>`:`<article class="content-card ${cover?'has-cover':''}" data-content="${c.id}">${body}<div class="platform-hidden-note">Lien original à valider</div></article>`}).join('')}
+eventHtml=function(p){const e=primaryEvent(p.id);if(!e||p50TriggerIsStale(e))return '';const link=p50v9ExactContentLink(e.url)?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">${p50TriggerKicker(p.id)}</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${p50v20EventThumbHtml(p,e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${e.platforms.join(' · ')} · ${e.publishedLabel} · Confiance ${e.confidence}</div><div class="trigger-reason">${e.reason}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric}</span>${link}</div></section>`}
+renderContent=function(){const grid=$('#contentGrid');if(!grid)return;grid.querySelectorAll('.content-card:not(.p50ci-card),[data-content="c1"],[data-content="c2"],[data-content="c3"],[data-content="c4"],[data-content="c5"]').forEach(el=>{if(!el.classList.contains('p50ci-card'))el.remove()});if(grid.querySelector('.p50ci-card'))return;grid.classList.add('p50-content-grid-loading');grid.setAttribute('aria-busy','true');grid.innerHTML=''}
 
 document.addEventListener('input',e=>{if(e.target.id==='mediaProfileSearch')p50ApplyMediaSearch();});
 
@@ -175,7 +261,7 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=18.21';
+    js.src='./data-engine-ui.js?v=18.24';
     js.dataset.pass50DataEngine='1';
     js.onload=function(){
       if(document.querySelector('script[data-pass50-admin-notifications]'))return;
@@ -366,7 +452,7 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
     const a=PASS50_V9.news[index],id=PASS50_V9.newsProfileId,p=profile(id);if(!a||!p)return;
     try{
       const preview=await apiFetch('content-preview.php',{method:'POST',body:{url:a.url}});
-      const isVideo=a.kind==='video'||a.type==='Vidéo'||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(a.platform);let ev=primaryEvent(id);const platform=a.platform||preview.platform||(isVideo?'Réseau social':'Web');const patch={type:isVideo?'Vidéo':'Article',title:a.title||`${isVideo?'Vidéo':'Actualité'} concernant ${p.name}`,platforms:[platform],metric:isVideo?'Vidéo détectée':'Article détecté',publishedLabel:a.date||`Sur ${PASS50_V9.newsDays} jours`,reason:isVideo?'Vidéo récente détectée sur un réseau officiel.':'Article récent sélectionné et source confirmée.',url:preview.canonicalUrl||a.url,icon:isVideo?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),coverCandidateUrl:a.image||preview.thumbnail||'',coverUrl:'',coverStatus:(a.image||preview.thumbnail)?'validated':'missing',coverSource:a.source||a.domain||preview.source||'Actualité',coverNote:(a.image||preview.thumbnail)?'Vignette extraite automatiquement du contenu original confirmé.':'Aucune vignette détectée : la photo validée du profil sera utilisée comme visuel de secours.'};if(ev)Object.assign(ev,patch);else{ev={id:'news_'+id+'_'+Date.now(),profileId:id,...patch};db.events.push(ev);}p50v20SyncTrendContent(id,ev,platform);save();render();p50v9RenderNews();toast(`${isVideo?'Vidéo':'Article'} validé avec vignette dans la FI et le Top 5`);
+      const isVideo=a.kind==='video'||a.type==='Vidéo'||['YouTube','TikTok','Instagram','Facebook','Snapchat'].includes(a.platform);let ev=primaryEvent(id);const platform=a.platform||preview.platform||(isVideo?'Réseau social':'Web');const patch={type:isVideo?'Vidéo':'Article',title:a.title||`${isVideo?'Vidéo':'Actualité'} concernant ${p.name}`,platforms:[platform],metric:isVideo?'Vidéo détectée':'Article détecté',publishedLabel:a.date||'Validation manuelle',reason:isVideo?'Vidéo récente détectée sur un réseau officiel.':'Article récent sélectionné et source confirmée.',url:preview.canonicalUrl||a.url,icon:isVideo?'▶':'📰',confidence:'élevée',originalLinkValidated:true,originalLinkValidatedAt:new Date().toISOString(),manualDataValidated:true,autoSynced:false,coverCandidateUrl:a.image||preview.thumbnail||'',coverUrl:'',coverStatus:(a.image||preview.thumbnail)?'validated':'missing',coverSource:a.source||a.domain||preview.source||'Actualité',coverNote:(a.image||preview.thumbnail)?'Vignette extraite automatiquement du contenu original confirmé.':'Aucune vignette détectée : la photo validée du profil sera utilisée comme visuel de secours.'};if(ev)Object.assign(ev,patch);else{ev={id:'news_'+id+'_'+Date.now(),profileId:id,...patch};db.events.push(ev);}p50v20SyncTrendContent(id,ev,platform);save();render();p50v9RenderNews();toast(`${isVideo?'Vidéo':'Article'} validé avec vignette dans la FI et le Top 5`);
     }catch(err){toast(err.message||'Impossible de valider ce lien');}
   };
 
@@ -392,21 +478,12 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
 
   function p50RejectTrigger(profileId){const ev=primaryEvent(profileId);if(!ev)return;if(!confirm('Retirer ce déclencheur de la FI ?'))return;db.events=db.events.filter(x=>x.id!==ev.id);save();render();p50v9RenderNews();toast('Déclencheur retiré');}
 
-  function p50TriggerIsStale(event){
-    if(!event)return true;
-    const validated=Date.parse(event.originalLinkValidatedAt||'');
-    if(Number.isFinite(validated)&&Date.now()-validated>24*3600*1000)return true;
-    const label=String(event.publishedLabel||'').toLowerCase();
-    if(/\b3\s*j|\b72\s*h|trois jour|il y a 3/.test(label))return true;
-    return false;
-  }
-
-  eventHtml=function(p){const e=primaryEvent(p.id);if(!e)return `<div class="trigger-empty"><strong>Aucune actualité récente mise en avant</strong><div style="margin-top:5px">Les nouvelles publications apparaîtront ici dès qu’elles seront disponibles.</div></div>`;if(p50TriggerIsStale(e))return `<div class="trigger-empty"><strong>Aucune actualité récente mise en avant</strong><div style="margin-top:5px">Les anciennes informations ont été retirées de cette fiche.</div></div>`;const valid=e.originalLinkValidated&&p50v9ExactContentLink(e.url);const link=valid?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'<span class="muted">Source en cours de validation</span>';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">⚡ POURQUOI DANS LE TOP 10 ?</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${p50v20EventThumbHtml(p,e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${(e.platforms||[]).join(' · ')} · ${e.publishedLabel||''} · Confiance ${e.confidence||'à vérifier'}</div><div class="trigger-reason">${e.reason||''}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric||'Signal détecté'}</span>${link}</div></section>`;};
+  eventHtml=function(p){const e=primaryEvent(p.id);if(!e||p50TriggerIsStale(e))return '';const valid=e.originalLinkValidated&&p50v9ExactContentLink(e.url);const link=valid?`<a class="btn small primary" href="${safeAttr(e.url)}" target="_blank" rel="noopener">Voir l’élément original ↗</a>`:'';return `<section class="trigger-card"><div class="trigger-head"><div class="trigger-kicker">${p50TriggerKicker(p.id)}</div><span class="trigger-type">${e.type}</span></div><div class="trigger-main">${p50v20EventThumbHtml(p,e)}<div><div class="trigger-title">${e.title}</div><div class="trigger-meta">${(e.platforms||[]).join(' · ')} · ${e.publishedLabel||''} · Confiance ${e.confidence||'à vérifier'}</div><div class="trigger-reason">${e.reason||''}</div></div></div><div class="trigger-actions"><span class="badge hot">${e.metric||'Signal détecté'}</span>${link}</div></section>`;};
 
   openProfile=function(id){
     const top50=$('#top50Modal'),profileWasOpen=$('#profileModal').classList.contains('show');
     if(top50?.classList.contains('show')){profileReturnContext={modalId:'top50Modal',scrollTop:top50.querySelector('.modal-box')?.scrollTop||0,profileId:id};close('top50Modal')}else if(!profileWasOpen){profileReturnContext=null}
-    const p=profile(id);if(!p){toast('Profil introuvable');return;}const u=userPrefs(),links=p50v9OfficialLinks(p),badges=Array.isArray(p.badges)?p.badges:[];$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p)}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category||''}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name||'Influenceur'}</h2><div class="handle">${p.handle||''}</div><div style="margin-top:11px">${badges.map(b=>badgeHtml(b,id)).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}${p50ProfileChartHtml(p)}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé.</div>':''}</div></div>`;open('profileModal');
+    const p=profile(id);if(!p){toast('Profil introuvable');return;}const u=userPrefs(),links=p50v9OfficialLinks(p),badges=Array.isArray(p.badges)?p.badges:[];$('#profileBody').innerHTML=`<div class="profile-grid"><div class="left">${avatarHtml(p,'',{zoomable:true})}<div class="card-actions"><button class="btn fav ${u?.favorites.includes(id)?'on':''}" data-id="${id}">${u?.favorites.includes(id)?'★ Favori':'☆ Favori'}</button><button class="btn follow ${u?.following.includes(id)?'on':''}" data-id="${id}">${u?.following.includes(id)?'Ne plus suivre':'＋ Suivre'}</button></div></div><div><div class="eyebrow">#${completeRanking().findIndex(x=>x.id===id)+1} · ${p.category||''}</div><h2 style="font-size:39px;margin:7px 0 2px">${p.name||'Influenceur'}</h2><div class="handle">${p.handle||''}</div><div style="margin-top:11px">${badges.map(b=>badgeHtml(b,id)).join(' ')||'<span class="muted">Aucun badge actif</span>'}</div><div class="stats"><div class="stat"><span class="muted">Trend Score</span><b>${score(p)}/100</b></div><div class="stat"><span class="muted">Évolution</span><b>${arrow(p)}</b></div><div class="stat"><span class="muted">Âge</span><b style="font-size:18px">${ageText(p)}</b></div><div class="stat"><span class="muted">Réseaux officiels</span><b>${links.length}</b></div></div>${eventHtml(p)}${p50ProfileChartHtml(p)}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${links.map(([x,url])=>`<a class="btn small" href="${safeAttr(url)}" target="_blank" rel="noopener">${x} ↗</a>`).join('')}</div>${links.length===0?'<div class="platform-hidden-note">Aucun lien officiel direct n’est encore validé.</div>':''}</div></div>`;open('profileModal');
   };
 
   const oldAdminRows=adminProfileRows;

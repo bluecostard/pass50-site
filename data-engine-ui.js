@@ -565,22 +565,22 @@
     if(!preview?.config?.publicationEnabled)return 'flags publication désactivés';
     return preview?.status||'bloqué';
   }
-  function dePublishOnlyStale(preview){
+  function dePublishNeedsRecalculate(preview){
     const reasons=preview?.summary?.reasons||[];
     if(!reasons.length)return false;
+    const dataGates=new Set(['run_freshness','successful_run','candidate_run_consistency','candidate_non_empty']);
     return reasons.every(raw=>{
       const gates=String(raw).split(/:(.+)/)[1]||'';
       return gates.split(',').every(g=>{
         const key=g.trim();
-        return !key||key==='run_freshness'||key==='candidate_non_empty'||key==='successful_run'||key==='skipped'||key.startsWith('skipped');
+        return !key||dataGates.has(key)||key==='skipped'||key.startsWith('skipped');
       });
-    })&&reasons.some(raw=>String(raw).includes('run_freshness'));
+    });
   }
   async function dePublishRankingLab(button){await deAction(button,async()=>{
     let preview=await apiFetch('metrics-ranking-publication-apply.php');
-    // Le sélecteur 2H/24H… ne filtre pas la publication : toutes les périodes éligibles partent ensemble.
-    if(!preview.publicationEligible&&dePublishOnlyStale(preview)){
-      toast('Calcul expérimental trop ancien — recalcul automatique…');
+    if(!preview.publicationEligible&&dePublishNeedsRecalculate(preview)){
+      toast('Calcul expérimental absent ou périmé — recalcul automatique…');
       await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});
       DE.rankingLab=null;DE.rankingCalibration=null;
       await deLoadRankingLab(true);
@@ -699,8 +699,11 @@
       const birth=item.birthBest||item.facts?.birth_date,date=String(item.birthDate||birth?.normalized_value||'').trim(),confidence=Number(birth?.confidence||item.quality?.birth||0),status=String(item.birthStatus||birth?.status||'');
       if(!date||status!=='verified'||confidence<threshold)continue;
       const p=db.profiles.find(x=>x.id===item.id);if(!p)continue;
+      const frozen=Boolean(p.birthManualLocked||(typeof p50BirthShouldPreserve==='function'&&p50BirthShouldPreserve(p))||(p.birthDate&&(p.ageStatus==='confirmed'||Number(p?.quality?.birth||0)>=90)));
+      if(frozen&&String(p.birthDate||'')!==date)continue;
       if(p.birthDate!==date||p.ageStatus!=='confirmed'||Number(p?.quality?.birth||0)!==confidence){
-        p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=p.quality||{};p.quality.birth=confidence;p.dataEngine=p.dataEngine||{};p.dataEngine.verifiedFacts=[...new Set([...(p.dataEngine.verifiedFacts||[]),'birth_date'])];changed++;
+        if(frozen)continue;
+        p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=(typeof p50EnsurePlainObject==='function'?p50EnsurePlainObject(p.quality):(p.quality&&typeof p.quality==='object'?p.quality:{}));p.quality.birth=confidence;if(typeof p50LockBirthDate==='function')p50LockBirthDate(p);else{p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();p.dataEngine=(p.dataEngine&&typeof p.dataEngine==='object'&&!Array.isArray(p.dataEngine))?p.dataEngine:{};const facts=Array.isArray(p.dataEngine.verifiedFacts)?p.dataEngine.verifiedFacts:[];p.dataEngine.verifiedFacts=[...new Set([...facts,'birth_date'])];}changed++;
       }
     }
     if(changed){localStorage.setItem(APP_KEY,JSON.stringify(db));if(!DE.majRunning&&window.__pass50CloudReady&&typeof scheduleCloudSync==='function')scheduleCloudSync();}
@@ -750,6 +753,20 @@
   function deMajSleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
   function deMajCheckpoint(extra){
     deMajPersistStatus(Object.assign({status:'running',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget},extra||{}));
+  }
+  async function deMajPublish(){
+    let lastError=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      try{return await apiFetch('data-publish.php',{method:'POST',body:{period:ui.period,includeHub:false},timeoutMs:180000});}
+      catch(error){
+        lastError=error;
+        if(attempt>=3)break;
+        DE.majMessage=`Publication interrompue (${error?.message||'Erreur serveur'}). Nouvelle tentative ${attempt}/3 dans 8 secondes…`;
+        deDrawMajProgress();
+        await deMajSleep(8000);
+      }
+    }
+    throw lastError||new Error('Erreur serveur');
   }
   async function deMajCollectBatch(){
     const body={limit:1,deep:true,excludeIds:[...DE.majSeen],includeHub:false,syncRegistry:false};
@@ -865,7 +882,7 @@
       }
 
       DE.majStage='4/7 · Publication des scores';DE.majMessage='Écriture des données vérifiées et des scores calculés dans l’état PASS50…';deDrawMajProgress();
-      const published=await apiFetch('data-publish.php',{method:'POST',body:{period:ui.period}});totals.published=Number(published.publishedProfiles||0);totals.historicalMetrics=Number(published.historicalMetrics??totals.historicalMetrics);totals.uniqueEvents=Number(published.uniqueEvents??totals.uniqueEvents);totals.activeMetrics=Number(published.activeMetrics??totals.activeMetrics);totals.measurableProfiles=Number(published.measurableProfiles??totals.measurableProfiles);totals.recalculated=Number(published.recalculatedProfiles||0);totals.notRecalculated=Number(published.notRecalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);totals.ranksChanged=Number(published.ranksChanged||0);DE.hub=published.hub||DE.hub;
+      const published=await deMajPublish();totals.published=Number(published.publishedProfiles||0);totals.historicalMetrics=Number(published.historicalMetrics??totals.historicalMetrics);totals.uniqueEvents=Number(published.uniqueEvents??totals.uniqueEvents);totals.activeMetrics=Number(published.activeMetrics??totals.activeMetrics);totals.measurableProfiles=Number(published.measurableProfiles??totals.measurableProfiles);totals.recalculated=Number(published.recalculatedProfiles||0);totals.notRecalculated=Number(published.notRecalculatedProfiles||0);totals.scoresChanged=Number(published.scoresChanged||0);totals.ranksChanged=Number(published.ranksChanged||0);if(published.hub)DE.hub=published.hub;
 
       DE.majStage='5/7 · Rechargement et reclassement';DE.majMessage='Récupération de l’état serveur puis reclassement automatique…';deDrawMajProgress();
       try{
@@ -878,7 +895,7 @@
       DE.majStage='7/7 · Capture du classement';DE.majMessage='Enregistrement de la photographie du classement actuel…';deDrawMajProgress();
       try{const snap=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});totals.captured=Number(snap.captured||0);}catch(error){console.warn('Capture classement non bloquante',error);}
 
-      await deLoadHub(true);
+      try{await deLoadHub(true);}catch(hubError){console.warn('Hub MAJ non bloquant',hubError);}
       const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
       const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
       const counters=`${totals.fiTraversed} FI parcourue(s) · ${totals.officialLinksAnalyzed} lien(s) officiel(s) analysé(s) · ${totals.recentPublications} publication(s) récente(s) détectée(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.capturesRecorded} capture(s) métrique(s) enregistrée(s) · ${totals.activeMetrics} métrique(s) active(s) · Intelligence : ${totals.intelligence.profilesAnalyzed} analysé(s), ${totals.intelligence.profilesIgnored} ignoré(s), ${totals.intelligence.strongTrends} tendance(s), ${totals.intelligence.buzzDetected} buzz, ${totals.intelligence.declinesDetected} recul(s), ${totals.intelligence.errors} erreur(s) non bloquante(s) · ${totals.unavailablePlatforms} plateforme(s) indisponible(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s). ${deYoutubeMajSummary(totals.youtube,totals.capturesRecorded)}`;
@@ -1013,7 +1030,7 @@
     finally{DE.autoRunning=false;DE.stopRequested=false;deSetAutoUi();deAutoProgress();await deLoadHub(true);}
   }
   async function dePriority16(btn){await deAction(btn,async()=>{const data=await apiFetch('priority-refresh.php',{method:'POST',body:{}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.processed} profils prioritaires parcourus · ${data.classable} classables sur preuves récentes`);},'Actualisation des 16…');}
-  async function dePublish(btn){await deAction(btn,async()=>{const data=await apiFetch('data-publish.php',{method:'POST',body:{}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.publishedProfiles} profils publiés`);},'Publication…');}
+  async function dePublish(btn){await deAction(btn,async()=>{const data=await apiFetch('data-publish.php',{method:'POST',body:{includeHub:false},timeoutMs:180000});if(data.hub)DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();try{await deLoadHub(true);}catch(hubError){console.warn('Hub publication non bloquant',hubError);}toast(`${data.publishedProfiles} profils publiés`);},'Publication…');}
   async function deSnapshot(btn){await deAction(btn,async()=>{const data=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});toast(`${data.captured} positions enregistrées`);},'Capture…');}
 
   async function deOpenBirth(profileId){

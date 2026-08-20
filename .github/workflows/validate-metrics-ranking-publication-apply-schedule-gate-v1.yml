@@ -8,6 +8,7 @@ on:
       - '.github/workflows/metrics-ranking-publication-watchdog.yml'
       - 'api/metrics-ranking-publication-apply-cron.php'
       - 'tests/test_metrics_ranking_publication_apply_schedule_gate_v1.py'
+      - 'tests/test_ranking_publish_unblock_v1.py'
       - '.github/workflows/validate-metrics-ranking-publication-apply-schedule-gate-v1.yml'
   push:
     branches:
@@ -18,6 +19,7 @@ on:
       - '.github/workflows/metrics-ranking-publication-watchdog.yml'
       - 'api/metrics-ranking-publication-apply-cron.php'
       - 'tests/test_metrics_ranking_publication_apply_schedule_gate_v1.py'
+      - 'tests/test_ranking_publish_unblock_v1.py'
       - '.github/workflows/validate-metrics-ranking-publication-apply-schedule-gate-v1.yml'
 
 permissions:
@@ -32,7 +34,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Publication scheduling contract
-        run: python3 -m unittest tests.test_metrics_ranking_publication_apply_schedule_gate_v1 -v
+        run: python3 -m unittest tests.test_metrics_ranking_publication_apply_schedule_gate_v1 tests.test_ranking_publish_unblock_v1 -v
       - name: Workflow diff safety
         run: |
           set -euo pipefail

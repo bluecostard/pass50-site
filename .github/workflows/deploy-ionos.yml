@@ -76,7 +76,13 @@ jobs:
           put -O ${REMOTE_DIR@Q} .deploy/mon-fil.html
           put -O ${REMOTE_DIR@Q} .deploy/mon-fil.js
           put -O ${REMOTE_DIR@Q} .deploy/app-config.js
+          put -O ${REMOTE_DIR@Q} .deploy/profile-samo-samo.js
+          put -O ${REMOTE_DIR@Q} .deploy/owner-current-links-lock-v1.js
+          put -O ${REMOTE_DIR@Q} .deploy/observateur-official-links-lock-v1.js
           put -O ${REMOTE_DIR@Q} .deploy/public-copy-fixes.js
+          put -O ${REMOTE_DIR@Q} .deploy/admin-fi-edit-preserve-v1.js
+          put -O ${REMOTE_DIR@Q} .deploy/admin-profile-alphabetical-v1.js
+          put -O ${REMOTE_DIR@Q} .deploy/official-links-protection-v4.js
           put -O ${REMOTE_DIR@Q} .deploy/public-ui-sanitizer-v1.js
           put -O ${REMOTE_DIR@Q} .deploy/context-share-v2.js
           put -O ${REMOTE_DIR@Q} .deploy/mobile-bottom-nav-v1.js
@@ -87,10 +93,12 @@ jobs:
           put -O ${REMOTE_DIR@Q} .deploy/content-intelligence.js
           put -O ${REMOTE_DIR@Q} .deploy/coules-share-simple-v1.js
           put -O ${REMOTE_DIR@Q} .deploy/share-center-v1.js
-          put -O ${REMOTE_DIR@Q} .deploy/admin-pronostics.html
-          put -O ${REMOTE_DIR@Q} .deploy/admin-membres.html
           put -O ${REMOTE_DIR@Q} .deploy/pronostics.html
           put -O ${REMOTE_DIR@Q} .deploy/pronostics.js
+          put -O ${REMOTE_DIR@Q} .deploy/pronostics-coules-tab-v1.js
+          put -O ${REMOTE_DIR@Q} .deploy/pronostics-live-tab-v1.js
+          put -O ${REMOTE_DIR@Q} .deploy/admin-pronostics.html
+          put -O ${REMOTE_DIR@Q} .deploy/admin-membres.html
           put -O ${REMOTE_DIR@Q} .deploy/deployment-version.json
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-feed.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-platform-audit-cron-v2.php
@@ -98,7 +106,12 @@ jobs:
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-core.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-admin-refresh.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/metrics-collector-facebook.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/live-radar-v4-source.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-core.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-live.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-slip.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-feed.php
+          put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-vote.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-admin-save.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/admin-users.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/prono-admin-profiles.php

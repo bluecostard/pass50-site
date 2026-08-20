@@ -344,6 +344,14 @@ function installCoulesBridge(){
 
 function applyDeepLink(){
   if(deepLinkApplied)return;
+  try{
+    const nav=performance.getEntriesByType?.('navigation')?.[0];
+    const reloaded=(nav&&nav.type==='reload')||(typeof performance.navigation==='object'&&Number(performance.navigation.type)===1);
+    if((typeof window.p50IsReloadNavigation==='function'&&window.p50IsReloadNavigation())||reloaded){
+      if(typeof window.p50ClearProfileQuery==='function')window.p50ClearProfileQuery();
+      return;
+    }
+  }catch{}
   const params=new URLSearchParams(location.search);
   const profileId=params.get('profile');
   const liveId=params.get('live');

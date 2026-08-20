@@ -6,6 +6,43 @@ const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verif
 /** Couverture rolling (scan récent) — distincte du trust gate anti-ghost. */
 const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-3';
 const P50_LIVE_V4_COVERAGE_WINDOW_SECONDS = 7200;
+/** TikTok à rescanner toutes les ~2 min. */
+const P50_LIVE_V4_P0_TIKTOK = [
+    'apoutchou',
+    'general-camille-makosso',
+    'census-no-limit',
+    'census-amour-ruth-poopy',
+    'census-jordan-evraa',
+    'dbz',
+    'maabio',
+    'census-el-profesor',
+    'census-adjinaya-el-professor',
+    'p_1785175190809',
+    'census-sarara-messan',
+    'louissette',
+    'aya-robert',
+    'hamondchic',
+    'coachhamond',
+    'coachhamondchic',
+    'dez-cocrane225',
+    'census-roseline-layo',
+    'census-rach-makosso',
+    'census-jp-nda',
+    'census-cahie-kunta',
+    'census-lise-akrassi',
+    'census-lexes',
+    'census-ange-morel',
+    'census-laguepe',
+];
+/** YouTube à rescanner au même rythme P0. */
+const P50_LIVE_V4_P0_YOUTUBE = [
+    'census-observateur-ebene',
+];
+/** Délai minimum entre deux sondes TikTok vérifié (secondes). */
+const P50_LIVE_V4_P0_RESCAN_SECONDS = 120;
+const P50_LIVE_V4_VERIFIED_RESCAN_SECONDS = 300;
+/** TikTok unknown (probe bloqué / incomplet) : même rythme que le P0. */
+const P50_LIVE_V4_UNKNOWN_RESCAN_SECONDS = 120;
 /** @deprecated Utiliser p50_live_v4_reconfirm_grace_map() — conservé pour compat tests/clients. */
 const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>12,'YouTube'=>18,'Instagram'=>15,'Facebook'=>15];
 const P50_LIVE_V4_CANDIDATE_TTL_MINUTES = 30;
@@ -147,6 +184,31 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
     $overrides=[
         'apoutchou|tiktok'=>'https://www.tiktok.com/@apoutchou_national1',
         'general-camille-makosso|tiktok'=>'https://www.tiktok.com/@generalmakossocamille79',
+        'census-no-limit|tiktok'=>'https://www.tiktok.com/@nolimit_vousdv',
+        'census-amour-ruth-poopy|tiktok'=>'https://www.tiktok.com/@amourruth0',
+        'census-jordan-evraa|tiktok'=>'https://www.tiktok.com/@realjordanevraa',
+        'dbz|tiktok'=>'https://www.tiktok.com/@dbz.07',
+        'maabio|tiktok'=>'https://www.tiktok.com/@biodetoxminceur',
+        'census-el-profesor|tiktok'=>'https://www.tiktok.com/@elprofesor_off',
+        'census-adjinaya-el-professor|tiktok'=>'https://www.tiktok.com/@elprofesor.off',
+        'p_1785175190809|tiktok'=>'https://www.tiktok.com/@ulrich_jordan30',
+        'census-sarara-messan|tiktok'=>'https://www.tiktok.com/@sarra_messan',
+        'louissette|tiktok'=>'https://www.tiktok.com/@misscadic',
+        'aya-robert|tiktok'=>'https://www.tiktok.com/@aya.robert27',
+        'hamondchic|tiktok'=>'https://www.tiktok.com/@coachhamond',
+        'coachhamond|tiktok'=>'https://www.tiktok.com/@coachhamond',
+        'coachhamondchic|tiktok'=>'https://www.tiktok.com/@coachhamond',
+        'coach-hamond|tiktok'=>'https://www.tiktok.com/@coachhamond',
+        'dez-cocrane225|tiktok'=>'https://www.tiktok.com/@dezcocrane.225',
+        'census-roseline-layo|tiktok'=>'https://www.tiktok.com/@roselinelayoofficiel',
+        'census-rach-makosso|tiktok'=>'https://www.tiktok.com/@rach_makosso1',
+        'census-jp-nda|tiktok'=>'https://www.tiktok.com/@jpnda_1',
+        'census-cahie-kunta|tiktok'=>'https://www.tiktok.com/@cahiekunta',
+        'census-lise-akrassi|tiktok'=>'https://www.tiktok.com/@lise.akrassi.offi',
+        'census-lexes|tiktok'=>'https://www.tiktok.com/@stephanesacre',
+        'census-ange-morel|tiktok'=>'https://www.tiktok.com/@angemorel4',
+        'census-laguepe|tiktok'=>'https://www.tiktok.com/@laguepe03',
+        'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
     ];
     return $overrides[$key]??$url;
 }
@@ -201,6 +263,43 @@ function p50_live_v4_sources(array $state): array {
             'verification_status'=>'manual_verified',
         ];
     }
+    foreach([
+        ['id'=>'census-no-limit','name'=>'No Limit','handle'=>'nolimit_vousdv'],
+        ['id'=>'census-amour-ruth-poopy','name'=>'Amour Ruth & Poopy','handle'=>'amourruth0'],
+        ['id'=>'census-jordan-evraa','name'=>'Jordan Evraa','handle'=>'realjordanevraa'],
+        ['id'=>'dbz','name'=>'DBZ','handle'=>'dbz.07'],
+        ['id'=>'maabio','name'=>'Maabio','handle'=>'biodetoxminceur'],
+        ['id'=>'p_1785175190809','name'=>'Ulrich Jordan','handle'=>'ulrich_jordan30'],
+        ['id'=>'census-sarara-messan','name'=>'Sarara Messan','handle'=>'sarra_messan'],
+        ['id'=>'louissette','name'=>'Cadic N’Guessan','handle'=>'misscadic'],
+        ['id'=>'aya-robert','name'=>'Aya Robert','handle'=>'aya.robert27'],
+        ['id'=>'hamondchic','name'=>'Coach Hamond Chic','handle'=>'coachhamond'],
+        ['id'=>'dez-cocrane225','name'=>'Dez Cocrane 225','handle'=>'dezcocrane.225'],
+        ['id'=>'census-roseline-layo','name'=>'Roseline Layo','handle'=>'roselinelayoofficiel'],
+        ['id'=>'census-rach-makosso','name'=>'Rach Makosso','handle'=>'rach_makosso1'],
+        ['id'=>'census-jp-nda','name'=>'JP N\'da','handle'=>'jpnda_1'],
+        ['id'=>'census-cahie-kunta','name'=>'Cahié kunta','handle'=>'cahiekunta'],
+        ['id'=>'census-lise-akrassi','name'=>'Lise Akrassi','handle'=>'lise.akrassi.offi'],
+        ['id'=>'census-lexes','name'=>'L\'Exès','handle'=>'stephanesacre'],
+        ['id'=>'census-ange-morel','name'=>'Ange-Morel Your Eyes','handle'=>'angemorel4'],
+        ['id'=>'census-laguepe','name'=>'Laguepe','handle'=>'laguepe03'],
+    ] as $forced){
+        $forcedKey='TikTok|'.$forced['id'];
+        if(isset($seen[$forcedKey]))continue;
+        $seen[$forcedKey]=true;$out[]=[
+            'profile_id'=>$forced['id'],'public_name'=>$forced['name'],'handle'=>'@'.$forced['handle'],
+            'platform'=>'TikTok','url'=>'https://www.tiktok.com/@'.$forced['handle'],'confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $observateurKey='YouTube|census-observateur-ebene';
+    if(!isset($seen[$observateurKey])){
+        $seen[$observateurKey]=true;$out[]=[
+            'profile_id'=>'census-observateur-ebene','public_name'=>'Observateur Ébène','handle'=>'@Observateur',
+            'platform'=>'YouTube','url'=>'https://www.youtube.com/@Observateur','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
     $manual=p50_live_v4_manual_priority_ids($state);$automatic=p50_live_v4_active_auto_ids();$health=p50_live_v4_health_map();
     $platformOrder=['TikTok'=>0,'YouTube'=>1,'Instagram'=>2,'Facebook'=>3];
     foreach($out as &$source){
@@ -208,6 +307,7 @@ function p50_live_v4_sources(array $state): array {
         $source['source_key']=$key;
         $source['priority']=isset($manual[$id])?0:(isset($automatic[$key])?1:(in_array($status,['owner_verified','manual_verified','verified'],true)?2:3));
         $source['last_checked_at']=(string)($health[$key]['last_checked_at']??'');
+        $source['last_live_at']=(string)($health[$key]['last_live_at']??'');
         $source['last_state']=(string)($health[$key]['last_state']??'never_checked');
         $metaJson=json_decode((string)($health[$key]['metadata']??''),true);
         $probe='';
@@ -231,15 +331,138 @@ function p50_live_v4_sources(array $state): array {
     return $out;
 }
 
-/** Ordre de découverte : never_checked → unknown Meta → unknown → plus ancien. */
+function p50_live_v4_health_ts(?string $mysql): int {
+    $value=trim((string)$mysql);
+    if($value==='')return 0;
+    try{return (new DateTimeImmutable($value,new DateTimeZone('UTC')))->getTimestamp();}
+    catch(Throwable){return strtotime($value.' UTC')?:0;}
+}
+
+function p50_live_v4_is_verified_tiktok(array $source): bool {
+    if((string)($source['platform']??'')!=='TikTok')return false;
+    return in_array((string)($source['verification_status']??''),['owner_verified','manual_verified','verified'],true);
+}
+
+const P50_LIVE_V4_P0_WATCH_SETTING = 'live_radar_v4_p0_watch';
+const P50_LIVE_V4_UNKNOWN_AUDIT_ENABLED_SETTING = 'live_radar_v4_unknown_audit_enabled';
+
+function p50_live_v4_p0_key(string $profileId,string $platform): string {
+    return strtolower(trim($profileId)).'|'.strtolower(trim($platform));
+}
+
+function p50_live_v4_normalize_p0_entry(array $row): ?array {
+    $profileId=trim((string)($row['profileId']??$row['profile_id']??''));
+    $platform=trim((string)($row['platform']??'TikTok'));
+    if($profileId===''||!in_array($platform,['TikTok','YouTube','Facebook'],true))return null;
+    return [
+        'profileId'=>$profileId,
+        'platform'=>$platform,
+        'handle'=>trim((string)($row['handle']??'')),
+        'addedAt'=>(string)($row['addedAt']??''),
+        'reason'=>(string)($row['reason']??''),
+    ];
+}
+
+/** Fusionne la watchlist P0 sans doublon (profileId+plateforme). */
+function p50_live_v4_merge_p0_watch(array $current,array $additions): array {
+    $out=[];$seen=[];
+    foreach(array_merge($current,$additions) as $row){
+        if(!is_array($row))continue;
+        $entry=p50_live_v4_normalize_p0_entry($row);
+        if($entry===null)continue;
+        $key=p50_live_v4_p0_key($entry['profileId'],$entry['platform']);
+        if(isset($seen[$key]))continue;
+        $seen[$key]=true;
+        if($entry['addedAt']==='')$entry['addedAt']=gmdate(DATE_ATOM);
+        $out[]=$entry;
+    }
+    return $out;
+}
+
+function p50_live_v4_dynamic_p0_watch(): array {
+    if(!function_exists('p50_de_get_setting'))return [];
+    try{$raw=p50_de_get_setting(P50_LIVE_V4_P0_WATCH_SETTING,[]);}
+    catch(Throwable){return [];}
+    return is_array($raw)?p50_live_v4_merge_p0_watch([],$raw):[];
+}
+
+function p50_live_v4_is_dynamic_p0(array $source): bool {
+    $key=p50_live_v4_p0_key((string)($source['profile_id']??''),(string)($source['platform']??''));
+    if($key==='|')return false;
+    foreach(p50_live_v4_dynamic_p0_watch() as $row){
+        if(p50_live_v4_p0_key($row['profileId'],$row['platform'])===$key)return true;
+    }
+    return false;
+}
+
+function p50_live_v4_is_p0_tiktok(array $source): bool {
+    if((string)($source['platform']??'')!=='TikTok')return false;
+    if(in_array((string)($source['profile_id']??''),P50_LIVE_V4_P0_TIKTOK,true))return true;
+    return p50_live_v4_is_dynamic_p0($source);
+}
+
+function p50_live_v4_is_p0_youtube(array $source): bool {
+    if((string)($source['platform']??'')!=='YouTube')return false;
+    if(in_array((string)($source['profile_id']??''),P50_LIVE_V4_P0_YOUTUBE,true))return true;
+    return p50_live_v4_is_dynamic_p0($source);
+}
+
+function p50_live_v4_is_p0_source(array $source): bool {
+    $platform=(string)($source['platform']??'');
+    if($platform==='TikTok')return p50_live_v4_is_p0_tiktok($source);
+    if($platform==='YouTube')return p50_live_v4_is_p0_youtube($source);
+    if($platform!=='Facebook')return false;
+    return p50_live_v4_is_dynamic_p0($source);
+}
+
+function p50_live_v4_is_unknown_tiktok(array $source): bool {
+    if((string)($source['platform']??'')!=='TikTok')return false;
+    $state=strtolower(trim((string)($source['last_state']??'')));
+    return in_array($state,['unknown','','never_checked'],true);
+}
+
+/** TikTok : rescan P0 ~2 min, vérifié offline ~5 min. */
+function p50_live_v4_needs_tiktok_rescan(array $source,?int $minStaleSeconds=null): bool {
+    if((string)($source['platform']??'')!=='TikTok')return false;
+    $state=strtolower(trim((string)($source['last_state']??'')));
+    if($state==='live')return true;
+    $isP0=p50_live_v4_is_p0_tiktok($source);
+    $isVerified=p50_live_v4_is_verified_tiktok($source);
+    if(!$isP0&&!$isVerified)return false;
+    $stale=$minStaleSeconds??($isP0?P50_LIVE_V4_P0_RESCAN_SECONDS:P50_LIVE_V4_VERIFIED_RESCAN_SECONDS);
+    $checkedTs=p50_live_v4_health_ts((string)($source['last_checked_at']??''));
+    return $checkedTs<=0||(time()-$checkedTs)>=$stale;
+}
+
+/** P0 YouTube/Facebook : même rythme que le P0 TikTok. */
+function p50_live_v4_needs_p0_rescan(array $source,?int $minStaleSeconds=null): bool {
+    if((string)($source['platform']??'')==='TikTok')return p50_live_v4_needs_tiktok_rescan($source,$minStaleSeconds);
+    if(!p50_live_v4_is_p0_source($source))return false;
+    $state=strtolower(trim((string)($source['last_state']??'')));
+    if($state==='live')return true;
+    $stale=$minStaleSeconds??P50_LIVE_V4_P0_RESCAN_SECONDS;
+    $checkedTs=p50_live_v4_health_ts((string)($source['last_checked_at']??''));
+    return $checkedTs<=0||(time()-$checkedTs)>=$stale;
+}
+
+/** Compte live récemment (72 h) : rescan prioritaire même si marqué offline. */
+function p50_live_v4_is_warm_watch(array $source,int $maxAgeSeconds=259200): bool {
+    if(!p50_live_v4_is_verified_tiktok($source))return false;
+    $lastLiveTs=p50_live_v4_health_ts((string)($source['last_live_at']??''));
+    return $lastLiveTs>0&&(time()-$lastLiveTs)<=$maxAgeSeconds;
+}
+
+/** Ordre de découverte : never_checked → P0 / unknown TikTok / warm → unknown Meta → offline. */
 function p50_live_v4_discovery_rank(array $source): array {
     $state=strtolower(trim((string)($source['last_state']??'never_checked')));
     $checked=(string)($source['last_checked_at']??'');
     $platform=(string)($source['platform']??'');
-    $meta=in_array($platform,['Instagram','Facebook'],true)?0:1;
-    if($checked===''||$state===''||$state==='never_checked')return [0,$meta,''];
-    if($state==='unknown')return [1,$meta,$checked];
-    return [2,$meta,$checked];
+    $tiktokFirst=$platform==='TikTok'?0:1;
+    if($checked===''||$state===''||$state==='never_checked')return [0,$tiktokFirst,''];
+    if(p50_live_v4_is_p0_source($source)||p50_live_v4_is_warm_watch($source)||p50_live_v4_needs_p0_rescan($source))return [1,0,$checked];
+    if($state==='unknown')return [2,$tiktokFirst,$checked];
+    if(p50_live_v4_is_verified_tiktok($source))return [3,0,$checked];
+    return [4,$tiktokFirst,$checked];
 }
 
 /** Source Meta déjà classifiée récemment via Graph OAuth — inutile de rescraper. */
@@ -301,9 +524,18 @@ function p50_live_v4_probe_requests(array $source): array {
             'Sec-Fetch-Mode: cors',
             'Sec-Fetch-Site: same-origin',
         ];
+        $webcastHeaders=[
+            'Referer: '.$identity['profileUrl'],
+            'Origin: https://www.tiktok.com',
+            'Sec-Fetch-Dest: empty',
+            'Sec-Fetch-Mode: cors',
+            'Sec-Fetch-Site: cross-site',
+        ];
         return [
             'api'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*','headers'=>$tiktokApiHeaders],
             'api_basic'=>['url'=>'https://www.tiktok.com/api-live/user/room/?aid=1988&uniqueId='.$handle,'accept'=>'application/json,text/plain,*/*','headers'=>$tiktokApiHeaders],
+            // Domaine distinct : IONOS est souvent en 403 sur www.tiktok.com/api-live, pas forcément sur webcast.
+            'api_webcast'=>['url'=>'https://webcast.tiktok.com/webcast/room/info_by_user/?aid=1988&unique_id='.$handle,'accept'=>'application/json,text/plain,*/*','headers'=>$webcastHeaders],
             'mobile_live'=>['url'=>'https://m.tiktok.com/@'.$handle.'/live','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','userAgent'=>P50_LIVE_V4_MOBILE_UA,'headers'=>['Referer: https://www.tiktok.com/']],
             'live'=>['url'=>$identity['liveUrl'].'?lang=fr','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','headers'=>['Referer: '.$identity['profileUrl']]],
             'embed'=>['url'=>'https://www.tiktok.com/embed/live/@'.$handle.'?autoplay=0&muted=1&controls=1&embed_domain=pass50.store','accept'=>'text/html,application/xhtml+xml,*/*;q=0.7','headers'=>['Referer: https://www.tiktok.com/']],

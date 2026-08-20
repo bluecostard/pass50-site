@@ -5,6 +5,8 @@ on:
     paths:
       - 'coules-share-simple-v1.js'
       - 'pronostics-coules-tab-v1.js'
+      - 'pronostics-live-tab-v1.js'
+      - 'tests/test_prono50_live_v1.py'
       - 'mobile-bottom-nav-v1.js'
       - 'pronostics.html'
       - 'index.html'
@@ -29,6 +31,7 @@ jobs:
         run: |
           node --check coules-share-simple-v1.js
           node --check pronostics-coules-tab-v1.js
+          node --check pronostics-live-tab-v1.js
           node --check mobile-bottom-nav-v1.js
           node --check app-config.js
           node --check sw.js
@@ -36,6 +39,7 @@ jobs:
         run: |
           python3 -m unittest tests.test_coules_share_simple_v1
           python3 -m unittest tests.test_pronostics_coules_tab_v1
+          python3 -m unittest tests.test_prono50_live_v1
       - name: Diff check
         if: "${{ github.event_name == 'pull_request' }}"
         run: git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"

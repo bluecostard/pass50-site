@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.6';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.7';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
   let linksRendererInstalled=false;
@@ -106,6 +106,7 @@
   function installOfficialLinksRenderer(){
     if(linksRendererInstalled||typeof p50v9RenderLinks!=='function'||typeof p50v9LinkCard!=='function')return;
     p50v9RenderLinks=function(){
+      if(window.PASS50_FI_EDIT_PRESERVE?.shouldSkip?.('links'))return;
       const pane=document.querySelector('#adminPane');
       if(!pane)return;
       const profiles=alphabeticalProfiles();
@@ -117,6 +118,7 @@
       let index=0;
       const appendChunk=()=>{
         if(token!==linksRenderToken||!cards.isConnected||currentAdminTab()!=='links')return;
+        if(window.PASS50_FI_EDIT_PRESERVE?.busy?.())return;
         const next=profiles.slice(index,index+12);
         if(next.length)cards.insertAdjacentHTML('beforeend',next.map(p50v9LinkCard).join(''));
         index+=next.length;
@@ -130,6 +132,7 @@
   function applyAlphabeticalOrder(){
     unifyIntelligenceSignalsTabs();
     installOfficialLinksRenderer();
+    if(window.PASS50_FI_EDIT_PRESERVE?.busy?.())return;
     const pane=document.querySelector('#adminPane');
     if(!pane)return;
     const tab=activeAdminTab();

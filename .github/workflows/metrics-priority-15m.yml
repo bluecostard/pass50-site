@@ -104,7 +104,7 @@ jobs:
           response="$(cat p0-dispatch-response.json)"
           remaining="$(jq -r '.queue.p0Remaining // .remaining // 0' <<<"$response")"
           processed=0; completed=0; partial=0; failed=0; skipped=0; work_error=''
-          for iteration in $(seq 1 80); do
+          for iteration in $(seq 1 400); do
             [ "$remaining" -eq 0 ] && break
             work_body="$(jq -nc --arg id "$dispatch_id" --argjson iteration "$iteration" '{action:"work",cadence:"p0",dispatchId:$id,iteration:$iteration}')"
             work_file="p0-work-response-${iteration}.json"

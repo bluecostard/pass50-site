@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.3';
+  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.5';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
   const OWNER_LOCK_KEY='pass50_owner_locked_profiles_v1';
   const OFFICIAL_LINK_FIELDS=['TikTok','Instagram','Facebook','YouTube','X','Snapchat'];
@@ -16,6 +16,10 @@
       TikTok:'https://www.tiktok.com/@cheffezeinabbance',
       Instagram:'https://www.instagram.com/zeinabbance/',
       Facebook:'https://www.facebook.com/p/Zeinab-BANCE-WRG-61568549139334/'
+    },
+    samo:{
+      TikTok:'https://www.tiktok.com/@kommandersamosamo',
+      Instagram:'https://www.instagram.com/kommander_samo_samo/'
     }
   };
   let installed=false;
@@ -105,7 +109,7 @@
 
   function ownerLockedLinks(profile,key){
     const current=profile&&profile.links&&typeof profile.links==='object'?profile.links:{};
-    const source=key==='samo'?current:{...current,...(OWNER_LOCK_EXACT[key]||{})};
+    const source={...current,...(OWNER_LOCK_EXACT[key]||{})};
     const result={};
     Object.entries(source).forEach(([platform,url])=>{
       const normalized=normalize(url);
@@ -188,6 +192,10 @@
   }
 
   function ensureOfficialLinksSearch(){
+    if(window.PASS50_FI_EDIT_PRESERVE?.busy?.()){
+      applyOfficialLinksSearch();
+      return Boolean(document.getElementById('linksCards')||document.getElementById('linksProfileSearch'));
+    }
     const cards=document.getElementById('linksCards');
     if(!cards)return false;
     try{
@@ -296,6 +304,7 @@
   }
 
   async function restoreVerifiedLinks(force=false){
+    if(window.PASS50_FI_EDIT_PRESERVE?.busy?.())return;
     if(restoring||typeof window.apiFetch!=='function'||!window.__pass50CloudReady)return;
     let user=null;
     try{user=typeof currentUser==='function'?currentUser():null;}catch{}
@@ -311,7 +320,7 @@
       if(typeof loadCloudState==='function')await loadCloudState();
       const removed=sanitizeBrowser();
       persistBrowser();
-      if(typeof ui==='object'&&ui?.adminTab==='links'&&typeof p50v9RenderLinks==='function')p50v9RenderLinks();
+      if(typeof ui==='object'&&ui?.adminTab==='links'&&typeof p50v9RenderLinks==='function'&&!window.PASS50_FI_EDIT_PRESERVE?.busy?.())p50v9RenderLinks();
       setTimeout(ensureOfficialLinksSearch,0);
       const restored=Number(data.restoredCount||0);
       if((pinned||restored||removed)&&typeof toast==='function')toast(`✓ Liens protégés : ${pinned} figé(s), ${restored} restauré(s), ${removed} recherche(s) retirée(s)`);
