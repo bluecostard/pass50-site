@@ -26,7 +26,8 @@ class BirthFreezeAllFiV1Tests(unittest.TestCase):
     def test_engine_publish_cannot_overwrite_frozen_birth(self):
         self.assertIn("function p50_de_profile_birth_frozen(array $p)", CORE)
         self.assertIn("function p50_de_lock_birth_date(array &$p, bool $adminConfirmed=false)", CORE)
-        self.assertIn("if($existingBirth!==''&&$birthFrozen&&!$manual&&$existingBirth!==$date)", CORE)
+        self.assertIn("elseif($existingBirth!==''&&$birthFrozen&&!$manual&&$existingBirth!==$date)", CORE)
+        self.assertIn("if(!p50_de_is_plausible_birth_date($date))", CORE)
         self.assertIn("p50_de_lock_birth_date($p,$manual)", CORE)
         self.assertIn("p50_de_profile_birth_frozen($stateProfile)&&p50_de_profile_birth_value($stateProfile)!==$date", CORE)
 

@@ -295,11 +295,14 @@ function p50_de_load_public_state(): array {
     $raw = $stmt->fetchColumn();
     if (!is_string($raw) || $raw === '') return [];
     $state = json_decode($raw, true);
-    return is_array($state) ? $state : [];
+    if (!is_array($state)) return [];
+    p50_de_sanitize_state_births($state);
+    return $state;
 }
 
 function p50_de_save_public_state(array $state, ?string $userId = null, bool $incrementRevision = true): void {
     p50_apply_profile_tombstones($state);
+    p50_de_sanitize_state_births($state);
     if($incrementRevision)$state['stateRevision']=max(0,(int)($state['stateRevision']??0))+1;
     $stmt = db()->prepare("INSERT INTO app_state(id,data,updated_by) VALUES('public',?,?) ON DUPLICATE KEY UPDATE data=VALUES(data),updated_by=VALUES(updated_by),updated_at=NOW()");
     $stmt->execute([json_encode($state, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $userId]);
@@ -310,7 +313,9 @@ function p50_de_load_public_state_for_update(): array {
     $raw=$stmt->fetchColumn();
     if(!$raw)return [];
     $state=json_decode((string)$raw,true);
-    return is_array($state)?$state:[];
+    if(!is_array($state))return [];
+    p50_de_sanitize_state_births($state);
+    return $state;
 }
 
 function p50_de_profile_state_map(array $state): array {
@@ -470,6 +475,10 @@ function p50_de_collect_curated_evidence_v221(array $profile): int {
 function p50_de_add_fact_evidence(string $profileId, string $factKey, string $normalizedValue, mixed $rawValue, string $sourceType, string $sourceName, string $sourceUrl, int $sourceWeight): void {
     $normalizedValue = trim($normalizedValue);
     if ($normalizedValue === '') return;
+    if ($factKey === 'birth_date') {
+        $normalizedValue = p50_de_normalize_iso_date($normalizedValue);
+        if (!p50_de_is_plausible_birth_date($normalizedValue)) return;
+    }
     $raw = is_string($rawValue) ? $rawValue : (json_encode($rawValue,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?: '');
     $valueHash = p50_de_hash($normalizedValue);
     $sourceHash = p50_de_hash(p50_de_source_identity($sourceType,$sourceName,$sourceUrl));
@@ -1496,7 +1505,7 @@ function p50_de_collect_state_facts(array $profile, ?array $state=null): int {
     if(!is_array($p))return 0;
     $count=0;$profileId=(string)$profile['profile_id'];
     $date=trim((string)($p['birthDate']??''));
-    if($date!==''&&preg_match('/^\d{4}-\d{2}-\d{2}$/',$date)){
+    if($date!==''&&preg_match('/^\d{4}-\d{2}-\d{2}$/',$date)&&p50_de_is_plausible_birth_date($date)){
         $manual=p50_de_profile_birth_frozen($p);
         p50_de_add_fact_evidence($profileId,'birth_date',$date,$date,$manual?'manual_owner':'state_import',$manual?'Administrateur PASS50':'État PASS50','',$manual?100:70);$count++;
     }
@@ -1582,6 +1591,67 @@ function p50_de_state_profile(string $profileId): ?array {
     return is_array($p)?$p:null;
 }
 
+function p50_de_is_plausible_birth_year(int $year, ?int $nowYear=null): bool {
+    $nowYear=$nowYear??(int)gmdate('Y');
+    $age=$nowYear-$year;
+    return $year>=1920 && $year<=$nowYear-5 && $age>=5 && $age<=110;
+}
+
+function p50_de_is_plausible_birth_date(string $date, ?int $nowYear=null): bool {
+    $date=trim($date);
+    if(!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/',$date,$m))return false;
+    $y=(int)$m[1];$mo=(int)$m[2];$d=(int)$m[3];
+    if(!checkdate($mo,$d,$y))return false;
+    try{
+        $dt=new DateTimeImmutable($date,new DateTimeZone('UTC'));
+        if($dt->format('Y-m-d')!==sprintf('%04d-%02d-%02d',$y,$mo,$d))return false;
+        if($dt->getTimestamp()>time())return false;
+    }catch(Throwable){
+        return false;
+    }
+    return p50_de_is_plausible_birth_year($y,$nowYear);
+}
+
+function p50_de_clear_implausible_birth(array &$p): bool {
+    $date=trim((string)($p['birthDate']??''));
+    $yearRaw=$p['birthYear']??null;
+    $year=($yearRaw===null||$yearRaw==='')?0:(int)$yearRaw;
+    if($date!==''&&p50_de_is_plausible_birth_date($date)){
+        $fixed=(int)substr($date,0,4);
+        if(($p['birthYear']??null)!==$fixed){$p['birthYear']=$fixed;return true;}
+        return false;
+    }
+    $yearOnlyOk=$date===''&&$year!==0&&p50_de_is_plausible_birth_year($year);
+    if($yearOnlyOk||($date===''&&$year===0))return false;
+    $p['birthDate']=null;
+    $p['birthYear']=null;
+    $p['ageStatus']='unconfirmed';
+    $p['birthManualLocked']=false;
+    $p['birthManualUpdatedAt']=null;
+    $p['quality']=is_array($p['quality']??null)?$p['quality']:[];
+    $p['quality']['birth']=0;
+    $p['dataEngine']=is_array($p['dataEngine']??null)&&!array_is_list($p['dataEngine']??[])?$p['dataEngine']:[];
+    $verified=$p['dataEngine']['verifiedFacts']??[];
+    $keys=[];
+    if(is_array($verified)){
+        $list=array_is_list($verified)?$verified:array_keys($verified);
+        foreach($list as $item){
+            if(is_string($item)&&$item!==''&&$item!=='birth_date'&&!is_numeric($item))$keys[]=$item;
+        }
+    }
+    $p['dataEngine']['verifiedFacts']=array_values(array_unique($keys));
+    return true;
+}
+
+function p50_de_sanitize_state_births(array &$state): int {
+    $changed=0;
+    foreach((array)($state['profiles']??[]) as &$p){
+        if(is_array($p)&&p50_de_clear_implausible_birth($p))$changed++;
+    }
+    unset($p);
+    return $changed;
+}
+
 function p50_de_profile_birth_value(array $p): string {
     return trim((string)($p['birthDate']??''));
 }
@@ -1612,6 +1682,7 @@ function p50_de_profile_birth_frozen(array $p): bool {
 }
 
 function p50_de_lock_birth_date(array &$p, bool $adminConfirmed=false): void {
+    if(p50_de_clear_implausible_birth($p))return;
     if(p50_de_profile_birth_value($p)==='')return;
     $p['birthYear']=(int)substr((string)$p['birthDate'],0,4);
     $p['ageStatus']='confirmed';
@@ -1632,10 +1703,11 @@ function p50_de_lock_birth_date(array &$p, bool $adminConfirmed=false): void {
 }
 
 function p50_de_freeze_existing_birth(array &$p): bool {
-    if(!p50_de_profile_birth_frozen($p))return false;
+    $cleared=p50_de_clear_implausible_birth($p);
+    if(!p50_de_profile_birth_frozen($p))return $cleared;
     $was=!empty($p['birthManualLocked']);
     p50_de_lock_birth_date($p, (int)(($p['quality']['birth']??0))>=100);
-    return !$was;
+    return $cleared||!$was;
 }
 
 function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array &$sharedState=null): bool {
@@ -1671,13 +1743,16 @@ function p50_de_publish_profile(string $profileId, ?string $userId=null, ?array 
         $p['quality']['identity']=max(90,(int)($p['quality']['identity']??0));
         $p['quality']['social']=$maxSocial;
 
+        if(p50_de_clear_implausible_birth($p))$changed=true;
         if(p50_de_freeze_existing_birth($p))$changed=true;
         $existingBirth=p50_de_profile_birth_value($p);
         $birthFrozen=p50_de_profile_birth_frozen($p);
         if(isset($facts['birth_date'])){
             $date=(string)$facts['birth_date']['normalized_value'];
             $manual=p50_de_fact_is_manual($facts['birth_date']);
-            if($existingBirth!==''&&$birthFrozen&&!$manual&&$existingBirth!==$date){
+            if(!p50_de_is_plausible_birth_date($date)){
+                if(p50_de_clear_implausible_birth($p))$changed=true;
+            }elseif($existingBirth!==''&&$birthFrozen&&!$manual&&$existingBirth!==$date){
                 p50_de_lock_birth_date($p);
             }else{
                 if(($p['birthDate']??null)!==$date){$p['birthDate']=$date;$changed=true;}

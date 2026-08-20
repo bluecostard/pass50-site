@@ -179,6 +179,7 @@ function p50v9ApplyPatch(){
     if(!p.photoPosition)p.photoPosition='50% 50%';
     p.photoManualLocked=Boolean(p.photoManualLocked);p.photoManualUpdatedAt=p.photoManualUpdatedAt||null;
     p.birthManualLocked=Boolean(p.birthManualLocked);p.birthManualUpdatedAt=p.birthManualUpdatedAt||null;
+    if(typeof p50ClearImplausibleBirth==='function')p50ClearImplausibleBirth(p);
     if(typeof p50FreezeExistingBirth==='function')p50FreezeExistingBirth(p);
     else if((p.birthDate||p.birthYear)&&(p.ageStatus==='confirmed'||Number(p?.quality?.birth||0)>=90)){p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();p.ageStatus='confirmed';}
   });
@@ -261,7 +262,7 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
   }
   if(!document.querySelector('script[data-pass50-data-engine]')){
     const js=document.createElement('script');
-    js.src='./data-engine-ui.js?v=18.25';
+    js.src='./data-engine-ui.js?v=18.26';
     js.dataset.pass50DataEngine='1';
     js.onload=function(){
       if(document.querySelector('script[data-pass50-admin-notifications]'))return;

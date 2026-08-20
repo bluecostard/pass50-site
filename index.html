@@ -408,18 +408,66 @@ function p50VerifiedFactsList(p){
   if(typeof raw==='string'&&raw.trim())return [raw.trim()];
   return [];
 }
+function p50BirthYearFromDate(value){
+  const raw=String(value||'').trim();
+  const iso=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso)return Number(iso[1]);
+  const yearOnly=raw.match(/^(\d{4})$/);
+  if(yearOnly)return Number(yearOnly[1]);
+  return null;
+}
+function p50BirthYearIsPlausible(year,nowYear=new Date().getFullYear()){
+  if(typeof year==='boolean')return false;
+  const y=Number(year);
+  if(!Number.isFinite(y)||y!==Math.trunc(y))return false;
+  const age=nowYear-y;
+  return y>=1920&&y<=nowYear-5&&age>=5&&age<=110;
+}
+function p50BirthDateIsPlausible(value,nowYear=new Date().getFullYear()){
+  const raw=String(value||'').trim();
+  const m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m)return false;
+  const y=Number(m[1]),mo=Number(m[2]),d=Number(m[3]);
+  if(!p50BirthYearIsPlausible(y,nowYear)||mo<1||mo>12||d<1||d>31)return false;
+  const dt=new Date(Date.UTC(y,mo-1,d));
+  if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return false;
+  return dt.getTime()<=Date.now();
+}
+function p50ClearImplausibleBirth(p){
+  if(!p)return p;
+  const date=p50BirthDateValue(p);
+  const storedYear=p.birthYear==null||p.birthYear===''?null:Number(p.birthYear);
+  if(p50BirthDateIsPlausible(date)){
+    p.birthYear=p50BirthYearFromDate(date);
+    return p;
+  }
+  if(!date&&p50BirthYearIsPlausible(storedYear))return p;
+  if(!date&&(storedYear==null||!Number.isFinite(storedYear)))return p;
+  p.birthDate=null;
+  p.birthYear=null;
+  p.ageStatus='unconfirmed';
+  p.birthManualLocked=false;
+  p.birthManualUpdatedAt=null;
+  p.quality=p50EnsurePlainObject(p.quality);
+  p.quality.birth=0;
+  p.dataEngine=p50EnsurePlainObject(p.dataEngine);
+  p.dataEngine.verifiedFacts=p50VerifiedFactsList(p).filter(x=>x!=='birth_date');
+  return p;
+}
 function p50BirthIsConfirmed(p){
-  if(!p50BirthDateValue(p))return false;
+  if(!p50BirthDateIsPlausible(p50BirthDateValue(p)))return false;
   if(p.birthManualLocked)return true;
   if(String(p.ageStatus||'')==='confirmed')return true;
   if(Number(p50EnsurePlainObject(p?.quality).birth||0)>=90)return true;
   return p50VerifiedFactsList(p).includes('birth_date');
 }
-function p50BirthShouldPreserve(p){return Boolean(p50BirthDateValue(p)&&(p50BirthIsConfirmed(p)||p.birthManualLocked))}
+function p50BirthShouldPreserve(p){return Boolean(p50BirthDateIsPlausible(p50BirthDateValue(p))&&(p50BirthIsConfirmed(p)||p.birthManualLocked))}
 function p50LockBirthDate(p,adminConfirmed=false){
-  if(!p||!p50BirthDateValue(p))return p;
+  if(!p)return p;
+  p50ClearImplausibleBirth(p);
+  if(!p50BirthDateIsPlausible(p50BirthDateValue(p)))return p;
   try{
-    p.birthYear=Number(String(p.birthDate).slice(0,4))||p.birthYear||null;
+    p.birthYear=p50BirthYearFromDate(p.birthDate);
     p.ageStatus='confirmed';
     p.agePublic=p.agePublic!==false;
     p.birthManualLocked=true;
@@ -431,7 +479,7 @@ function p50LockBirthDate(p,adminConfirmed=false){
   }catch(err){try{console.warn('PASS50 birth lock',p.id,err)}catch{}}
   return p;
 }
-function p50FreezeExistingBirth(p){try{if(p50BirthIsConfirmed(p))p50LockBirthDate(p,Number(p50EnsurePlainObject(p?.quality).birth||0)>=100)}catch(err){try{console.warn('PASS50 birth freeze',p?.id,err)}catch{}}return p}
+function p50FreezeExistingBirth(p){try{p50ClearImplausibleBirth(p);if(p50BirthIsConfirmed(p))p50LockBirthDate(p,Number(p50EnsurePlainObject(p?.quality).birth||0)>=100)}catch(err){try{console.warn('PASS50 birth freeze',p?.id,err)}catch{}}return p}
 function p50IsReloadNavigation(){
   try{
     const nav=performance.getEntriesByType?.('navigation')?.[0];
@@ -451,6 +499,10 @@ function p50ClearProfileQuery(){
 window.p50BirthDateValue=p50BirthDateValue;
 window.p50EnsurePlainObject=p50EnsurePlainObject;
 window.p50VerifiedFactsList=p50VerifiedFactsList;
+window.p50BirthYearFromDate=p50BirthYearFromDate;
+window.p50BirthYearIsPlausible=p50BirthYearIsPlausible;
+window.p50BirthDateIsPlausible=p50BirthDateIsPlausible;
+window.p50ClearImplausibleBirth=p50ClearImplausibleBirth;
 window.p50BirthIsConfirmed=p50BirthIsConfirmed;
 window.p50BirthShouldPreserve=p50BirthShouldPreserve;
 window.p50LockBirthDate=p50LockBirthDate;
@@ -973,7 +1025,7 @@ function p50PhotoUpdatedAt(p){const t=Date.parse(String(p?.photoManualUpdatedAt|
 function p50LocalPhotoShouldKeep(kept,cloud){const cloudUrl=String(cloud?.photoUrl||cloud?.photoCandidateUrl||'');const localUrl=String(kept?.photoUrl||kept?.photoCandidateUrl||'');if(!cloudUrl)return Boolean(localUrl);if(!localUrl)return false;if(localUrl===cloudUrl)return false;const localAt=p50PhotoUpdatedAt(kept),cloudAt=p50PhotoUpdatedAt(cloud);if(localAt&&cloudAt)return localAt>cloudAt;if(cloudAt&&!localAt)return false;return false}
 function p50ProfileChartHtml(p){const bars=[31,38,42,36,51,59,63,70,66,79,85,score(p)];return `<div class="chart">${bars.map((h,i)=>`<div class="bar" style="--bar-h:${Math.max(8,h)}%;--bar-delay:${i*45}ms"></div>`).join('')}</div>`}
 
-function ageText(p){if(p.agePublic===false)return'Masqué';const confidence=Number(p?.quality?.birth||0),verifiedFacts=Array.isArray(p?.dataEngine?.verifiedFacts)?p.dataEngine.verifiedFacts:[],confirmed=p.ageStatus==='confirmed'||confidence>=90||verifiedFacts.includes('birth_date');if(confirmed&&p.birthDate){const b=new Date(p.birthDate+'T00:00:00'),n=new Date();if(!Number.isNaN(b.getTime())){let age=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))age--;return `${age} ans`;}}if(p.birthYear){const a=new Date().getFullYear()-Number(p.birthYear);return confirmed?`${a} ans`:`≈ ${a-1}–${a} ans`;}return'Non confirmé'}
+function ageText(p){if(p.agePublic===false)return'Masqué';const date=p50BirthDateValue(p),year=p50BirthYearFromDate(date)??(p.birthYear==null||p.birthYear===''?null:Number(p.birthYear));if(!p50BirthYearIsPlausible(year))return'Non confirmé';const confidence=Number(p?.quality?.birth||0),verifiedFacts=p50VerifiedFactsList(p),confirmed=p.ageStatus==='confirmed'||confidence>=90||verifiedFacts.includes('birth_date');if(confirmed&&p50BirthDateIsPlausible(date)){const b=new Date(date+'T00:00:00'),n=new Date();if(!Number.isNaN(b.getTime())){let age=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))age--;if(age>=5&&age<=110)return `${age} ans`;}}const a=new Date().getFullYear()-Number(year);if(a<5||a>110)return'Non confirmé';return confirmed?`${a} ans`:`≈ ${a-1}–${a} ans`}
 function publishedAtIso(){const meta=db.metricsRankingMeta||{};return meta.publishedAt||db.publishedAt||new Date().toISOString();}
 let _renderCoalesceTimer=null,_renderForceScoreMotion=false;
 let previousTop10Order=[],previousTop3Order=[],bootTop3Lock=null,_bootSettleTimer=null;
@@ -1499,7 +1551,7 @@ document.addEventListener('input',e=>{
     const count=document.querySelector('#fullRankingCount');if(count)count.textContent=`${visible} profil${visible>1?'s':''}`;
   }
 });
-document.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='authForm')submitAuth(e.target);if(e.target.id==='liveForm')startLive(new FormData(e.target));if(e.target.id==='hubForm'){const p=profile(e.target.dataset.id),fd=new FormData(e.target);ensureQuality(p);['identity','photo','birth','nationality','social','score','live'].forEach(k=>p.quality[k]=Math.max(0,Math.min(100,Number(fd.get(k)||0))));p.qualityNote=String(fd.get('qualityNote')||'');p.lastCollectedAt=new Date().toISOString();if(Number(p.quality.birth||0)>=90&&p50BirthDateValue(p))p50LockBirthDate(p,true);save();ui.adminTab='adminhome';renderAdmin();toast('Contrôle enregistré');}if(e.target.id==='profileForm'){const fd=new FormData(e.target),isNew=e.target.dataset.new==='1';let p=isNew?null:profile(e.target.dataset.id);if(isNew){p=buildProfile([e.target.dataset.id,String(fd.get('name')),String(fd.get('handle')),(String(fd.get('name')).match(/\b\w/g)||['I','A']).slice(0,2).join('').toUpperCase(),String(fd.get('region')),String(fd.get('category')),['Instagram'],Number(fd.get('score')),Number(fd.get('delta')),0],db.profiles.length);db.profiles.push(p);}p.name=String(fd.get('name'));p.handle=String(fd.get('handle'));p.region=String(fd.get('region'));p.category=String(fd.get('category'));p.scores[ui.period]=Number(fd.get('score'));p.delta=Number(fd.get('delta'));p.birthDate=String(fd.get('birthDate')||'').trim()||null;p.birthYear=p.birthDate?Number(String(p.birthDate).slice(0,4)):null;p.ageStatus=String(fd.get('ageStatus'));if(!p.birthDate){p.birthManualLocked=false;p.birthManualUpdatedAt=null;}else if(p.ageStatus==='confirmed'||p.birthManualLocked)p50LockBirthDate(p,true);const nextPhotoUrl=String(fd.get('photoUrl')||'').trim();const nextPhotoStatus=String(fd.get('photoStatus')||p.photoStatus||'missing');p.photoPosition=String(fd.get('photoPosition')||p.photoPosition||'50% 50%');if(nextPhotoUrl){p.photoUrl=nextPhotoUrl;p.photoCandidateUrl=nextPhotoUrl;p.photoStatus=nextPhotoStatus||'validated';p.photoManualLocked=true;p.photoManualUpdatedAt=new Date().toISOString();}else if(!p.photoUrl&&!p.photoCandidateUrl){p.photoStatus=nextPhotoStatus||'missing';}else{p.photoStatus=nextPhotoStatus||p.photoStatus||'pending';}p.alive=fd.get('alive')==='on';p.eligible=fd.get('eligible')==='on';if(p.alive){p.adminDeleted=false;delete p.deletedAt;}else{p.classable=false;}save();render();ui.adminTab='profiles';renderAdmin();toast('Profil enregistré')}});
+document.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='authForm')submitAuth(e.target);if(e.target.id==='liveForm')startLive(new FormData(e.target));if(e.target.id==='hubForm'){const p=profile(e.target.dataset.id),fd=new FormData(e.target);ensureQuality(p);['identity','photo','birth','nationality','social','score','live'].forEach(k=>p.quality[k]=Math.max(0,Math.min(100,Number(fd.get(k)||0))));p.qualityNote=String(fd.get('qualityNote')||'');p.lastCollectedAt=new Date().toISOString();if(Number(p.quality.birth||0)>=90&&p50BirthDateValue(p))p50LockBirthDate(p,true);save();ui.adminTab='adminhome';renderAdmin();toast('Contrôle enregistré');}if(e.target.id==='profileForm'){const fd=new FormData(e.target),isNew=e.target.dataset.new==='1';let p=isNew?null:profile(e.target.dataset.id);if(isNew){p=buildProfile([e.target.dataset.id,String(fd.get('name')),String(fd.get('handle')),(String(fd.get('name')).match(/\b\w/g)||['I','A']).slice(0,2).join('').toUpperCase(),String(fd.get('region')),String(fd.get('category')),['Instagram'],Number(fd.get('score')),Number(fd.get('delta')),0],db.profiles.length);db.profiles.push(p);}p.name=String(fd.get('name'));p.handle=String(fd.get('handle'));p.region=String(fd.get('region'));p.category=String(fd.get('category'));p.scores[ui.period]=Number(fd.get('score'));p.delta=Number(fd.get('delta'));p.birthDate=String(fd.get('birthDate')||'').trim()||null;if(p.birthDate&&!p50BirthDateIsPlausible(p.birthDate))p.birthDate=null;p.birthYear=p.birthDate?p50BirthYearFromDate(p.birthDate):null;p.ageStatus=String(fd.get('ageStatus'));if(!p.birthDate){p.birthManualLocked=false;p.birthManualUpdatedAt=null;p.birthYear=null;}else if(p.ageStatus==='confirmed'||p.birthManualLocked)p50LockBirthDate(p,true);const nextPhotoUrl=String(fd.get('photoUrl')||'').trim();const nextPhotoStatus=String(fd.get('photoStatus')||p.photoStatus||'missing');p.photoPosition=String(fd.get('photoPosition')||p.photoPosition||'50% 50%');if(nextPhotoUrl){p.photoUrl=nextPhotoUrl;p.photoCandidateUrl=nextPhotoUrl;p.photoStatus=nextPhotoStatus||'validated';p.photoManualLocked=true;p.photoManualUpdatedAt=new Date().toISOString();}else if(!p.photoUrl&&!p.photoCandidateUrl){p.photoStatus=nextPhotoStatus||'missing';}else{p.photoStatus=nextPhotoStatus||p.photoStatus||'pending';}p.alive=fd.get('alive')==='on';p.eligible=fd.get('eligible')==='on';if(p.alive){p.adminDeleted=false;delete p.deletedAt;}else{p.classable=false;}save();render();ui.adminTab='profiles';renderAdmin();toast('Profil enregistré')}});
 $$('#periodFilters button').forEach(b=>b.addEventListener('click',()=>{$$('#periodFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');ui.period=b.dataset.period;ui.scoreMotion=true;render();toast('Période : '+periodLabels[ui.period])}));
 $$('#regionFilters button').forEach(b=>b.addEventListener('click',()=>{$$('#regionFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');ui.region=b.dataset.region;ui.scoreMotion=true;render();toast('Zone mise à jour')}));
 $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)close(m.id)}));
@@ -1616,7 +1668,7 @@ async function loadCloudState(){
     photoManualLocked:Boolean(p.photoManualLocked)||['validated','verified','approved','manual_verified'].includes(String(p.photoStatus||'').toLowerCase()),
     photoManualUpdatedAt:p.photoManualUpdatedAt||new Date().toISOString()
   }]));
-  const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p50BirthShouldPreserve(p)).map(p=>[p.id,{birthDate:p.birthDate,birthYear:Number(String(p.birthDate).slice(0,4))||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...p50EnsurePlainObject(p.quality),birth:Math.max(100,Number(p50EnsurePlainObject(p.quality).birth||0))},dataEngine:{...p50EnsurePlainObject(p.dataEngine),verifiedFacts:[...new Set([...p50VerifiedFactsList(p),'birth_date'])]}}]));
+  const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p50BirthShouldPreserve(p)).map(p=>[p.id,{birthDate:p.birthDate,birthYear:p50BirthYearFromDate(p.birthDate)||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...p50EnsurePlainObject(p.quality),birth:Math.max(100,Number(p50EnsurePlainObject(p.quality).birth||0))},dataEngine:{...p50EnsurePlainObject(p.dataEngine),verifiedFacts:[...new Set([...p50VerifiedFactsList(p),'birth_date'])]}}]));
   const data=await apiFetch('state.php',{auth:false,timeoutMs:12000});
   if(Number.isFinite(Number(data?.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
   if(data?.data){const cloud=data.data;const localTombstones=[...(Array.isArray(db.deletedProfileIds)?db.deletedProfileIds:[]),...P50_TOMBSTONE_PROFILE_IDS];cloud.liveStreams=(cloud.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};db.deletedProfileIds=Array.from(new Set([...localTombstones,...(Array.isArray(cloud.deletedProfileIds)?cloud.deletedProfileIds:[])]));migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{

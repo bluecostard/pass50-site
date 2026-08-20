@@ -30,7 +30,7 @@ class RosemarkMarcelLiveRadarTests(unittest.TestCase):
         self.assertIn('rosemarkmarcel', CORE)
 
     def test_cache_bust_loader(self):
-        self.assertIn('./profile-rosemark-marcel.js?v=1.1', CONFIG)
+        self.assertIn('./profile-rosemark-marcel.js?v=1.2', CONFIG)
 
 
 if __name__ == '__main__':

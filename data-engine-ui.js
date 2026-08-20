@@ -700,12 +700,13 @@
     for(const item of DE.hub.profiles){
       const birth=item.birthBest||item.facts?.birth_date,date=String(item.birthDate||birth?.normalized_value||'').trim(),confidence=Number(birth?.confidence||item.quality?.birth||0),status=String(item.birthStatus||birth?.status||'');
       if(!date||status!=='verified'||confidence<threshold)continue;
+      if(typeof p50BirthDateIsPlausible==='function'&&!p50BirthDateIsPlausible(date))continue;
       const p=db.profiles.find(x=>x.id===item.id);if(!p)continue;
       const frozen=Boolean(p.birthManualLocked||(typeof p50BirthShouldPreserve==='function'&&p50BirthShouldPreserve(p))||(p.birthDate&&(p.ageStatus==='confirmed'||Number(p?.quality?.birth||0)>=90)));
       if(frozen&&String(p.birthDate||'')!==date)continue;
       if(p.birthDate!==date||p.ageStatus!=='confirmed'||Number(p?.quality?.birth||0)!==confidence){
         if(frozen)continue;
-        p.birthDate=date;p.birthYear=Number(date.slice(0,4))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=(typeof p50EnsurePlainObject==='function'?p50EnsurePlainObject(p.quality):(p.quality&&typeof p.quality==='object'?p.quality:{}));p.quality.birth=confidence;if(typeof p50LockBirthDate==='function')p50LockBirthDate(p);else{p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();p.dataEngine=(p.dataEngine&&typeof p.dataEngine==='object'&&!Array.isArray(p.dataEngine))?p.dataEngine:{};const facts=Array.isArray(p.dataEngine.verifiedFacts)?p.dataEngine.verifiedFacts:[];p.dataEngine.verifiedFacts=[...new Set([...facts,'birth_date'])];}changed++;
+        p.birthDate=date;p.birthYear=(typeof p50BirthYearFromDate==='function'?p50BirthYearFromDate(date):Number(date.slice(0,4)))||p.birthYear||null;p.ageStatus='confirmed';p.agePublic=p.agePublic!==false;p.quality=(typeof p50EnsurePlainObject==='function'?p50EnsurePlainObject(p.quality):(p.quality&&typeof p.quality==='object'?p.quality:{}));p.quality.birth=confidence;if(typeof p50LockBirthDate==='function')p50LockBirthDate(p);else{p.birthManualLocked=true;p.birthManualUpdatedAt=p.birthManualUpdatedAt||new Date().toISOString();p.dataEngine=(p.dataEngine&&typeof p.dataEngine==='object'&&!Array.isArray(p.dataEngine))?p.dataEngine:{};const facts=Array.isArray(p.dataEngine.verifiedFacts)?p.dataEngine.verifiedFacts:[];p.dataEngine.verifiedFacts=[...new Set([...facts,'birth_date'])];}changed++;
       }
     }
     if(changed){localStorage.setItem(APP_KEY,JSON.stringify(db));if(!DE.majRunning&&window.__pass50CloudReady&&typeof scheduleCloudSync==='function')scheduleCloudSync();}
@@ -719,7 +720,9 @@
     else if((match=cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))){d=Number(match[1]);m=Number(match[2]);y=Number(match[3]);}
     else return '';
     const dt=new Date(Date.UTC(y,m-1,d));if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==m-1||dt.getUTCDate()!==d)return '';
-    return `${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const iso=`${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(typeof p50BirthDateIsPlausible==='function'&&!p50BirthDateIsPlausible(iso))return '';
+    return iso;
   }
 
 

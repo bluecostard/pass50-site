@@ -95,6 +95,14 @@ function applyProfile(){
     profile.platforms=Array.isArray(profile.platforms)?profile.platforms:[];
     ['TikTok','Instagram','Facebook','YouTube'].forEach(p=>{if(!profile.platforms.includes(p)){profile.platforms.push(p);changed=true;}});
   }
+  if(typeof p50ClearImplausibleBirth==='function'){
+    const before=JSON.stringify({d:profile.birthDate,y:profile.birthYear,s:profile.ageStatus});
+    p50ClearImplausibleBirth(profile);
+    if(JSON.stringify({d:profile.birthDate,y:profile.birthYear,s:profile.ageStatus})!==before)changed=true;
+  }else if(Number(profile.birthYear)===2026||String(profile.birthDate||'').startsWith('2026')){
+    profile.birthDate=null;profile.birthYear=null;profile.ageStatus='unconfirmed';profile.birthManualLocked=false;changed=true;
+  }
+  if(profile.verifiedPass50===undefined){profile.verifiedPass50=false;changed=true;}
   if(changed){
     try{if(typeof save==='function')save();else if(typeof APP_KEY!=='undefined')localStorage.setItem(APP_KEY,JSON.stringify(db));}catch{}
     try{if(typeof render==='function')render();}catch{}

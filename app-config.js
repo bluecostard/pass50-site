@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-rosemark-marcel]')) return;
   var script = document.createElement('script');
-  script.src = './profile-rosemark-marcel.js?v=1.1';
+  script.src = './profile-rosemark-marcel.js?v=1.2';
   script.dataset.pass50ProfileRosemarkMarcel = '1.1';
   document.head.appendChild(script);
 })();

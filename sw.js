@@ -36,7 +36,7 @@ const ASSETS=[
   './profile-jp-nda.js?v=1.1','./profile-jp-nda.js?v=1.0','./profile-cahie-kunta.js?v=1.0','./profile-lise-akrassi.js?v=1.0','./profile-lexes.js?v=1.1','./profile-lexes.js?v=1.0',
   './profile-zagba-le-requin.js?v=1.0','./profile-samo-samo.js?v=1.1','./profile-samo-samo.js?v=1.0',
   './profile-lionel-pcs.js?v=1.0','./profile-yasmine-fofana.js?v=1.0',
-  './profile-ange-morel.js?v=1.1','./profile-ange-morel.js?v=1.0','./profile-laguepe.js?v=1.0','./profile-rosemark-marcel.js?v=1.1','./profile-rosemark-marcel.js?v=1.0',
+  './profile-ange-morel.js?v=1.1','./profile-ange-morel.js?v=1.0','./profile-laguepe.js?v=1.0','./profile-rosemark-marcel.js?v=1.2','./profile-rosemark-marcel.js?v=1.1','./profile-rosemark-marcel.js?v=1.0',
   './live-radar-v3.js?v=1.9','./live-trust-gate-v1.js?v=1.3',
   './live-experience-v4-1.js?v=1.7','./live-dismiss-ui-v1.js?v=1.0',
   './official-links-persistence-v3.js?v=3.4','./public-copy-fixes.js?v=1.14','./public-copy-fixes.js?v=1.13','./public-copy-fixes.js?v=1.12','./public-copy-fixes.js?v=1.11','./admin-fi-edit-preserve-v1.js?v=1.0',
@@ -44,7 +44,7 @@ const ASSETS=[
   './meta-oauth-ui-v1.js?v=1.7','./tiktok-oauth-ui-v1.js?v=1.1',
   './admin-fictive-ranking-v1.js?v=1.0','./classement-fictif.html',
   './v9-tools.css?v=22.4','./v9-tools.js?v=15.31','./v9-tools.js?v=15.30','./v9-tools.js?v=15.29','./v9-tools.js?v=15.28','./v9-tools.js?v=15.27',
-  './pass50_nouveaux_candidats_90_v19.json?v=22.15','./data-engine-ui.js?v=18.25','./data-engine-ui.js?v=18.24','./data-engine-ui.js?v=18.23','./data-engine-ui.js?v=18.22','./data-engine-ui.js?v=18.21',
+  './pass50_nouveaux_candidats_90_v19.json?v=22.15','./data-engine-ui.js?v=18.26','./data-engine-ui.js?v=18.25','./data-engine-ui.js?v=18.24','./data-engine-ui.js?v=18.23','./data-engine-ui.js?v=18.22','./data-engine-ui.js?v=18.21',
   './manifest.webmanifest?v=22.4','./icon.svg?v=22.4','./favicon-32.png?v=22.4',
   './apple-touch-icon.png?v=22.4','./assets/hero-media-1.jpg','./assets/hero-media-2.jpg',
   './assets/hero-media-3.jpg','./assets/hero-media-4.jpg','./assets/hero-media-5.jpg','./assets/hero-media-6.jpg','./data-engine-ui.css?v=27.1'

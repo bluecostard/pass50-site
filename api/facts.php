@@ -51,6 +51,7 @@ $sourceName=trim((string)($in['sourceName']??''));
 $sourceUrl=trim((string)($in['sourceUrl']??''));
 $confirmedSource=filter_var($in['confirmedSource']??false,FILTER_VALIDATE_BOOLEAN);
 if($profileId===''||$factKey!=='birth_date'||$value==='')json_response(['error'=>'Date invalide. Formats acceptés : JJ/MM/AAAA ou AAAA-MM-JJ.'],422);
+if(!p50_de_is_plausible_birth_date($value))json_response(['error'=>'Date de naissance impossible (année actuelle, future ou hors plage).'],422);
 if(!$confirmedSource)json_response(['error'=>'La confirmation de la source est obligatoire.'],422);
 if(!filter_var($sourceUrl,FILTER_VALIDATE_URL)||!p50_public_http_url($sourceUrl))json_response(['error'=>'Source publique invalide.'],422);
 $profiles=p50_de_registry_profiles($profileId,1,0);
