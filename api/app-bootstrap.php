@@ -37,8 +37,13 @@ json_response([
     ],
     'guidance' => [
         'desktop' => 'Plateforme complète (classement, fil, prono, compte, admin).',
-        'mobileApp' => 'Même API ; lecture live en mode=status uniquement ; scans réservés serveur/admin.',
+        'mobileApp' => 'Client web installable : ./app.html — même API ; live en mode=status uniquement.',
         'auth' => 'Authorization: Bearer <token> après login.php',
+    ],
+    'client' => [
+        'webApp' => 'app.html',
+        'contract' => 'PASS50-APP-CLIENT-V1',
+        'manifest' => 'manifest.webmanifest',
     ],
     'generatedAt' => gmdate('c'),
 ]);

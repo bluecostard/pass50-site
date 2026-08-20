@@ -48,16 +48,17 @@ class AppPlatformPhase2Tests(unittest.TestCase):
         copy = read("public-copy-fixes.js")
         self.assertIn('"display": "standalone"', manifest)
         self.assertIn("maskable", manifest)
+        self.assertIn("./app.html?source=pwa", manifest)
         self.assertIn("PASS50-APP-SHELL-SW-V1", sw)
         self.assertNotIn("self.registration.unregister()", sw)
-        self.assertIn("app-bootstrap.php", app)
+        self.assertIn("app-client.js?v=1.0", app)
         self.assertIn("reconcileServiceWorkers", copy)
         self.assertNotIn("disableServiceWorkers", copy)
 
     def test_desktop_surfaces_still_linked(self):
-        app = read("app.html")
+        client = read("app-client.js")
         for href in ("./", "./mon-fil.html", "./pronostics.html", "./?open=account"):
-            self.assertIn(href, app)
+            self.assertIn(href, client)
 
 
 if __name__ == "__main__":
