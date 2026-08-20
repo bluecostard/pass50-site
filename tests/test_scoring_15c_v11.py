@@ -51,6 +51,8 @@ class Scoring15cV11Tests(unittest.TestCase):
         self.assertIn("informations-legales.html", INDEX)
         self.assertIn("verification-pass50.html", INDEX)
         self.assertIn("accountLegalLinksHtml()", INDEX)
+        open_auth = INDEX.split("function openAuth(", 1)[1].split("async function submitAuth", 1)[0]
+        self.assertNotIn("accountLegalLinksHtml()", open_auth)
 
 
 if __name__ == "__main__":

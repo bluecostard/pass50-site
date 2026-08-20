@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.8';
+  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.9';
   const PRONO_HREF = './pronostics.html?v=83';
   const LEGACY_CONTEXT_SHARE_ASSET = './context-share-v1.js?v=1.0';
   const path = location.pathname || '';
@@ -210,6 +210,15 @@
     if (profileId) callWhenReady('openProfile', fn => fn(profileId));
   }
 
+  function guestNeedsAuth() {
+    if (typeof window.currentUser === 'function' && window.currentUser()) return false;
+    try {
+      if (localStorage.getItem('pass50_api_token')) return false;
+      if (sessionStorage.getItem('pass50_session')) return false;
+    } catch (_) {}
+    return true;
+  }
+
   function openAccount(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -252,6 +261,17 @@
       }
       openAccount(event || { preventDefault() {}, stopPropagation() {} });
       activatedAt = Date.now();
+      return true;
+    }
+
+    if ((tab === 'feed' || tab === 'prono') && guestNeedsAuth()) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      activatedAt = Date.now();
+      if (isHome && typeof window.openAuth === 'function') window.openAuth('login');
+      else location.assign('./?open=account');
       return true;
     }
 
