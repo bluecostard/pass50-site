@@ -114,12 +114,52 @@ function p50_mrp_apply_schema_sql(): array {
           INDEX idx_p50_mrpa_status_created(status,created_at),
           INDEX idx_p50_mrpa_run(run_uuid)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS p50_metric_publication_preview_cache (
+          id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+          run_uuid CHAR(36) CHARACTER SET ascii NOT NULL,
+          public_revision INT UNSIGNED NOT NULL DEFAULT 0,
+          payload_json LONGTEXT NOT NULL,
+          expires_at DATETIME NOT NULL,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
     ];
 }
 
 function p50_mrp_apply_ensure_schema(PDO $pdo): array {
     foreach(p50_mrp_apply_schema_sql() as $sql)$pdo->exec($sql);
     return ['status'=>p50_metrics_table_exists($pdo,'p50_metric_publication_applies')?'applied':'missing','table'=>'p50_metric_publication_applies'];
+}
+
+function p50_mrp_apply_save_preview_cache(PDO $pdo,array $preview): void {
+    if(empty($preview['publicationEligible'])||empty($preview['publishPlans'])||empty($preview['runUuid']))return;
+    p50_mrp_apply_ensure_schema($pdo);
+    $anchorPeriod=array_key_exists('24H',(array)$preview['publishPlans'])?'24H':(string)array_key_first((array)$preview['publishPlans']);
+    $revision=(int)(($preview['publishPlans'][$anchorPeriod]['publicStateRevision']??0));
+    $expires=(p50_metrics_now_utc())->modify('+20 minutes')->format('Y-m-d H:i:s');
+    $payload=p50_mr_json([
+        'runUuid'=>(string)$preview['runUuid'],
+        'publicationEligible'=>true,
+        'status'=>(string)($preview['status']??'ready'),
+        'bootstrap'=>!empty($preview['bootstrap']),
+        'summary'=>(array)($preview['summary']??[]),
+        'publishPlans'=>(array)$preview['publishPlans'],
+        'periods'=>array_keys((array)$preview['publishPlans']),
+    ],false);
+    $stmt=$pdo->prepare("INSERT INTO p50_metric_publication_preview_cache(id,run_uuid,public_revision,payload_json,expires_at,updated_at)
+        VALUES(1,?,?,?,?,UTC_TIMESTAMP())
+        ON DUPLICATE KEY UPDATE run_uuid=VALUES(run_uuid),public_revision=VALUES(public_revision),payload_json=VALUES(payload_json),expires_at=VALUES(expires_at),updated_at=UTC_TIMESTAMP()");
+    $stmt->execute([(string)$preview['runUuid'],$revision,$payload,$expires]);
+}
+
+function p50_mrp_apply_load_preview_cache(PDO $pdo): ?array {
+    if(!p50_metrics_table_exists($pdo,'p50_metric_publication_preview_cache'))return null;
+    $row=$pdo->query("SELECT run_uuid,public_revision,payload_json,expires_at FROM p50_metric_publication_preview_cache WHERE id=1 LIMIT 1")->fetch();
+    if(!$row)return null;
+    $expires=p50_metrics_parse_utc((string)$row['expires_at']);
+    if(!$expires||$expires<p50_metrics_now_utc())return null;
+    $payload=json_decode((string)$row['payload_json'],true);
+    if(!is_array($payload)||empty($payload['publicationEligible'])||empty($payload['publishPlans'])||empty($payload['runUuid']))return null;
+    return $payload;
 }
 
 function p50_mrp_apply_has_prior_success(PDO $pdo): bool {
@@ -258,7 +298,7 @@ function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $
     }
     $eligible=!$blocked&&$runUuid!==null&&$totalMutations>0&&$publishPlans!==[]&&$cfg['publicationEnabled'];
     $autoEligible=$eligible&&$cfg['automaticPublicationEnabled'];
-    return [
+    $preview=[
         'ok'=>true,
         'version'=>P50_MRP_APPLY_VERSION,
         'algorithmVersion'=>P50_MR_ALGORITHM_VERSION,
@@ -295,6 +335,8 @@ function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $
         'nextPhase'=>$eligible?'apply_with_backup':'resolve_gates_or_enable_publication',
         'health'=>p50_mrp_apply_health($pdo),
     ];
+    try{p50_mrp_apply_save_preview_cache($pdo,$preview);}catch(Throwable){}
+    return $preview;
 }
 
 function p50_mrp_apply_mutate_state(array $state,array $plans,string $runUuid): array {
@@ -414,8 +456,20 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
         $lastRaceError=null;
         for($raceAttempt=1;$raceAttempt<=$raceAttempts;$raceAttempt++){
             try{
-                // forceBootstrap doit assouplir exit/entry/movement dans la preview, sinon la recovery reste bloquée.
-                $preview=p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now,$forceBootstrap);
+                // Réutilise la preview fraîche (cache 20 min) pour éviter 5× simulate à chaque tentative —
+                // c’est ce double calcul qui faisait planter l’apply en 500 vide côté IONOS.
+                $preview=null;
+                if(!$forceBootstrap){
+                    $cached=p50_mrp_apply_load_preview_cache($pdo);
+                    if(is_array($cached)&&!empty($cached['publicationEligible'])&&!empty($cached['publishPlans'])){
+                        $preview=$cached;
+                        $preview['fromCache']=true;
+                    }
+                }
+                if($preview===null){
+                    // forceBootstrap doit assouplir exit/entry/movement dans la preview, sinon la recovery reste bloquée.
+                    $preview=p50_mrp_apply_preview($pdo,P50_MRP_APPLY_PERIODS,$now,$forceBootstrap);
+                }
                 $reasons=(array)($preview['summary']['reasons']??[]);
                 $blockedPeriods=(array)($preview['summary']['blockedPeriods']??[]);
                 if(($preview['status']??'')==='blocked'||empty($preview['runUuid'])||empty($preview['publicationEligible'])){
@@ -508,6 +562,8 @@ function p50_mrp_apply_execute(PDO $pdo,array $options=[]): array {
                 if($pdo->inTransaction())$pdo->rollBack();
                 if($raceAttempt<$raceAttempts&&p50_mrp_apply_is_transient_race($error)){
                     $lastRaceError=$error;
+                    // Cache basé sur l’ancienne révision → forcer une preview neuve au prochain tour.
+                    try{$pdo->exec("DELETE FROM p50_metric_publication_preview_cache WHERE id=1");}catch(Throwable){}
                     usleep(150000*$raceAttempt);
                     continue;
                 }

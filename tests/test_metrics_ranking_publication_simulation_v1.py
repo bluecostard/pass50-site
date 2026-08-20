@@ -81,6 +81,10 @@ class MetricsRankingPublicationSimulationV1Tests(unittest.TestCase):
             "maximum_rank_movement",
         ):
             self.assertIn(f"'{gate}'", simulate)
+        self.assertIn(
+            "p50_mrp_gate('candidate_profiles_exist',!$orphans?'pass':'warn'",
+            simulate,
+        )
         self.assertIn("P50_MRP_MAX_RUN_AGE_HOURS=6", CORE)
         self.assertIn("$experimental['runUuids'][0]===($latestRun['runUuid']??null)", simulate)
         self.assertIn("$blocked?'blocked':($warnings?'review':'ready')", simulate)

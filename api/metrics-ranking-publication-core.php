@@ -209,7 +209,9 @@ function p50_mrp_simulate(PDO $pdo,string $period='2H',int $limit=200,?DateTimeI
         p50_mrp_gate('successful_run',$latestRun!==null?'pass':'block','Un cycle MR-V1.0 réussi couvre la période.',$latestRun['runUuid']??null),
         p50_mrp_gate('candidate_run_consistency',$latestRun!==null&&count($experimental['runUuids'])===1&&$experimental['runUuids'][0]===($latestRun['runUuid']??null)?'pass':'block','Toutes les lignes candidates proviennent du dernier cycle réussi.',$experimental['runUuids']),
         p50_mrp_gate('candidate_non_empty',$comparison['candidateCount']>0?'pass':'block','Le candidat contient au moins un profil classable.',$comparison['candidateCount']),
-        p50_mrp_gate('candidate_profiles_exist',!$orphans?'pass':'block','Tous les profils candidats existent dans app_state.',$orphans),
+        // Warn (pas block) : l’apply ignore déjà les profils absents de app_state.
+        // Un block ici refusait toute publication dès qu’un score expérimental orphelin apparaissait.
+        p50_mrp_gate('candidate_profiles_exist',!$orphans?'pass':'warn','Profils candidats absents de app_state (ignorés à la publication).',$orphans),
         p50_mrp_gate('run_freshness',$runAgeHours!==null&&$runAgeHours<=P50_MRP_MAX_RUN_AGE_HOURS?'pass':'block','Le calcul expérimental a moins de six heures.',$runAgeHours),
         p50_mrp_gate('exit_ratio',$exitRatio<=20?'pass':'warn','Part des sorties par rapport au classement public.',$exitRatio),
         p50_mrp_gate('entry_ratio',$entryRatio<=20?'pass':'warn','Part des entrées par rapport au classement public.',$entryRatio),
