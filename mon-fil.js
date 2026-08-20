@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.20';
+  const CONTRACT = 'PASS50-FOLLOW-FEED-PAGE-V2.21';
   const API_BASE = './api';
   const APP_KEY = 'pass50.ionos.v1';
   const MAX_FOLLOWED = 5;
@@ -711,10 +711,19 @@
     renderFeed();
   }
 
+  function sharedLiveSource() {
+    if (window.db && Array.isArray(window.db.liveStreams)) return window.db.liveStreams;
+    const cached = localDb().liveStreams;
+    return Array.isArray(cached) ? cached : [];
+  }
+
   function normalizeLives(items) {
+    if (typeof window.PASS50_LIVE_FILTER_PUBLIC === 'function') {
+      return window.PASS50_LIVE_FILTER_PUBLIC(items);
+    }
     const seen = new Set();
     return (Array.isArray(items) ? items : []).filter(item => {
-      if (!item || item.status !== 'live' || !/^https?:\/\//i.test(String(item.url || ''))) return false;
+      if (!item || item.status !== 'live' || !item.profileId || !/^https?:\/\//i.test(String(item.url || ''))) return false;
       const key = [item.profileId || '', item.platform || '', String(item.url).replace(/\/+$/, '')].map(value => String(value).toLowerCase()).join('|');
       if (seen.has(key)) return false;
       seen.add(key);
@@ -722,17 +731,40 @@
     });
   }
 
-  async function refreshRadar() {
+  function persistSharedLives(streams) {
     try {
-      const data = await apiFetch('live-status.php');
-      state.liveStreams = normalizeLives(data?.liveStreams);
-    } catch (error) {
-      console.warn('Radar LIVE indisponible', error);
-      state.liveStreams = [];
-    }
+      const database = localDb();
+      database.liveStreams = streams;
+      localStorage.setItem(APP_KEY, JSON.stringify(database));
+      if (!window.db || typeof window.db !== 'object') window.db = database;
+      window.db.liveStreams = streams;
+    } catch (_) {}
+  }
+
+  function syncLiveUi() {
+    state.liveStreams = normalizeLives(sharedLiveSource());
     const count = $('#feedLiveCount');
     if (count) count.textContent = state.liveStreams.length ? `(${state.liveStreams.length})` : '';
     if ($('#feedLiveModal')?.classList.contains('show')) renderRadarModal();
+  }
+
+  async function refreshRadar() {
+    syncLiveUi();
+    try {
+      const data = await apiFetch('live-status.php');
+      if (data?.radar) window.PASS50_LIVE_RADAR = data.radar;
+      if (Array.isArray(data?.liveStreams)) {
+        persistSharedLives(data.liveStreams);
+        if (typeof window.normalizeLiveStreams === 'function') {
+          try { window.normalizeLiveStreams(); } catch (_) {}
+        } else {
+          persistSharedLives(normalizeLives(data.liveStreams));
+        }
+      }
+    } catch (error) {
+      console.warn('Radar LIVE indisponible', error);
+    }
+    syncLiveUi();
   }
 
   function renderRadarModal() {
@@ -838,9 +870,14 @@
     state.user = user;
     state.profiles = profiles;
     state.following = [...new Set(Array.isArray(user?.following) ? user.following.map(String) : [])].slice(0, MAX_FOLLOWED);
+    syncLiveUi();
     await Promise.all([refreshFeed(), refreshRadar()]);
     restoreFeedOrigin();
-    setInterval(refreshRadar, 60000);
+    if (typeof window.PASS50_RUN_LIVE_RADAR === 'function') {
+      setTimeout(() => window.PASS50_RUN_LIVE_RADAR(false), 2500);
+    }
+    setInterval(syncLiveUi, 5000);
+    setInterval(refreshRadar, 30000);
     setInterval(() => refreshFeed({ silent: true }), 60000);
     window.PASS50_FOLLOW_FEED_PAGE = Object.freeze({ contract: CONTRACT, maxFollowed: MAX_FOLLOWED, newsPerProfile: NEWS_PER_PROFILE, duelAudio: true });
   }
