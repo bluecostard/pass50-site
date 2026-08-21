@@ -38,6 +38,20 @@ function json_response(array $data, int $status = 200): never {
     exit;
 }
 
+/** Cache navigateur + edge Cloudflare pour les lectures publiques. */
+function p50_public_edge_cache(int $maxAge, int $staleWhileRevalidate = 0): void {
+    $maxAge = max(0, $maxAge);
+    $staleWhileRevalidate = max(0, $staleWhileRevalidate);
+    $value = 'public, max-age=' . $maxAge;
+    if ($staleWhileRevalidate > 0) {
+        $value .= ', stale-while-revalidate=' . $staleWhileRevalidate;
+    }
+    header('Cache-Control: ' . $value);
+    // Respecté par Cloudflare même si un proxy intermédiaire touche Cache-Control.
+    header('Cloudflare-CDN-Cache-Control: ' . $value);
+    header('CDN-Cache-Control: ' . $value);
+}
+
 function json_input(): array {
     $raw = file_get_contents('php://input');
     if ($raw === false || trim($raw) === '') return [];

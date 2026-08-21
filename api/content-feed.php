@@ -42,7 +42,7 @@ function p50_content_feed_facebook_playable(string $platform,string $contentType
 $pdo=db();
 if(!p50_ci_table_ready($pdo)){
   if($profileId===''){
-    header('Cache-Control: public, max-age=30, stale-while-revalidate=60');
+    p50_public_edge_cache(30, 60);
   }else{
     header('Cache-Control: private, max-age=15');
   }
@@ -149,7 +149,7 @@ $runFinishedAt=$lastRun&&$lastRun['finished_at']?strtotime((string)$lastRun['fin
 $trendAgeMinutes=$runFinishedAt===false?null:max(0,(int)floor((time()-$runFinishedAt)/60));
 $trendDataStale=$trendAgeMinutes!==null&&$trendAgeMinutes>30;
 if($profileId===''){
-  header('Cache-Control: public, max-age=30, stale-while-revalidate=60');
+  p50_public_edge_cache(30, 60);
 }else{
   header('Cache-Control: private, max-age=15');
 }

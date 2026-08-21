@@ -18,7 +18,7 @@ class PeakLoadCacheLiveV1Tests(unittest.TestCase):
         self.assertIn("mode === 'status'", legacy)
         self.assertIn("PASS50-LIVE-STATUS-CACHE-V1", cache)
         self.assertIn("GET_LOCK('pass50_live_status_cache'", cache)
-        self.assertIn("Cache-Control: public, max-age=", cache)
+        self.assertIn("p50_public_edge_cache(P50_LIVE_STATUS_CACHE_MAX_AGE", cache)
         self.assertIn("JSON_EXTRACT(data, '$.liveStreams')", cache)
         self.assertNotIn("p50_de_load_public_state()", cache)
         self.assertNotIn("p50_de_sync_registry_from_state", cache)
@@ -32,9 +32,9 @@ class PeakLoadCacheLiveV1Tests(unittest.TestCase):
         ranking = read("api/public-ranking.php")
         feed = read("api/content-feed.php")
         boot = read("api/app-bootstrap.php")
-        self.assertIn("Cache-Control: public, max-age=60, stale-while-revalidate=120", ranking)
-        self.assertIn("Cache-Control: public, max-age=30, stale-while-revalidate=60", feed)
-        self.assertIn("Cache-Control: public, max-age=60, stale-while-revalidate=120", boot)
+        self.assertIn("p50_public_edge_cache(60, 120)", ranking)
+        self.assertIn("p50_public_edge_cache(30, 60)", feed)
+        self.assertIn("p50_public_edge_cache(60, 120)", boot)
         self.assertIn("Cache-Control: private, no-store", boot)
 
     def test_deploy_priority_includes_cache_core(self):

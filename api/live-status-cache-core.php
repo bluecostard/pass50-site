@@ -139,10 +139,7 @@ function p50_live_status_cache_build(): array {
 }
 
 function p50_live_status_cache_headers(bool $hit): void {
-    header(
-        'Cache-Control: public, max-age=' . P50_LIVE_STATUS_CACHE_MAX_AGE
-        . ', stale-while-revalidate=' . P50_LIVE_STATUS_CACHE_SWR
-    );
+    p50_public_edge_cache(P50_LIVE_STATUS_CACHE_MAX_AGE, P50_LIVE_STATUS_CACHE_SWR);
     header('X-PASS50-Live-Cache: ' . ($hit ? 'HIT' : 'MISS'));
     header('X-PASS50-Live-Contract: ' . P50_LIVE_STATUS_CACHE_CONTRACT);
 }

@@ -32,7 +32,7 @@ try {
             $payload['rows'] = array_slice($payload['periods'][$period], 0, $limit);
         }
         // Clients app / desktop : cache courte pour encaisser un pic de lectures.
-        header('Cache-Control: public, max-age=60, stale-while-revalidate=120');
+        p50_public_edge_cache(60, 120);
         json_response($payload);
     }
 

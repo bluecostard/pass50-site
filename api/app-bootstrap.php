@@ -13,7 +13,7 @@ $user = auth_user(false);
 $session = $user ? user_payload($user) : null;
 
 if ($session === null) {
-    header('Cache-Control: public, max-age=60, stale-while-revalidate=120');
+    p50_public_edge_cache(60, 120);
 } else {
     header('Cache-Control: private, no-store');
 }
