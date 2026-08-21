@@ -1,6 +1,6 @@
 # PASS50 — Coque native (Capacitor)
 
-Coque **iOS / Android** autour du client mobile déjà en prod :  
+Coque **iOS / Android** autour du client mobile déjà en prod :
 `https://pass50.store/app.html`
 
 Doctrine :
