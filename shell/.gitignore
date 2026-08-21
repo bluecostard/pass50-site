@@ -1,6 +1,7 @@
 node_modules/
-android/
 ios/
 .DS_Store
 *.log
 dist/
+
+# Android : le projet natif est versionné ; builds locaux ignorés via android/.gitignore

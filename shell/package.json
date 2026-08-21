@@ -5,6 +5,7 @@
   "description": "Coque Capacitor iOS/Android autour de https://pass50.store/app.html",
   "scripts": {
     "sync": "npx cap sync",
+    "sync:android": "npx cap sync android",
     "open:android": "npx cap open android",
     "open:ios": "npx cap open ios",
     "add:android": "npx cap add android",
