@@ -33,7 +33,7 @@ class FiEditPreserveV1Tests(unittest.TestCase):
     def test_runtime_is_loaded(self):
         self.assertIn("admin-fi-edit-preserve-v1.js?v=1.0", LOADER)
         self.assertIn("official-links-protection-v4.js?v=4.5", LOADER)
-        self.assertIn("public-copy-fixes.js?v=1.14", CONFIG)
+        self.assertIn("public-copy-fixes.js?v=1.15", CONFIG)
         self.assertIn("admin-fi-edit-preserve-v1.js?v=1.0", SW)
 
 
