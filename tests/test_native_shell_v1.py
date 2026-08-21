@@ -40,8 +40,10 @@ class NativeShellV1Tests(unittest.TestCase):
         self.assertIn('Files "apple-app-site-association"', htaccess)
         self.assertIn('Files "assetlinks.json"', htaccess)
         self.assertIn("--exclude 'shell/'", deploy)
-        self.assertIn("put -O ${REMOTE_DIR@Q}/.well-known .deploy/.well-known/assetlinks.json", deploy)
+        self.assertIn(".deploy/.well-known/assetlinks.json", deploy)
         self.assertIn("apple-app-site-association", deploy)
+        self.assertIn("mkdir ${REMOTE_DIR@Q}/.well-known", deploy)
+        self.assertNotIn("mkdir -p .deploy/.well-known\n          put -O", deploy)
 
     def test_readme_documents_store_flow(self):
         readme = read("shell/README.md")

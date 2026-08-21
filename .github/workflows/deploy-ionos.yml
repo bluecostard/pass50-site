@@ -38,6 +38,11 @@ jobs:
             --exclude '*.md'
           jq -nc --arg commit "$GITHUB_SHA" --arg deployedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             '{commit:$commit,deployedAt:$deployedAt,environment:"production",serviceWorker:"app-shell-v1",frontend:"v82-share-v2-only"}' > .deploy/deployment-version.json
+          mkdir -p .deploy/.well-known
+          cp -f .well-known/assetlinks.json .deploy/.well-known/assetlinks.json
+          cp -f .well-known/apple-app-site-association .deploy/.well-known/apple-app-site-association
+          test -f .deploy/.well-known/assetlinks.json
+          test -f .deploy/.well-known/apple-app-site-association
 
       - name: Installer SFTP
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
@@ -112,7 +117,9 @@ jobs:
           put -O ${REMOTE_DIR@Q} .deploy/app.html
           put -O ${REMOTE_DIR@Q} .deploy/app-client.js
           put -O ${REMOTE_DIR@Q} .deploy/manifest.webmanifest
-          mkdir -p .deploy/.well-known
+          set cmd:fail-exit no
+          mkdir ${REMOTE_DIR@Q}/.well-known
+          set cmd:fail-exit yes
           put -O ${REMOTE_DIR@Q}/.well-known .deploy/.well-known/assetlinks.json
           put -O ${REMOTE_DIR@Q}/.well-known .deploy/.well-known/apple-app-site-association
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-platform-audit-cron-v2.php

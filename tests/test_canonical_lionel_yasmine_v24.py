@@ -35,7 +35,9 @@ class CanonicalLionelYasmineV24Tests(unittest.TestCase):
         self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.15', V9)
         self.assertIn("const CENSUS_VERSION='99-v32'", V9)
         self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.15', SW)
-        self.assertRegex(SW, r"const CACHE='pass50-v\d+-[a-z0-9-]+'")
+        self.assertRegex(SW, r"const CACHE='pass50-app-shell-v1'")
+        self.assertIn("PASS50-APP-SHELL-SW-V1", SW)
+        self.assertIn("pass50-v81-service-worker-disabled", SW)
 
     def test_public_loader_is_cache_busted(self):
         self.assertIn('public-copy-fixes.js?v=1.15', APP_CONFIG)
