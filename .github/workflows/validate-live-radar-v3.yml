@@ -30,6 +30,7 @@ on:
       - 'tests/test_live_radar_p0_webcast.py'
       - 'tests/test_cahie_kunta_live_radar.py'
       - 'tests/test_daniel_m_live_radar.py'
+      - 'tests/test_akalajoie_live_radar.py'
       - 'tests/test_roseline_layo_live_radar.py'
       - 'tests/test_rach_makosso_live_radar.py'
       - '.github/workflows/validate-live-radar-v3.yml'
@@ -91,6 +92,7 @@ jobs:
           python3 -m unittest tests/test_live_radar_p0_webcast.py
           python3 -m unittest tests/test_cahie_kunta_live_radar.py
           python3 -m unittest tests/test_daniel_m_live_radar.py
+          python3 -m unittest tests/test_akalajoie_live_radar.py
           python3 -m unittest tests/test_roseline_layo_live_radar.py
           python3 -m unittest tests/test_rach_makosso_live_radar.py
           php tests/live_radar_v4_core.php

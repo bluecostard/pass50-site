@@ -17,6 +17,7 @@ LEXES = (ROOT / "profile-lexes.js").read_text(encoding="utf-8")
 ANGE = (ROOT / "profile-ange-morel.js").read_text(encoding="utf-8")
 JPNDA = (ROOT / "profile-jp-nda.js").read_text(encoding="utf-8")
 DANIEL = (ROOT / "profile-daniel-m.js").read_text(encoding="utf-8")
+AKA = (ROOT / "profile-akalajoie.js").read_text(encoding="utf-8")
 
 
 def extract_function(source, name):
@@ -62,7 +63,7 @@ class PlausibleBirthAgeV1Tests(unittest.TestCase):
         self.assertIn("p50BirthDateIsPlausible(date)", UI)
 
     def test_new_census_fiches_do_not_seed_2026_as_birth(self):
-        for source in (ROSEMARK, JIAAN, SAMUELLA, LEXES, ANGE, JPNDA, DANIEL):
+        for source in (ROSEMARK, JIAAN, SAMUELLA, LEXES, ANGE, JPNDA, DANIEL, AKA):
             self.assertIn("birthDate:null", source)
             self.assertIn("birthYear:null", source)
             self.assertIn("ageStatus:'unconfirmed'", source)

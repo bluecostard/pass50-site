@@ -349,6 +349,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Miss akalajoie (TikTok @akalajoie).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-akalajoie]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-akalajoie.js?v=1.0';
+  script.dataset.pass50ProfileAkalajoie = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Lise Akrassi.
 (function () {
   if (document.querySelector('script[data-pass50-profile-lise-akrassi]')) return;
