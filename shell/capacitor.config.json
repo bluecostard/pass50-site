@@ -1,0 +1,35 @@
+{
+  "appId": "store.pass50.app",
+  "appName": "PASS50",
+  "webDir": "www",
+  "backgroundColor": "#050705",
+  "server": {
+    "url": "https://pass50.store/app.html?source=native",
+    "cleartext": false,
+    "allowNavigation": [
+      "pass50.store",
+      "www.pass50.store"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#050705",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#050705"
+    }
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#050705"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#050705",
+    "preferredContentMode": "mobile"
+  }
+}

@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-APP-CLIENT-V1';
+  const CONTRACT = 'PASS50-APP-CLIENT-V1.1';
   const TOKEN_KEY = 'pass50_api_token';
   const API = './api/';
   const PERIODS = ['2H', '24H', '48H', '7J', '15J'];
@@ -12,6 +12,17 @@
     { key: '7d', label: '7J' },
     { key: '15d', label: '15J' },
   ];
+
+  function isNativeShell() {
+    try {
+      const cap = window.Capacitor;
+      if (cap && typeof cap.isNativePlatform === 'function') return Boolean(cap.isNativePlatform());
+      if (cap && typeof cap.getPlatform === 'function') {
+        return ['ios', 'android'].includes(String(cap.getPlatform() || '').toLowerCase());
+      }
+    } catch (_) {}
+    return /source=native/i.test(location.search || '');
+  }
 
   const state = {
     tab: 'ranking',
@@ -330,7 +341,9 @@
         <a class="btn ghost" href="./?open=account">Créer un compte</a>
       </form>
       <div class="panel stack">
-        <button type="button" class="btn ghost" data-action="install"${state.installEvent ? '' : ' hidden'}>Installer PASS50</button>
+        ${isNativeShell()
+          ? '<p class="muted">Coque native PASS50 · store.pass50.app</p>'
+          : `<button type="button" class="btn ghost" data-action="install"${state.installEvent ? '' : ' hidden'}>Installer PASS50</button>`}
         <a class="btn ghost" href="./">Ouvrir le site complet</a>
       </div>`;
   }
@@ -339,7 +352,8 @@
     if (el.status) {
       const auth = state.user ? 'Connecté' : 'Invité';
       const contract = (state.bootstrap && state.bootstrap.contract) || CONTRACT;
-      el.status.textContent = auth + ' · ' + contract;
+      const shell = isNativeShell() ? ' · App native' : '';
+      el.status.textContent = auth + ' · ' + contract + shell;
     }
     if (el.nav) {
       el.nav.querySelectorAll('[data-tab]').forEach((node) => {
@@ -467,9 +481,13 @@
     el.content = $('appContent');
     el.nav = $('appNav');
     el.toast = $('appToast');
-    window.PASS50_APP_CLIENT = Object.freeze({ contract: CONTRACT, version: '1.0' });
+    window.PASS50_APP_CLIENT = Object.freeze({
+      contract: CONTRACT,
+      version: '1.1',
+      native: isNativeShell(),
+    });
 
-    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    if (!isNativeShell() && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
       navigator.serviceWorker.register('./sw.js?v=91').catch(() => {});
     }
 

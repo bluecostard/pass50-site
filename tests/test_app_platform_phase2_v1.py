@@ -51,7 +51,7 @@ class AppPlatformPhase2Tests(unittest.TestCase):
         self.assertIn("./app.html?source=pwa", manifest)
         self.assertIn("PASS50-APP-SHELL-SW-V1", sw)
         self.assertNotIn("self.registration.unregister()", sw)
-        self.assertIn("app-client.js?v=1.0", app)
+        self.assertIn("app-client.js?v=1.1", app)
         self.assertIn("reconcileServiceWorkers", copy)
         self.assertNotIn("disableServiceWorkers", copy)
 

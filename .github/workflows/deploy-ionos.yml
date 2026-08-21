@@ -30,6 +30,7 @@ jobs:
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude '.deploy/' \
+            --exclude 'shell/' \
             --exclude 'api/config.php' \
             --exclude 'uploads/' \
             --exclude 'install.php' \
@@ -111,6 +112,9 @@ jobs:
           put -O ${REMOTE_DIR@Q} .deploy/app.html
           put -O ${REMOTE_DIR@Q} .deploy/app-client.js
           put -O ${REMOTE_DIR@Q} .deploy/manifest.webmanifest
+          mkdir -p .deploy/.well-known
+          put -O ${REMOTE_DIR@Q}/.well-known .deploy/.well-known/assetlinks.json
+          put -O ${REMOTE_DIR@Q}/.well-known .deploy/.well-known/apple-app-site-association
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-platform-audit-cron-v2.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-cron-v4.php
           put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-core.php

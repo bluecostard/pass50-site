@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.store.pass50.app",
+        "paths": [
+          "/app.html",
+          "/app.html*",
+          "/app",
+          "/app/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.store.pass50.app"]
+  }
+}
