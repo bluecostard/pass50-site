@@ -244,7 +244,8 @@ jobs:
             boot_headers="$(curl -sS -D - -o /dev/null -H 'Cache-Control: no-cache' "https://pass50.store/api/app-bootstrap.php?sha=$GITHUB_SHA&a=$attempt" || true)"
             ok=true
             grep -qi 'cache-control:.*public, max-age=60' <<<"$ranking_headers" || ok=false
-            grep -qi 'cloudflare-cdn-cache-control:.*max-age=60' <<<"$ranking_headers" || ok=false
+            # Cloudflare peut renvoyer CDN-Cache-Control (et consommer Cloudflare-CDN-Cache-Control).
+            grep -qiE '(cloudflare-)?cdn-cache-control:.*max-age=60' <<<"$ranking_headers" || ok=false
             grep -qi 'cache-control:.*public, max-age=10' <<<"$live_headers" || ok=false
             grep -qi 'x-pass50-live-contract: PASS50-LIVE-STATUS-CACHE-V1' <<<"$live_headers" || ok=false
             grep -qi 'cache-control:.*public, max-age=60' <<<"$boot_headers" || ok=false
@@ -254,8 +255,8 @@ jobs:
           done
           if [ "$ready" != true ]; then
             echo '::error::Les API publiques ne servent pas encore Cache-Control public (Apache/PHP).'
-            echo "$ranking_headers" | head -20
-            echo "$live_headers" | head -20
+            echo "$ranking_headers" | grep -iE '^(HTTP/|cache-control:|cdn-cache-control:|cloudflare-cdn-cache-control:|cf-cache-status:|x-pass50-)' || echo "$ranking_headers" | head -25
+            echo "$live_headers" | grep -iE '^(HTTP/|cache-control:|cdn-cache-control:|cloudflare-cdn-cache-control:|cf-cache-status:|x-pass50-)' || echo "$live_headers" | head -25
             exit 1
           fi
           echo 'API chaudes : Cache-Control public OK (prêt Cloudflare).'
