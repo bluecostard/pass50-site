@@ -2,15 +2,13 @@
   "appId": "store.pass50.app",
   "appName": "PASS50",
   "webDir": "www",
-  "bundledWebRuntime": false,
   "backgroundColor": "#050705",
   "server": {
     "url": "https://pass50.store/app.html?source=native",
     "cleartext": false,
     "allowNavigation": [
       "pass50.store",
-      "www.pass50.store",
-      "*.pass50.store"
+      "www.pass50.store"
     ]
   },
   "plugins": {
