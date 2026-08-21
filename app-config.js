@@ -340,6 +340,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : DANIEL.M (TikTok @_michael_daniel, YouTube @wisdombydaniel.m).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-daniel-m]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-daniel-m.js?v=1.0';
+  script.dataset.pass50ProfileDanielM = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Lise Akrassi.
 (function () {
   if (document.querySelector('script[data-pass50-profile-lise-akrassi]')) return;

@@ -35,11 +35,13 @@ class LiveRadarP0WebcastTests(unittest.TestCase):
         self.assertEqual(by_handle['oustazdianeofficiel1'], 'oustaz-diane')
         self.assertEqual(by_handle['samuellakouassiofficiel'], 'census-samuella-kouassi')
         self.assertEqual(by_handle['angemorel4'], 'census-ange-morel')
+        self.assertEqual(by_handle['_michael_daniel'], 'census-daniel-m')
         self.assertEqual(sum(1 for row in sources if row['handle'].lower() == 'coachhamond'), 1)
         youtube = load_p0_youtube_sources(SOURCE)
         yt_ids = {row['profileId'] for row in youtube}
         self.assertIn('oustaz-diane', yt_ids)
         self.assertIn('census-observateur-ebene', yt_ids)
+        self.assertIn('census-daniel-m', yt_ids)
         self.assertTrue(all(row['platform'] == 'YouTube' and row.get('liveUrl') for row in youtube))
 
     def test_quick_workflow_runs_webcast_before_ionos(self):

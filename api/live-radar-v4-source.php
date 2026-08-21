@@ -37,6 +37,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-jiaan-wu',
     'census-samuella-kouassi',
     'oustaz-diane',
+    'census-daniel-m',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -44,6 +45,7 @@ const P50_LIVE_V4_P0_YOUTUBE = [
     'census-rosemark-marcel',
     'census-jiaan-wu',
     'oustaz-diane',
+    'census-daniel-m',
 ];
 /** Délai minimum entre deux sondes TikTok vérifié (secondes). */
 const P50_LIVE_V4_P0_RESCAN_SECONDS = 120;
@@ -286,6 +288,8 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
         'oustaz-diane|tiktok'=>'https://www.tiktok.com/@oustazdianeofficiel1',
         'oustaz-diane|youtube'=>'https://www.youtube.com/@OustazDianeofficiel',
+        'census-daniel-m|tiktok'=>'https://www.tiktok.com/@_michael_daniel',
+        'census-daniel-m|youtube'=>'https://www.youtube.com/@wisdombydaniel.m',
     ];
     return $overrides[$key]??$url;
 }
@@ -364,6 +368,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-jiaan-wu','name'=>'Jiaan Wu','handle'=>'jiaaan.wu'],
         ['id'=>'census-samuella-kouassi','name'=>'Samuella Kouassi','handle'=>'samuellakouassiofficiel'],
         ['id'=>'oustaz-diane','name'=>'Oustaz Diané','handle'=>'oustazdianeofficiel1'],
+        ['id'=>'census-daniel-m','name'=>'DANIEL.M','handle'=>'_michael_daniel'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
@@ -434,6 +439,14 @@ function p50_live_v4_sources(array $state): array {
         $seen[$oustazYtKey]=true;$out[]=[
             'profile_id'=>'oustaz-diane','public_name'=>'Oustaz Diané','handle'=>'@OustazDianeofficiel',
             'platform'=>'YouTube','url'=>'https://www.youtube.com/@OustazDianeofficiel','confidence'=>100,
+            'verification_status'=>'manual_verified',
+        ];
+    }
+    $danielYtKey='YouTube|census-daniel-m';
+    if(!isset($seen[$danielYtKey])){
+        $seen[$danielYtKey]=true;$out[]=[
+            'profile_id'=>'census-daniel-m','public_name'=>'DANIEL.M','handle'=>'@wisdombydaniel.m',
+            'platform'=>'YouTube','url'=>'https://www.youtube.com/@wisdombydaniel.m','confidence'=>100,
             'verification_status'=>'manual_verified',
         ];
     }
