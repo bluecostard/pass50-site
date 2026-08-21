@@ -46,9 +46,9 @@ Options -Indexes
     Header always set Pragma "no-cache"
     Header always set Expires "0"
   </FilesMatch>
-  <FilesMatch "\.(php)$">
-    Header always set Cache-Control "no-store"
-  </FilesMatch>
+  # Ne PAS forcer no-store sur tous les .php : ça écrasait les Cache-Control
+  # publics posés par PHP (ranking/feed/live/bootstrap) et empêchait Cloudflare.
+  # Les API passent par bootstrap.php (no-store par défaut) puis surcharge locale.
   <Files "fi.php">
     Header always set Cache-Control "public, max-age=300"
   </Files>

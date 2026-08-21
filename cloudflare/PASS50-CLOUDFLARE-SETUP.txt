@@ -1,0 +1,65 @@
+PASS50 — Cloudflare Free (edge cache)
+=====================================
+
+Objectif : mettre Cloudflare devant IONOS (0 €) pour absorber les pics
+de lecture sur ranking / fil / live / bootstrap, sans changer le code PHP
+d’hébergement.
+
+Prérequis
+---------
+- Compte Cloudflare (Free)
+- Accès DNS IONOS pour pass50.store (nameservers actuels : ui-dns.*)
+- SSL IONOS déjà actif (Sectigo) → mode Cloudflare « Full (strict) »
+
+Étapes (15–30 min + propagation DNS)
+------------------------------------
+1) Cloudflare → Add site → pass50.store → plan Free
+2) Vérifier les enregistrements DNS importés :
+   - A / AAAA / CNAME de pass50.store et www → Proxied (nuage orange)
+   - MX / TXT mail → DNS only (nuage gris), ne pas proxy
+3) Copier les 2 nameservers Cloudflare
+4) IONOS → Domaines → pass50.store → Nameservers
+   - Désactiver DNSSEC si actif (sinon blackhole pendant le cutover)
+   - Remplacer ui-dns.* par les 2 NS Cloudflare
+5) Cloudflare → SSL/TLS → Overview → Full (strict)
+6) SSL/TLS → Edge Certificates → Always Use HTTPS = On
+7) Caching → Configuration → Browser Cache TTL = Respect Existing Headers
+8) Caching → Cache Rules → créer 2 règles :
+
+   Règle A — « PASS50 public API cache »
+   If :
+     (http.request.uri.path eq "/api/public-ranking.php")
+     or (http.request.uri.path eq "/api/public-feed.php")
+     or (http.request.uri.path eq "/api/content-feed.php")
+     or (http.request.uri.path eq "/api/live-status.php")
+     or (http.request.uri.path eq "/api/app-bootstrap.php")
+   Then :
+     Eligible for cache = Yes
+     Edge TTL = Use cache-control header / Respect origin
+     Origin Cache Control = On (défaut Free)
+
+   Règle B — « PASS50 bypass privé »
+   If :
+     (http.request.uri.path eq "/api/state.php")
+     or (http.request.uri.path contains "/api/login")
+     or (http.request.uri.path contains "/api/admin")
+     or (http.request.method ne "GET")
+   Then :
+     Eligible for cache = Bypass cache
+
+9) Attendre status Active (souvent < 1 h, parfois jusqu’à 24 h)
+10) Vérifier :
+    curl -sSI 'https://pass50.store/api/public-ranking.php' | grep -iE 'cf-ray|cf-cache-status|cache-control'
+    curl -sS -D - -o /dev/null 'https://pass50.store/api/live-status.php?mode=status' | grep -iE 'cf-cache-status|cache-control|x-pass50'
+
+Attendu après warm
+------------------
+- Header cf-ray présent
+- cf-cache-status : MISS puis HIT / STALE
+- cache-control : public, max-age=…
+- live status < 1 s
+
+Rollback
+--------
+Remettre les nameservers IONOS (ui-dns.*) si besoin. Aucune donnée
+applicative n’est stockée chez Cloudflare.
