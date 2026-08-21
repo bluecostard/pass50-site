@@ -79,5 +79,18 @@ Options -Indexes
   </IfModule>
 </FilesMatch>
 
-RedirectMatch 404 (?i)^/(private|emails|mobile|live-scout-standalone|node_modules)/
+# Universal Links / Digital Asset Links (coque native Capacitor)
+<Files "apple-app-site-association">
+  <IfModule mod_headers.c>
+    Header set Content-Type "application/json"
+  </IfModule>
+  ForceType application/json
+</Files>
+<Files "assetlinks.json">
+  <IfModule mod_headers.c>
+    Header set Content-Type "application/json"
+  </IfModule>
+</Files>
+
+RedirectMatch 404 (?i)^/(private|emails|mobile|live-scout-standalone|node_modules|shell)/
 DirectoryIndex index.html
