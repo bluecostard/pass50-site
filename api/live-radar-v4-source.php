@@ -51,7 +51,7 @@ const P50_LIVE_V4_VERIFIED_RESCAN_SECONDS = 300;
 /** TikTok unknown (probe bloqué / incomplet) : même rythme que le P0. */
 const P50_LIVE_V4_UNKNOWN_RESCAN_SECONDS = 120;
 /** @deprecated Utiliser p50_live_v4_reconfirm_grace_map() — conservé pour compat tests/clients. */
-const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>12,'YouTube'=>18,'Instagram'=>15,'Facebook'=>15];
+const P50_LIVE_V4_GRACE_MINUTES = ['TikTok'=>40,'YouTube'=>25,'Instagram'=>15,'Facebook'=>15];
 const P50_LIVE_V4_CANDIDATE_TTL_MINUTES = 30;
 const P50_LIVE_V4_BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 const P50_LIVE_V4_MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';

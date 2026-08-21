@@ -1,0 +1,39 @@
+name: PASS50 Live Radar P0
+
+# GitHub n’honore pas un cron plus serré que 5 min (souvent 10–30 min).
+# Ce job ne fait QUE du webcast GitHub + POST IONOS. Pas de scan IONOS TikTok.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-radar-p0.yml'
+      - 'scripts/live_radar_p0_webcast.py'
+      - 'scripts/live_radar_unknown_audit.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pass50-live-radar-p0
+  cancel-in-progress: true
+
+jobs:
+  publish-p0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      UNKNOWN_AUDIT_ENDPOINT: https://pass50.store/api/live-radar-unknown-audit.php
+      PASS50_METRICS_CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Publier tous les lives P0 vus par GitHub
+        run: |
+          set -euo pipefail
+          test -n "${PASS50_METRICS_CRON_SECRET}"
+          python3 scripts/live_radar_p0_webcast.py

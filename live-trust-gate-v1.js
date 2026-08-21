@@ -5,7 +5,7 @@ if(window.__pass50LiveTrustGateV1)return;
 window.__pass50LiveTrustGateV1=true;
 
 const VERSION='1.2.0';
-const DEFAULT_TRUST_SECONDS={TikTok:480,YouTube:720,Instagram:600,Facebook:600};
+const DEFAULT_TRUST_SECONDS={TikTok:1800,YouTube:1200,Instagram:600,Facebook:600};
 
 function trustSeconds(platform){
   const configured=Number(window.PASS50_LIVE_RADAR?.trustSeconds?.[platform]);

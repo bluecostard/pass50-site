@@ -35,6 +35,7 @@ on:
       - '.github/workflows/live-radar-sweep.yml'
       - '.github/workflows/live-radar-unknown-audit.yml'
       - '.github/workflows/live-radar-quick.yml'
+      - '.github/workflows/live-radar-p0.yml'
 
 jobs:
   validate:

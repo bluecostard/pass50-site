@@ -107,7 +107,7 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("h.last_state='live'", storage)
         self.assertIn('INTERVAL {$seconds} SECOND', storage)
         self.assertIn("confirmation_grace_expired", storage)
-        self.assertIn("'TikTok'=>12", source)
+        self.assertIn("'TikTok'=>40", source)
         self.assertNotIn("$platform==='TikTok'?2", storage)
         self.assertIn("latest_probe_offline", storage)
 

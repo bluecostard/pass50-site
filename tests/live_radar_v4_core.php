@@ -20,7 +20,7 @@ must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une rév
 must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-STRICT-PUBLISH-2026-08-11-1','La révision Strict Publish doit être active.');
 must(P50_LIVE_V4_TRUST_REVISION==='LIVE-STRICT-PUBLISH-2026-08-11-1','Le module Trust Gate Strict Publish doit être chargé.');
 must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===3600,'La fenêtre TikTok candidat est d’une heure.');
-must(p50_live_v4_public_max_age('TikTok')===480,'TikTok public max age = 8 min.');
+must(p50_live_v4_public_max_age('TikTok')===1800,'TikTok public max age = 30 min.');
 $utcNow=gmdate('Y-m-d H:i:s');
 must(p50_live_v4_parse_utc($utcNow)!==null&&abs(time()-(int)p50_live_v4_parse_utc($utcNow))<=2,'Les datetimes MySQL UTC doivent être lues en UTC.');
 must(p50_live_v4_is_publicly_fresh(['status'=>'live','platform'=>'TikTok','source'=>'automatic','last_state'=>'live','last_seen_at'=>$utcNow]),'Un LIVE confirmé à l’instant doit rester public.');

@@ -30,19 +30,20 @@ function p50_live_v4_parse_utc(?string $value): ?int {
 
 /**
  * Âge max depuis la dernière confirmation live positive pour rester visible.
- * Doit rester > intervalle quick sweep (~30s), sans laisser traîner les fantômes.
+ * Doit rester > le vrai rythme GitHub (cron min 5 min, souvent 10–30 min).
+ * IONOS ne confirme pas TikTok : sans cette fenêtre le radar se vide entre deux jobs.
  */
 const P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS = [
-    'TikTok' => 480,      // 8 min
-    'YouTube' => 720,     // 12 min
+    'TikTok' => 1800,     // 30 min — cadence GitHub réelle
+    'YouTube' => 1200,    // 20 min
     'Instagram' => 600,   // 10 min
     'Facebook' => 600,    // 10 min
 ];
 
 /** Grâce serveur pour retester un direct sans le clôturer trop tôt ( ≥ fenêtre publique ). */
 const P50_LIVE_V4_RECONFIRM_GRACE_MINUTES = [
-    'TikTok' => 12,
-    'YouTube' => 18,
+    'TikTok' => 40,
+    'YouTube' => 25,
     'Instagram' => 15,
     'Facebook' => 15,
 ];

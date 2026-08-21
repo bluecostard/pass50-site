@@ -137,6 +137,8 @@ function p50_live_status_cache_build(): array {
             'activeAutomaticConfirmed' => count($automatic),
             'refreshSeconds' => P50_LIVE_STATUS_CACHE_TTL,
             'trustGate' => defined('P50_LIVE_V4_TRUST_REVISION') ? P50_LIVE_V4_TRUST_REVISION : null,
+            'trustSeconds' => function_exists('p50_live_v4_trust_seconds_map') ? p50_live_v4_trust_seconds_map() : null,
+            'graceMinutes' => function_exists('p50_live_v4_reconfirm_grace_map') ? p50_live_v4_reconfirm_grace_map() : null,
             'diagnostics' => [],
             'cache' => [
                 'ttlSeconds' => P50_LIVE_STATUS_CACHE_TTL,

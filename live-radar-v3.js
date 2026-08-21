@@ -4,7 +4,7 @@
 const ENDPOINT='./api/live-status-v4.php';
 const QUICK_INTERVAL=30_000;
 const FULL_CYCLE_KEY='pass50_live_radar_v4_cycle';
-const DEFAULT_TRUST_SECONDS={TikTok:480,Facebook:600,YouTube:720,Instagram:600};
+const DEFAULT_TRUST_SECONDS={TikTok:1800,Facebook:600,YouTube:1200,Instagram:600};
 const PLATFORM_PRIORITY=['TikTok','Facebook','YouTube','Instagram'];
 const RADAR_BATCH_SIZE='14';
 let runningMode='';
@@ -230,7 +230,7 @@ function badgeProfileId(badge){
 
 function ensureLiveTrustGate(){
   if(document.querySelector('script[data-pass50-live-trust-gate]'))return;
-  const script=document.createElement('script');script.src='./live-trust-gate-v1.js?v=1.3';script.dataset.pass50LiveTrustGate='1.3';document.head.appendChild(script);
+  const script=document.createElement('script');script.src='./live-trust-gate-v1.js?v=1.4';script.dataset.pass50LiveTrustGate='1.4';document.head.appendChild(script);
 }
 function ensureLiveExperience(){
   ensureLiveTrustGate();

@@ -8,6 +8,7 @@ from live_radar_p0_webcast import load_p0_tiktok_sources, load_p0_youtube_source
 
 SOURCE = (ROOT / 'api' / 'live-radar-v4-source.php').read_text(encoding='utf-8')
 QUICK = (ROOT / '.github' / 'workflows' / 'live-radar-quick.yml').read_text(encoding='utf-8')
+P0 = (ROOT / '.github' / 'workflows' / 'live-radar-p0.yml').read_text(encoding='utf-8')
 SCRIPT = (ROOT / 'scripts' / 'live_radar_p0_webcast.py').read_text(encoding='utf-8')
 
 
@@ -41,9 +42,12 @@ class LiveRadarP0WebcastTests(unittest.TestCase):
         ionos_at = QUICK.find('Sonder prioritairement Oustaz Diané')
         self.assertGreater(webcast_at, 0)
         self.assertGreater(ionos_at, webcast_at)
-        self.assertIn('python3 scripts/live_radar_p0_webcast.py', QUICK)
+        self.assertIn('python3 scripts/live_radar_p0_webcast.py', P0)
+        self.assertIn("cron: '*/5 * * * *'", P0)
+        self.assertIn('cancel-in-progress: true', P0)
+        self.assertNotIn('live-status-v4.php', P0)
         self.assertIn('continue-on-error: true', QUICK)
-        self.assertIn("cron: '*/2 * * * *'", QUICK)
+        self.assertIn("cron: '*/15 * * * *'", QUICK)
         self.assertIn('webcast.tiktok.com/webcast/room/info_by_user', SCRIPT)
         self.assertIn('live-radar-unknown-audit.php', SCRIPT)
         self.assertIn('POST lot tentative', SCRIPT)
