@@ -37,7 +37,7 @@ class GuestLoginGatesV1Tests(unittest.TestCase):
         self.assertIn("if(!requireLogin())return;", PRONO)
 
     def test_bottom_nav_gates_feed_and_prono(self):
-        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.9", NAV)
+        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.11", NAV)
         self.assertIn("function guestNeedsAuth()", NAV)
         self.assertIn("tab === 'feed' || tab === 'prono'", NAV)
         self.assertIn("openAuth('login')", NAV)
