@@ -105,6 +105,10 @@ foreach($merged as $row){
 }
 if($added)p50_de_set_setting(P50_LIVE_V4_P0_WATCH_SETTING,$merged);
 p50_de_set_setting('live_radar_v4_unknown_audit_last',['at'=>gmdate(DATE_ATOM),'published'=>$published,'added'=>count($added)]);
+if($published>0 && is_file(__DIR__.'/live-status-cache-core.php')){
+    require_once __DIR__.'/live-status-cache-core.php';
+    try { p50_live_status_cache_store(p50_live_status_cache_build()); } catch (Throwable) {}
+}
 
 json_response([
     'ok'=>true,

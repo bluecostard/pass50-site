@@ -25,12 +25,16 @@ on:
       - 'tests/live_radar_v4_core.php'
       - 'tests/live_radar_v4_mariadb.php'
       - 'scripts/live_radar_unknown_audit.py'
+      - 'scripts/live_radar_p0_webcast.py'
       - 'tests/test_live_radar_unknown_audit.py'
+      - 'tests/test_live_radar_p0_webcast.py'
+      - 'tests/test_cahie_kunta_live_radar.py'
       - 'tests/test_roseline_layo_live_radar.py'
       - 'tests/test_rach_makosso_live_radar.py'
       - '.github/workflows/validate-live-radar-v3.yml'
       - '.github/workflows/live-radar-sweep.yml'
       - '.github/workflows/live-radar-unknown-audit.yml'
+      - '.github/workflows/live-radar-quick.yml'
 
 jobs:
   validate:
@@ -82,6 +86,8 @@ jobs:
           python3 -m unittest tests/test_live_radar_v4_docs.py
           python3 -m unittest tests/test_live_radar_runtime_v4.py
           python3 -m unittest tests/test_live_radar_unknown_audit.py
+          python3 -m unittest tests/test_live_radar_p0_webcast.py
+          python3 -m unittest tests/test_cahie_kunta_live_radar.py
           python3 -m unittest tests/test_roseline_layo_live_radar.py
           python3 -m unittest tests/test_rach_makosso_live_radar.py
           php tests/live_radar_v4_core.php

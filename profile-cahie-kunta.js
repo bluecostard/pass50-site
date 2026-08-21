@@ -45,7 +45,7 @@ function baseProfile(){
     },
     verifiedPass50:false,
     censusStatus:'Recensé confirmé',
-    verificationPriority:'P1',
+    verificationPriority:'P0',
     source:{publisher:'Signalement PASS50 — profil TikTok Cahié kunta',date:'2026-08-19',url:TIKTOK_URL},
     notes:'Influenceur ivoirien connu sous Cahié kunta (@cahiekunta). Président des Chapeaux Rouges, contenus politiques et société. Profil recensé et relié au Radar LIVE PASS50.'
   };
@@ -62,10 +62,11 @@ function applyProfile(){
   let changed=false;
   if(!profile){profile=patch;db.profiles.push(profile);changed=true;}
   else{
-    ['name','handle','initials','region','category','censusStatus','verificationPriority','source','notes'].forEach(key=>{
+    ['name','handle','initials','region','category','censusStatus','source','notes'].forEach(key=>{
       const value=profile[key];
       if(value===undefined||value===null||value===''){profile[key]=patch[key];changed=true;}
     });
+    if(profile.verificationPriority!=='P0'){profile.verificationPriority='P0';changed=true;}
     profile.links=profile.links||{};
     if(profile.links.TikTok!==TIKTOK_URL){profile.links.TikTok=TIKTOK_URL;changed=true;}
     profile.linkChecks=profile.linkChecks||{};

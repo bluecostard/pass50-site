@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/live-radar-quick.yml'
+      - 'scripts/live_radar_p0_webcast.py'
+      - 'scripts/live_radar_unknown_audit.py'
       - 'profile-oustaz-diane.js'
       - 'profile-ange-morel.js'
       - 'profile-laguepe.js'
@@ -24,10 +26,22 @@ concurrency:
 jobs:
   quick-sweep:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 6
     env:
       ENDPOINT: https://pass50.store/api/live-status-v4.php
+      UNKNOWN_AUDIT_ENDPOINT: https://pass50.store/api/live-radar-unknown-audit.php
+      PASS50_METRICS_CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Publier les lives P0 TikTok vus par webcast GitHub
+        run: |
+          set -euo pipefail
+          test -n "${PASS50_METRICS_CRON_SECRET}"
+          python3 scripts/live_radar_p0_webcast.py
+
       - name: Sonder prioritairement Oustaz Diané
         run: |
           set -euo pipefail

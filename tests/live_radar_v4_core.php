@@ -233,6 +233,11 @@ $samuellaLive=p50_live_v4_parse_tiktok($samuellaSource,['api_webcast'=>response(
 must($samuellaLive['state']==='live','Samuella Kouassi webcast status=2 doit publier le LIVE.');
 must(($samuellaLive['live']['metadata']['roomId']??'')==='7675480011223345222','Le roomId Samuella Kouassi doit être conservé.');
 
+$cahieSource=['profile_id'=>'census-cahie-kunta','public_name'=>'Cahié kunta','platform'=>'TikTok','url'=>'https://www.tiktok.com/@cahiekunta'];
+$cahieLive=p50_live_v4_parse_tiktok($cahieSource,['api_webcast'=>response('{"data":{"status":2,"id":7676614414696368916,"id_str":"7676614414696368916","title":"QUEL EST TON PROBLEME","user_count":339,"owner":{"display_id":"cahiekunta","nickname":"Cahié kunta"}},"status_code":0}')]);
+must($cahieLive['state']==='live','Cahié kunta webcast status=2 doit publier le LIVE.');
+must(($cahieLive['live']['metadata']['roomId']??'')==='7676614414696368916','Le roomId Cahié kunta doit être conservé.');
+
 must(p50_live_v4_canonical_profile_id('p_ghost_sa','TikTok','samuellakouassiofficiel')==='census-samuella-kouassi','Le handle @samuellakouassiofficiel doit fusionner sur la fiche officielle.');
 must(p50_live_v4_canonical_profile_id('other','TikTok','jiaaan.wu')==='other','Un handle hors table canonique reste inchangé.');
 $collapsed=p50_live_v4_collapse_identity_sources([
@@ -269,4 +274,4 @@ must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un mêm
 must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
 must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
 
-echo json_encode(['ok'=>true,'cases'=>69],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>70],JSON_UNESCAPED_SLASHES).PHP_EOL;
