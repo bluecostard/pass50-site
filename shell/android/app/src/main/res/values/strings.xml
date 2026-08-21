@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PASS50</string>
+    <string name="title_activity_main">PASS50</string>
+    <string name="package_name">store.pass50.app</string>
+    <string name="custom_url_scheme">store.pass50.app</string>
+</resources>

@@ -26,6 +26,20 @@ class NativeShellV1Tests(unittest.TestCase):
         self.assertIn("PASS50-NATIVE-SHELL-V1", www)
         self.assertIn("pass50-native-shell", pkg["name"])
 
+    def test_android_project_is_versioned_with_app_links(self):
+        manifest = read("shell/android/app/src/main/AndroidManifest.xml")
+        gradle = read("shell/android/app/build.gradle")
+        ignore = read("shell/.gitignore")
+        self.assertIn('applicationId "store.pass50.app"', gradle)
+        self.assertIn('namespace "store.pass50.app"', gradle)
+        self.assertIn("android.permission.INTERNET", manifest)
+        self.assertIn('android:host="pass50.store"', manifest)
+        self.assertIn('android:pathPrefix="/app.html"', manifest)
+        self.assertIn('android:scheme="pass50"', manifest)
+        self.assertIn("android:autoVerify=\"true\"", manifest)
+        self.assertNotIn("\nandroid/\n", "\n" + ignore.replace("\r", ""))
+        self.assertIn("ios/", ignore)
+
     def test_well_known_deep_link_placeholders(self):
         assetlinks = json.loads(read(".well-known/assetlinks.json"))
         aasa = json.loads(read(".well-known/apple-app-site-association"))
@@ -47,10 +61,11 @@ class NativeShellV1Tests(unittest.TestCase):
 
     def test_readme_documents_store_flow(self):
         readme = read("shell/README.md")
-        self.assertIn("npm run add:android", readme)
+        self.assertIn("npm run open:android", readme)
         self.assertIn("npm run add:ios", readme)
         self.assertIn("store.pass50.app", readme)
-        self.assertIn("App Store", readme)
+        self.assertIn("App Links", readme)
+        self.assertIn("android/", readme)
 
 
 if __name__ == "__main__":
