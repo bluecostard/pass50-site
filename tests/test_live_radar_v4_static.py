@@ -68,8 +68,10 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("return ['state'=>'offline','error'=>'tiktok_no_live_signal'", parser)
         self.assertIn('tiktok_embed_uninformative', parser)
         self.assertIn('tiktok_api_failed_html_ended', parser)
+        self.assertIn("'error'=>'tiktok_api_failed','confidence'=>0", parser)
         self.assertIn('p50_live_v4_tiktok_api_unreachable', parser)
         self.assertIn('p50_live_v4_tiktok_bodies_inconclusive', parser)
+        self.assertIn('p50_live_v4_tiktok_probe_is_inconclusive', FILES['storage'])
         self.assertIn("liveSignal'=>'isLiveNow'", parser)
         self.assertIn('youtube_vod_not_live_now', parser)
 

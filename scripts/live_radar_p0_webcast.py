@@ -24,6 +24,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from live_radar_unknown_audit import ENDPOINT_DEFAULT, fetch, probe_source  # noqa: E402
 
 SOURCE_PHP = ROOT / "api" / "live-radar-v4-source.php"
+ROTATION_LIMIT = 48
 
 
 def load_p0_tiktok_sources(source_php: str | None = None) -> list[dict[str, str]]:
@@ -95,6 +96,80 @@ def load_p0_youtube_sources(source_php: str | None = None) -> list[dict[str, str
 def load_p0_sources(source_php: str | None = None) -> list[dict[str, str]]:
     text = source_php if source_php is not None else SOURCE_PHP.read_text(encoding="utf-8")
     return load_p0_tiktok_sources(text) + load_p0_youtube_sources(text)
+
+
+def _source_key(row: dict[str, Any]) -> tuple[str, str]:
+    return (str(row.get("profileId") or "").lower(), str(row.get("platform") or "").lower())
+
+
+def source_from_audit_row(row: dict[str, Any]) -> dict[str, str] | None:
+    profile_id = str(row.get("profileId") or row.get("profile_id") or "").strip()
+    platform = str(row.get("platform") or "").strip()
+    if not profile_id or not platform:
+        return None
+    if platform == "TikTok":
+        handle = str(row.get("handle") or "").strip().lstrip("@")
+        if not handle:
+            return None
+        return {"profileId": profile_id, "platform": "TikTok", "handle": handle}
+    if platform == "YouTube":
+        url = str(row.get("url") or "").strip()
+        live_url = str(row.get("liveUrl") or "").strip()
+        if not url and not live_url:
+            return None
+        if not live_url:
+            live_url = url if "/live" in url else url.rstrip("/") + "/live"
+        return {"profileId": profile_id, "platform": "YouTube", "url": url or live_url, "liveUrl": live_url}
+    if platform == "Facebook":
+        url = str(row.get("url") or row.get("liveUrl") or "").strip()
+        if not url:
+            return None
+        return {"profileId": profile_id, "platform": "Facebook", "url": url, "liveUrl": str(row.get("liveUrl") or url)}
+    return None
+
+
+def load_audit_listing(endpoint: str, secret: str, limit: int = ROTATION_LIMIT) -> dict[str, Any]:
+    sep = "&" if "?" in endpoint else "?"
+    status, body = fetch(
+        f"{endpoint}{sep}limit={limit}&t=1",
+        headers={"X-PASS50-CRON-SECRET": secret, "Accept": "application/json"},
+        timeout=30,
+    )
+    if status != 200:
+        print(f"GET rotation HTTP {status}: {body[:200]}", file=sys.stderr)
+        return {}
+    try:
+        listing = json.loads(body)
+    except json.JSONDecodeError:
+        print("GET rotation JSON invalide", file=sys.stderr)
+        return {}
+    return listing if isinstance(listing, dict) else {}
+
+
+def merge_github_sources(
+    seed: list[dict[str, str]],
+    listing: dict[str, Any],
+) -> list[dict[str, str]]:
+    merged: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in seed:
+        key = _source_key(row)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(row)
+    for raw in list(listing.get("p0") or []) + list(listing.get("unknowns") or []):
+        if not isinstance(raw, dict):
+            continue
+        source = source_from_audit_row(raw)
+        if source is None:
+            continue
+        key = _source_key(source)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(source)
+    return merged
 
 
 def probe_p0_lives(sources: list[dict[str, str]] | None = None) -> list[dict[str, Any]]:
@@ -179,9 +254,20 @@ def post_lives(endpoint: str, secret: str, lives: list[dict[str, Any]]) -> dict[
 
 
 def run(endpoint: str, secret: str, dry_run: bool = False) -> dict[str, Any]:
-    sources = load_p0_sources()
+    seed = load_p0_sources()
+    listing: dict[str, Any] = {}
+    if secret and not dry_run:
+        listing = load_audit_listing(endpoint, secret, ROTATION_LIMIT)
+    sources = merge_github_sources(seed, listing)
     lives = probe_p0_lives(sources)
-    print(f"P0 sondés : {len(sources)} · vraiment en live : {len(lives)}")
+    print(
+        "GitHub sondés : {total} (P0 {seed} · rotation {extra}) · vraiment en live : {lives}".format(
+            total=len(sources),
+            seed=len(seed),
+            extra=max(0, len(sources) - len(seed)),
+            lives=len(lives),
+        )
+    )
     for live in lives:
         handle = live.get("handle") or ""
         extra = f" @{handle}" if handle else ""

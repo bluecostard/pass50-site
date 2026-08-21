@@ -65,6 +65,8 @@ class LiveRadarUnknownAuditTests(unittest.TestCase):
         self.assertIn('contents: write', WORKFLOW)
         self.assertIn('p50_live_status_cache_invalidate', ENDPOINT)
         self.assertNotIn('p50_live_status_cache_build()', ENDPOINT)
+        self.assertIn("array_slice($unknowns,0,$limit)", ENDPOINT)
+        self.assertIn('$tiktokFalseOffline', ENDPOINT)
 
     def test_discussion_journal_lists_real_lives(self):
         entry = format_discussion_entry({

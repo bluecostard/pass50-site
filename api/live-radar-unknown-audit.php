@@ -21,12 +21,14 @@ $enabled=!in_array($enabledRaw,[false,0,'0','false','off'],true);
 if($_SERVER['REQUEST_METHOD']==='GET'){
     if(!$enabled)json_response(['ok'=>true,'enabled'=>false,'unknowns'=>[],'p0'=>p50_live_v4_dynamic_p0_watch(),'seedP0'=>P50_LIVE_V4_P0_TIKTOK]);
     $state=p50_de_load_public_state();
+    $limit=max(1,min(200,(int)($_GET['limit']??200)));
     $unknowns=[];
     foreach(p50_live_v4_sources($state) as $source){
         $platform=(string)($source['platform']??'');
         if(!in_array($platform,['TikTok','YouTube','Facebook'],true))continue;
         $last=strtolower(trim((string)($source['last_state']??'never_checked')));
-        if(!in_array($last,['unknown','never_checked',''],true))continue;
+        $tiktokFalseOffline=$platform==='TikTok'&&$last==='offline';
+        if(!in_array($last,['unknown','never_checked',''],true)&&!$tiktokFalseOffline)continue;
         $identity=p50_live_v4_identity($platform,(string)$source['url']);
         $liveUrl=(string)($identity['liveUrl']??$source['url']);
         if($platform==='YouTube'){
@@ -49,7 +51,8 @@ if($_SERVER['REQUEST_METHOD']==='GET'){
         'ok'=>true,
         'enabled'=>true,
         'tool'=>'webcast.tiktok.com/webcast/room/info_by_user',
-        'unknowns'=>$unknowns,
+        'unknowns'=>array_slice($unknowns,0,$limit),
+        'unknownTotal'=>count($unknowns),
         'p0'=>p50_live_v4_dynamic_p0_watch(),
         'seedP0'=>P50_LIVE_V4_P0_TIKTOK,
     ]);

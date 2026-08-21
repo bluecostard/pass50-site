@@ -68,14 +68,27 @@ function p50_live_v4_store_candidate(array $live,string $reason): void {
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata) VALUES(?,?,?,?,?,?,'unconfirmed','automatic',?,?,?,UTC_TIMESTAMP(),NULL,?) ON DUPLICATE KEY UPDATE title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='unconfirmed',confidence=VALUES(confidence),viewers=COALESCE(VALUES(viewers),viewers),last_seen_at=UTC_TIMESTAMP(),metadata=VALUES(metadata),ended_at=NULL");
     $stmt->execute([$key,(string)$live['profileId'],(string)$live['platform'],$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
 }
+/** IONOS ne voit pas TikTok : HTML/403/timeout ne prouvent ni un live ni une fin. */
+function p50_live_v4_tiktok_probe_is_inconclusive(string $error): bool {
+    $error=strtolower(trim($error));
+    return in_array($error,[
+        'tiktok_no_live_signal',
+        'tiktok_no_live_signal_while_live',
+        'tiktok_api_failed',
+        'tiktok_api_failed_html_ended',
+        'tiktok_embed_uninformative',
+        'tiktok_blocked_or_challenged',
+        'tiktok_confirmation_incomplete',
+    ],true);
+}
+
 /** IONOS HTML sans JSON live ne doit pas clôturer un direct encore confirmé (webcast GitHub). */
 function p50_live_v4_should_end_from_probe(string $previousState, array $result): bool {
     $state=(string)($result['state']??'');
-    $previous=strtolower(trim($previousState));
     if($state==='replay')return true;
     if($state!=='offline')return false;
     $error=(string)($result['error']??'');
-    if($previous==='live'&&$error==='tiktok_no_live_signal')return false;
+    if(p50_live_v4_tiktok_probe_is_inconclusive($error))return false;
     return true;
 }
 function p50_live_v4_health_update(array $source,array $result): array {
@@ -91,6 +104,9 @@ function p50_live_v4_health_update(array $source,array $result): array {
     return ['previousState'=>$previousState==='never_checked'?'never_checked':(string)($previous['last_state']??'never_checked'),'previousLiveAt'=>$previous['last_live_at']??null,'offline'=>$offline,'unknown'=>$unknown];
 }
 function p50_live_v4_mark_ended(string $profileId,string $platform,string $reason='offline',?array $replay=null): void {
+    if(strcasecmp($platform,'TikTok')===0 && $reason!=='replay' && $reason!=='tiktok_live_ended' && $reason!=='manually_dismissed'){
+        return;
+    }
     $metadata=json_encode(['endReason'=>$reason,'replay'=>$replay,'endedObservedAt'=>gmdate(DATE_ATOM)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
     $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()),metadata=JSON_MERGE_PATCH(COALESCE(metadata,'{}'),?) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed')");$stmt->execute([$metadata,$profileId,$platform]);
 }

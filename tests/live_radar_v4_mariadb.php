@@ -55,17 +55,24 @@ must(count($active)===1,'Une nouvelle confirmation live peut republier le flux.'
 $pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 MINUTE) WHERE profile_id='tiktok-test'");
 $pdo->exec("UPDATE p50_live_source_health SET last_checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 MINUTE) WHERE profile_id='tiktok-test'");
 $active=p50_live_v4_active_rows();
-must(count($active)===1,'TikTok reste public 2 minutes après confirmation (fenêtre 12 min).');
+must(count($active)===1,'TikTok reste public 2 minutes après confirmation (fenêtre 30 min).');
 $pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 13 MINUTE) WHERE profile_id='tiktok-test'");
 $pdo->exec("UPDATE p50_live_source_health SET last_checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 13 MINUTE),last_state='live' WHERE profile_id='tiktok-test'");
 $active=p50_live_v4_active_rows();
-must(count($active)===0,'TikTok sort du public après 12 minutes sans reconfirmation.');
+must(count($active)===1,'TikTok reste public 13 minutes après confirmation (fenêtre 30 min).');
+$pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 31 MINUTE) WHERE profile_id='tiktok-test'");
+$pdo->exec("UPDATE p50_live_source_health SET last_checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 31 MINUTE),last_state='live' WHERE profile_id='tiktok-test'");
+$active=p50_live_v4_active_rows();
+must(count($active)===0,'TikTok sort du public après 30 minutes sans reconfirmation.');
 
 p50_live_v4_store_live($live);
 $pdo->prepare("UPDATE p50_live_source_health SET last_state='live',last_checked_at=UTC_TIMESTAMP(),last_live_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
-$pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 21 MINUTE) WHERE profile_id='tiktok-test'");
+p50_live_v4_mark_ended('tiktok-test','TikTok','tiktok_no_live_signal');
+$status=$pdo->query("SELECT status FROM p50_live_streams WHERE profile_id='tiktok-test'")->fetchColumn();
+must($status==='live','Un HTML IONOS sans JSON ne clôture pas un LIVE TikTok GitHub.');
+$pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 41 MINUTE) WHERE profile_id='tiktok-test'");
 $active=p50_live_v4_active_rows();
-must(count($active)===0,'TikTok expire aussi après la grâce de reconfirmation.');
+must(count($active)===0,'TikTok expire après la grâce de reconfirmation (40 min).');
 
 p50_live_v4_store_live($live);
 p50_live_v4_mark_ended('tiktok-test','TikTok','replay',['url'=>'https://example.test/replay']);

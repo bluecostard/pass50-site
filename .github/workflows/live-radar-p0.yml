@@ -24,7 +24,7 @@ concurrency:
 jobs:
   publish-p0:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
     env:
       UNKNOWN_AUDIT_ENDPOINT: https://pass50.store/api/live-radar-unknown-audit.php
       PASS50_METRICS_CRON_SECRET: ${{ secrets.PASS50_METRICS_CRON_SECRET }}

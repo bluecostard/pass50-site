@@ -35,11 +35,11 @@ class OustazDianeLiveRadarTests(unittest.TestCase):
     def test_cache_bust_loader(self):
         self.assertIn('./profile-oustaz-diane.js?v=1.1', CONFIG)
 
-    def test_quick_radar_forces_targeted_probe(self):
-        self.assertIn('Sonder prioritairement Oustaz Diané',QUICK)
-        self.assertIn('mode=profile&profileId=oustaz-diane&force=1&batch=4',QUICK)
-        self.assertIn('live TikTok=',QUICK)
-        self.assertIn('live YouTube=',QUICK)
+    def test_quick_radar_publishes_via_github_webcast(self):
+        self.assertIn('live_radar_p0_webcast.py', QUICK)
+        self.assertIn("'oustaz-diane'", SOURCE.split('P50_LIVE_V4_P0_TIKTOK', 1)[1].split('];', 1)[0])
+        self.assertIn("'oustaz-diane'", SOURCE.split('P50_LIVE_V4_P0_YOUTUBE', 1)[1].split('];', 1)[0])
+        self.assertNotIn('mode=profile&profileId=oustaz-diane', QUICK)
 
 if __name__=='__main__':
     unittest.main()

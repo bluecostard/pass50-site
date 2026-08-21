@@ -238,8 +238,9 @@ $cahieLive=p50_live_v4_parse_tiktok($cahieSource,['api_webcast'=>response('{"dat
 must($cahieLive['state']==='live','Cahié kunta webcast status=2 doit publier le LIVE.');
 must(($cahieLive['live']['metadata']['roomId']??'')==='7676614414696368916','Le roomId Cahié kunta doit être conservé.');
 must(!p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_no_live_signal']),'Un HTML IONOS sans JSON ne clôture pas un LIVE encore confirmé.');
+must(!p50_live_v4_should_end_from_probe('never_checked',['state'=>'offline','error'=>'tiktok_no_live_signal']),'IONOS sans API TikTok ne clôture jamais un compte, même jamais sondé.');
+must(!p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_api_failed']),'Un 403 IONOS ne clôture pas un LIVE confirmé.');
 must(p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_live_ended']),'Une fin API/HTML explicite clôture toujours le direct.');
-must(p50_live_v4_should_end_from_probe('never_checked',['state'=>'offline','error'=>'tiktok_no_live_signal']),'Sans LIVE préalable, l’absence de signal reste hors ligne.');
 
 must(p50_live_v4_canonical_profile_id('p_ghost_sa','TikTok','samuellakouassiofficiel')==='census-samuella-kouassi','Le handle @samuellakouassiofficiel doit fusionner sur la fiche officielle.');
 must(p50_live_v4_canonical_profile_id('other','TikTok','jiaaan.wu')==='other','Un handle hors table canonique reste inchangé.');
@@ -264,6 +265,14 @@ must($embedOnlyBlocked['state']==='unknown','Un embed sans JSON live + API 403 n
 
 $readableOffline=p50_live_v4_parse_tiktok($source,['profile'=>response('<!doctype html><title>Coach Test | TikTok</title><script>{"uniqueId":"coachtest","videoCount":12}</script>',200,'https://www.tiktok.com/@coachtest')]);
 must($readableOffline['state']==='offline','Une page profil lisible sans signal live reste hors ligne.');
+
+$apiDownProfile=p50_live_v4_parse_tiktok($source,[
+    'api'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://www.tiktok.com/api-live/user/room/','error'=>'http_403','timeMs'=>8],
+    'api_webcast'=>['ok'=>false,'status'=>403,'body'=>'','finalUrl'=>'https://webcast.tiktok.com/webcast/room/info_by_user/','error'=>'http_403','timeMs'=>8],
+    'profile'=>response('<!doctype html><title>Coach Test | TikTok</title><script>{"uniqueId":"coachtest","videoCount":12}</script>',200,'https://www.tiktok.com/@coachtest'),
+]);
+must($apiDownProfile['state']==='unknown','API TikTok injoignable + page profil lisible ne doit pas classer hors ligne.');
+must(($apiDownProfile['error']??'')==='tiktok_api_failed','Le motif IONOS doit rester tiktok_api_failed.');
 
 $requests=p50_live_v4_probe_requests($jordanSource);
 must(isset($requests['api_webcast']),'Jordan Evraa doit être sondé via webcast.tiktok.com.');

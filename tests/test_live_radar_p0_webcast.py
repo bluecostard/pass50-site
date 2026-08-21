@@ -4,7 +4,12 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from live_radar_p0_webcast import load_p0_tiktok_sources, load_p0_youtube_sources  # noqa: E402
+from live_radar_p0_webcast import (  # noqa: E402
+    load_p0_tiktok_sources,
+    load_p0_youtube_sources,
+    merge_github_sources,
+    source_from_audit_row,
+)
 
 SOURCE = (ROOT / 'api' / 'live-radar-v4-source.php').read_text(encoding='utf-8')
 QUICK = (ROOT / '.github' / 'workflows' / 'live-radar-quick.yml').read_text(encoding='utf-8')
@@ -39,9 +44,10 @@ class LiveRadarP0WebcastTests(unittest.TestCase):
 
     def test_quick_workflow_runs_webcast_before_ionos(self):
         webcast_at = QUICK.find('Publier tous les lives P0 vus par GitHub')
-        ionos_at = QUICK.find('Sonder prioritairement Oustaz Diané')
+        ionos_at = QUICK.find('Reconfirmer YouTube / Instagram / Facebook depuis IONOS')
         self.assertGreater(webcast_at, 0)
         self.assertGreater(ionos_at, webcast_at)
+        self.assertNotIn('Sonder prioritairement Oustaz Diané', QUICK)
         self.assertIn('python3 scripts/live_radar_p0_webcast.py', P0)
         self.assertIn("cron: '*/5 * * * *'", P0)
         self.assertIn('cancel-in-progress: true', P0)
@@ -51,8 +57,31 @@ class LiveRadarP0WebcastTests(unittest.TestCase):
         self.assertIn('webcast.tiktok.com/webcast/room/info_by_user', SCRIPT)
         self.assertIn('live-radar-unknown-audit.php', SCRIPT)
         self.assertIn('POST lot tentative', SCRIPT)
+        self.assertIn('ROTATION_LIMIT', SCRIPT)
+        self.assertIn('merge_github_sources', SCRIPT)
         self.assertIn('p50_live_v4_should_end_from_probe', (ROOT / 'api' / 'live-radar-v4-storage.php').read_text(encoding='utf-8'))
+        self.assertIn('p50_live_v4_tiktok_probe_is_inconclusive', (ROOT / 'api' / 'live-radar-v4-storage.php').read_text(encoding='utf-8'))
         self.assertIn('tiktok_no_live_signal_while_live', (ROOT / 'api' / 'live-status-v4.php').read_text(encoding='utf-8'))
+
+    def test_rotation_merges_dynamic_p0_and_unknowns(self):
+        seed = load_p0_tiktok_sources(SOURCE)[:1]
+        listing = {
+            'p0': [{'profileId': 'new-host', 'platform': 'TikTok', 'handle': 'new_host_tt'}],
+            'unknowns': [
+                {'profileId': seed[0]['profileId'], 'platform': 'TikTok', 'handle': seed[0]['handle']},
+                {'profileId': 'catalog-tt', 'platform': 'TikTok', 'handle': 'catalog_handle'},
+            ],
+        }
+        merged = merge_github_sources(seed, listing)
+        handles = [row['handle'].lower() for row in merged]
+        self.assertEqual(handles[0], seed[0]['handle'].lower())
+        self.assertIn('new_host_tt', handles)
+        self.assertIn('catalog_handle', handles)
+        self.assertEqual(len(handles), len(set(handles)))
+        self.assertEqual(
+            source_from_audit_row({'profileId': 'x', 'platform': 'TikTok', 'handle': '@foo'}),
+            {'profileId': 'x', 'platform': 'TikTok', 'handle': 'foo'},
+        )
 
 
 if __name__ == '__main__':

@@ -270,6 +270,10 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
     if(p50_live_v4_tiktok_bodies_inconclusive($bodies)){
         return ['state'=>'unknown','error'=>$blocked>0?'tiktok_blocked_or_challenged':'tiktok_embed_uninformative','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>[],'blocked'=>$blocked,'positive'=>[],'readable'=>array_keys($bodies)]];
     }
+    // IONOS : API 403/timeout + HTML profil lisible ≠ hors ligne. Seul GitHub (webcast) confirme TikTok.
+    if(p50_live_v4_tiktok_api_unreachable($responses)){
+        return ['state'=>'unknown','error'=>'tiktok_api_failed','confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>[],'blocked'=>$blocked,'positive'=>[],'readable'=>array_keys($bodies),'errors'=>$errors]];
+    }
     // Pages lisibles sans signal live → hors ligne. unknown réservé aux blocages / échecs réseau.
     if($bodies)return ['state'=>'offline','error'=>'tiktok_no_live_signal','confidence'=>90,'responseMs'=>$maxMs,'evidence'=>['ended'=>[],'blocked'=>$blocked,'positive'=>[],'readable'=>array_keys($bodies)]];
     return ['state'=>'unknown','error'=>$blocked>0?'tiktok_blocked_or_challenged':($errors?implode(';',$errors):'tiktok_no_live_signal'),'confidence'=>0,'responseMs'=>$maxMs,'evidence'=>['ended'=>[],'blocked'=>$blocked,'positive'=>[]]];
