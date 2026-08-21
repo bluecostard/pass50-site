@@ -25,7 +25,9 @@ class OustazDianeLiveRadarTests(unittest.TestCase):
 
     def test_radar_p0_youtube_forced_probe(self):
         self.assertIn("'oustaz-diane'", SOURCE.split('P50_LIVE_V4_P0_YOUTUBE', 1)[1].split('];', 1)[0])
+        self.assertIn("'oustaz-diane'", SOURCE.split('P50_LIVE_V4_P0_TIKTOK', 1)[1].split('];', 1)[0])
         self.assertIn("'oustaz-diane|youtube'=>'https://www.youtube.com/@OustazDianeofficiel'", SOURCE)
+        self.assertIn("'oustaz-diane|tiktok'=>'https://www.tiktok.com/@oustazdianeofficiel1'", SOURCE)
         self.assertIn("'handle'=>'@OustazDianeofficiel'", SOURCE)
         self.assertIn("'profile_id'=>'oustaz-diane'", SOURCE)
         self.assertIn("'oustaz-diane'", CORE)

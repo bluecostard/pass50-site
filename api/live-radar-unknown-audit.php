@@ -57,6 +57,8 @@ if($_SERVER['REQUEST_METHOD']==='GET'){
 
 if(!$enabled)json_response(['ok'=>true,'enabled'=>false,'added'=>[],'published'=>0]);
 
+$published=0;$skipped=[];$stored=[];$additions=[];$added=[];$merged=[];
+try{
 $input=json_input();
 $incoming=is_array($input['lives']??null)?$input['lives']:[];
 $state=p50_de_load_public_state();
@@ -66,11 +68,11 @@ foreach(p50_live_v4_sources($state) as $source){
 }
 
 $watch=p50_live_v4_dynamic_p0_watch();
-$additions=[];$published=0;$skipped=[];$stored=[];
 foreach($incoming as $item){
     if(!is_array($item)||count($additions)+count($stored)>=20)break;
     $profileId=trim((string)($item['profileId']??$item['profile_id']??''));
     $platform=trim((string)($item['platform']??''));
+    try{
     $key=p50_live_v4_p0_key($profileId,$platform);
     if(!isset($sourceMap[$key])){$skipped[]=['profileId'=>$profileId,'platform'=>$platform,'error'=>'unknown_source'];continue;}
     $source=$sourceMap[$key];
@@ -93,6 +95,9 @@ foreach($incoming as $item){
         'reason'=>'unknown_audit_live',
         'addedAt'=>gmdate(DATE_ATOM),
     ];
+    }catch(Throwable $itemError){
+        $skipped[]=['profileId'=>$profileId,'platform'=>$platform,'error'=>'exception','detail'=>substr($itemError->getMessage(),0,180)];
+    }
 }
 
 $merged=p50_live_v4_merge_p0_watch($watch,$additions);
@@ -107,7 +112,19 @@ if($added)p50_de_set_setting(P50_LIVE_V4_P0_WATCH_SETTING,$merged);
 p50_de_set_setting('live_radar_v4_unknown_audit_last',['at'=>gmdate(DATE_ATOM),'published'=>$published,'added'=>count($added)]);
 if($published>0 && is_file(__DIR__.'/live-status-cache-core.php')){
     require_once __DIR__.'/live-status-cache-core.php';
-    try { p50_live_status_cache_store(p50_live_status_cache_build()); } catch (Throwable) {}
+    try { p50_live_status_cache_invalidate(); } catch (Throwable) {}
+}
+}catch(Throwable $batchError){
+    json_response([
+        'ok'=>$published>0,
+        'enabled'=>true,
+        'published'=>$published,
+        'added'=>$additions,
+        'stored'=>$stored,
+        'skipped'=>$skipped,
+        'error'=>'audit_exception',
+        'detail'=>substr($batchError->getMessage(),0,180),
+    ], $published>0?200:500);
 }
 
 json_response([

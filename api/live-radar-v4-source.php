@@ -36,6 +36,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-rosemark-marcel',
     'census-jiaan-wu',
     'census-samuella-kouassi',
+    'oustaz-diane',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -283,6 +284,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-samuella-kouassi|tiktok'=>'https://www.tiktok.com/@samuellakouassiofficiel',
         'census-samuella-kouassi|instagram'=>'https://www.instagram.com/samuellakouassiofficiel/',
         'census-observateur-ebene|youtube'=>'https://www.youtube.com/@Observateur',
+        'oustaz-diane|tiktok'=>'https://www.tiktok.com/@oustazdianeofficiel1',
         'oustaz-diane|youtube'=>'https://www.youtube.com/@OustazDianeofficiel',
     ];
     return $overrides[$key]??$url;
@@ -361,6 +363,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-rosemark-marcel','name'=>'Rosemark Marcel','handle'=>'rosemarkmarcel'],
         ['id'=>'census-jiaan-wu','name'=>'Jiaan Wu','handle'=>'jiaaan.wu'],
         ['id'=>'census-samuella-kouassi','name'=>'Samuella Kouassi','handle'=>'samuellakouassiofficiel'],
+        ['id'=>'oustaz-diane','name'=>'Oustaz Diané','handle'=>'oustazdianeofficiel1'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;

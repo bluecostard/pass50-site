@@ -45,7 +45,8 @@ class CahieKuntaLiveRadarTests(unittest.TestCase):
         self.assertIn('actions/checkout@v4', QUICK)
         self.assertIn('unknown_audit_webcast', AUDIT)
         self.assertIn('p50_live_v4_store_live', AUDIT)
-        self.assertIn('p50_live_status_cache_store', AUDIT)
+        self.assertIn('p50_live_status_cache_invalidate', AUDIT)
+        self.assertNotIn('p50_live_status_cache_build()', AUDIT)
         self.assertNotIn('ensureManualLive', SCRIPT)
         self.assertNotIn("source:'manual'", SCRIPT)
 

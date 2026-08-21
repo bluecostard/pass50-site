@@ -138,7 +138,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -237,6 +237,9 @@ $cahieSource=['profile_id'=>'census-cahie-kunta','public_name'=>'Cahié kunta','
 $cahieLive=p50_live_v4_parse_tiktok($cahieSource,['api_webcast'=>response('{"data":{"status":2,"id":7676614414696368916,"id_str":"7676614414696368916","title":"QUEL EST TON PROBLEME","user_count":339,"owner":{"display_id":"cahiekunta","nickname":"Cahié kunta"}},"status_code":0}')]);
 must($cahieLive['state']==='live','Cahié kunta webcast status=2 doit publier le LIVE.');
 must(($cahieLive['live']['metadata']['roomId']??'')==='7676614414696368916','Le roomId Cahié kunta doit être conservé.');
+must(!p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_no_live_signal']),'Un HTML IONOS sans JSON ne clôture pas un LIVE encore confirmé.');
+must(p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_live_ended']),'Une fin API/HTML explicite clôture toujours le direct.');
+must(p50_live_v4_should_end_from_probe('never_checked',['state'=>'offline','error'=>'tiktok_no_live_signal']),'Sans LIVE préalable, l’absence de signal reste hors ligne.');
 
 must(p50_live_v4_canonical_profile_id('p_ghost_sa','TikTok','samuellakouassiofficiel')==='census-samuella-kouassi','Le handle @samuellakouassiofficiel doit fusionner sur la fiche officielle.');
 must(p50_live_v4_canonical_profile_id('other','TikTok','jiaaan.wu')==='other','Un handle hors table canonique reste inchangé.');
@@ -274,4 +277,4 @@ must(count($merged)===2,'La watchlist P0 dynamique ne doit pas dupliquer un mêm
 must($merged[1]['platform']==='YouTube','YouTube unknown vraiment en live peut entrer en P0.');
 must(p50_live_v4_p0_key('Census-Jordan-Evraa','TikTok')==='census-jordan-evraa|tiktok','La clé P0 est insensible à la casse.');
 
-echo json_encode(['ok'=>true,'cases'=>70],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'cases'=>73],JSON_UNESCAPED_SLASHES).PHP_EOL;

@@ -84,6 +84,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("elseif($stateValue==='replay')", ENDPOINT)
         self.assertIn('p50_live_v4_mark_ended', ENDPOINT)
         self.assertIn("'replay'=>0", STORAGE)
+        self.assertIn('function p50_live_v4_should_end_from_probe', STORAGE)
+        self.assertIn('tiktok_no_live_signal_while_live', ENDPOINT)
 
     def test_data_chain_starts_from_verified_links_and_ends_in_public_streams(self):
         self.assertIn("s.status='verified'", SOURCE)

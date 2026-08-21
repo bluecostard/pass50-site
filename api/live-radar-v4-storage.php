@@ -68,11 +68,22 @@ function p50_live_v4_store_candidate(array $live,string $reason): void {
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata) VALUES(?,?,?,?,?,?,'unconfirmed','automatic',?,?,?,UTC_TIMESTAMP(),NULL,?) ON DUPLICATE KEY UPDATE title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='unconfirmed',confidence=VALUES(confidence),viewers=COALESCE(VALUES(viewers),viewers),last_seen_at=UTC_TIMESTAMP(),metadata=VALUES(metadata),ended_at=NULL");
     $stmt->execute([$key,(string)$live['profileId'],(string)$live['platform'],$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
 }
+/** IONOS HTML sans JSON live ne doit pas clôturer un direct encore confirmé (webcast GitHub). */
+function p50_live_v4_should_end_from_probe(string $previousState, array $result): bool {
+    $state=(string)($result['state']??'');
+    $previous=strtolower(trim($previousState));
+    if($state==='replay')return true;
+    if($state!=='offline')return false;
+    $error=(string)($result['error']??'');
+    if($previous==='live'&&$error==='tiktok_no_live_signal')return false;
+    return true;
+}
 function p50_live_v4_health_update(array $source,array $result): array {
     $state=(string)($result['state']??'unknown');$profileId=(string)$source['profile_id'];$platform=(string)$source['platform'];$url=(string)$source['url'];$urlHash=hash('sha256',strtolower(rtrim($url,'/')));
     $stmt=db()->prepare('SELECT url_hash,last_state,last_live_at,consecutive_offline,consecutive_unknown FROM p50_live_source_health WHERE profile_id=? AND platform=? LIMIT 1');$stmt->execute([$profileId,$platform]);$previous=$stmt->fetch()?:[];
-    $sameUrl=(string)($previous['url_hash']??'')===$urlHash;$offline=$state==='offline'?($sameUrl?(int)($previous['consecutive_offline']??0):0)+1:0;$unknown=$state==='unknown'?($sameUrl?(int)($previous['consecutive_unknown']??0)+1:1):0;$metadata=['confidence'=>(int)($result['confidence']??0),'probes'=>$result['probes']??[],'evidence'=>$result['evidence']??[]];
     $previousState=strtolower(trim((string)($previous['last_state']??'never_checked')));
+    if($state==='offline'&&!p50_live_v4_should_end_from_probe($previousState,$result))$state='unknown';
+    $sameUrl=(string)($previous['url_hash']??'')===$urlHash;$offline=$state==='offline'?($sameUrl?(int)($previous['consecutive_offline']??0):0)+1:0;$unknown=$state==='unknown'?($sameUrl?(int)($previous['consecutive_unknown']??0)+1:1):0;$metadata=['confidence'=>(int)($result['confidence']??0),'probes'=>$result['probes']??[],'evidence'=>$result['evidence']??[]];
     // Un unknown IONOS (timeout / embed) ne doit pas cacher un LIVE encore frais : last_seen reste la fenêtre publique.
     $storedState=($state==='unknown'&&$previousState==='live')?'live':$state;
     $upsert=db()->prepare("INSERT INTO p50_live_source_health(profile_id,platform,url_hash,official_url,last_state,consecutive_offline,consecutive_unknown,last_checked_at,last_live_at,response_ms,last_error,metadata) VALUES(?,?,?,?,?,?,?,UTC_TIMESTAMP(),IF(?='live',UTC_TIMESTAMP(),NULL),?,?,?) ON DUPLICATE KEY UPDATE url_hash=VALUES(url_hash),official_url=VALUES(official_url),last_state=VALUES(last_state),consecutive_offline=VALUES(consecutive_offline),consecutive_unknown=VALUES(consecutive_unknown),last_checked_at=UTC_TIMESTAMP(),last_live_at=IF(?='live',UTC_TIMESTAMP(),last_live_at),response_ms=VALUES(response_ms),last_error=VALUES(last_error),metadata=VALUES(metadata)");

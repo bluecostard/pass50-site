@@ -124,6 +124,12 @@ if($canScan&&$selected&&$lock){
     try{
         foreach(p50_live_v4_scan_batch($selected) as $result){
             $source=$result['source'];$platform=(string)$source['platform'];$profileId=(string)$source['profile_id'];$stateValue=(string)($result['state']??'unknown');
+            $previousState=strtolower(trim((string)($source['last_state']??'never_checked')));
+            if($stateValue==='offline'&&!p50_live_v4_should_end_from_probe($previousState,$result)){
+                $stateValue='unknown';
+                $result['state']='unknown';
+                $result['error']='tiktok_no_live_signal_while_live';
+            }
             $platformStats[$platform]['scanned']++;
             $health=p50_live_v4_health_update($source,$result);
             if($stateValue==='live'&&!empty($result['live'])){

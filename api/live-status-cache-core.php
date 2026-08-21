@@ -51,6 +51,16 @@ function p50_live_status_cache_load(): ?array {
     return null;
 }
 
+function p50_live_status_cache_invalidate(): void {
+    @unlink(p50_live_status_cache_file());
+    if (function_exists('p50_de_set_setting')) {
+        try {
+            p50_de_set_setting(P50_LIVE_STATUS_CACHE_KEY, ['ok' => false, 'invalidatedAt' => gmdate('c')]);
+        } catch (Throwable) {
+        }
+    }
+}
+
 function p50_live_status_cache_store(array $payload): void {
     $payload['generatedAt'] = (string)($payload['generatedAt'] ?? gmdate('c'));
     $payload['contract'] = P50_LIVE_STATUS_CACHE_CONTRACT;

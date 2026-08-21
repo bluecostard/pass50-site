@@ -63,8 +63,8 @@ class LiveRadarUnknownAuditTests(unittest.TestCase):
         self.assertIn('scripts/live_radar_unknown_audit.py', WORKFLOW)
         self.assertIn('pass50/discussions/radar-unknown-audit.md', WORKFLOW)
         self.assertIn('contents: write', WORKFLOW)
-        self.assertIn('p50_live_status_cache_store', ENDPOINT)
-        self.assertIn('p50_live_status_cache_build', ENDPOINT)
+        self.assertIn('p50_live_status_cache_invalidate', ENDPOINT)
+        self.assertNotIn('p50_live_status_cache_build()', ENDPOINT)
 
     def test_discussion_journal_lists_real_lives(self):
         entry = format_discussion_entry({

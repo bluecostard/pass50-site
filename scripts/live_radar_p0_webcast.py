@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publie les lives TikTok P0 confirmés par webcast GitHub.
+"""Publie tous les lives P0 confirmés depuis GitHub (TikTok webcast + YouTube).
 
 IONOS rate souvent `tiktok_embed_uninformative` alors que
 webcast.tiktok.com/webcast/room/info_by_user (depuis GitHub) voit status=2.
@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
@@ -56,8 +57,48 @@ def load_p0_tiktok_sources(source_php: str | None = None) -> list[dict[str, str]
     return sources
 
 
+def load_p0_youtube_sources(source_php: str | None = None) -> list[dict[str, str]]:
+    text = source_php if source_php is not None else SOURCE_PHP.read_text(encoding="utf-8")
+    if "const P50_LIVE_V4_P0_YOUTUBE = [" not in text:
+        return []
+    block = text.split("const P50_LIVE_V4_P0_YOUTUBE = [", 1)[1].split("];", 1)[0]
+    profile_ids = re.findall(r"'([^']+)'", block)
+    overrides: dict[str, str] = {}
+    for match in re.finditer(
+        r"'([^']+)\|youtube'\s*=>\s*'(https://(?:www\.)?youtube\.com/[^']+)'",
+        text,
+        flags=re.I,
+    ):
+        overrides[match.group(1)] = match.group(2).strip()
+    sources: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for profile_id in profile_ids:
+        url = overrides.get(profile_id, "")
+        if not url:
+            continue
+        key = url.lower().rstrip("/")
+        if key in seen:
+            continue
+        seen.add(key)
+        live_url = url if "/live" in url else url.rstrip("/") + "/live"
+        sources.append(
+            {
+                "profileId": profile_id,
+                "platform": "YouTube",
+                "url": url,
+                "liveUrl": live_url,
+            }
+        )
+    return sources
+
+
+def load_p0_sources(source_php: str | None = None) -> list[dict[str, str]]:
+    text = source_php if source_php is not None else SOURCE_PHP.read_text(encoding="utf-8")
+    return load_p0_tiktok_sources(text) + load_p0_youtube_sources(text)
+
+
 def probe_p0_lives(sources: list[dict[str, str]] | None = None) -> list[dict[str, Any]]:
-    sources = sources if sources is not None else load_p0_tiktok_sources()
+    sources = sources if sources is not None else load_p0_sources()
     lives: list[dict[str, Any]] = []
     workers = min(8, max(1, len(sources)))
     with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -70,9 +111,21 @@ def probe_p0_lives(sources: list[dict[str, str]] | None = None) -> list[dict[str
     return lives
 
 
-def post_lives(endpoint: str, secret: str, lives: list[dict[str, Any]]) -> dict[str, Any]:
+def _decode_posted(status: int, body: str) -> dict[str, Any] | None:
+    if status != 200:
+        return None
+    try:
+        posted = json.loads(body)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(posted, dict) or not posted.get("ok"):
+        return None
+    return posted
+
+
+def _post_once(endpoint: str, secret: str, lives: list[dict[str, Any]]) -> tuple[int, str]:
     payload = json.dumps({"lives": lives}).encode("utf-8")
-    status, body = fetch(
+    return fetch(
         endpoint,
         headers={
             "X-PASS50-CRON-SECRET": secret,
@@ -82,18 +135,53 @@ def post_lives(endpoint: str, secret: str, lives: list[dict[str, Any]]) -> dict[
         data=payload,
         timeout=45,
     )
-    if status != 200:
-        raise SystemExit(f"POST P0 webcast refusé HTTP {status}: {body[:400]}")
-    posted = json.loads(body)
-    if not posted.get("ok"):
-        raise SystemExit(f"POST P0 webcast invalide: {body[:400]}")
-    return posted
+
+
+def post_lives(endpoint: str, secret: str, lives: list[dict[str, Any]]) -> dict[str, Any]:
+    last_error = ""
+    for attempt in range(1, 4):
+        status, body = _post_once(endpoint, secret, lives)
+        posted = _decode_posted(status, body)
+        if posted is not None:
+            return posted
+        last_error = f"HTTP {status}: {body[:400]}"
+        print(f"POST lot tentative {attempt}/3 échouée ({status})", file=sys.stderr)
+        if attempt < 3:
+            time.sleep(min(8, 2 * attempt))
+    stored: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    published = 0
+    for live in lives:
+        posted = None
+        for attempt in range(1, 3):
+            status, body = _post_once(endpoint, secret, [live])
+            posted = _decode_posted(status, body)
+            if posted is not None:
+                break
+            last_error = f"HTTP {status}: {body[:400]}"
+            time.sleep(1)
+        if posted is None:
+            skipped.append(
+                {
+                    "profileId": live.get("profileId"),
+                    "platform": live.get("platform"),
+                    "error": "post_failed",
+                    "detail": last_error[:180],
+                }
+            )
+            continue
+        published += int(posted.get("published") or 0)
+        stored.extend(posted.get("stored") or [])
+        skipped.extend(posted.get("skipped") or [])
+    if published <= 0:
+        raise SystemExit(f"POST P0 webcast refusé: {last_error}")
+    return {"ok": True, "published": published, "stored": stored, "skipped": skipped, "added": []}
 
 
 def run(endpoint: str, secret: str, dry_run: bool = False) -> dict[str, Any]:
-    sources = load_p0_tiktok_sources()
+    sources = load_p0_sources()
     lives = probe_p0_lives(sources)
-    print(f"P0 TikTok sondés : {len(sources)} · vraiment en live : {len(lives)}")
+    print(f"P0 sondés : {len(sources)} · vraiment en live : {len(lives)}")
     for live in lives:
         handle = live.get("handle") or ""
         extra = f" @{handle}" if handle else ""

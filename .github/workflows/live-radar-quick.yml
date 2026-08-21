@@ -36,13 +36,14 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Publier les lives P0 TikTok vus par webcast GitHub
+      - name: Publier tous les lives P0 vus par GitHub
         run: |
           set -euo pipefail
           test -n "${PASS50_METRICS_CRON_SECRET}"
           python3 scripts/live_radar_p0_webcast.py
 
       - name: Sonder prioritairement Oustaz Diané
+        continue-on-error: true
         run: |
           set -euo pipefail
           response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
@@ -59,6 +60,7 @@ jobs:
           '
 
       - name: Sonder prioritairement Roseline Layo
+        continue-on-error: true
         run: |
           set -euo pipefail
           response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
@@ -74,6 +76,7 @@ jobs:
           '
 
       - name: Sonder prioritairement Rach Makosso
+        continue-on-error: true
         run: |
           set -euo pipefail
           response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
@@ -89,6 +92,7 @@ jobs:
           '
 
       - name: Sonder prioritairement Ange-Morel Your Eyes
+        continue-on-error: true
         run: |
           set -euo pipefail
           response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
@@ -104,6 +108,7 @@ jobs:
           '
 
       - name: Sonder prioritairement Laguepe
+        continue-on-error: true
         run: |
           set -euo pipefail
           response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
@@ -119,6 +124,7 @@ jobs:
           '
 
       - name: Sonder prioritairement Rosemark Marcel
+        continue-on-error: true
         run: |
           set -euo pipefail
           response="$(curl --fail --silent --show-error --location --max-time 40 --retry 2 --retry-delay 1 \
@@ -134,6 +140,7 @@ jobs:
           '
 
       - name: Reconfirmer les directs et découvrir de nouveaux LIVE
+        continue-on-error: true
         run: |
           set -euo pipefail
           total_found=0
