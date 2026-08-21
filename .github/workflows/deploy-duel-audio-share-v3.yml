@@ -33,7 +33,7 @@ jobs:
           node --check duel-audio-share-intercept-v1.js
           php -l a.php
           php -l duel-audio-og-v1.php
-          grep -q 'PASS50-PUBLIC-RUNTIME-V90' public-copy-fixes.js
+          grep -Eq 'PASS50-PUBLIC-RUNTIME-V9[0-9]+' public-copy-fixes.js
           grep -q 'duel-audio-share-intercept-v1.js?v=1.0' public-copy-fixes.js
           grep -q 'PASS50-DUEL-AUDIO-SHARE-INTERCEPT-V1.0' duel-audio-share-intercept-v1.js
 
@@ -71,7 +71,7 @@ jobs:
               runtime="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/public-copy-fixes.js?v=$GITHUB_SHA-$attempt" || true)"
               intercept="$(curl -LfsS --max-time 15 -H 'Cache-Control: no-cache, no-store' "$site/duel-audio-share-intercept-v1.js?v=$GITHUB_SHA-$attempt" || true)"
               short_code="$(curl -L -sS --max-time 15 -o /dev/null -w '%{http_code}' -H 'Cache-Control: no-cache, no-store' "$site/a.php?k=000000000000&v=$GITHUB_SHA-$attempt" || true)"
-              if grep -q 'PASS50-PUBLIC-RUNTIME-V90' <<<"$runtime" \
+              if grep -Eq 'PASS50-PUBLIC-RUNTIME-V9[0-9]+' <<<"$runtime" \
                 && grep -q 'duel-audio-share-intercept-v1.js?v=1.0' <<<"$runtime" \
                 && grep -q 'PASS50-DUEL-AUDIO-SHARE-INTERCEPT-V1.0' <<<"$intercept" \
                 && grep -q 'one-short-link-no-files' <<<"$intercept" \

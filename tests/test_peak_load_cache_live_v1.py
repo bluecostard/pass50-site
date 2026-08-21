@@ -41,6 +41,15 @@ class PeakLoadCacheLiveV1Tests(unittest.TestCase):
         deploy = read(".github/workflows/deploy-ionos.yml")
         self.assertIn("live-status-cache-core.php", deploy)
         self.assertIn("live-status-v4.php", deploy)
+        # Cloudflare expose souvent CDN-Cache-Control (pas Cloudflare-CDN-Cache-Control).
+        self.assertIn("(cloudflare-)?cdn-cache-control:.*max-age=60", deploy)
+
+    def test_duel_audio_share_v3_accepts_current_runtime(self):
+        workflow = read(".github/workflows/deploy-duel-audio-share-v3.yml")
+        runtime = read("public-copy-fixes.js")
+        self.assertRegex(runtime, r"PASS50-PUBLIC-RUNTIME-V9\d+")
+        self.assertIn("PASS50-PUBLIC-RUNTIME-V9[0-9]+", workflow)
+        self.assertNotIn("grep -q 'PASS50-PUBLIC-RUNTIME-V90'", workflow)
 
 
 if __name__ == "__main__":
