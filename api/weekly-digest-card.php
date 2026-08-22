@@ -21,7 +21,7 @@ json_response([
     'ok' => true,
     'version' => P50_WEEKLY_DIGEST_VERSION,
     'stats' => $stats,
-    'view' => p50_weekly_digest_view_model($stats),
+    'view' => p50_weekly_digest_view_model($stats, db()),
     'message' => p50_weekly_digest_build_message($stats),
     'publicUrl' => p50_weekly_digest_page_url((string)$stats['weekKey']),
     'pdfUrl' => p50_weekly_digest_pdf_url((string)$stats['weekKey']),

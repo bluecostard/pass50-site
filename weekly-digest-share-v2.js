@@ -10,7 +10,15 @@
   const GOLD = '#f0d27a';
   const PURPLE = '#a66cff';
   const CI_GREEN = '#2e9e44';
+  const PROD_ORIGIN = 'https://pass50.store';
   const API = './api/weekly-digest-card.php';
+  const LAYOUT = {
+    podiumY: 500,
+    cardsY: 810,
+    cardH: 126,
+    cardGap: 138,
+    footerY: 1238
+  };
 
   const SECTION_THEMES = [
     { key: 'live', label: 'LIVE', headline: 'Le plus suivi', accent: LIVE, glow: 'rgba(255,75,75,.35)', icon: '●' },
@@ -22,9 +30,9 @@
     weekKey: '2026-W34',
     weekLabel: '15/08 → 22/08/2026',
     sections: [
-      { num: '1', title: 'Live le plus suivi', name: 'Samuella Kouassi', detail: '12 840 auditeurs · TikTok', metric: '12 840', metricLabel: 'auditeurs', profileId: 'census-samuella-kouassi' },
-      { num: '2', title: 'N°1 du classement le plus souvent', name: 'Roseline Layo', detail: '5 fois en tête (24H)', metric: '5×', metricLabel: 'en tête', profileId: 'census-roseline-layo' },
-      { num: '3', title: 'Influenceur le plus pronostiqué', name: 'Jordan Evraa', detail: '312 pronostics · 186 votants', metric: '312', metricLabel: 'pronostics', profileId: 'census-jordan-evraa' }
+      { num: '1', title: 'Live le plus suivi', name: 'Samuella Kouassi', detail: '12 840 auditeurs · TikTok', metric: '12 840', metricLabel: 'auditeurs', profileId: 'census-samuella-kouassi', photoUrl: '/partage-photo.php?id=census-samuella-kouassi&size=480' },
+      { num: '2', title: 'N°1 du classement le plus souvent', name: 'Roseline Layo', detail: '5 fois en tête (24H)', metric: '5×', metricLabel: 'en tête', profileId: 'census-roseline-layo', photoUrl: '/partage-photo.php?id=census-roseline-layo&size=480' },
+      { num: '3', title: 'Influenceur le plus pronostiqué', name: 'Jordan Evraa', detail: '312 pronostics · 186 votants', metric: '312', metricLabel: 'pronostics', profileId: 'census-jordan-evraa', photoUrl: '/partage-photo.php?id=census-jordan-evraa&size=480' }
     ]
   };
 
@@ -98,10 +106,44 @@
     });
   }
 
-  function photoUrl(profileId, size = 480) {
+  function photoEndpoint(profileId, size = 480, photoUrl = '') {
+    const direct = String(photoUrl || '').trim();
+    if (direct) {
+      if (/^https?:\/\//i.test(direct)) {
+        return direct.includes('size=') ? direct : `${direct}${direct.includes('?') ? '&' : '?'}size=${size}`;
+      }
+      const rel = direct.startsWith('/') ? direct : `./${direct}`;
+      return rel.includes('size=') ? rel : `${rel}${rel.includes('?') ? '&' : '?'}size=${size}`;
+    }
     const id = String(profileId || '').trim();
     if (!/^[A-Za-z0-9._:-]{1,100}$/.test(id)) return '';
     return `./partage-photo.php?id=${encodeURIComponent(id)}&size=${size}`;
+  }
+
+  function prodPhotoEndpoint(profileId, size = 480) {
+    const id = String(profileId || '').trim();
+    if (!id) return '';
+    return `${PROD_ORIGIN}/partage-photo.php?id=${encodeURIComponent(id)}&size=${size}`;
+  }
+
+  async function loadSectionImage(section, size = 480) {
+    const primary = photoEndpoint(section.profileId, size, section.photoUrl);
+    const image = primary ? await loadImage(primary) : null;
+    if (image) return image;
+    return loadImage(prodPhotoEndpoint(section.profileId, size));
+  }
+
+  function drawIvoryCoastFlag(ctx, x, y, w, h) {
+    const stripe = w / 3;
+    ctx.fillStyle = '#f77f00';
+    ctx.fillRect(x, y, stripe, h);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + stripe, y, stripe, h);
+    ctx.fillStyle = '#009e60';
+    ctx.fillRect(x + stripe * 2, y, stripe, h);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
   }
 
   function drawFestiveBackground(ctx) {
@@ -193,7 +235,9 @@
     ctx.fillStyle = LIME;
     ctx.fillText('50', 168, 58);
 
-    roundedRect(ctx, 250, 34, 290, 34, 17);
+    drawIvoryCoastFlag(ctx, 248, 36, 54, 36);
+
+    roundedRect(ctx, 314, 34, 290, 34, 17);
     ctx.fillStyle = 'rgba(255,157,29,.14)';
     ctx.fill();
     ctx.strokeStyle = ORANGE;
@@ -201,7 +245,7 @@
     ctx.stroke();
     ctx.fillStyle = ORANGE;
     ctx.font = '800 16px Arial, sans-serif';
-    ctx.fillText('CÔTE D’IVOIRE · INFLUENCEURS', 268, 57);
+    ctx.fillText('CÔTE D’IVOIRE · INFLUENCEURS', 332, 57);
 
     ctx.fillStyle = LIME;
     ctx.font = '1000 74px Arial, sans-serif';
@@ -211,6 +255,12 @@
     ctx.fillStyle = ORANGE;
     ctx.font = '1000 42px Arial, sans-serif';
     ctx.fillText('Ils ont fait le buzz à Abidjan', 48, 278);
+
+    ['★', '✦', '★'].forEach((star, index) => {
+      ctx.fillStyle = index === 1 ? LIME : ORANGE;
+      ctx.font = `1000 ${index === 1 ? 34 : 26}px Arial, sans-serif`;
+      ctx.fillText(star, 720 + index * 42, 140 + index * 18);
+    });
 
     ctx.textAlign = 'right';
     ctx.fillStyle = MUTED;
@@ -284,11 +334,11 @@
   }
 
   function drawPodium(ctx, sections, images) {
-    const podiumY = 560;
+    const podiumY = LAYOUT.podiumY;
     const slots = [
-      { x: 108, y: podiumY - 72, size: 205, badge: 'N°1', accent: GOLD, glow: 'rgba(240,210,122,.28)', sectionIndex: 1, podiumH: 108 },
-      { x: 372, y: podiumY - 132, size: 310, badge: 'LIVE', accent: LIVE, glow: 'rgba(255,75,75,.32)', sectionIndex: 0, podiumH: 172 },
-      { x: 742, y: podiumY - 52, size: 188, badge: 'PRONOS', accent: PURPLE, glow: 'rgba(166,108,255,.28)', sectionIndex: 2, podiumH: 88 }
+      { x: 108, y: podiumY - 68, size: 198, badge: 'N°1', accent: GOLD, glow: 'rgba(240,210,122,.28)', sectionIndex: 1, podiumH: 100 },
+      { x: 372, y: podiumY - 122, size: 296, badge: 'LIVE', accent: LIVE, glow: 'rgba(255,75,75,.32)', sectionIndex: 0, podiumH: 158 },
+      { x: 742, y: podiumY - 48, size: 182, badge: 'PRONOS', accent: PURPLE, glow: 'rgba(166,108,255,.28)', sectionIndex: 2, podiumH: 82 }
     ];
 
     slots.forEach(slot => {
@@ -328,8 +378,35 @@
     });
   }
 
-  function drawHeroStatCard(ctx, section, y) {
-    const cardH = 148;
+  function drawMiniPhoto(ctx, image, x, y, size, fallback, accent) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+    ctx.clip();
+    if (image) {
+      const ratio = Math.max(size / image.width, size / image.height);
+      const width = image.width * ratio;
+      const height = image.height * ratio;
+      ctx.drawImage(image, x + (size - width) / 2, y + (size - height) / 2, width, height);
+    } else {
+      ctx.fillStyle = '#1a221a';
+      ctx.fillRect(x, y, size, size);
+      ctx.fillStyle = TEXT;
+      ctx.textAlign = 'center';
+      ctx.font = `1000 ${Math.max(14, Math.round(size * .28))}px Arial, sans-serif`;
+      ctx.fillText(fallback, x + size / 2, y + size * .62);
+      ctx.textAlign = 'left';
+    }
+    ctx.restore();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size / 2 - 1.5, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  function drawHeroStatCard(ctx, section, y, image) {
+    const cardH = LAYOUT.cardH;
     roundedRect(ctx, 40, y, 1000, cardH, 22);
     const cardGrad = ctx.createLinearGradient(40, y, 1040, y + cardH);
     cardGrad.addColorStop(0, 'rgba(255,255,255,.07)');
@@ -340,66 +417,59 @@
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    roundedRect(ctx, 58, y + 18, 112, 112, 18);
-    ctx.fillStyle = section.accent;
-    ctx.fill();
-    ctx.fillStyle = BG;
-    ctx.textAlign = 'center';
-    ctx.font = '1000 52px Arial, sans-serif';
-    ctx.fillText(section.icon, 114, y + 92);
-    ctx.textAlign = 'left';
+    drawMiniPhoto(ctx, image, 58, y + 20, 86, initials(section.name), section.accent);
 
     ctx.fillStyle = section.accent;
-    ctx.font = '1000 24px Arial, sans-serif';
-    ctx.fillText(section.label, 190, y + 42);
+    ctx.font = '1000 22px Arial, sans-serif';
+    ctx.fillText(section.label, 168, y + 38);
     ctx.fillStyle = TEXT;
-    ctx.font = '1000 30px Arial, sans-serif';
-    ctx.fillText(section.headline, 190, y + 78);
+    ctx.font = '1000 28px Arial, sans-serif';
+    ctx.fillText(section.headline, 168, y + 72);
     ctx.fillStyle = MUTED;
-    ctx.font = '700 20px Arial, sans-serif';
-    wrapCanvas(ctx, section.title, 420, 2).forEach((line, index) => {
-      ctx.fillText(line, 190, y + 108 + index * 24);
+    ctx.font = '700 18px Arial, sans-serif';
+    wrapCanvas(ctx, section.title, 360, 2).forEach((line, index) => {
+      ctx.fillText(line, 168, y + 100 + index * 22);
     });
 
     ctx.textAlign = 'right';
     ctx.fillStyle = section.accent;
-    ctx.font = '1000 64px Arial, sans-serif';
-    ctx.fillText(section.metric, 1010, y + 78);
+    ctx.font = '1000 56px Arial, sans-serif';
+    ctx.fillText(section.metric, 1010, y + 72);
     ctx.fillStyle = TEXT;
-    ctx.font = '800 22px Arial, sans-serif';
-    ctx.fillText(section.metricLabel, 1010, y + 112);
+    ctx.font = '800 20px Arial, sans-serif';
+    ctx.fillText(section.metricLabel, 1010, y + 100);
     ctx.fillStyle = TEXT;
-    ctx.font = '1000 28px Arial, sans-serif';
-    ctx.fillText(compact(section.name, 22), 1010, y + 142);
+    ctx.font = '1000 24px Arial, sans-serif';
+    ctx.fillText(compact(section.name, 22), 1010, y + 126);
     ctx.textAlign = 'left';
   }
 
   function drawFooter(ctx) {
-    roundedRect(ctx, 40, 1240, 1000, 88, 18);
+    const y = LAYOUT.footerY;
+    roundedRect(ctx, 40, y, 1000, 88, 18);
     ctx.fillStyle = LIME;
     ctx.fill();
     ctx.fillStyle = BG;
     ctx.font = '1000 38px Arial, sans-serif';
-    ctx.fillText('PASS50.STORE', 68, 1298);
+    ctx.fillText('PASS50.STORE', 68, y + 56);
     ctx.textAlign = 'right';
     ctx.font = '800 22px Arial, sans-serif';
-    ctx.fillText('CLASSEMENT · LIVE · PRONOS', 1010, 1284);
+    ctx.fillText('CLASSEMENT · LIVE · PRONOS', 1010, y + 42);
     ctx.font = '700 18px Arial, sans-serif';
-    ctx.fillText('Qui dit quoi, qui va où ?', 1010, 1312);
+    ctx.fillText('Qui dit quoi, qui va où ?', 1010, y + 70);
     ctx.textAlign = 'left';
   }
 
   async function drawWeeklyDigestCard(ctx, view) {
     const sections = Array.isArray(view.sections) ? view.sections.slice(0, 3).map(enrichSection) : [];
-    const images = await Promise.all(sections.map(section => loadImage(photoUrl(section.profileId, 480))));
+    const images = await Promise.all(sections.map(section => loadSectionImage(section, 480)));
 
     drawFestiveBackground(ctx);
     drawHeader(ctx, view.weekLabel || '');
     drawPodium(ctx, sections, images);
 
-    const cardsY = 700;
     sections.forEach((section, index) => {
-      drawHeroStatCard(ctx, section, cardsY + index * 162);
+      drawHeroStatCard(ctx, section, LAYOUT.cardsY + index * LAYOUT.cardGap, images[index]);
     });
 
     drawFooter(ctx);

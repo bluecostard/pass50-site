@@ -229,6 +229,14 @@ function p50_weekly_digest_format_viewers(int $n): string {
     return number_format(max(0, $n), 0, ',', ' ');
 }
 
+function p50_weekly_digest_profile_photo_url(?PDO $pdo, string $profileId, int $size = 480): string {
+    $profileId = trim($profileId);
+    if ($profileId === '' || !preg_match('/^[A-Za-z0-9._:-]{1,100}$/', $profileId)) {
+        return '';
+    }
+    return '/partage-photo.php?id=' . rawurlencode($profileId) . '&size=' . max(32, min(512, $size));
+}
+
 function p50_weekly_digest_pdf_url(string $weekKey = ''): string {
     return '/api/weekly-digest-pdf.php' . ($weekKey !== '' ? '?week=' . rawurlencode($weekKey) : '');
 }

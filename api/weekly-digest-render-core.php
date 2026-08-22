@@ -31,8 +31,8 @@ function p50_weekly_digest_load_stats(PDO $pdo, string $week = '', bool $preview
     return $stats;
 }
 
-/** @return array{weekKey:string,weekLabel:string,sections:list<array{num:string,title:string,name:string,detail:string}>} */
-function p50_weekly_digest_view_model(array $stats): array {
+/** @return array{weekKey:string,weekLabel:string,sections:list<array{num:string,title:string,name:string,detail:string,profileId:string,photoUrl:string}>} */
+function p50_weekly_digest_view_model(array $stats, ?PDO $pdo = null): array {
     $live = is_array($stats['topLive'] ?? null) ? $stats['topLive'] : null;
     $rank = is_array($stats['topRankOne'] ?? null) ? $stats['topRankOne'] : null;
     $prono = is_array($stats['topProno'] ?? null) ? $stats['topProno'] : null;
@@ -63,13 +63,25 @@ function p50_weekly_digest_view_model(array $stats): array {
         $pronoDetail = $votes . ' pronostic' . ($votes > 1 ? 's' : '') . ' · ' . $voters . ' votant' . ($voters > 1 ? 's' : '');
     }
 
+    $section = static function (?array $row, string $num, string $title, string $name, string $detail) use ($pdo): array {
+        $profileId = trim((string)($row['profileId'] ?? ''));
+        return [
+            'num' => $num,
+            'title' => $title,
+            'name' => $name !== '' ? $name : '—',
+            'detail' => $detail,
+            'profileId' => $profileId,
+            'photoUrl' => p50_weekly_digest_profile_photo_url($pdo, $profileId),
+        ];
+    };
+
     return [
         'weekKey' => (string)($stats['weekKey'] ?? ''),
         'weekLabel' => (string)($stats['window']['label'] ?? ''),
         'sections' => [
-            ['num' => '1', 'title' => 'Live le plus suivi', 'name' => $liveName !== '' ? $liveName : '—', 'detail' => $liveDetail, 'profileId' => trim((string)($live['profileId'] ?? ''))],
-            ['num' => '2', 'title' => 'N°1 du classement le plus souvent', 'name' => $rankName !== '' ? $rankName : '—', 'detail' => $rankDetail, 'profileId' => trim((string)($rank['profileId'] ?? ''))],
-            ['num' => '3', 'title' => 'Influenceur le plus pronostiqué', 'name' => $pronoName !== '' ? $pronoName : '—', 'detail' => $pronoDetail, 'profileId' => trim((string)($prono['profileId'] ?? ''))],
+            $section($live, '1', 'Live le plus suivi', $liveName, $liveDetail),
+            $section($rank, '2', 'N°1 du classement le plus souvent', $rankName, $rankDetail),
+            $section($prono, '3', 'Influenceur le plus pronostiqué', $pronoName, $pronoDetail),
         ],
     ];
 }
