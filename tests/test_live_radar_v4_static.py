@@ -34,7 +34,9 @@ class LiveRadarV41StaticTests(unittest.TestCase):
 
     def test_reported_youtube_false_positive_is_scoped_to_one_video(self):
         parser = FILES['parsers']
-        self.assertIn("P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS = ['TOa6dTjz7V0']", parser)
+        self.assertIn('P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS', parser)
+        self.assertIn('P50_LIVE_V4_FALSE_POSITIVE_TIKTOK_PROFILES', parser)
+        self.assertIn("'census-isouch'", parser)
         self.assertIn("'error'=>'known_false_positive'", parser)
         self.assertIn('p50_live_v4_known_false_positive($stream)', FILES['endpoint'])
         self.assertNotIn("profileId']==='kevine'", parser)
