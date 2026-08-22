@@ -151,9 +151,10 @@ function p50_live_v4_active_rows(): array {
         $params[]=$platform;
     }
     $conditions[]="(s.source='meta_authorized' AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE))";
-    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform LEFT JOIN p50_live_dismissals d ON d.stream_key=s.stream_key AND d.dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) LEFT JOIN p50_live_dismissals dp ON dp.stream_key=SHA2(LOWER(CONCAT('profile_dismiss|',s.profile_id,'|',s.platform)),256) AND dp.dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) WHERE d.stream_key IS NULL AND dp.stream_key IS NULL AND s.source IN ('automatic','meta_authorized') AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY (s.source='meta_authorized') DESC,s.last_seen_at DESC");
+    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform LEFT JOIN p50_live_dismissals d ON d.stream_key=s.stream_key AND d.dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) WHERE d.stream_key IS NULL AND s.source IN ('automatic','meta_authorized') AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY (s.source='meta_authorized') DESC,s.last_seen_at DESC");
     $stmt->execute($params);$out=[];
     foreach($stmt->fetchAll() as $row){
+        if(p50_live_v4_is_profile_suppressed((string)$row['profile_id'],(string)$row['platform']))continue;
         $source=(string)$row['source'];
         $meta=json_decode((string)($row['metadata']??''),true);
         if(!is_array($meta))$meta=[];
