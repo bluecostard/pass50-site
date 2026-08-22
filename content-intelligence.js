@@ -1,9 +1,10 @@
 'use strict';
 
 (() => {
-  const P50CI={period:'24h',data:null,loading:false,news:new Map(),lastRefresh:0,profileHookInstalled:false};
+  const P50CI={period:'48h',data:null,loading:false,news:new Map(),lastRefresh:0,profileHookInstalled:false};
   const TREND_CACHE_KEY='pass50_ci_trends_cache_v1';
   const PERIODS={"2h":"2 H","24h":"24 H","48h":"48 H","7d":"7 J","15d":"15 J"};
+  const TREND_PERIOD_FALLBACK=['2h','24h','48h','7d','15d'];
   const NEWS_TTL=30*1000;
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const attr=value=>esc(value).replace(/`/g,'&#96;');
@@ -65,8 +66,8 @@
     }catch{}
   }
 
-  async function fetchFeed(profileId=''){
-    const query=new URLSearchParams({period:P50CI.period});if(profileId)query.set('profileId',profileId);
+  async function fetchFeed(profileId='',period=P50CI.period){
+    const query=new URLSearchParams({period});if(profileId)query.set('profileId',profileId);
     query.set('_',String(Date.now()));
     const response=await fetch(`./api/public-feed.php?${query}`,{headers:{Accept:'application/json'},cache:'no-store'});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Flux de contenus indisponible.');return data;
@@ -113,10 +114,22 @@
     }).join('');
   }
 
+  async function fetchTrendFeed(){
+    const startIx=Math.max(0,TREND_PERIOD_FALLBACK.indexOf(P50CI.period));
+    const order=[...TREND_PERIOD_FALLBACK.slice(startIx),...TREND_PERIOD_FALLBACK.slice(0,startIx)];
+    let last=null;
+    for(const period of order){
+      const data=await fetchFeed('',period);
+      last=data;
+      if(Array.isArray(data?.trends)&&data.trends.length)return data;
+    }
+    return last||{ready:true,trends:[]};
+  }
+
   async function refreshTrends(force=false){
     if(P50CI.loading)return;if(!force&&Date.now()-P50CI.lastRefresh<30000)return;
     P50CI.loading=true;renderTrends();
-    try{P50CI.data=await fetchFeed();P50CI.lastRefresh=Date.now();
+    try{P50CI.data=await fetchTrendFeed();P50CI.lastRefresh=Date.now();
       if(Array.isArray(P50CI.data?.trends)&&P50CI.data.trends.length)writeTrendCache(P50CI.period,P50CI.data);
       else if(P50CI.data?.rules?.staleTrendsRemainVisible){
         const cached=readTrendCache(P50CI.period);

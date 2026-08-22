@@ -38,14 +38,23 @@ class AuthSessionTop5V1Tests(unittest.TestCase):
 
     def test_top5_stale_fallback_when_fresh_filter_empty(self):
         self.assertIn("p50_content_feed_collect_trends", FEED)
-        self.assertIn("if(count($trends)===0)", FEED)
-        self.assertIn("p50_content_feed_collect_trends($pdo,$period,null)", FEED)
+        self.assertIn("p50_content_feed_trend_period_fallback_order", FEED)
+        self.assertIn("trendsServedPeriod", FEED)
         self.assertIn("trendsUsedFallback", FEED)
+
+    def test_auth_boot_restores_session_before_cloud_state(self):
+        self.assertIn("async function restoreCloudSession", INDEX)
+        self.assertIn("finishCloudBoot()", INDEX)
+        self.assertIn("if(CLOUD.token)await restoreCloudSession()", INDEX)
+        self.assertIn("function isGuestUser()", INDEX)
+        self.assertIn("window.authPending", NAV)
 
     def test_client_keeps_last_top5_while_refreshing(self):
         self.assertIn("pass50_ci_trends_cache_v1", CLIENT)
         self.assertIn("staleTrendsRemainVisible", CLIENT)
         self.assertIn("writeTrendCache", CLIENT)
+        self.assertIn("fetchTrendFeed", CLIENT)
+        self.assertIn("period:'48h'", CLIENT)
 
     def test_mobile_nav_respects_stored_auth(self):
         self.assertIn("P50Auth.hasStoredAuth()", NAV)
