@@ -30,9 +30,9 @@
     weekKey: '2026-W34',
     weekLabel: '15/08 → 22/08/2026',
     sections: [
-      { num: '1', title: 'Live le plus suivi', name: 'Samuella Kouassi', detail: '12 840 auditeurs · TikTok', metric: '12 840', metricLabel: 'auditeurs', profileId: 'census-samuella-kouassi', photoUrl: '/partage-photo.php?id=census-samuella-kouassi&size=480' },
-      { num: '2', title: 'N°1 du classement le plus souvent', name: 'Roseline Layo', detail: '5 fois en tête (24H)', metric: '5×', metricLabel: 'en tête', profileId: 'census-roseline-layo', photoUrl: '/partage-photo.php?id=census-roseline-layo&size=480' },
-      { num: '3', title: 'Influenceur le plus pronostiqué', name: 'Jordan Evraa', detail: '312 pronostics · 186 votants', metric: '312', metricLabel: 'pronostics', profileId: 'census-jordan-evraa', photoUrl: '/partage-photo.php?id=census-jordan-evraa&size=480' }
+      { num: '1', title: 'Live le plus suivi', name: 'Samuella Kouassi', detail: '12 840 auditeurs · TikTok', metric: '12 840', metricLabel: 'auditeurs', profileId: 'census-samuella-kouassi', photoUrl: '/api/weekly-digest-photo.php?id=census-samuella-kouassi&size=480' },
+      { num: '2', title: 'N°1 du classement le plus souvent', name: 'Roseline Layo', detail: '5 fois en tête (24H)', metric: '5×', metricLabel: 'en tête', profileId: 'census-roseline-layo', photoUrl: '/api/weekly-digest-photo.php?id=census-roseline-layo&size=480' },
+      { num: '3', title: 'Influenceur le plus pronostiqué', name: 'Jordan Evraa', detail: '312 pronostics · 186 votants', metric: '312', metricLabel: 'pronostics', profileId: 'census-jordan-evraa', photoUrl: '/api/weekly-digest-photo.php?id=census-jordan-evraa&size=480' }
     ]
   };
 
@@ -98,11 +98,14 @@
         settled = true;
         resolve(value);
       };
-      image.crossOrigin = 'anonymous';
+      const absolute = /^https?:\/\//i.test(url);
+      const sameOrigin = !absolute || url.startsWith(location.origin);
+      if (sameOrigin) image.crossOrigin = 'anonymous';
+      image.referrerPolicy = 'no-referrer';
       image.onload = () => finish(image);
       image.onerror = () => finish(null);
       image.src = url;
-      setTimeout(() => finish(null), 5000);
+      setTimeout(() => finish(null), 8000);
     });
   }
 
@@ -117,7 +120,7 @@
     }
     const id = String(profileId || '').trim();
     if (!/^[A-Za-z0-9._:-]{1,100}$/.test(id)) return '';
-    return `./partage-photo.php?id=${encodeURIComponent(id)}&size=${size}`;
+    return `./api/weekly-digest-photo.php?id=${encodeURIComponent(id)}&size=${size}`;
   }
 
   function prodPhotoEndpoint(profileId, size = 480) {

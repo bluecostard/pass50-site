@@ -234,7 +234,7 @@ function p50_weekly_digest_profile_photo_url(?PDO $pdo, string $profileId, int $
     if ($profileId === '' || !preg_match('/^[A-Za-z0-9._:-]{1,100}$/', $profileId)) {
         return '';
     }
-    return '/partage-photo.php?id=' . rawurlencode($profileId) . '&size=' . max(32, min(512, $size));
+    return '/api/weekly-digest-photo.php?id=' . rawurlencode($profileId) . '&size=' . max(32, min(512, $size));
 }
 
 function p50_weekly_digest_pdf_url(string $weekKey = ''): string {
