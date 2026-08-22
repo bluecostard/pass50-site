@@ -1,4 +1,4 @@
-# Mobile bottom nav V1.11 — scroll usable, lock only for overlays, content clear of bar.
+# Mobile bottom nav V1.12 — scroll usable, lock only for overlays, content clear of bar.
 from pathlib import Path
 import unittest
 
@@ -12,12 +12,12 @@ SW = (ROOT / "sw.js").read_text(encoding="utf-8")
 
 class MobileScrollNavV1Tests(unittest.TestCase):
     def test_contract_and_cache_bust(self):
-        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.11", NAV)
-        self.assertIn("mobile-bottom-nav-v1.js?v=1.11", LOADER)
-        self.assertIn('pass50MobileBottomNav","1.11"', LOADER.replace("'", '"'))
-        self.assertIn("mobile-bottom-nav-v1.js?v=1.11", FEED)
-        self.assertIn("mobile-bottom-nav-v1.js?v=1.11", PRONO)
-        self.assertIn("mobile-bottom-nav-v1.js?v=1.11", SW)
+        self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.12", NAV)
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.12", LOADER)
+        self.assertIn('pass50MobileBottomNav","1.12"', LOADER.replace("'", '"'))
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.12", FEED)
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.12", PRONO)
+        self.assertIn("mobile-bottom-nav-v1.js?v=1.12", SW)
 
     def test_bottom_padding_clears_floating_nav(self):
         self.assertIn("padding-bottom:calc(132px + env(safe-area-inset-bottom))", NAV)
@@ -38,6 +38,8 @@ class MobileScrollNavV1Tests(unittest.TestCase):
 
     def test_carousel_and_modal_overscroll_guards(self):
         self.assertIn("touch-action:pan-x", NAV)
+        self.assertIn("touch-action:pan-y pinch-zoom", NAV)
+        self.assertIn("#contentGrid", NAV)
         self.assertIn("overscroll-behavior:contain", NAV)
         self.assertIn(".modal.show", NAV)
 

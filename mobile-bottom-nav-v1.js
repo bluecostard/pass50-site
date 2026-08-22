@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.11';
+  const CONTRACT = 'PASS50-MOBILE-BOTTOM-NAV-V1.12';
   const PRONO_HREF = './pronostics.html?v=83';
   const LEGACY_CONTEXT_SHARE_ASSET = './context-share-v1.js?v=1.0';
   const path = location.pathname || '';
@@ -94,10 +94,15 @@
         .toast,.record-toast{
           bottom:calc(148px + env(safe-area-inset-bottom))!important;
         }
-        .top10,.content-grid,.follow-strip,.prono-stories{
+        .top10,.follow-strip,.prono-stories{
           touch-action:pan-x;
           overscroll-behavior-x:contain;
           overscroll-behavior-y:none;
+        }
+        .content-grid,#contentGrid{
+          touch-action:pan-y pinch-zoom;
+          overscroll-behavior-x:contain;
+          overscroll-behavior-y:auto;
         }
         .modal.show,.modal.show .modal-box,.modal.show .modal-body{
           overscroll-behavior:contain;
@@ -258,6 +263,7 @@
     const profileId = params.get('profile');
     if (action === 'account') callWhenReady('currentUser', current => {
       if (current()) callWhenReady('openUser', fn => fn());
+      else if (typeof window.authPending === 'function' && window.authPending()) return;
       else callWhenReady('openAuth', fn => fn('login'));
     });
     if (isReloadNavigation()) {
