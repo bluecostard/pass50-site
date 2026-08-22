@@ -29,6 +29,23 @@ class LiveRadarRuntimeV4Tests(unittest.TestCase):
         self.assertIn('trustSeconds(String(item.platform', CLIENT)
         self.assertIn('confirmation', CLIENT.lower())
         self.assertNotIn("10*60_000:3*60_000", CLIENT)
+        index = (ROOT / 'index.html').read_text(encoding='utf-8')
+        v9 = (ROOT / 'v9-tools.js').read_text(encoding='utf-8')
+        self.assertNotIn("10*60_000:3*60_000", index)
+        self.assertNotIn("10*60_000:3*60_000", v9)
+        self.assertIn('TikTok:1800', CLIENT)
+        self.assertIn('1800*1000', index)
+        self.assertIn('1800*1000', v9)
+        self.assertIn('preservedRadarLives', index)
+        self.assertIn('if(!window.__pass50LiveNormalizerV4)normalizeLiveStreams=', v9)
+
+    def test_radar_boots_immediately_and_keeps_lives_without_cloud(self):
+        self.assertIn('setTimeout(runQuick,0)', CLIENT)
+        self.assertNotIn('setTimeout(runQuick,3000)', CLIENT)
+        self.assertIn("document.readyState==='loading'", CLIENT)
+        self.assertIn('function bootRadar()', CLIENT)
+        index = (ROOT / 'index.html').read_text(encoding='utf-8')
+        self.assertNotIn('if(CLOUD.ready){if(changed){render();syncFollowContextAlerts();}', index)
 
     def test_reasonable_ionos_future_skew_is_repaired(self):
         self.assertIn('futureSkew>5*60_000', CLIENT)

@@ -18,7 +18,6 @@ function trustSeconds(platform){
 }
 
 function installLiveNormalizerV4(){
-  if(window.__pass50LiveNormalizerV4)return;
   const normalizer=function(){
     if(typeof window.PASS50_LIVE_FILTER_PUBLIC==='function'){
       if(!Array.isArray(db.liveStreams))db.liveStreams=[];
@@ -61,8 +60,9 @@ function installLiveNormalizerV4(){
   };
   window.normalizeLiveStreams=normalizer;
   try{normalizeLiveStreams=normalizer;}catch{}
+  const first=!window.__pass50LiveNormalizerV4;
   window.__pass50LiveNormalizerV4=true;
-  normalizer();
+  if(first)normalizer();
 }
 
 function liveCount(){
@@ -266,7 +266,14 @@ document.addEventListener('click',event=>{
 
 document.addEventListener('p50:official-links-saved',event=>{const id=String(event.detail?.profileId||'');if(id)setTimeout(()=>verifyProfile(id),300);});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)runQuick();});
-document.addEventListener('DOMContentLoaded',()=>{installLiveNormalizerV4();ensureLiveExperience();bind();setTimeout(runQuick,3000);autoTimer=setInterval(runQuick,QUICK_INTERVAL);try{refreshLiveStatus=runQuick}catch{}});
+function bootRadar(){
+  installLiveNormalizerV4();ensureLiveExperience();bind();
+  setTimeout(runQuick,0);
+  if(!autoTimer)autoTimer=setInterval(runQuick,QUICK_INTERVAL);
+  try{refreshLiveStatus=runQuick}catch{}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootRadar);
+else bootRadar();
 const observer=new MutationObserver(()=>requestAnimationFrame(bind));observer.observe(document.documentElement,{subtree:true,childList:true});
 window.addEventListener('beforeunload',()=>{if(autoTimer)clearInterval(autoTimer);},{once:true});
 window.PASS50_RUN_LIVE_RADAR=force=>force?runFullSweep():runQuick();

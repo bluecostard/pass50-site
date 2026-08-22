@@ -520,26 +520,46 @@ function migrateDb(){
 }
 let session={userId:sessionStorage.getItem('pass50_session')||null};let ui={period:'24H',region:'ALL',adminTab:'adminhome',scoreMotion:false,allowRankMotion:false,bootSettling:true};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-function normalizeLiveStreams(){
-  if(!Array.isArray(db.liveStreams))db.liveStreams=[];
+function liveTrustMs(platform){
+  const name=String(platform||'');
+  const configured=Number(window.PASS50_LIVE_RADAR?.trustSeconds?.[name]);
+  if(Number.isFinite(configured)&&configured>0)return configured*1000;
+  const key=name.toLowerCase();
+  if(key==='tiktok')return 1800*1000;
+  if(key==='youtube')return 1200*1000;
+  return 600*1000;
+}
+function isFreshPublicLive(x){
+  if(typeof window.PASS50_LIVE_IS_FRESH==='function')return window.PASS50_LIVE_IS_FRESH(x);
+  if(!x||x.status!=='live'||!x.profileId||!/^https?:\/\//i.test(String(x.url||'')))return false;
   const now=Date.now();
-  const seen=new Set();
-  db.liveStreams=db.liveStreams.filter(x=>{
-    if(!x||x.status!=='live'||!x.profileId||!/^https?:\/\//i.test(String(x.url||'')))return false;
-    if(x.source==='manual'){
-      const endsAt=new Date(x.endsAt||'').getTime();
-      if(!Number.isFinite(endsAt)||endsAt<=now)return false;
-    }else{
-      const confirmedAt=new Date(x.lastConfirmedAt||x.lastSeenAt||'').getTime();
-      const maxAge=String(x.platform||'').toLowerCase()==='youtube'?10*60_000:3*60_000;
-      if(!Number.isFinite(confirmedAt)||now-confirmedAt>maxAge||confirmedAt>now+30_000)return false;
-    }
-    const key=[x.profileId,x.platform||'',String(x.url).replace(/\/+$/,'')].map(v=>String(v).trim().toLowerCase()).join('|');
-    if(seen.has(key))return false;
-    seen.add(key);
-    return true;
-  });
-  db.profiles.forEach(p=>{
+  if(x.source==='manual'){
+    const endsAt=new Date(x.endsAt||'').getTime();
+    return Number.isFinite(endsAt)&&endsAt>now;
+  }
+  let confirmedAt=new Date(x.lastConfirmedAt||x.lastSeenAt||'').getTime();
+  if(!Number.isFinite(confirmedAt))return false;
+  const futureSkew=confirmedAt-now;
+  if(futureSkew>5*60_000&&futureSkew<=6*60*60_000)confirmedAt=now;
+  else if(futureSkew>6*60*60_000)return false;
+  return now-confirmedAt<=liveTrustMs(x.platform);
+}
+function normalizeLiveStreams(){
+  if(typeof window.PASS50_LIVE_FILTER_PUBLIC==='function'){
+    if(!Array.isArray(db.liveStreams))db.liveStreams=[];
+    db.liveStreams=window.PASS50_LIVE_FILTER_PUBLIC(db.liveStreams);
+  }else{
+    if(!Array.isArray(db.liveStreams))db.liveStreams=[];
+    const seen=new Set();
+    db.liveStreams=db.liveStreams.filter(x=>{
+      if(!isFreshPublicLive(x))return false;
+      const key=[x.profileId,x.platform||'',String(x.url).replace(/\/+$/,'')].map(v=>String(v).trim().toLowerCase()).join('|');
+      if(seen.has(key))return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  (db.profiles||[]).forEach(p=>{
     p.badges=(p.badges||[]).filter(b=>b!=='LIVE');
     if(db.liveStreams.some(x=>x.profileId===p.id&&x.status==='live'))p.badges.unshift('LIVE');
   });
@@ -580,7 +600,7 @@ function openLives(){
   }).join('')}</div>`:`<div class="live-empty"><strong>Aucun direct détecté pour le moment.</strong><div style="margin-top:6px">Cette fenêtre se met à jour automatiquement.</div></div>`;
   open('liveModal');
 }
-async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php?mode=status',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){const changed=JSON.stringify(db.liveStreams||[])!==JSON.stringify(data.liveStreams);db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));if(CLOUD.ready){if(changed){render();syncFollowContextAlerts();}else renderLiveHeader();}}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
+async function refreshLiveStatus(){try{const r=await fetch('./api/live-status.php?mode=status',{cache:'no-store'});if(!r.ok)return null;const data=await r.json();window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){const changed=JSON.stringify(db.liveStreams||[])!==JSON.stringify(data.liveStreams);db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));if(changed){if(typeof render==='function')render();if(typeof syncFollowContextAlerts==='function')syncFollowContextAlerts();}else if(typeof renderLiveHeader==='function')renderLiveHeader();if(document.getElementById('liveModal')?.classList.contains('show')&&typeof openLives==='function')openLives();}return data;}catch(err){console.warn('Radar LIVE indisponible',err);return null;}}
 function hasPeriodScore(p,period=ui.period){
   const scores=p&&typeof p==='object'?p.scores:null;
   if(!scores||typeof scores!=='object')return false;
@@ -1724,7 +1744,7 @@ async function loadCloudState(){
   const manualBirths=Object.fromEntries((db.profiles||[]).filter(p=>p50BirthShouldPreserve(p)).map(p=>[p.id,{birthDate:p.birthDate,birthYear:p50BirthYearFromDate(p.birthDate)||p.birthYear||null,ageStatus:'confirmed',agePublic:p.agePublic!==false,birthManualLocked:true,birthManualUpdatedAt:p.birthManualUpdatedAt||new Date().toISOString(),quality:{...p50EnsurePlainObject(p.quality),birth:Math.max(100,Number(p50EnsurePlainObject(p.quality).birth||0))},dataEngine:{...p50EnsurePlainObject(p.dataEngine),verifiedFacts:[...new Set([...p50VerifiedFactsList(p),'birth_date'])]}}]));
   const data=await apiFetch('state.php',{auth:false,timeoutMs:12000});
   if(Number.isFinite(Number(data?.stateRevision)))CLOUD.stateRevision=Number(data.stateRevision);
-  if(data?.data){const cloud=data.data;const localTombstones=[...(Array.isArray(db.deletedProfileIds)?db.deletedProfileIds:[]),...P50_TOMBSTONE_PROFILE_IDS];cloud.liveStreams=(cloud.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};db.deletedProfileIds=Array.from(new Set([...localTombstones,...(Array.isArray(cloud.deletedProfileIds)?cloud.deletedProfileIds:[])]));migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{
+  if(data?.data){const cloud=data.data;const localTombstones=[...(Array.isArray(db.deletedProfileIds)?db.deletedProfileIds:[]),...P50_TOMBSTONE_PROFILE_IDS];const preservedRadarLives=(db.liveStreams||[]).filter(stream=>stream&&stream.source!=='manual'&&stream.status==='live'&&stream.profileId&&/^https?:\/\//i.test(String(stream.url||'')));cloud.liveStreams=(cloud.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});db={...db,...cloud,users:db.users||[],notifications:db.notifications||[]};db.liveStreams=[...(Array.isArray(cloud.liveStreams)?cloud.liveStreams:[]),...preservedRadarLives];db.deletedProfileIds=Array.from(new Set([...localTombstones,...(Array.isArray(cloud.deletedProfileIds)?cloud.deletedProfileIds:[])]));migrateDb();applyPass50V6Patch();(db.profiles||[]).forEach(p=>{
     const kept=manualPhotos[p.id];
     if(kept){
       if(p50LocalPhotoShouldKeep(kept,p))Object.assign(p,kept);
@@ -1883,7 +1903,7 @@ initCloud();
 
 </script>
   <script src="./public-ui-sanitizer-v1.js?v=1.1"></script>
-<script src="./v9-tools.js?v=15.31"></script>
+<script src="./v9-tools.js?v=15.32"></script>
 <script src="./pronostics-coules-tab-v1.js?v=1.2" data-pass50-prono-coules-tab="1.2"></script>
 </body>
 </html>

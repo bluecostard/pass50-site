@@ -180,7 +180,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('coverageRevision', contract)
 
     def test_client_is_compatibly_loaded_but_uses_v4(self):
-        self.assertIn("live-radar-v3.js?v=1.10", CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.11", CONFIG)
         self.assertIn("const ENDPOINT='./api/live-status-v4.php'", CLIENT)
         self.assertIn('RADAR LIVE V4', CLIENT)
         self.assertIn('TikTok:1800', CLIENT)

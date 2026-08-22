@@ -46,8 +46,8 @@ class AwaoCanonicalProfileTests(unittest.TestCase):
     def test_versions(self):
         self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.15",self.v9)
         self.assertIn("CENSUS_VERSION='99-v32'",self.v9)
-        self.assertIn('v9-tools.js?v=15.31',self.index)
-        self.assertIn('v9-tools.js?v=15.31',self.sw)
+        self.assertIn('v9-tools.js?v=15.32',self.index)
+        self.assertIn('v9-tools.js?v=15.32',self.sw)
         self.assertIn('pass50_nouveaux_candidats_90_v19.json?v=22.15',self.sw)
 
 if __name__=='__main__': unittest.main()
