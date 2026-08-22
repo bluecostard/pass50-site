@@ -2,6 +2,7 @@
 
 (() => {
   const P50CI={period:'24h',data:null,loading:false,news:new Map(),lastRefresh:0,profileHookInstalled:false};
+  const TREND_CACHE_KEY='pass50_ci_trends_cache_v1';
   const PERIODS={"2h":"2 H","24h":"24 H","48h":"48 H","7d":"7 J","15d":"15 J"};
   const NEWS_TTL=30*1000;
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -48,6 +49,20 @@
       #contentGrid:has(.p50ci-card)>.content-card:not(.p50ci-card),#contentGrid [data-content="c1"],#contentGrid [data-content="c2"],#contentGrid [data-content="c3"],#contentGrid [data-content="c4"],#contentGrid [data-content="c5"],#contentGrid .p50ci-empty,#contentGrid .p50-content-wait{display:none!important}
       @media(max-width:680px){.p50ci-periods{justify-content:flex-start}.p50ci-card-cover{height:150px}.p50ci-news-card{grid-template-columns:62px minmax(0,1fr)}.p50ci-news-thumb{width:62px;height:58px}.p50ci-news-card>a{grid-column:1/-1;width:100%;text-align:center}}
     `;
+  }
+
+  function readTrendCache(period){
+    try{
+      const raw=JSON.parse(localStorage.getItem(TREND_CACHE_KEY)||'null');
+      if(!raw||raw.period!==period||!Array.isArray(raw.trends)||!raw.trends.length)return null;
+      return raw;
+    }catch{return null}
+  }
+  function writeTrendCache(period,data){
+    try{
+      if(!Array.isArray(data?.trends)||!data.trends.length)return;
+      localStorage.setItem(TREND_CACHE_KEY,JSON.stringify({period,generatedAt:data.generatedAt||new Date().toISOString(),trends:data.trends}));
+    }catch{}
   }
 
   async function fetchFeed(profileId=''){
@@ -102,6 +117,13 @@
     if(P50CI.loading)return;if(!force&&Date.now()-P50CI.lastRefresh<30000)return;
     P50CI.loading=true;renderTrends();
     try{P50CI.data=await fetchFeed();P50CI.lastRefresh=Date.now();
+      if(Array.isArray(P50CI.data?.trends)&&P50CI.data.trends.length)writeTrendCache(P50CI.period,P50CI.data);
+      else if(P50CI.data?.rules?.staleTrendsRemainVisible){
+        const cached=readTrendCache(P50CI.period);
+        if(cached?.trends?.length){
+          P50CI.data={...P50CI.data,trends:cached.trends,message:P50CI.data?.message||'Dernier Top 5 connu affiché en attendant la mise à jour.'};
+        }
+      }
       for(const item of (P50CI.data?.trends||[])){
         if(typeof window.p50SyncTriggerFromOfficialNews==='function'){
           window.p50SyncTriggerFromOfficialNews(item.profileId,{...item,official:true,itemType:item.contentType});

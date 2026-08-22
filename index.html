@@ -240,6 +240,7 @@
 <div class="toast" id="toast"></div><div class="record-toast" id="recordToast">🏆 Nouveau record</div>
 
 <script src="./app-config.js"></script>
+<script src="./pass50-auth-session.js?v=1.0"></script>
 <script>
 'use strict';
 const APP_KEY='pass50.ionos.v1';
@@ -518,7 +519,9 @@ function migrateDb(){
   db.version=Math.max(Number(db.version||1),5);
   p50ApplyProfileTombstones();
 }
-let session={userId:sessionStorage.getItem('pass50_session')||null};let ui={period:'24H',region:'ALL',adminTab:'adminhome',scoreMotion:false,allowRankMotion:false,bootSettling:true};
+let session={userId:(typeof P50Auth!=='undefined'?P50Auth.getSessionUserId():null)||null};let ui={period:'24H',region:'ALL',adminTab:'adminhome',scoreMotion:false,allowRankMotion:false,bootSettling:true};
+function authPending(){return !currentUser()&&typeof P50Auth!=='undefined'&&P50Auth.hasStoredAuth();}
+function setSessionUser(userId){session.userId=userId||null;if(typeof P50Auth!=='undefined')P50Auth.setSessionUserId(userId||null);}
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function liveTrustMs(platform){
   const name=String(platform||'');
@@ -1314,10 +1317,10 @@ function close(id){
   if(id==='profileModal'){closeFiPhoto();restoreProfileOrigin();p50ClearProfileQuery();}
   if(id==='voteShareModal')voteShareCleanup();
 }
-function requireAuth(){if(currentUser())return true;openAuth('login');return false}
+function requireAuth(){if(currentUser())return true;if(authPending()&&!CLOUD.ready)return false;openAuth('login');return false}
 let _guestTop10GateBound=false;
 function syncGuestRankingGate(){
-  const guest=!currentUser();
+  const guest=!currentUser()&&!authPending();
   const section=$('#top10');
   const grid=$('#top10Grid');
   document.documentElement.classList.toggle('p50-guest',guest);
@@ -1366,8 +1369,9 @@ async function submitAuth(form){
         
         $('#authBody').innerHTML=html+`<button class="btn" style="margin-top:12px" data-close="authModal">Fermer</button>`;
       }else{
-        const data=await apiFetch('login.php',{method:'POST',body:{email,password},auth:false});
-        CLOUD.token=data.token;localStorage.setItem('pass50_api_token',CLOUD.token);const notes=await loadCloudNotifications();hydrateApiUser(data.user,notes);CLOUD.ready=true;window.__pass50CloudReady=true;close('authModal');toast('Connexion réussie');render();openUser();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
+        const loginBody={email,password};if(typeof P50Auth!=='undefined')loginBody.deviceId=P50Auth.getDeviceId();
+        const data=await apiFetch('login.php',{method:'POST',body:loginBody,auth:false});
+        CLOUD.token=data.token;if(typeof P50Auth!=='undefined')P50Auth.setToken(CLOUD.token);else localStorage.setItem('pass50_api_token',CLOUD.token);const notes=await loadCloudNotifications();hydrateApiUser(data.user,notes);CLOUD.ready=true;window.__pass50CloudReady=true;close('authModal');toast('Connexion réussie');render();openUser();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
       }
       return;
     }catch(err){console.error(err);return toast(err?.message||'Connexion impossible');}
@@ -1377,9 +1381,9 @@ async function submitAuth(form){
   if(mode==='signup'){
     if(db.users.some(u=>u.email===email))return toast('Cette adresse existe déjà');
     const user={id:'u_'+Date.now(),email,passwordHash:hash,displayName,role:db.users.length===0?'owner':'member',favorites:[],following:[],followAlerts:{},notificationMode:'daily',createdAt:new Date().toISOString()};
-    db.users.push(user);session.userId=user.id;sessionStorage.setItem('pass50_session',user.id);save();close('authModal');toast('Compte créé');render();openUser();
+    db.users.push(user);setSessionUser(user.id);save();close('authModal');toast('Compte créé');render();openUser();
   }else{
-    const u=db.users.find(x=>x.email===email&&x.passwordHash===hash);if(!u)return toast('Identifiants incorrects');session.userId=u.id;sessionStorage.setItem('pass50_session',u.id);close('authModal');toast('Connexion réussie');render();openUser();
+    const u=db.users.find(x=>x.email===email&&x.passwordHash===hash);if(!u)return toast('Identifiants incorrects');setSessionUser(u.id);close('authModal');toast('Connexion réussie');render();openUser();
   }
 }
 function toggleFavorite(id){if(!requireAuth())return;id=String(id||'');const u=userPrefs(),ix=u.favorites.findIndex(x=>String(x)===id);if(ix>=0)u.favorites.splice(ix,1);else{if(u.favorites.length>=3)return toast('Maximum 3 favoris');u.favorites.push(id)}save();render();if($('#userModal').classList.contains('show'))openUser();if($('#profileModal').classList.contains('show'))openProfile(id);toast('Favoris mis à jour')}
@@ -1540,7 +1544,7 @@ function restoreAdminProfile(id){
 }
 function editProfile(id){const p=id?profile(id):{id:'p_'+Date.now(),name:'',handle:'@',initials:'',region:'CI',category:'Lifestyle',platforms:['Instagram'],scores:Object.fromEntries(periods.map(x=>[x,40])),delta:0,decline:0,alive:true,eligible:true,ageStatus:'unconfirmed',birthDate:null,birthYear:null,agePublic:true,birthManualLocked:false,birthManualUpdatedAt:null,photoUrl:'',photoCandidateUrl:'',photoStatus:'missing',photoSource:'',photoNote:'',badges:[],links:{Instagram:'https://www.instagram.com/'}};$('#adminPane').innerHTML=`<form class="form" id="profileForm" data-id="${p.id}" data-new="${id?'0':'1'}"><div class="section-head"><div><button class="btn admin-view-home" type="button" data-admin-tab="adminhome">← Accueil administration</button><div class="section-title" style="margin-top:10px">${id?'MODIFIER UNE FI':'AJOUTER UNE FI'}</div></div></div><div class="two"><div class="field"><label>Nom public</label><input name="name" value="${p.name}" required></div><div class="field"><label>Identifiant</label><input name="handle" value="${p.handle}" required></div></div><div class="two"><div class="field"><label>Zone</label><select name="region"><option ${p.region==='CI'?'selected':''}>CI</option><option ${p.region==='DIASPORA'?'selected':''}>DIASPORA</option><option ${p.region==='BOTH'?'selected':''}>BOTH</option></select></div><div class="field"><label>Catégorie</label><input name="category" value="${p.category}"></div></div><div class="two"><div class="field"><label>Score ${ui.period}</label><input type="number" min="0" max="100" name="score" value="${score(p)}"></div><div class="field"><label>Variation de places</label><input type="number" name="delta" value="${p.delta}"></div></div><div class="two"><div class="field"><label>Date de naissance</label><input type="date" name="birthDate" value="${safeAttr(p.birthDate||'')}"><small>Une date saisie et confirmée par l’administrateur est prioritaire sur le moteur.</small></div><div class="field"><label>Statut âge</label><select name="ageStatus"><option value="unconfirmed" ${p.ageStatus==='unconfirmed'?'selected':''}>Non confirmé</option><option value="probable" ${p.ageStatus==='probable'?'selected':''}>Estimé</option><option value="confirmed" ${p.ageStatus==='confirmed'?'selected':''}>Confirmé</option></select></div></div><div class="two"><div class="field"><label>URL photo / candidate</label><input name="photoUrl" value="${safeAttr(candidatePhoto(p))}"></div><div class="field"><label>Statut photo</label><select name="photoStatus"><option value="missing" ${p.photoStatus==='missing'?'selected':''}>Manquante</option><option value="pending" ${p.photoStatus==='pending'?'selected':''}>À valider</option><option value="validated" ${p.photoStatus==='validated'?'selected':''}>Validée</option><option value="rejected" ${p.photoStatus==='rejected'?'selected':''}>Rejetée</option></select></div></div><div class="two"><div class="field"><label>Cadrage photo</label><input name="photoPosition" value="${safeAttr(p.photoPosition||'50% 50%')}" placeholder="50% 50%"></div><div class="field"><label>Note</label><input value="Éditable aussi depuis l’onglet Médias" disabled></div></div><label><input type="checkbox" name="alive" ${p.alive?'checked':''}> Personne vivante</label><label><input type="checkbox" name="eligible" ${p.eligible?'checked':''}> Éligible au classement</label><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit">Enregistrer</button><button class="btn" type="button" data-admin-tab="profiles">Annuler</button>${id?((!p.alive||p.adminDeleted)?`<button class="btn restore-profile" type="button" data-id="${p.id}">Restaurer</button>`:`<button class="btn danger delete-profile" type="button" data-id="${p.id}">Supprimer</button>`):''}</div></form>`;}
 function simulateCycle(){db.profiles.forEach(p=>{periods.forEach(k=>p.scores[k]=Math.max(5,Math.min(100,p.scores[k]+Math.floor(Math.random()*9)-4)));p.delta=Math.floor(Math.random()*11)-5;});generateAlerts();save();render();renderAdmin();toast('Nouveau cycle simulé')}
-function resetDemo(){if(!confirm('Réinitialiser toutes les données locales ?'))return;localStorage.removeItem(APP_KEY);sessionStorage.removeItem('pass50_session');db=clone(seedData);session.userId=null;save();p50ExitAdmin();render();toast('Démo réinitialisée')}
+function resetDemo(){if(!confirm('Réinitialiser toutes les données locales ?'))return;localStorage.removeItem(APP_KEY);if(typeof P50Auth!=='undefined')P50Auth.clearAuth();else{localStorage.removeItem('pass50_api_token');sessionStorage.removeItem('pass50_session');}db=clone(seedData);session.userId=null;save();p50ExitAdmin();render();toast('Démo réinitialisée')}
 
 document.addEventListener('click',async e=>{
   if(e.target.closest('#fiPhotoLightbox')){closeFiPhoto();return;}
@@ -1582,8 +1586,8 @@ document.addEventListener('click',async e=>{
   if(e.target.id==='liveRadarRefresh'){e.target.disabled=true;e.target.textContent='RADAR EN COURS…';try{const r=await fetch('./api/live-status.php?mode=quick&force=1',{cache:'no-store'});const data=r.ok?await r.json():null;if(data?.ok){window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));}}renderAdminPane();toast(data?.radar?.profilesScanned?`${data.radar.profilesScanned} chaîne(s) contrôlée(s)`:'Radar actualisé');}catch{toast('Radar indisponible');}finally{e.target.disabled=false;e.target.textContent='🔴 LANCER LE RADAR MAINTENANT';}}
   if(e.target.matches('.live-stop'))stopLive(e.target.dataset.id);
   if(e.target.id==='accountBtn'){currentUser()?openUser():openAuth('login')}if(e.target.id==='top50Btn')openTop50();if(e.target.id==='shareBtn')share();if(e.target.id==='notificationCenterBtn')openNotifications();
-  if(e.target.id==='logoutBtn'){if(CLOUD.enabled&&CLOUD.token){try{await apiFetch('logout.php',{method:'POST',body:{}})}catch{}}CLOUD.token='';localStorage.removeItem('pass50_api_token');session.userId=null;sessionStorage.removeItem('pass50_session');close('userModal');render();toast('Déconnecté')}
-  if(e.target.id==='deleteAccountBtn'){const u=currentUser();if(confirm(CLOUD.enabled?'Supprimer définitivement ce compte ?':'Supprimer ce compte local ?')){if(CLOUD.enabled&&CLOUD.token)await deleteCloudProfile();db.users=db.users.filter(x=>x.id!==u.id);db.notifications=db.notifications.filter(n=>n.userId!==u.id);session.userId=null;sessionStorage.removeItem('pass50_session');save();close('userModal');render();toast('Compte supprimé')}}
+  if(e.target.id==='logoutBtn'){if(CLOUD.enabled&&CLOUD.token){try{await apiFetch('logout.php',{method:'POST',body:{}})}catch{}}CLOUD.token='';if(typeof P50Auth!=='undefined')P50Auth.clearAuth();else{localStorage.removeItem('pass50_api_token');sessionStorage.removeItem('pass50_session');}session.userId=null;close('userModal');render();toast('Déconnecté')}
+  if(e.target.id==='deleteAccountBtn'){const u=currentUser();if(confirm(CLOUD.enabled?'Supprimer définitivement ce compte ?':'Supprimer ce compte local ?')){if(CLOUD.enabled&&CLOUD.token)await deleteCloudProfile();db.users=db.users.filter(x=>x.id!==u.id);db.notifications=db.notifications.filter(n=>n.userId!==u.id);setSessionUser(null);save();close('userModal');render();toast('Compte supprimé')}}
   if(e.target.id==='adminMembersOpen'){adminOpen('members');return;}if(e.target.id==='adminOpen')adminOpen();if(e.target.closest('[data-open-admin-todo]')){adminOpen(e.target.closest('[data-open-admin-todo]').dataset.openAdminTodo||'todo');return;}if(e.target.id==='browserNotify')askNotifications();
   if(e.target.closest('[data-user-fold-toggle]')){const btn=e.target.closest('[data-user-fold-toggle]');const key=btn.getAttribute('data-user-fold-toggle');const section=btn.closest('[data-user-fold]');if(section){const next=!section.classList.contains('is-collapsed');section.classList.toggle('is-collapsed',next);btn.setAttribute('aria-expanded',next?'false':'true');setUserFold(key,next);}return;}
   if(e.target.id==='memberProfileSave'){await saveMemberProfile();return;}
@@ -1639,7 +1643,7 @@ const apiConfig=window.PASS50_API||{};
 const CLOUD={
   enabled:Boolean(apiConfig.baseUrl&&location.protocol.startsWith('http')),
   baseUrl:String(apiConfig.baseUrl||'').replace(/\/$/,''),
-  token:localStorage.getItem('pass50_api_token')||'',
+  token:(typeof P50Auth!=='undefined'?P50Auth.getToken():localStorage.getItem('pass50_api_token'))||'',
   syncTimer:null,
   stateRevision:0,
   ready:false,
@@ -1675,7 +1679,7 @@ async function apiFetch(path,{method='GET',body=null,formData=null,auth=true,tim
     throw err;
   }finally{if(timer)clearTimeout(timer);}
   let data={};try{data=await res.json()}catch{}
-  if(!res.ok)throw new Error(data.error||data.message||(res.status?`Erreur serveur (${res.status})`:'Erreur serveur'));
+  if(!res.ok){const err=new Error(data.error||data.message||(res.status?`Erreur serveur (${res.status})`:'Erreur serveur'));err.status=res.status;throw err;}
   return data;
 }
 function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};copy.liveStreams=(copy.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});return copy;}
@@ -1764,7 +1768,7 @@ function hydrateApiUser(apiUser,notes=[]){
   db.users=db.users.filter(x=>x.id!==local.id);db.users.push(local);
   db.notifications=db.notifications.filter(n=>n.userId!==local.id);
   (notes||[]).forEach(n=>db.notifications.push(n));
-  session.userId=local.id;sessionStorage.setItem('pass50_session',local.id);localStorage.setItem(APP_KEY,JSON.stringify(db));
+  setSessionUser(local.id);localStorage.setItem(APP_KEY,JSON.stringify(db));
 }
 async function saveMemberProfile(){
   const displayName=String($('#memberDisplayName')?.value||'').trim();
@@ -1866,7 +1870,7 @@ async function uploadMediaFile(file,kind,id){
   const fd=new FormData();fd.append('file',file);fd.append('kind',kind);fd.append('id',id);
   const data=await apiFetch('upload.php',{method:'POST',formData:fd});return data.url;
 }
-async function deleteCloudProfile(){if(!CLOUD.token)return;await apiFetch('delete-account.php',{method:'POST',body:{}});CLOUD.token='';localStorage.removeItem('pass50_api_token');}
+async function deleteCloudProfile(){if(!CLOUD.token)return;await apiFetch('delete-account.php',{method:'POST',body:{}});CLOUD.token='';if(typeof P50Auth!=='undefined')P50Auth.clearAuth();else localStorage.removeItem('pass50_api_token');}
 function openCampaignProfile(){
   const params=new URLSearchParams(location.search),id=params.get('profile'),period=params.get('period');
   if(period&&periods.includes(period))ui.period=period;
@@ -1897,7 +1901,7 @@ async function initCloud(){
     await rankingBoot.catch(()=>{});
     if(!loaded)throw lastError||new Error('État public indisponible');
     if(CLOUD.token){
-      try{const me=await apiFetch('me.php');const notes=await loadCloudNotifications();hydrateApiUser(me.user,notes);applyPass50V6Patch();await syncCloudState()}catch{CLOUD.token='';localStorage.removeItem('pass50_api_token')}
+      try{const me=await apiFetch('me.php');const notes=await loadCloudNotifications();hydrateApiUser(me.user,notes);applyPass50V6Patch();await syncCloudState()}catch(err){if(typeof P50Auth!=='undefined'&&P50Auth.isAuthExpiredError(err)){CLOUD.token='';P50Auth.clearAuth();session.userId=null;}else console.warn('Session restore',err);}
     }
     await loadCloudCoulesHistory();
     await loadCloudCoulesPoll();

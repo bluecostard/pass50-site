@@ -54,47 +54,65 @@ if(!p50_ci_table_ready($pdo)){
 ]);
 }
 
-$trendStmt=$pdo->prepare("SELECT t.rank_position,t.previous_rank,t.rank_delta,t.score,t.confidence,t.view_delta,t.interaction_delta,
-  t.share_delta,t.velocity,t.acceleration,t.follower_count,t.cluster_platform_count,t.badge,t.calculated_at,
-  c.id content_id,c.profile_id,c.platform,c.content_type,c.canonical_url,c.title,c.published_at,c.first_seen_at,c.platform_content_id,c.metadata_json,
-  r.public_name,n.thumbnail_url
-  FROM p50_content_trend_current t
-  JOIN p50_metric_contents c ON c.id=t.content_id
-  JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY c.profile_id
-  LEFT JOIN p50_news_items n ON n.content_id=c.id AND n.validation_status='published'
-  WHERE t.period_key=? AND c.status='active' AND r.alive=1
-    AND COALESCE(c.published_at,c.first_seen_at)>=?
-  ORDER BY t.rank_position LIMIT 80");
-$trendStmt->execute([$period,$trendFreshSince]);
-$trends=[];$perProfile=[];
-foreach($trendStmt->fetchAll() as $row){
-    $pid=(string)$row['profile_id'];
-    if(($perProfile[$pid]??0)>=2)continue;
-    $metadata=p50_ci_decode((string)$row['metadata_json']);
-    $thumbnail=trim((string)($row['thumbnail_url']??''));
-    if($thumbnail==='')$thumbnail=(string)(p50_ci_thumbnail((string)$row['platform'],(string)$row['canonical_url'],$row['platform_content_id']!==null?(string)$row['platform_content_id']:null,$metadata)??'');
-    $title=trim((string)$row['title']);
-    $titleLength=function_exists('mb_strlen')?mb_strlen($title,'UTF-8'):strlen($title);
-    if(strcasecmp((string)$row['platform'],'Facebook')===0&&$titleLength<12&&$thumbnail==='')continue;
-    $publishedSource=$row['published_at']?:$row['first_seen_at'];
-    $playable=p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['content_type'],(string)$row['canonical_url']);
-    $trends[]=[
-        'rank'=>count($trends)+1,'sourceRank'=>(int)$row['rank_position'],'previousRank'=>$row['previous_rank']===null?null:(int)$row['previous_rank'],
-        'rankDelta'=>$row['rank_delta']===null?null:(int)$row['rank_delta'],'contentId'=>(int)$row['content_id'],
-        'profileId'=>$pid,'name'=>(string)$row['public_name'],'platform'=>(string)$row['platform'],'contentType'=>(string)$row['content_type'],
-        'title'=>$title,'url'=>(string)$row['canonical_url'],'thumbnailUrl'=>$thumbnail,
-        'publishedAt'=>$publishedSource?gmdate('c',strtotime((string)$publishedSource.' UTC')):null,
-        'score'=>(float)$row['score'],'confidence'=>(float)$row['confidence'],'badge'=>(string)$row['badge'],
-        'viewDelta'=>(int)$row['view_delta'],'interactionDelta'=>(int)$row['interaction_delta'],'shareDelta'=>(int)$row['share_delta'],
-        'velocity'=>(float)$row['velocity'],'acceleration'=>(float)$row['acceleration'],
-        'followers'=>$row['follower_count']===null?null:(int)$row['follower_count'],'clusterPlatformCount'=>(int)$row['cluster_platform_count'],
-        'calculatedAt'=>gmdate('c',strtotime((string)$row['calculated_at'].' UTC')),
-        'readableInPass50'=>strcasecmp((string)$row['platform'],'Facebook')===0,
-        'playableInPass50'=>$playable,
-        'facebookEmbedType'=>$playable?p50_content_feed_facebook_embed_type((string)$row['platform'],(string)$row['canonical_url']):null,
-    ];
-    $perProfile[$pid]=($perProfile[$pid]??0)+1;
-    if(count($trends)>=5)break;
+function p50_content_feed_collect_trends(PDO $pdo,string $period,?string $freshSince=null): array {
+    $sql="SELECT t.rank_position,t.previous_rank,t.rank_delta,t.score,t.confidence,t.view_delta,t.interaction_delta,
+      t.share_delta,t.velocity,t.acceleration,t.follower_count,t.cluster_platform_count,t.badge,t.calculated_at,
+      c.id content_id,c.profile_id,c.platform,c.content_type,c.canonical_url,c.title,c.published_at,c.first_seen_at,c.platform_content_id,c.metadata_json,
+      r.public_name,n.thumbnail_url
+      FROM p50_content_trend_current t
+      JOIN p50_metric_contents c ON c.id=t.content_id
+      JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY c.profile_id
+      LEFT JOIN p50_news_items n ON n.content_id=c.id AND n.validation_status='published'
+      WHERE t.period_key=? AND c.status='active' AND r.alive=1";
+    $params=[$period];
+    if($freshSince!==null){
+        $sql.=" AND COALESCE(c.published_at,c.first_seen_at)>=?";
+        $params[]=$freshSince;
+    }
+    $sql.=" ORDER BY t.rank_position LIMIT 80";
+    $trendStmt=$pdo->prepare($sql);
+    $trendStmt->execute($params);
+    $trends=[];$perProfile=[];
+    foreach($trendStmt->fetchAll() as $row){
+        $pid=(string)$row['profile_id'];
+        if(($perProfile[$pid]??0)>=2)continue;
+        $metadata=p50_ci_decode((string)$row['metadata_json']);
+        $thumbnail=trim((string)($row['thumbnail_url']??''));
+        if($thumbnail==='')$thumbnail=(string)(p50_ci_thumbnail((string)$row['platform'],(string)$row['canonical_url'],$row['platform_content_id']!==null?(string)$row['platform_content_id']:null,$metadata)??'');
+        $title=trim((string)$row['title']);
+        $titleLength=function_exists('mb_strlen')?mb_strlen($title,'UTF-8'):strlen($title);
+        if(strcasecmp((string)$row['platform'],'Facebook')===0&&$titleLength<12&&$thumbnail==='')continue;
+        $publishedSource=$row['published_at']?:$row['first_seen_at'];
+        $playable=p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['content_type'],(string)$row['canonical_url']);
+        $trends[]=[
+            'rank'=>count($trends)+1,'sourceRank'=>(int)$row['rank_position'],'previousRank'=>$row['previous_rank']===null?null:(int)$row['previous_rank'],
+            'rankDelta'=>$row['rank_delta']===null?null:(int)$row['rank_delta'],'contentId'=>(int)$row['content_id'],
+            'profileId'=>$pid,'name'=>(string)$row['public_name'],'platform'=>(string)$row['platform'],'contentType'=>(string)$row['content_type'],
+            'title'=>$title,'url'=>(string)$row['canonical_url'],'thumbnailUrl'=>$thumbnail,
+            'publishedAt'=>$publishedSource?gmdate('c',strtotime((string)$publishedSource.' UTC')):null,
+            'score'=>(float)$row['score'],'confidence'=>(float)$row['confidence'],'badge'=>(string)$row['badge'],
+            'viewDelta'=>(int)$row['view_delta'],'interactionDelta'=>(int)$row['interaction_delta'],'shareDelta'=>(int)$row['share_delta'],
+            'velocity'=>(float)$row['velocity'],'acceleration'=>(float)$row['acceleration'],
+            'followers'=>$row['follower_count']===null?null:(int)$row['follower_count'],'clusterPlatformCount'=>(int)$row['cluster_platform_count'],
+            'calculatedAt'=>gmdate('c',strtotime((string)$row['calculated_at'].' UTC')),
+            'readableInPass50'=>strcasecmp((string)$row['platform'],'Facebook')===0,
+            'playableInPass50'=>$playable,
+            'facebookEmbedType'=>$playable?p50_content_feed_facebook_embed_type((string)$row['platform'],(string)$row['canonical_url']):null,
+        ];
+        $perProfile[$pid]=($perProfile[$pid]??0)+1;
+        if(count($trends)>=5)break;
+    }
+    return $trends;
+}
+
+$trends=p50_content_feed_collect_trends($pdo,$period,$trendFreshSince);
+$trendsUsedFallback=false;
+if(count($trends)===0){
+    $fallbackTrends=p50_content_feed_collect_trends($pdo,$period,null);
+    if(count($fallbackTrends)>0){
+        $trends=$fallbackTrends;
+        $trendsUsedFallback=true;
+    }
 }
 
 $news=[];
@@ -165,7 +183,7 @@ json_response([
         'officialNewsMaxAgeHours'=>72,'officialNewsFallbackMaxAgeHours'=>168,
         'officialNewsHoursApplied'=>$officialNewsHoursApplied,'officialNewsUsedFallback'=>$officialNewsUsedFallback,
         'externalNewsMaxAgeDays'=>7,'trendMaxAgeHours'=>$trendMaxAgeHours,'maxTrendRunAgeMinutes'=>30,
-        'staleTrendsRemainVisible'=>true,
+        'staleTrendsRemainVisible'=>true,'trendsUsedFallback'=>$trendsUsedFallback,
         'facebookPreviewInPass50'=>true,'facebookVideoPlaybackInPass50'=>true,'facebookEmbedRouting'=>true,
     ],
     'run'=>$lastRun?['runUuid'=>(string)$lastRun['run_uuid'],'contentsConsidered'=>(int)$lastRun['contents_considered'],'rowsWritten'=>(int)$lastRun['rows_written'],'finishedAt'=>gmdate('c',strtotime((string)$lastRun['finished_at'].' UTC'))]:null,

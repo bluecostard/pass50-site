@@ -10,5 +10,6 @@ $stmt->execute([$email]);
 $u = $stmt->fetch();
 if (!$u || !password_verify($password, $u['password_hash'])) json_response(['error' => 'Identifiants incorrects.'], 401);
 if ($u['email_confirmed_at'] === null) json_response(['error' => 'Confirmez d’abord votre adresse e-mail.'], 403);
-$token = create_session($u['id']);
+$deviceId = trim((string)($in['deviceId'] ?? ''));
+$token = create_session($u['id'], $deviceId !== '' ? $deviceId : null);
 json_response(['ok' => true, 'token' => $token, 'user' => user_payload($u)]);
