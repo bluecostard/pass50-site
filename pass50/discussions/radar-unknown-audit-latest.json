@@ -1,58 +1,9 @@
 {
-  "at": "2026-08-22 04:00 UTC",
+  "at": "2026-08-22 07:04 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "aya-robert",
-      "platform": "TikTok",
-      "roomId": "7676621029871045409",
-      "title": "",
-      "viewers": 716,
-      "startedAt": "2026-08-21 22:51:30",
-      "handle": "aya.robert27"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7676587137415842593",
-      "title": "",
-      "viewers": 135,
-      "startedAt": "2026-08-21 20:39:29",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "ennemi-des-djandjou",
-      "platform": "TikTok",
-      "roomId": "7676669382254742293",
-      "title": "",
-      "viewers": 268,
-      "startedAt": "2026-08-22 01:58:08",
-      "handle": "ennemidesdjandjou"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "aya-robert",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "ennemi-des-djandjou",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 3
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
