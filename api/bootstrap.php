@@ -99,6 +99,32 @@ function bearer_token(): ?string {
     return null;
 }
 
+function p50_sessions_ensure_schema(): void {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        $pdo = db();
+        $col = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='sessions' AND COLUMN_NAME='device_id'")->fetchColumn();
+        if ((int)$col === 0) {
+            $pdo->exec('ALTER TABLE sessions ADD COLUMN device_id VARCHAR(64) NULL AFTER user_id, ADD INDEX idx_sessions_device (device_id)');
+        }
+    } catch (Throwable $e) {
+        error_log('PASS50 sessions schema: ' . $e->getMessage());
+    }
+}
+
+function touch_session(string $tokenHash): void {
+    global $config;
+    $days = max(30, (int)($config['app']['session_days'] ?? 365));
+    $expires = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+' . $days . ' days')->format('Y-m-d H:i:s');
+    try {
+        db()->prepare('UPDATE sessions SET expires_at=? WHERE token_hash=?')->execute([$expires, $tokenHash]);
+    } catch (Throwable $e) {
+        error_log('PASS50 touch_session: ' . $e->getMessage());
+    }
+}
+
 function auth_user(bool $required = true): ?array {
     $token = bearer_token();
     if (!$token) {
@@ -113,6 +139,7 @@ function auth_user(bool $required = true): ?array {
             error_log('PASS50 member schema: '.$e->getMessage());
         }
     }
+    p50_sessions_ensure_schema();
     $hash = hash('sha256', $token);
     $stmt = db()->prepare('SELECT u.id,u.email,u.display_name,u.avatar_url,u.birth_date,u.role,u.email_confirmed_at,u.deleted_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>NOW() LIMIT 1');
     try {
@@ -132,6 +159,7 @@ function auth_user(bool $required = true): ?array {
         if ($required) json_response(['error' => 'Session expirée.'], 401);
         return null;
     }
+    touch_session($hash);
     return $u;
 }
 
@@ -139,13 +167,23 @@ function require_role(array $user, string ...$roles): void {
     if (!in_array($user['role'], $roles, true)) json_response(['error' => 'Droits insuffisants.'], 403);
 }
 
-function create_session(string $userId): string {
+function create_session(string $userId, ?string $deviceId = null): string {
     global $config;
+    p50_sessions_ensure_schema();
     $token = bin2hex(random_bytes(32));
-    $days = max(1, (int)$config['app']['session_days']);
+    $days = max(30, (int)($config['app']['session_days'] ?? 365));
     $expires = (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+' . $days . ' days')->format('Y-m-d H:i:s');
-    $stmt = db()->prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)');
-    $stmt->execute([hash('sha256', $token), $userId, $expires]);
+    $deviceId = $deviceId !== null ? trim($deviceId) : '';
+    if ($deviceId === '' || strlen($deviceId) > 64 || !preg_match('/^[A-Za-z0-9._:-]+$/', $deviceId)) {
+        $deviceId = null;
+    }
+    try {
+        $stmt = db()->prepare('INSERT INTO sessions(token_hash,user_id,device_id,expires_at) VALUES(?,?,?,?)');
+        $stmt->execute([hash('sha256', $token), $userId, $deviceId, $expires]);
+    } catch (Throwable $e) {
+        $stmt = db()->prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)');
+        $stmt->execute([hash('sha256', $token), $userId, $expires]);
+    }
     return $token;
 }
 

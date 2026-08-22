@@ -51,17 +51,23 @@
 
   function localUser() {
     const database = localDb();
-    const sessionId = sessionStorage.getItem('pass50_session');
+    const sessionId = (typeof window.P50Auth !== 'undefined' && window.P50Auth.getSessionUserId())
+      || sessionStorage.getItem('pass50_session');
     return Array.isArray(database.users) ? database.users.find(user => user.id === sessionId) || null : null;
   }
 
   async function apiFetch(path, { auth = false } = {}) {
     const headers = { Accept: 'application/json' };
-    const token = localStorage.getItem('pass50_api_token') || '';
+    const token = (typeof window.P50Auth !== 'undefined' && window.P50Auth.getToken())
+      || localStorage.getItem('pass50_api_token') || '';
     if (auth && token) headers.Authorization = `Bearer ${token}`;
     const response = await fetch(`${API_BASE}/${String(path).replace(/^\//, '')}`, { headers, cache: 'no-store' });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || 'Service momentanément indisponible.');
+    if (!response.ok) {
+      const err = new Error(data.error || 'Service momentanément indisponible.');
+      err.status = response.status;
+      throw err;
+    }
     return data;
   }
 

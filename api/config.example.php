@@ -6,7 +6,7 @@ return [
         // Adresse publique finale, sans slash à la fin.
         'base_url' => 'https://votre-domaine.fr',
         'name' => 'PASS50',
-        'session_days' => 30,
+        'session_days' => 365,
         'confirmation_hours' => 24,
         'reset_hours' => 1,
         // Laisser false en production.

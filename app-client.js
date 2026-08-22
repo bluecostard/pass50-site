@@ -3,6 +3,15 @@
 (() => {
   const CONTRACT = 'PASS50-APP-CLIENT-V1.1';
   const TOKEN_KEY = 'pass50_api_token';
+
+  function readToken() {
+    if (typeof window.P50Auth !== 'undefined') return window.P50Auth.getToken();
+    try {
+      return localStorage.getItem(TOKEN_KEY) || '';
+    } catch (_) {
+      return '';
+    }
+  }
   const API = './api/';
   const PERIODS = ['2H', '24H', '48H', '7J', '15J'];
   const FEED_PERIODS = [
@@ -33,7 +42,7 @@
     feed: null,
     live: null,
     user: null,
-    token: localStorage.getItem(TOKEN_KEY) || '',
+    token: readToken(),
     loading: { ranking: false, feed: false, live: false, auth: false },
     error: { ranking: '', feed: '', live: '', auth: '' },
     installEvent: null,
@@ -94,7 +103,8 @@
 
   function setToken(token) {
     state.token = String(token || '');
-    if (state.token) localStorage.setItem(TOKEN_KEY, state.token);
+    if (typeof window.P50Auth !== 'undefined') window.P50Auth.setToken(state.token);
+    else if (state.token) localStorage.setItem(TOKEN_KEY, state.token);
     else localStorage.removeItem(TOKEN_KEY);
   }
 
@@ -106,6 +116,10 @@
       if (!data.authenticated) state.user = null;
       renderChrome();
     } catch (error) {
+      if (typeof window.P50Auth !== 'undefined' && window.P50Auth.isAuthExpiredError(error)) {
+        setToken('');
+        state.user = null;
+      }
       state.bootstrap = { ok: false, error: String(error.message || error) };
       renderChrome();
     }
@@ -396,7 +410,15 @@
     state.error.auth = '';
     render();
     try {
-      const data = await api('login.php', { method: 'POST', body: { email, password }, auth: false });
+      const data = await api('login.php', {
+        method: 'POST',
+        body: {
+          email,
+          password,
+          deviceId: typeof window.P50Auth !== 'undefined' ? window.P50Auth.getDeviceId() : undefined,
+        },
+        auth: false,
+      });
       setToken(data.token || '');
       state.user = data.user || null;
       toast('Connexion réussie');

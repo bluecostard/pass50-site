@@ -270,7 +270,9 @@
   function guestNeedsAuth() {
     if (typeof window.currentUser === 'function' && window.currentUser()) return false;
     try {
+      if (typeof window.P50Auth !== 'undefined' && window.P50Auth.hasStoredAuth()) return false;
       if (localStorage.getItem('pass50_api_token')) return false;
+      if (localStorage.getItem('pass50_session_user')) return false;
       if (sessionStorage.getItem('pass50_session')) return false;
     } catch (_) {}
     return true;
