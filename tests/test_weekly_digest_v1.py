@@ -73,6 +73,17 @@ class WeeklyDigestV1Tests(unittest.TestCase):
         self.assertIn("Google Play", poster)
         self.assertIn("storeBadgesY", poster)
 
+    def test_staff_can_dispatch_weekly_digest_test(self):
+        dispatch = (ROOT / "api" / "weekly-digest-dispatch-test-v1.php").read_text(encoding="utf-8")
+        index = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn("require_role($user, 'owner', 'admin')", dispatch)
+        self.assertIn("p50_weekly_digest_compute_stats", dispatch)
+        self.assertIn("p50_notification_create", dispatch)
+        self.assertIn("weekly-digest-dispatch-test-v1.php", index)
+        self.assertIn("weeklyDigestTestDispatch", index)
+        self.assertIn("weeklyDigestCardUrl", index)
+        self.assertIn("Voir l’affiche", index)
+
 
 if __name__ == "__main__":
     unittest.main()
