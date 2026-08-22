@@ -141,41 +141,81 @@ function p50_pdf_escape(string $text): string {
     return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], p50_pdf_latin($text));
 }
 
-function p50_weekly_digest_pdf_bytes(array $view): string {
-    $lines = [
-        ['size' => 22, 'text' => 'PASS50'],
-        ['size' => 11, 'text' => 'Bilan du vendredi soir'],
-        ['size' => 16, 'text' => 'Semaine ' . (string)$view['weekLabel']],
-        ['size' => 10, 'text' => ''],
-    ];
-    foreach ($view['sections'] as $section) {
-        $lines[] = ['size' => 10, 'text' => ''];
-        $lines[] = ['size' => 11, 'text' => (string)$section['num'] . '. ' . (string)$section['title']];
-        $lines[] = ['size' => 18, 'text' => (string)$section['name']];
-        $lines[] = ['size' => 12, 'text' => (string)$section['detail']];
-    }
-    $lines[] = ['size' => 10, 'text' => ''];
-    $lines[] = ['size' => 10, 'text' => 'pass50.store'];
+function p50_pdf_rgb_fill(int $r, int $g, int $b): string {
+    return sprintf("%.3F %.3F %.3F rg\n", $r / 255, $g / 255, $b / 255);
+}
 
-    $y = 800.0;
-    $stream = "BT\n";
-    foreach ($lines as $line) {
-        $size = (float)$line['size'];
-        $text = p50_pdf_escape((string)$line['text']);
-        if ($text === '') {
-            $y -= 10;
-            continue;
-        }
-        $stream .= sprintf("/F1 %.1F Tf\n1 0 0 1 72 %.1F Tm\n(%s) Tj\n", $size, $y, $text);
-        $y -= $size + ($size >= 16 ? 14 : 10);
+function p50_pdf_rgb_stroke(int $r, int $g, int $b): string {
+    return sprintf("%.3F %.3F %.3F RG\n", $r / 255, $g / 255, $b / 255);
+}
+
+function p50_pdf_fill_rect(float $x, float $y, float $w, float $h, int $r, int $g, int $b): string {
+    return p50_pdf_rgb_fill($r, $g, $b) . sprintf("%.1F %.1F %.1F %.1F re f\n", $x, $y, $w, $h);
+}
+
+function p50_pdf_stroke_rect(float $x, float $y, float $w, float $h, int $r, int $g, int $b, float $width = 1.0): string {
+    return p50_pdf_rgb_stroke($r, $g, $b) . sprintf("%.2F w\n", $width) . sprintf("%.1F %.1F %.1F %.1F re S\n", $x, $y, $w, $h);
+}
+
+function p50_pdf_text(float $x, float $y, float $size, string $text, int $r = 11, int $g = 15, int $b = 11): string {
+    if ($text === '') {
+        return '';
     }
-    $stream .= "ET";
+    return p50_pdf_rgb_fill($r, $g, $b)
+        . sprintf("BT /F1 %.1F Tf 1 0 0 1 %.1F %.1F Tm (%s) Tj ET\n", $size, $x, $y, p50_pdf_escape($text));
+}
+
+function p50_weekly_digest_pdf_bytes(array $view): string {
+    $pageW = 595.0;
+    $pageH = 842.0;
+    $margin = 45.0;
+    $contentW = $pageW - (2 * $margin);
+    $stream = '';
+
+    // Fond page A4 (papier clair).
+    $stream .= p50_pdf_fill_rect(0, 0, $pageW, $pageH, 238, 241, 236);
+
+    $top = static function (float $fromTop) use ($pageH): float {
+        return $pageH - $fromTop;
+    };
+
+    // En-tête.
+    $stream .= p50_pdf_fill_rect($margin, $top(58), 10, 10, 183, 255, 0);
+    $stream .= p50_pdf_text($margin + 16, $top(52), 22, 'PASS50');
+    $stream .= p50_pdf_text($margin, $top(82), 10, 'BILAN DU VENDREDI SOIR', 14, 124, 124);
+    $stream .= p50_pdf_text($margin, $top(108), 24, 'Bilan de la semaine');
+    $stream .= p50_pdf_text($margin, $top(132), 12, 'Semaine ' . (string)$view['weekLabel'], 92, 102, 92);
+
+    $cardTop = 158.0;
+    $cardH = 148.0;
+    $cardGap = 14.0;
+    foreach ($view['sections'] as $section) {
+        $cardBottom = $pageH - $cardTop - $cardH;
+        $stream .= p50_pdf_fill_rect($margin, $cardBottom, $contentW, $cardH, 255, 255, 255);
+        $stream .= p50_pdf_stroke_rect($margin, $cardBottom, $contentW, $cardH, 213, 219, 210, 0.8);
+
+        $badgeX = $margin + 12;
+        $badgeY = $cardBottom + $cardH - 43;
+        $stream .= p50_pdf_fill_rect($badgeX, $badgeY, 31, 31, 14, 124, 124);
+        $stream .= p50_pdf_text($badgeX + 11, $badgeY + 10, 16, (string)$section['num'], 255, 255, 255);
+
+        $textX = $margin + 56;
+        $stream .= p50_pdf_text($textX, $cardBottom + $cardH - 28, 9, (string)$section['title'], 92, 102, 92);
+        $stream .= p50_pdf_text($textX, $cardBottom + $cardH - 54, 20, (string)$section['name']);
+        $stream .= p50_pdf_text($textX, $cardBottom + $cardH - 74, 11, (string)$section['detail'], 92, 102, 92);
+
+        $cardTop += $cardH + $cardGap;
+    }
+
+    $stream .= p50_pdf_stroke_rect($margin, 52, $contentW, 0.5, 213, 219, 210, 0.8);
+    $stream .= p50_pdf_text($margin, 36, 10, 'pass50.store', 92, 102, 92);
+    $stream .= p50_pdf_text($pageW - $margin - 108, 36, 10, '3 indicateurs · 1 page', 92, 102, 92);
 
     $objects = [];
     $objects[] = '<< /Type /Catalog /Pages 2 0 R >>';
     $objects[] = '<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
     $objects[] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>';
-    $objects[] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+    $objects[] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
     $objects[] = '<< /Length ' . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream";
 
     $pdf = "%PDF-1.4\n";
