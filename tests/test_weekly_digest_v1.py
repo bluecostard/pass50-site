@@ -53,16 +53,25 @@ class WeeklyDigestV1Tests(unittest.TestCase):
         card = (ROOT / "weekly-digest-card.html").read_text(encoding="utf-8")
         public = (ROOT / "bilan-semaine.php").read_text(encoding="utf-8")
         index = (ROOT / "index.html").read_text(encoding="utf-8")
+        poster = (ROOT / "weekly-digest-share-v2.js").read_text(encoding="utf-8")
         self.assertIn("p50_weekly_digest_view_model", RENDER)
         self.assertIn("p50_weekly_digest_pdf_bytes", RENDER)
         self.assertIn("p50_weekly_digest_render_html", RENDER)
         self.assertIn("application/pdf", PDF)
-        self.assertIn("weekly-digest-pdf.php?preview=1", card)
+        self.assertIn("weekly-digest-share-v2.js", card)
         self.assertIn("weekly-digest-render-core.php", public)
         self.assertIn("Télécharger le PDF", index)
         self.assertIn("weeklyDigestPdfUrl", index)
         self.assertIn("p50_weekly_digest_pdf_url", CORE)
         self.assertIn("pdfUrl", CORE)
+
+    def test_poster_layout_locked_with_store_badges(self):
+        poster = (ROOT / "weekly-digest-share-v2.js").read_text(encoding="utf-8")
+        self.assertIn("PASS50-WEEKLY-DIGEST-POSTER-V1-LOCK", poster)
+        self.assertIn("drawStoreBadges", poster)
+        self.assertIn("App Store", poster)
+        self.assertIn("Google Play", poster)
+        self.assertIn("storeBadgesY", poster)
 
 
 if __name__ == "__main__":

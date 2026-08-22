@@ -1,6 +1,10 @@
 'use strict';
 
+// Contrat visuel figé — ne pas modifier la structure sans validation produit.
+// PASS50-WEEKLY-DIGEST-POSTER-V1-LOCK · canvas 1080×1350
+
 (() => {
+  const POSTER_CONTRACT = 'PASS50-WEEKLY-DIGEST-POSTER-V1-LOCK';
   const BG = '#050705';
   const TEXT = '#f6f8f4';
   const MUTED = '#9da79b';
@@ -17,7 +21,14 @@
     cardsY: 810,
     cardH: 126,
     cardGap: 138,
-    footerY: 1238
+    storeBadgesY: 1218,
+    footerY: 1278,
+    footerH: 72
+  };
+
+  const STORE_LINKS = {
+    appStore: 'https://pass50.store/app.html?source=bilan-ios',
+    googlePlay: 'https://pass50.store/app.html?source=bilan-android'
   };
 
   const SECTION_THEMES = [
@@ -447,19 +458,87 @@
     ctx.textAlign = 'left';
   }
 
+  function drawStoreBadge(ctx, kind, x, y, w, h) {
+    roundedRect(ctx, x, y, w, h, 10);
+    ctx.fillStyle = '#0b0b0b';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.28)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    if (kind === 'ios') {
+      ctx.save();
+      ctx.translate(x + 18, y + h / 2 + 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, -5, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, 2);
+      ctx.bezierCurveTo(-10, 2, -10, 16, 0, 20);
+      ctx.bezierCurveTo(10, 16, 10, 2, 0, 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 11px Arial, sans-serif';
+      ctx.fillText('Télécharger dans', x + 40, y + 18);
+      ctx.font = '1000 20px Arial, sans-serif';
+      ctx.fillText('App Store', x + 40, y + 40);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(x + 16, y + 14);
+      ctx.lineTo(x + 16, y + h - 14);
+      ctx.lineTo(x + 34, y + h / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + 22, y + 18);
+      ctx.lineTo(x + 22, y + h - 18);
+      ctx.lineTo(x + 32, y + h / 2);
+      ctx.closePath();
+      ctx.fillStyle = '#0b0b0b';
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 11px Arial, sans-serif';
+      ctx.fillText('Disponible sur', x + 40, y + 18);
+      ctx.font = '1000 20px Arial, sans-serif';
+      ctx.fillText('Google Play', x + 40, y + 40);
+    }
+  }
+
+  function drawStoreBadges(ctx) {
+    const y = LAYOUT.storeBadgesY;
+    const badgeW = 220;
+    const badgeH = 52;
+    const gap = 18;
+    const totalW = badgeW * 2 + gap;
+    const startX = (1080 - totalW) / 2;
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = MUTED;
+    ctx.font = '700 16px Arial, sans-serif';
+    ctx.fillText('Téléchargez l’application', 540, y - 10);
+    ctx.textAlign = 'left';
+
+    drawStoreBadge(ctx, 'ios', startX, y, badgeW, badgeH);
+    drawStoreBadge(ctx, 'android', startX + badgeW + gap, y, badgeW, badgeH);
+  }
+
   function drawFooter(ctx) {
     const y = LAYOUT.footerY;
-    roundedRect(ctx, 40, y, 1000, 88, 18);
+    const h = LAYOUT.footerH;
+    roundedRect(ctx, 40, y, 1000, h, 18);
     ctx.fillStyle = LIME;
     ctx.fill();
     ctx.fillStyle = BG;
-    ctx.font = '1000 38px Arial, sans-serif';
-    ctx.fillText('PASS50.STORE', 68, y + 56);
+    ctx.font = '1000 34px Arial, sans-serif';
+    ctx.fillText('PASS50.STORE', 68, y + 46);
     ctx.textAlign = 'right';
-    ctx.font = '800 22px Arial, sans-serif';
-    ctx.fillText('CLASSEMENT · LIVE · PRONOS', 1010, y + 42);
-    ctx.font = '700 18px Arial, sans-serif';
-    ctx.fillText('Qui dit quoi, qui va où ?', 1010, y + 70);
+    ctx.font = '800 20px Arial, sans-serif';
+    ctx.fillText('CLASSEMENT · LIVE · PRONOS', 1010, y + 34);
+    ctx.font = '700 16px Arial, sans-serif';
+    ctx.fillText('Qui dit quoi, qui va où ?', 1010, y + 58);
     ctx.textAlign = 'left';
   }
 
@@ -475,6 +554,7 @@
       drawHeroStatCard(ctx, section, LAYOUT.cardsY + index * LAYOUT.cardGap, images[index]);
     });
 
+    drawStoreBadges(ctx);
     drawFooter(ctx);
   }
 
@@ -538,6 +618,9 @@
   }
 
   window.PASS50_WEEKLY_DIGEST_SHARE_V2 = {
+    POSTER_CONTRACT,
+    LAYOUT,
+    STORE_LINKS,
     boot,
     renderPreview,
     fetchView,
