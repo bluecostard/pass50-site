@@ -47,6 +47,22 @@ class WeeklyDigestV1Tests(unittest.TestCase):
         self.assertIn("pass50/weekly-digest", WORKFLOW)
         self.assertRegex(WORKFLOW, r"Abidjan")
 
+    def test_share_card_prototype_assets(self):
+        share = (ROOT / "weekly-digest-share-v1.js").read_text(encoding="utf-8")
+        card = (ROOT / "weekly-digest-card.html").read_text(encoding="utf-8")
+        public = (ROOT / "bilan-semaine.php").read_text(encoding="utf-8")
+        api = (ROOT / "api" / "weekly-digest-card.php").read_text(encoding="utf-8")
+        index = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn("drawWeeklyDigestCard", share)
+        self.assertIn("downloadPdf", share)
+        self.assertIn("weeklyDigestNoticePreviewHtml", share)
+        self.assertIn("bilan-semaine.php", share)
+        self.assertIn("PROTOTYPE V1", card)
+        self.assertIn("bilan-semaine.php", public)
+        self.assertIn("p50_weekly_digest_compute_stats", api)
+        self.assertIn("previewWeeklyDigest", index)
+        self.assertIn("bilan-semaine.php", CORE)
+
 
 if __name__ == "__main__":
     unittest.main()
