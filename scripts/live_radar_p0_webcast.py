@@ -24,7 +24,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from live_radar_unknown_audit import ENDPOINT_DEFAULT, fetch, probe_source  # noqa: E402
 
 SOURCE_PHP = ROOT / "api" / "live-radar-v4-source.php"
-ROTATION_LIMIT = 48
+ROTATION_LIMIT = 200
 
 
 def load_p0_tiktok_sources(source_php: str | None = None) -> list[dict[str, str]]:
@@ -55,6 +55,50 @@ def load_p0_tiktok_sources(source_php: str | None = None) -> list[dict[str, str]
         sources.append({"profileId": profile_id, "platform": "TikTok", "handle": handle})
     if missing:
         print("P0 TikTok sans handle : " + ", ".join(missing), file=sys.stderr)
+    for extra in load_declared_p0_tiktok_sources():
+        key = extra["handle"].lower()
+        if key in seen_handles:
+            continue
+        seen_handles.add(key)
+        sources.append(extra)
+    return sources
+
+
+def _tiktok_handle_from_text(text: str) -> str:
+    match = re.search(r"tiktok\.com/@([^/?#'\"\\]+)", text, flags=re.I)
+    return match.group(1).strip().lstrip("@") if match else ""
+
+
+def load_declared_p0_tiktok_sources() -> list[dict[str, str]]:
+    sources: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    def add(profile_id: str, handle: str) -> None:
+        handle = str(handle or "").strip().lstrip("@")
+        profile_id = str(profile_id or "").strip()
+        key = handle.lower()
+        if not profile_id or not handle or key in seen:
+            return
+        seen.add(key)
+        sources.append({"profileId": profile_id, "platform": "TikTok", "handle": handle})
+
+    for path in sorted(ROOT.glob("profile-*.js")):
+        text = path.read_text(encoding="utf-8")
+        if "verificationPriority:'P0'" not in text and 'verificationPriority:"P0"' not in text:
+            continue
+        pid = re.search(r"const PROFILE_ID='([^']+)'", text)
+        add(pid.group(1) if pid else "", _tiktok_handle_from_text(text))
+    census_path = ROOT / "pass50_nouveaux_candidats_90_v19.json"
+    if census_path.exists():
+        try:
+            census = json.loads(census_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            census = []
+        for row in census if isinstance(census, list) else []:
+            if str(row.get("verification_priority") or "").upper() != "P0":
+                continue
+            socials = row.get("official_socials") if isinstance(row.get("official_socials"), dict) else {}
+            add(str(row.get("id") or ""), _tiktok_handle_from_text(str(socials.get("TikTok") or "")))
     return sources
 
 
@@ -175,7 +219,7 @@ def merge_github_sources(
 def probe_p0_lives(sources: list[dict[str, str]] | None = None) -> list[dict[str, Any]]:
     sources = sources if sources is not None else load_p0_sources()
     lives: list[dict[str, Any]] = []
-    workers = min(8, max(1, len(sources)))
+    workers = min(16, max(1, len(sources)))
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(probe_source, source): source for source in sources}
         for future in as_completed(futures):

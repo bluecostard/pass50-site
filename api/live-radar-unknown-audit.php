@@ -21,14 +21,14 @@ $enabled=!in_array($enabledRaw,[false,0,'0','false','off'],true);
 if($_SERVER['REQUEST_METHOD']==='GET'){
     if(!$enabled)json_response(['ok'=>true,'enabled'=>false,'unknowns'=>[],'p0'=>p50_live_v4_dynamic_p0_watch(),'seedP0'=>P50_LIVE_V4_P0_TIKTOK]);
     $state=p50_de_load_public_state();
-    $limit=max(1,min(200,(int)($_GET['limit']??200)));
+    $limit=max(1,min(400,(int)($_GET['limit']??200)));
     $unknowns=[];
     foreach(p50_live_v4_sources($state) as $source){
         $platform=(string)($source['platform']??'');
         if(!in_array($platform,['TikTok','YouTube','Facebook'],true))continue;
         $last=strtolower(trim((string)($source['last_state']??'never_checked')));
-        $tiktokFalseOffline=$platform==='TikTok'&&$last==='offline';
-        if(!in_array($last,['unknown','never_checked',''],true)&&!$tiktokFalseOffline)continue;
+        $tiktokCatalog=$platform==='TikTok';
+        if(!in_array($last,['unknown','never_checked',''],true)&&!$tiktokCatalog)continue;
         $identity=p50_live_v4_identity($platform,(string)$source['url']);
         $liveUrl=(string)($identity['liveUrl']??$source['url']);
         if($platform==='YouTube'){
@@ -72,7 +72,7 @@ foreach(p50_live_v4_sources($state) as $source){
 
 $watch=p50_live_v4_dynamic_p0_watch();
 foreach($incoming as $item){
-    if(!is_array($item)||count($additions)+count($stored)>=20)break;
+    if(!is_array($item)||count($additions)+count($stored)>=80)break;
     $profileId=trim((string)($item['profileId']??$item['profile_id']??''));
     $platform=trim((string)($item['platform']??''));
     try{

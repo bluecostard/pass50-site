@@ -37,6 +37,9 @@ class LiveRadarP0WebcastTests(unittest.TestCase):
         self.assertEqual(by_handle['angemorel4'], 'census-ange-morel')
         self.assertEqual(by_handle['_michael_daniel'], 'census-daniel-m')
         self.assertEqual(by_handle['akalajoie'], 'census-akalajoie')
+        self.assertEqual(by_handle['ennemidesdjandjou'], 'ennemi-des-djandjou')
+        self.assertEqual(by_handle['prince_du_pays'], 'census-isouch')
+        self.assertNotEqual(by_handle.get('prince_du_pays'), 'ennemi-des-djandjou')
         self.assertEqual(sum(1 for row in sources if row['handle'].lower() == 'coachhamond'), 1)
         youtube = load_p0_youtube_sources(SOURCE)
         yt_ids = {row['profileId'] for row in youtube}

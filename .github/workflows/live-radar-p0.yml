@@ -13,6 +13,9 @@ on:
       - '.github/workflows/live-radar-p0.yml'
       - 'scripts/live_radar_p0_webcast.py'
       - 'scripts/live_radar_unknown_audit.py'
+      - 'api/live-radar-v4-source.php'
+      - 'profile-ennemi-des-djandjou.js'
+      - 'profile-isouch.js'
 
 permissions:
   contents: read

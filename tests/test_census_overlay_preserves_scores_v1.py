@@ -39,7 +39,7 @@ class CensusOverlayPreservesScoresV1Tests(unittest.TestCase):
         sw = (ROOT / "sw.js").read_text(encoding="utf-8")
         for src in (
             "profile-kawaii-nanami.js?v=1.1",
-            "profile-ennemi-des-djandjou.js?v=1.1",
+            "profile-ennemi-des-djandjou.js?v=1.2",
             "profile-obre-marie-pascale.js?v=1.2",
         ):
             self.assertIn(src, app)

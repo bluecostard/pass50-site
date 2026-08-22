@@ -39,6 +39,8 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'oustaz-diane',
     'census-daniel-m',
     'census-akalajoie',
+    'ennemi-des-djandjou',
+    'census-isouch',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -154,6 +156,8 @@ function p50_live_v4_identity(string $platform,string $url): array {
 function p50_live_v4_tiktok_handle_canonicals(): array {
     return [
         'samuellakouassiofficiel'=>'census-samuella-kouassi',
+        'ennemidesdjandjou'=>'ennemi-des-djandjou',
+        'prince_du_pays'=>'census-isouch',
     ];
 }
 
@@ -292,6 +296,8 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-daniel-m|tiktok'=>'https://www.tiktok.com/@_michael_daniel',
         'census-daniel-m|youtube'=>'https://www.youtube.com/@wisdombydaniel.m',
         'census-akalajoie|tiktok'=>'https://www.tiktok.com/@akalajoie',
+        'ennemi-des-djandjou|tiktok'=>'https://www.tiktok.com/@ennemidesdjandjou',
+        'census-isouch|tiktok'=>'https://www.tiktok.com/@prince_du_pays',
     ];
     return $overrides[$key]??$url;
 }
@@ -323,6 +329,7 @@ function p50_live_v4_sources(array $state): array {
                 'profile_id'=>$id,'public_name'=>(string)($profile['name']??$id),'handle'=>(string)($profile['handle']??''),
                 'platform'=>$platform,'url'=>$url,'confidence'=>in_array($status,['owner_verified','manual_verified','verified'],true)?98:94,
                 'verification_status'=>$status,
+                'verification_priority'=>(string)($profile['verificationPriority']??''),
             ];
         }
     }
@@ -372,6 +379,8 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'oustaz-diane','name'=>'Oustaz Diané','handle'=>'oustazdianeofficiel1'],
         ['id'=>'census-daniel-m','name'=>'DANIEL.M','handle'=>'_michael_daniel'],
         ['id'=>'census-akalajoie','name'=>'Miss akalajoie','handle'=>'akalajoie'],
+        ['id'=>'ennemi-des-djandjou','name'=>'Ennemi des Djandjou','handle'=>'ennemidesdjandjou'],
+        ['id'=>'census-isouch','name'=>'Isouch','handle'=>'prince_du_pays'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
@@ -379,6 +388,7 @@ function p50_live_v4_sources(array $state): array {
             'profile_id'=>$forced['id'],'public_name'=>$forced['name'],'handle'=>'@'.$forced['handle'],
             'platform'=>'TikTok','url'=>'https://www.tiktok.com/@'.$forced['handle'],'confidence'=>100,
             'verification_status'=>'manual_verified',
+            'verification_priority'=>'P0',
         ];
     }
     $observateurKey='YouTube|census-observateur-ebene';
@@ -551,6 +561,7 @@ function p50_live_v4_is_dynamic_p0(array $source): bool {
 
 function p50_live_v4_is_p0_tiktok(array $source): bool {
     if((string)($source['platform']??'')!=='TikTok')return false;
+    if(strtoupper(trim((string)($source['verification_priority']??'')))==='P0')return true;
     if(in_array((string)($source['profile_id']??''),P50_LIVE_V4_P0_TIKTOK,true))return true;
     return p50_live_v4_is_dynamic_p0($source);
 }

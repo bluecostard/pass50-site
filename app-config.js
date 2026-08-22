@@ -91,12 +91,21 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
-// Profil recensé : Ennemi des Djandjou.
+// Profil recensé : Ennemi des Djandjou (@ennemidesdjandjou).
 (function () {
   if (document.querySelector('script[data-pass50-profile-ennemi-djandjou]')) return;
   var script = document.createElement('script');
-  script.src = './profile-ennemi-des-djandjou.js?v=1.1';
-  script.dataset.pass50ProfileEnnemiDjandjou = '1.1';
+  script.src = './profile-ennemi-des-djandjou.js?v=1.2';
+  script.dataset.pass50ProfileEnnemiDjandjou = '1.2';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Isouch (@prince_du_pays).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-isouch]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-isouch.js?v=1.0';
+  script.dataset.pass50ProfileIsouch = '1.0';
   document.head.appendChild(script);
 })();
 
