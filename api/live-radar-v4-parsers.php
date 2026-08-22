@@ -5,9 +5,14 @@ const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-STRICT-PUBLISH-2026-08-11-1';
 /** Fenêtre pour classer un candidat (probable) — ne publie plus à elle seule. */
 const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 3600;
 const P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS = ['TOa6dTjz7V0'];
+/** TikTok webcast status=2 persistant alors que le créateur n'est plus en direct. */
+const P50_LIVE_V4_FALSE_POSITIVE_TIKTOK_PROFILES = ['census-isouch'];
 
 function p50_live_v4_known_false_positive(array $live): bool {
-    if(strcasecmp((string)($live['platform']??''),'YouTube')!==0)return false;
+    $profileId=trim((string)($live['profileId']??''));
+    $platform=(string)($live['platform']??'');
+    if(strcasecmp($platform,'TikTok')===0&&in_array($profileId,P50_LIVE_V4_FALSE_POSITIVE_TIKTOK_PROFILES,true))return true;
+    if(strcasecmp($platform,'YouTube')!==0)return false;
     $videoId=trim((string)($live['videoId']??($live['metadata']['videoId']??'')));
     if($videoId==='')$videoId=p50_live_v4_video_id((string)($live['url']??''));
     return in_array($videoId,P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS,true);
@@ -258,6 +263,7 @@ function p50_live_v4_parse_tiktok(array $source,array $responses): array {
         if($title==='')$title='Direct TikTok détecté';elseif(!preg_match('/\b(direct|live)\b/iu',$title))$title.=' est en direct';
         $families=$roomEvidence[$roomId]??['api'=>[],'html'=>[],'strictApi'=>[],'freshApi'=>[],'apiLiveStructure'=>[],'roomStartedAt'=>null];$startedTimestamp=(int)($families['roomStartedAt']??0);$startedAt=$startedTimestamp>0?gmdate('Y-m-d H:i:s',$startedTimestamp):null;
         $live=['profileId'=>(string)$source['profile_id'],'platform'=>'TikTok','title'=>$title,'url'=>$identity['liveUrl'],'thumbnail'=>(string)($meta['image']??''),'confidence'=>$confidence,'startedAt'=>$startedAt,'viewers'=>p50_live_v4_viewers(implode("\n",$bodies)),'metadata'=>['profileUrl'=>$identity['profileUrl'],'handle'=>'@'.$identity['handle'],'roomId'=>$roomId,'roomStartedAt'=>$startedAt,'roomAgeSeconds'=>$startedTimestamp>0?max(0,time()-$startedTimestamp):null,'probeLabels'=>array_keys($positive),'proofFamilies'=>['api'=>$families['api'],'html'=>$families['html']],'strictApiLabels'=>$families['strictApi'],'freshApiLabels'=>$families['freshApi'],'apiLiveStructureLabels'=>$families['apiLiveStructure'],'classification'=>$state]];
+        if(p50_live_v4_known_false_positive($live))return ['state'=>'replay','error'=>'known_false_positive','confidence'=>100,'responseMs'=>$maxMs,'replay'=>['url'=>$identity['liveUrl'],'roomId'=>$roomId,'title'=>$title]];
         return ['state'=>$state,'confidence'=>$confidence,'responseMs'=>$maxMs,'error'=>$state==='probable'?'tiktok_confirmation_incomplete':'','live'=>$live,'evidence'=>['positive'=>array_keys($positive),'ended'=>$endedLabels,'blocked'=>$blocked,'rooms'=>$roomEvidence,'freshRoomSeconds'=>P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS]];
     }
     if($endedLabels){

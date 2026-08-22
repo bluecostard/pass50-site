@@ -262,8 +262,8 @@ must(($ennemiLive['live']['metadata']['roomId']??'')==='7676641654631107001','Le
 
 $isouchSource=['profile_id'=>'census-isouch','public_name'=>'Isouch','platform'=>'TikTok','url'=>'https://www.tiktok.com/@prince_du_pays'];
 $isouchLive=p50_live_v4_parse_tiktok($isouchSource,['api_webcast'=>response('{"data":{"status":2,"id":7676641654631107360,"id_str":"7676641654631107360","title":"En direct","user_count":246,"owner":{"display_id":"prince_du_pays","nickname":"isouch"}},"status_code":0}')]);
-must($isouchLive['state']==='live','Isouch webcast status=2 doit publier le LIVE.');
-must(($isouchLive['live']['metadata']['roomId']??'')==='7676641654631107360','Le roomId Isouch doit être conservé.');
+must($isouchLive['state']==='replay','Isouch webcast status=2 persistant est un faux positif connu.');
+must(($isouchLive['error']??'')==='known_false_positive','Le motif Isouch doit être known_false_positive.');
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','ennemidesdjandjou')==='ennemi-des-djandjou','@ennemidesdjandjou reste Ennemi des Djandjou.');
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','prince_du_pays')==='census-isouch','@prince_du_pays reste Isouch.');
 must(p50_live_v4_canonical_profile_id('ennemi-des-djandjou','TikTok','prince_du_pays')==='census-isouch','Isouch ne fusionne pas sur Ennemi des Djandjou.');
