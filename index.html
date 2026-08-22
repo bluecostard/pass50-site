@@ -521,7 +521,27 @@ function migrateDb(){
 }
 let session={userId:(typeof P50Auth!=='undefined'?P50Auth.getSessionUserId():null)||null};let ui={period:'24H',region:'ALL',adminTab:'adminhome',scoreMotion:false,allowRankMotion:false,bootSettling:true};
 function authPending(){return !currentUser()&&typeof P50Auth!=='undefined'&&P50Auth.hasStoredAuth();}
+function isGuestUser(){return !currentUser()&&!authPending();}
+window.authPending=authPending;
+window.isGuestUser=isGuestUser;
 function setSessionUser(userId){session.userId=userId||null;if(typeof P50Auth!=='undefined')P50Auth.setSessionUserId(userId||null);}
+async function restoreCloudSession(){
+  if(!CLOUD.enabled||!CLOUD.token)return false;
+  try{
+    const me=await apiFetch('me.php');
+    const notes=await loadCloudNotifications();
+    hydrateApiUser(me.user,notes);
+    applyPass50V6Patch();
+    return true;
+  }catch(err){
+    if(typeof P50Auth!=='undefined'&&P50Auth.isAuthExpiredError(err)){CLOUD.token='';P50Auth.clearAuth();session.userId=null;}
+    else console.warn('Session restore',err);
+    return false;
+  }
+}
+function finishCloudBoot(){
+  CLOUD.ready=true;window.__pass50CloudReady=true;endBootSettling();scheduleRender({immediate:true});
+}
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function liveTrustMs(platform){
   const name=String(platform||'');
@@ -1317,10 +1337,10 @@ function close(id){
   if(id==='profileModal'){closeFiPhoto();restoreProfileOrigin();p50ClearProfileQuery();}
   if(id==='voteShareModal')voteShareCleanup();
 }
-function requireAuth(){if(currentUser())return true;if(authPending()&&!CLOUD.ready)return false;openAuth('login');return false}
+function requireAuth(){if(currentUser())return true;if(authPending())return false;openAuth('login');return false}
 let _guestTop10GateBound=false;
 function syncGuestRankingGate(){
-  const guest=!currentUser()&&!authPending();
+  const guest=isGuestUser();
   const section=$('#top10');
   const grid=$('#top10Grid');
   document.documentElement.classList.toggle('p50-guest',guest);
@@ -1329,7 +1349,7 @@ function syncGuestRankingGate(){
   if(guest)grid.scrollLeft=0;
   if(_guestTop10GateBound)return;
   _guestTop10GateBound=true;
-  const askLogin=()=>{if(currentUser())return false;openAuth('login');grid.scrollLeft=0;return true;};
+  const askLogin=()=>{if(currentUser()||authPending())return false;openAuth('login');grid.scrollLeft=0;return true;};
   grid.addEventListener('wheel',e=>{
     if(currentUser())return;
     if(Math.abs(e.deltaX)<1&&Math.abs(e.deltaY)<1)return;
@@ -1585,7 +1605,7 @@ document.addEventListener('click',async e=>{
   if(e.target.id==='liveBtn')openLives();
   if(e.target.id==='liveRadarRefresh'){e.target.disabled=true;e.target.textContent='RADAR EN COURS…';try{const r=await fetch('./api/live-status.php?mode=quick&force=1',{cache:'no-store'});const data=r.ok?await r.json():null;if(data?.ok){window.PASS50_LIVE_RADAR=data.radar||{};if(Array.isArray(data.liveStreams)){db.liveStreams=data.liveStreams;normalizeLiveStreams();localStorage.setItem(APP_KEY,JSON.stringify(db));}}renderAdminPane();toast(data?.radar?.profilesScanned?`${data.radar.profilesScanned} chaîne(s) contrôlée(s)`:'Radar actualisé');}catch{toast('Radar indisponible');}finally{e.target.disabled=false;e.target.textContent='🔴 LANCER LE RADAR MAINTENANT';}}
   if(e.target.matches('.live-stop'))stopLive(e.target.dataset.id);
-  if(e.target.id==='accountBtn'){currentUser()?openUser():openAuth('login')}if(e.target.id==='top50Btn')openTop50();if(e.target.id==='shareBtn')share();if(e.target.id==='notificationCenterBtn')openNotifications();
+  if(e.target.id==='accountBtn'){if(currentUser())openUser();else if(!authPending())openAuth('login')}if(e.target.id==='top50Btn')openTop50();if(e.target.id==='shareBtn')share();if(e.target.id==='notificationCenterBtn')openNotifications();
   if(e.target.id==='logoutBtn'){if(CLOUD.enabled&&CLOUD.token){try{await apiFetch('logout.php',{method:'POST',body:{}})}catch{}}CLOUD.token='';if(typeof P50Auth!=='undefined')P50Auth.clearAuth();else{localStorage.removeItem('pass50_api_token');sessionStorage.removeItem('pass50_session');}session.userId=null;close('userModal');render();toast('Déconnecté')}
   if(e.target.id==='deleteAccountBtn'){const u=currentUser();if(confirm(CLOUD.enabled?'Supprimer définitivement ce compte ?':'Supprimer ce compte local ?')){if(CLOUD.enabled&&CLOUD.token)await deleteCloudProfile();db.users=db.users.filter(x=>x.id!==u.id);db.notifications=db.notifications.filter(n=>n.userId!==u.id);setSessionUser(null);save();close('userModal');render();toast('Compte supprimé')}}
   if(e.target.id==='adminMembersOpen'){adminOpen('members');return;}if(e.target.id==='adminOpen')adminOpen();if(e.target.closest('[data-open-admin-todo]')){adminOpen(e.target.closest('[data-open-admin-todo]').dataset.openAdminTodo||'todo');return;}if(e.target.id==='browserNotify')askNotifications();
@@ -1879,13 +1899,11 @@ function openCampaignProfile(){
   if(id&&profile(id))requestAnimationFrame(()=>openProfile(id));
 }
 async function initCloud(){
-  if(!CLOUD.enabled){setCloudStatus('',false);scheduleRender({immediate:true});endBootSettling();openCampaignProfile();return;}
-  // Peindre tout de suite le dernier classement local : le Top 10 ne doit pas
-  // attendre IONOS. L'état cloud met à jour ensuite.
+  if(!CLOUD.enabled){setCloudStatus('',false);scheduleRender({immediate:true});finishCloudBoot();openCampaignProfile();return;}
   scheduleRender({immediate:true});
+  if(CLOUD.token)await restoreCloudSession();
   try{
     setCloudStatus('',false);
-    // Contrat app V1 : snapshot slim en parallèle (desktop + futurs clients).
     const rankingBoot=loadPublicRanking().then(data=>{
       if(data)scheduleRender({immediate:true});
     });
@@ -1899,14 +1917,14 @@ async function initCloud(){
       }
     }
     await rankingBoot.catch(()=>{});
-    if(!loaded)throw lastError||new Error('État public indisponible');
-    if(CLOUD.token){
-      try{const me=await apiFetch('me.php');const notes=await loadCloudNotifications();hydrateApiUser(me.user,notes);applyPass50V6Patch();await syncCloudState()}catch(err){if(typeof P50Auth!=='undefined'&&P50Auth.isAuthExpiredError(err)){CLOUD.token='';P50Auth.clearAuth();session.userId=null;}else console.warn('Session restore',err);}
-    }
+    if(!loaded)console.warn('État public indisponible',lastError||'');
+    if(CLOUD.token&&!currentUser())await restoreCloudSession();
+    if(CLOUD.token&&currentUser()){try{await syncCloudState()}catch(err){console.warn('Cloud sync',err)}}
     await loadCloudCoulesHistory();
     await loadCloudCoulesPoll();
-    CLOUD.ready=true;window.__pass50CloudReady=true;clearInterval(CLOUD.coulesTimer);clearInterval(CLOUD.coulesHistoryTimer);CLOUD.coulesTimer=setInterval(loadCloudCoulesPoll,15000);CLOUD.coulesHistoryTimer=setInterval(loadCloudCoulesHistory,3600000);clearInterval(CLOUD.notificationTimer);CLOUD.notificationTimer=setInterval(()=>refreshCloudNotifications(true),30000);setCloudStatus('',true);scheduleRender({immediate:true});syncFollowContextAlerts();openCampaignProfile();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
-  }catch(err){console.error(err);setCloudStatus('',false);scheduleRender({immediate:true});endBootSettling();openCampaignProfile();}
+    clearInterval(CLOUD.coulesTimer);clearInterval(CLOUD.coulesHistoryTimer);CLOUD.coulesTimer=setInterval(loadCloudCoulesPoll,15000);CLOUD.coulesHistoryTimer=setInterval(loadCloudCoulesHistory,3600000);clearInterval(CLOUD.notificationTimer);CLOUD.notificationTimer=setInterval(()=>refreshCloudNotifications(true),30000);setCloudStatus('',loaded);syncFollowContextAlerts();openCampaignProfile();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
+  }catch(err){console.error(err);setCloudStatus('',false);openCampaignProfile();}
+  finally{finishCloudBoot();}
 }
 initCloud();
 

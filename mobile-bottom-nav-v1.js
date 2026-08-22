@@ -283,6 +283,8 @@
     event.stopPropagation();
     if (typeof window.currentUser === 'function' && window.currentUser()) {
       if (typeof window.openUser === 'function') window.openUser();
+    } else if (typeof window.authPending === 'function' && window.authPending()) {
+      return;
     } else if (typeof window.openAuth === 'function') window.openAuth('login');
   }
 

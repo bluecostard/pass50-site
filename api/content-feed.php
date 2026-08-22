@@ -54,7 +54,14 @@ if(!p50_ci_table_ready($pdo)){
 ]);
 }
 
-function p50_content_feed_collect_trends(PDO $pdo,string $period,?string $freshSince=null): array {
+function p50_content_feed_trend_period_fallback_order(string $period): array {
+    $chain=['2h','24h','48h','7d','15d'];
+    $ix=array_search($period,$chain,true);
+    if($ix===false)return [$period];
+    return array_values(array_unique(array_merge(array_slice($chain,$ix),$chain)));
+}
+
+function p50_content_feed_collect_trends(PDO $pdo,string $period,?string $freshSince=null,bool $relaxed=false): array {
     $sql="SELECT t.rank_position,t.previous_rank,t.rank_delta,t.score,t.confidence,t.view_delta,t.interaction_delta,
       t.share_delta,t.velocity,t.acceleration,t.follower_count,t.cluster_platform_count,t.badge,t.calculated_at,
       c.id content_id,c.profile_id,c.platform,c.content_type,c.canonical_url,c.title,c.published_at,c.first_seen_at,c.platform_content_id,c.metadata_json,
@@ -81,7 +88,10 @@ function p50_content_feed_collect_trends(PDO $pdo,string $period,?string $freshS
         if($thumbnail==='')$thumbnail=(string)(p50_ci_thumbnail((string)$row['platform'],(string)$row['canonical_url'],$row['platform_content_id']!==null?(string)$row['platform_content_id']:null,$metadata)??'');
         $title=trim((string)$row['title']);
         $titleLength=function_exists('mb_strlen')?mb_strlen($title,'UTF-8'):strlen($title);
-        if(strcasecmp((string)$row['platform'],'Facebook')===0&&$titleLength<12&&$thumbnail==='')continue;
+        if(strcasecmp((string)$row['platform'],'Facebook')===0){
+            if(!$relaxed&&$titleLength<12&&$thumbnail==='')continue;
+            if($title==='')$title='Publication Facebook de '.trim((string)$row['public_name']);
+        }
         $publishedSource=$row['published_at']?:$row['first_seen_at'];
         $playable=p50_content_feed_facebook_playable((string)$row['platform'],(string)$row['content_type'],(string)$row['canonical_url']);
         $trends[]=[
@@ -105,13 +115,18 @@ function p50_content_feed_collect_trends(PDO $pdo,string $period,?string $freshS
     return $trends;
 }
 
-$trends=p50_content_feed_collect_trends($pdo,$period,$trendFreshSince);
+$trends=[];
 $trendsUsedFallback=false;
-if(count($trends)===0){
-    $fallbackTrends=p50_content_feed_collect_trends($pdo,$period,null);
-    if(count($fallbackTrends)>0){
-        $trends=$fallbackTrends;
-        $trendsUsedFallback=true;
+$trendsServedPeriod=$period;
+foreach(p50_content_feed_trend_period_fallback_order($period) as $candidatePeriod){
+    $freshSince=$candidatePeriod===$period?$trendFreshSince:null;
+    $trends=p50_content_feed_collect_trends($pdo,$candidatePeriod,$freshSince);
+    if(count($trends)===0)$trends=p50_content_feed_collect_trends($pdo,$candidatePeriod,null);
+    if(count($trends)===0)$trends=p50_content_feed_collect_trends($pdo,$candidatePeriod,null,true);
+    if(count($trends)>0){
+        $trendsServedPeriod=$candidatePeriod;
+        $trendsUsedFallback=$candidatePeriod!==$period;
+        break;
     }
 }
 
@@ -177,13 +192,15 @@ json_response([
     'period'=>$period,
     'periods'=>array_keys(p50_ci_periods()),'trends'=>$trends,'news'=>$news,
     'trendDataStale'=>$trendDataStale,'trendAgeMinutes'=>$trendAgeMinutes,
-    'message'=>$trendDataStale?'Mise à jour des tendances en attente. Le dernier Top 5 valide reste affiché.':null,
+    'message'=>$trendsUsedFallback&&count($trends)>0
+        ?('Top 5 affiché sur la période '.$trendsServedPeriod.' (aucun contenu sur '.$period.').')
+        :($trendDataStale?'Mise à jour des tendances en attente. Le dernier Top 5 valide reste affiché.':null),
     'rules'=>[
         'maxPerProfile'=>2,'topLimit'=>5,'officialContentAutomatic'=>true,'externalNewsHumanValidation'=>true,
         'officialNewsMaxAgeHours'=>72,'officialNewsFallbackMaxAgeHours'=>168,
         'officialNewsHoursApplied'=>$officialNewsHoursApplied,'officialNewsUsedFallback'=>$officialNewsUsedFallback,
         'externalNewsMaxAgeDays'=>7,'trendMaxAgeHours'=>$trendMaxAgeHours,'maxTrendRunAgeMinutes'=>30,
-        'staleTrendsRemainVisible'=>true,'trendsUsedFallback'=>$trendsUsedFallback,
+        'staleTrendsRemainVisible'=>true,'trendsUsedFallback'=>$trendsUsedFallback,'trendsServedPeriod'=>$trendsServedPeriod,
         'facebookPreviewInPass50'=>true,'facebookVideoPlaybackInPass50'=>true,'facebookEmbedRouting'=>true,
     ],
     'run'=>$lastRun?['runUuid'=>(string)$lastRun['run_uuid'],'contentsConsidered'=>(int)$lastRun['contents_considered'],'rowsWritten'=>(int)$lastRun['rows_written'],'finishedAt'=>gmdate('c',strtotime((string)$lastRun['finished_at'].' UTC'))]:null,

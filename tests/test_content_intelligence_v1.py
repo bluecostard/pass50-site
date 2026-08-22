@@ -64,6 +64,7 @@ class ContentIntelligenceV1Tests(unittest.TestCase):
         self.assertIn("trendAgeMinutes>30", FEED)
         self.assertIn("p50_content_feed_collect_trends", FEED)
         self.assertIn("trendsUsedFallback", FEED)
+        self.assertIn("trendsServedPeriod", FEED)
 
     def test_fast_cycle_prioritizes_collectable_stale_ranked_profiles(self):
         self.assertIn("CONTENT-FRESHNESS-V4.0", FRESH)
