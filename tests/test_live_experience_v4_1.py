@@ -42,8 +42,8 @@ class LiveExperienceV41Tests(unittest.TestCase):
 
     def test_modules_are_loaded_and_cached(self):
         self.assertIn("live-experience-v4-1.js?v=1.8", PUBLIC)
-        self.assertIn("live-dismiss-ui-v1.js?v=1.0", PUBLIC)
-        self.assertIn("live-dismiss-ui-v1.js?v=1.0", SW)
+        self.assertIn("live-dismiss-ui-v1.js?v=1.1", PUBLIC)
+        self.assertIn("live-dismiss-ui-v1.js?v=1.1", SW)
         self.assertIn("share-center-v1.js?v=1.5", SW)
         self.assertRegex(SW, r"pass50-v\d+-[a-z0-9-]+")
 
@@ -72,6 +72,10 @@ class LiveExperienceV41Tests(unittest.TestCase):
         self.assertIn("require_role($user,'owner','admin')", DISMISS_API)
         self.assertIn('p50_live_dismissals', STORAGE)
         self.assertIn('p50_live_v4_is_dismissed', STORAGE)
+        self.assertIn('p50_live_v4_profile_dismiss_key', STORAGE)
+        self.assertIn('p50_live_v4_is_profile_suppressed', STORAGE)
+        self.assertIn('p50_live_v4_live_is_blocked', STORAGE)
+        self.assertIn('profile_dismiss|', STORAGE)
         self.assertIn("'manually_dismissed'", DISMISS_API + STORAGE)
 
     def test_share_card_is_short_and_visual(self):
