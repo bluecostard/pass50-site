@@ -2,20 +2,29 @@
 
 (() => {
   const BG = '#050705';
-  const PANEL = '#0d110d';
-  const LINE = '#293129';
   const TEXT = '#f6f8f4';
   const MUTED = '#9da79b';
   const LIME = '#b7ff00';
   const LIVE = '#ff4b4b';
+  const ORANGE = '#ff9d1d';
+  const GOLD = '#f0d27a';
+  const PURPLE = '#a66cff';
+  const CI_GREEN = '#2e9e44';
   const API = './api/weekly-digest-card.php';
+
+  const SECTION_THEMES = [
+    { key: 'live', label: 'LIVE', headline: 'Le plus suivi', accent: LIVE, glow: 'rgba(255,75,75,.35)', icon: '●' },
+    { key: 'rank', label: 'N°1', headline: 'Roi du classement', accent: GOLD, glow: 'rgba(240,210,122,.35)', icon: '♛' },
+    { key: 'prono', label: 'PRONOS', headline: 'Le plus pronostiqué', accent: PURPLE, glow: 'rgba(166,108,255,.35)', icon: '◎' }
+  ];
+
   const FALLBACK_VIEW = {
     weekKey: '2026-W34',
     weekLabel: '15/08 → 22/08/2026',
     sections: [
-      { num: '1', title: 'Live le plus suivi', name: 'Samuella Kouassi', detail: '12 840 auditeurs · TikTok', profileId: 'census-samuella-kouassi' },
-      { num: '2', title: 'N°1 du classement le plus souvent', name: 'Roseline Layo', detail: '5 fois en tête (24H)', profileId: 'census-roseline-layo' },
-      { num: '3', title: 'Influenceur le plus pronostiqué', name: 'Jordan Evraa', detail: '312 pronostics · 186 votants', profileId: 'census-jordan-evraa' }
+      { num: '1', title: 'Live le plus suivi', name: 'Samuella Kouassi', detail: '12 840 auditeurs · TikTok', metric: '12 840', metricLabel: 'auditeurs', profileId: 'census-samuella-kouassi' },
+      { num: '2', title: 'N°1 du classement le plus souvent', name: 'Roseline Layo', detail: '5 fois en tête (24H)', metric: '5×', metricLabel: 'en tête', profileId: 'census-roseline-layo' },
+      { num: '3', title: 'Influenceur le plus pronostiqué', name: 'Jordan Evraa', detail: '312 pronostics · 186 votants', metric: '312', metricLabel: 'pronostics', profileId: 'census-jordan-evraa' }
     ]
   };
 
@@ -28,6 +37,20 @@
     const words = String(value || 'PASS50').trim().split(/\s+/).filter(Boolean);
     return words.slice(0, 2).map(word => word[0] || '').join('').toUpperCase() || 'P50';
   };
+
+  function enrichSection(section, index) {
+    const theme = SECTION_THEMES[index] || SECTION_THEMES[0];
+    const metric = String(section.metric || '').trim();
+    if (metric) return { ...section, ...theme, metric, metricLabel: section.metricLabel || '' };
+    const detail = String(section.detail || '');
+    const viewers = detail.match(/([\d\s]+)\s*auditeur/i);
+    const times = detail.match(/(\d+)\s*fois/i);
+    const votes = detail.match(/(\d+)\s*pronostic/i);
+    if (viewers) return { ...section, ...theme, metric: viewers[1].trim(), metricLabel: 'auditeurs' };
+    if (times) return { ...section, ...theme, metric: `${times[1]}×`, metricLabel: 'en tête' };
+    if (votes) return { ...section, ...theme, metric: votes[1], metricLabel: 'pronostics' };
+    return { ...section, ...theme, metric: '—', metricLabel: '' };
+  }
 
   function roundedRect(ctx, x, y, w, h, r) {
     const radius = Math.min(r, w / 2, h / 2);
@@ -81,176 +104,305 @@
     return `./partage-photo.php?id=${encodeURIComponent(id)}&size=${size}`;
   }
 
-  function drawPosterBackground(ctx) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, 1350);
-    gradient.addColorStop(0, '#101510');
-    gradient.addColorStop(0.45, BG);
-    gradient.addColorStop(1, '#020302');
-    ctx.fillStyle = gradient;
+  function drawFestiveBackground(ctx) {
+    const sky = ctx.createLinearGradient(0, 0, 1080, 1350);
+    sky.addColorStop(0, '#1a1208');
+    sky.addColorStop(0.22, '#120d06');
+    sky.addColorStop(0.55, BG);
+    sky.addColorStop(1, '#020302');
+    ctx.fillStyle = sky;
     ctx.fillRect(0, 0, 1080, 1350);
 
-    const glow = ctx.createRadialGradient(540, 260, 40, 540, 320, 520);
-    glow.addColorStop(0, 'rgba(183,255,0,.22)');
-    glow.addColorStop(0.55, 'rgba(183,255,0,.06)');
-    glow.addColorStop(1, 'rgba(183,255,0,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, 1080, 720);
+    const limeGlow = ctx.createRadialGradient(540, 180, 20, 540, 320, 620);
+    limeGlow.addColorStop(0, 'rgba(183,255,0,.28)');
+    limeGlow.addColorStop(0.45, 'rgba(255,157,29,.12)');
+    limeGlow.addColorStop(1, 'rgba(183,255,0,0)');
+    ctx.fillStyle = limeGlow;
+    ctx.fillRect(0, 0, 1080, 700);
 
-    ctx.fillStyle = 'rgba(5,7,5,.55)';
-    ctx.fillRect(0, 500, 1080, 220);
+    const orangeGlow = ctx.createRadialGradient(180, 500, 10, 180, 500, 280);
+    orangeGlow.addColorStop(0, 'rgba(255,157,29,.18)');
+    orangeGlow.addColorStop(1, 'rgba(255,157,29,0)');
+    ctx.fillStyle = orangeGlow;
+    ctx.fillRect(0, 0, 1080, 1350);
 
+    const greenGlow = ctx.createRadialGradient(900, 520, 10, 900, 520, 260);
+    greenGlow.addColorStop(0, 'rgba(46,158,68,.16)');
+    greenGlow.addColorStop(1, 'rgba(46,158,68,0)');
+    ctx.fillStyle = greenGlow;
+    ctx.fillRect(0, 0, 1080, 1350);
+
+    ctx.save();
+    ctx.globalAlpha = 0.08;
     ctx.strokeStyle = LIME;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(0, 18);
-    ctx.lineTo(1080, 18);
-    ctx.stroke();
+    ctx.lineWidth = 2;
+    for (let i = -200; i < 1300; i += 46) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + 320, 1350);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    drawConfetti(ctx);
   }
 
-  function drawBrandHeader(ctx) {
+  function drawConfetti(ctx) {
+    const pieces = [
+      [84, 120, LIME], [220, 88, ORANGE], [940, 110, LIVE], [1010, 180, GOLD],
+      [160, 260, PURPLE], [890, 240, CI_GREEN], [70, 420, ORANGE], [1000, 390, LIME],
+      [130, 680, GOLD], [960, 720, LIVE], [48, 980, LIME], [1020, 1040, ORANGE],
+      [300, 60, LIVE], [760, 74, GOLD], [540, 40, LIME], [410, 150, ORANGE]
+    ];
+    pieces.forEach(([x, y, color], index) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((index % 7) * 0.4);
+      ctx.fillStyle = color;
+      if (index % 3 === 0) {
+        ctx.fillRect(-5, -12, 10, 24);
+      } else if (index % 3 === 1) {
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(9, 8);
+        ctx.lineTo(-9, 8);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+  }
+
+  function drawHeader(ctx, weekLabel) {
     ctx.fillStyle = LIME;
-    ctx.fillRect(54, 48, 18, 18);
+    ctx.fillRect(0, 0, 1080, 8);
+    ctx.fillStyle = ORANGE;
+    ctx.fillRect(0, 8, 1080, 4);
+    ctx.fillStyle = CI_GREEN;
+    ctx.fillRect(0, 12, 1080, 4);
+
+    ctx.fillStyle = LIME;
+    ctx.fillRect(48, 42, 16, 16);
     ctx.fillStyle = TEXT;
-    ctx.font = '1000 34px Arial, sans-serif';
-    ctx.fillText('PASS', 82, 66);
+    ctx.font = '1000 30px Arial, sans-serif';
+    ctx.fillText('PASS', 72, 58);
     ctx.fillStyle = LIME;
-    ctx.fillText('50', 198, 66);
+    ctx.fillText('50', 168, 58);
+
+    roundedRect(ctx, 250, 34, 290, 34, 17);
+    ctx.fillStyle = 'rgba(255,157,29,.14)';
+    ctx.fill();
+    ctx.strokeStyle = ORANGE;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = ORANGE;
+    ctx.font = '800 16px Arial, sans-serif';
+    ctx.fillText('CÔTE D’IVOIRE · INFLUENCEURS', 268, 57);
+
+    ctx.fillStyle = LIME;
+    ctx.font = '1000 74px Arial, sans-serif';
+    ctx.fillText('TOP 3', 48, 150);
+    ctx.fillStyle = TEXT;
+    ctx.fillText('DE LA SEMAINE', 48, 228);
+    ctx.fillStyle = ORANGE;
+    ctx.font = '1000 42px Arial, sans-serif';
+    ctx.fillText('Ils ont fait le buzz à Abidjan', 48, 278);
+
+    ctx.textAlign = 'right';
     ctx.fillStyle = MUTED;
     ctx.font = '700 18px Arial, sans-serif';
-    ctx.fillText('BILAN DU VENDREDI SOIR', 54, 98);
+    ctx.fillText('VENDREDI SOIR', 1032, 58);
+    ctx.fillStyle = TEXT;
+    ctx.font = '800 22px Arial, sans-serif';
+    ctx.fillText(`Semaine ${weekLabel}`, 1032, 88);
+    ctx.textAlign = 'left';
   }
 
-  function drawPhotoFrame(ctx, image, x, y, w, h, fallback, accent = LIME) {
+  function drawSpotlight(ctx, x, y, radius, glowColor) {
+    const spot = ctx.createRadialGradient(x, y, 8, x, y, radius);
+    spot.addColorStop(0, glowColor);
+    spot.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = spot;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+
+  function drawPhotoCircle(ctx, image, x, y, size, fallback, accent, glow, rankLabel) {
+    drawSpotlight(ctx, x + size / 2, y + size / 2, size * 0.95, glow);
+
     ctx.save();
-    roundedRect(ctx, x, y, w, h, 18);
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
     ctx.clip();
     if (image) {
-      const ratio = Math.max(w / image.width, h / image.height);
+      const ratio = Math.max(size / image.width, size / image.height);
       const width = image.width * ratio;
       const height = image.height * ratio;
-      ctx.drawImage(image, x + (w - width) / 2, y + (h - height) / 2, width, height);
+      ctx.drawImage(image, x + (size - width) / 2, y + (size - height) / 2, width, height);
     } else {
-      const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-      grad.addColorStop(0, '#1a221a');
-      grad.addColorStop(1, '#0a0d0a');
+      const grad = ctx.createLinearGradient(x, y, x + size, y + size);
+      grad.addColorStop(0, '#2a2218');
+      grad.addColorStop(1, '#0d110d');
       ctx.fillStyle = grad;
-      ctx.fillRect(x, y, w, h);
+      ctx.fillRect(x, y, size, size);
       ctx.fillStyle = TEXT;
       ctx.textAlign = 'center';
-      ctx.font = `1000 ${Math.max(28, Math.round(w * .18))}px Arial, sans-serif`;
-      ctx.fillText(fallback, x + w / 2, y + h * .56);
+      ctx.font = `1000 ${Math.max(24, Math.round(size * .22))}px Arial, sans-serif`;
+      ctx.fillText(fallback, x + size / 2, y + size * .58);
       ctx.textAlign = 'left';
     }
     ctx.restore();
+
     ctx.strokeStyle = accent;
-    ctx.lineWidth = 4;
-    roundedRect(ctx, x, y, w, h, 18);
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(x + size / 2, y + size / 2, size / 2 - 3, 0, Math.PI * 2);
     ctx.stroke();
+
+    if (rankLabel) {
+      const label = String(rankLabel).toUpperCase();
+      ctx.font = '1000 20px Arial, sans-serif';
+      const badgeW = Math.max(74, ctx.measureText(label).width + 28);
+      const badgeH = 40;
+      const bx = x + size / 2 - badgeW / 2;
+      const by = y - 22;
+      roundedRect(ctx, bx, by, badgeW, badgeH, 20);
+      ctx.fillStyle = accent;
+      ctx.fill();
+      ctx.strokeStyle = TEXT;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = BG;
+      ctx.textAlign = 'center';
+      ctx.font = '1000 20px Arial, sans-serif';
+      ctx.fillText(label, bx + badgeW / 2, by + 27);
+      ctx.textAlign = 'left';
+    }
   }
 
-  function drawNameTag(ctx, name, x, y, maxWidth = 300) {
-    const label = compact(name, 22).toUpperCase();
-    ctx.font = '1000 22px Arial, sans-serif';
-    const width = Math.min(maxWidth, ctx.measureText(label).width + 28);
-    roundedRect(ctx, x, y, width, 38, 8);
-    ctx.fillStyle = 'rgba(5,7,5,.82)';
-    ctx.fill();
-    ctx.strokeStyle = LIME;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = TEXT;
-    ctx.fillText(label, x + 14, y + 27);
-  }
-
-  function drawPhotoCollage(ctx, sections, images) {
+  function drawPodium(ctx, sections, images) {
+    const podiumY = 560;
     const slots = [
-      { x: 300, y: 130, w: 480, h: 430, accent: LIVE },
-      { x: 54, y: 250, w: 300, h: 360, accent: LIME },
-      { x: 726, y: 250, w: 300, h: 360, accent: LIME }
+      { x: 108, y: podiumY - 72, size: 205, badge: 'N°1', accent: GOLD, glow: 'rgba(240,210,122,.28)', sectionIndex: 1, podiumH: 108 },
+      { x: 372, y: podiumY - 132, size: 310, badge: 'LIVE', accent: LIVE, glow: 'rgba(255,75,75,.32)', sectionIndex: 0, podiumH: 172 },
+      { x: 742, y: podiumY - 52, size: 188, badge: 'PRONOS', accent: PURPLE, glow: 'rgba(166,108,255,.28)', sectionIndex: 2, podiumH: 88 }
     ];
-    slots.forEach((slot, index) => {
-      const section = sections[index];
+
+    slots.forEach(slot => {
+      roundedRect(ctx, slot.x - 16, podiumY, slot.size + 32, slot.podiumH, 10);
+      const grad = ctx.createLinearGradient(slot.x, podiumY, slot.x, podiumY + slot.podiumH);
+      grad.addColorStop(0, slot.accent);
+      grad.addColorStop(1, '#24180a');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.28)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    [1, 0, 2].forEach(drawOrder => {
+      const slot = slots[drawOrder];
+      const section = sections[slot.sectionIndex];
       if (!section) return;
-      drawPhotoFrame(ctx, images[index], slot.x, slot.y, slot.w, slot.h, initials(section.name), slot.accent);
-      drawNameTag(ctx, section.name, slot.x + 12, slot.y + slot.h - 52, slot.w - 24);
+      drawPhotoCircle(
+        ctx,
+        images[slot.sectionIndex],
+        slot.x,
+        slot.y,
+        slot.size,
+        initials(section.name),
+        slot.accent,
+        slot.glow,
+        slot.badge
+      );
+
+      const name = compact(section.name, 16).toUpperCase();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = TEXT;
+      ctx.font = '1000 22px Arial, sans-serif';
+      ctx.fillText(name, slot.x + slot.size / 2, slot.y + slot.size + 32);
+      ctx.textAlign = 'left';
     });
   }
 
-  function drawStatRows(ctx, sections, weekLabel) {
-    const startY = 640;
-    sections.forEach((section, index) => {
-      const y = startY + index * 118;
-      const num = String(section.num || index + 1).padStart(2, '0');
-      ctx.fillStyle = LIME;
-      ctx.font = '1000 58px Arial, sans-serif';
-      ctx.fillText(num, 54, y + 52);
-      ctx.fillStyle = index === 0 ? LIVE : LIME;
-      ctx.font = '800 18px Arial, sans-serif';
-      ctx.fillText(String(section.title || '').toUpperCase(), 150, y + 10);
-      ctx.fillStyle = TEXT;
-      ctx.font = '1000 34px Arial, sans-serif';
-      ctx.fillText(compact(section.name, 28), 150, y + 48);
-      ctx.fillStyle = MUTED;
-      ctx.font = '700 22px Arial, sans-serif';
-      wrapCanvas(ctx, section.detail, 760, 2).forEach((line, lineIndex) => {
-        ctx.fillText(line, 150, y + 82 + lineIndex * 28);
-      });
-      if (index < sections.length - 1) {
-        ctx.strokeStyle = LINE;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(54, y + 98);
-        ctx.lineTo(1026, y + 98);
-        ctx.stroke();
-      }
-    });
+  function drawHeroStatCard(ctx, section, y) {
+    const cardH = 148;
+    roundedRect(ctx, 40, y, 1000, cardH, 22);
+    const cardGrad = ctx.createLinearGradient(40, y, 1040, y + cardH);
+    cardGrad.addColorStop(0, 'rgba(255,255,255,.07)');
+    cardGrad.addColorStop(1, 'rgba(255,255,255,.02)');
+    ctx.fillStyle = cardGrad;
+    ctx.fill();
+    ctx.strokeStyle = section.accent;
+    ctx.lineWidth = 3;
+    ctx.stroke();
 
+    roundedRect(ctx, 58, y + 18, 112, 112, 18);
+    ctx.fillStyle = section.accent;
+    ctx.fill();
+    ctx.fillStyle = BG;
+    ctx.textAlign = 'center';
+    ctx.font = '1000 52px Arial, sans-serif';
+    ctx.fillText(section.icon, 114, y + 92);
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = section.accent;
+    ctx.font = '1000 24px Arial, sans-serif';
+    ctx.fillText(section.label, 190, y + 42);
+    ctx.fillStyle = TEXT;
+    ctx.font = '1000 30px Arial, sans-serif';
+    ctx.fillText(section.headline, 190, y + 78);
     ctx.fillStyle = MUTED;
     ctx.font = '700 20px Arial, sans-serif';
-    ctx.fillText(`Semaine ${weekLabel}`, 54, startY + sections.length * 118 + 18);
-  }
+    wrapCanvas(ctx, section.title, 420, 2).forEach((line, index) => {
+      ctx.fillText(line, 190, y + 108 + index * 24);
+    });
 
-  function drawPosterTitle(ctx) {
-    ctx.save();
-    ctx.translate(760, 1120);
-    ctx.rotate(-0.08);
-    ctx.fillStyle = 'rgba(183,255,0,.12)';
-    ctx.font = '1000 118px Arial, sans-serif';
-    ctx.fillText('BILAN', -10, 0);
-    ctx.fillStyle = TEXT;
-    ctx.font = '1000 108px Arial, sans-serif';
-    ctx.fillText('BILAN', -14, -4);
-    ctx.fillStyle = LIME;
-    ctx.font = '1000 92px Arial, sans-serif';
-    ctx.fillText('SEMAINE', 8, 92);
-    ctx.restore();
-  }
-
-  function drawFooter(ctx, weekLabel) {
-    ctx.fillStyle = LIME;
-    ctx.fillRect(0, 1248, 1080, 102);
-    ctx.fillStyle = BG;
-    ctx.font = '1000 42px Arial, sans-serif';
-    ctx.fillText('PASS50.STORE', 54, 1312);
     ctx.textAlign = 'right';
+    ctx.fillStyle = section.accent;
+    ctx.font = '1000 64px Arial, sans-serif';
+    ctx.fillText(section.metric, 1010, y + 78);
+    ctx.fillStyle = TEXT;
+    ctx.font = '800 22px Arial, sans-serif';
+    ctx.fillText(section.metricLabel, 1010, y + 112);
+    ctx.fillStyle = TEXT;
+    ctx.font = '1000 28px Arial, sans-serif';
+    ctx.fillText(compact(section.name, 22), 1010, y + 142);
+    ctx.textAlign = 'left';
+  }
+
+  function drawFooter(ctx) {
+    roundedRect(ctx, 40, 1240, 1000, 88, 18);
+    ctx.fillStyle = LIME;
+    ctx.fill();
     ctx.fillStyle = BG;
-    ctx.font = '800 24px Arial, sans-serif';
-    ctx.fillText('3 TOPS · 1 AFFICHE', 1026, 1300);
-    ctx.font = '700 20px Arial, sans-serif';
-    ctx.fillText(compact(`Semaine ${weekLabel}`, 40), 1026, 1328);
+    ctx.font = '1000 38px Arial, sans-serif';
+    ctx.fillText('PASS50.STORE', 68, 1298);
+    ctx.textAlign = 'right';
+    ctx.font = '800 22px Arial, sans-serif';
+    ctx.fillText('CLASSEMENT · LIVE · PRONOS', 1010, 1284);
+    ctx.font = '700 18px Arial, sans-serif';
+    ctx.fillText('Qui dit quoi, qui va où ?', 1010, 1312);
     ctx.textAlign = 'left';
   }
 
   async function drawWeeklyDigestCard(ctx, view) {
-    const sections = Array.isArray(view.sections) ? view.sections.slice(0, 3) : [];
+    const sections = Array.isArray(view.sections) ? view.sections.slice(0, 3).map(enrichSection) : [];
     const images = await Promise.all(sections.map(section => loadImage(photoUrl(section.profileId, 480))));
 
-    drawPosterBackground(ctx);
-    drawBrandHeader(ctx);
-    drawPhotoCollage(ctx, sections, images);
-    drawStatRows(ctx, sections, view.weekLabel || '');
-    drawPosterTitle(ctx);
-    drawFooter(ctx, view.weekLabel || '');
+    drawFestiveBackground(ctx);
+    drawHeader(ctx, view.weekLabel || '');
+    drawPodium(ctx, sections, images);
+
+    const cardsY = 700;
+    sections.forEach((section, index) => {
+      drawHeroStatCard(ctx, section, cardsY + index * 162);
+    });
+
+    drawFooter(ctx);
   }
 
   async function renderPreview(canvas, view) {
@@ -270,9 +422,16 @@
       if (!response.ok || !data?.ok || !data?.view) {
         throw new Error(data?.error || 'Impossible de charger le bilan');
       }
-      return data.view;
+      const view = data.view;
+      view.sections = (view.sections || []).map(enrichSection);
+      return view;
     } catch (error) {
-      if (preview) return { ...FALLBACK_VIEW };
+      if (preview) {
+        return {
+          ...FALLBACK_VIEW,
+          sections: FALLBACK_VIEW.sections.map(enrichSection)
+        };
+      }
       throw error;
     }
   }
