@@ -11,6 +11,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 
 $week = trim((string)($_GET['week'] ?? ''));
 $preview = isset($_GET['preview']) && in_array(strtolower((string)$_GET['preview']), ['1', 'true', 'yes'], true);
+$embed = isset($_GET['embed']) && in_array(strtolower((string)$_GET['embed']), ['1', 'true', 'yes'], true);
 $autoprint = isset($_GET['print']) && in_array(strtolower((string)$_GET['print']), ['1', 'true', 'yes'], true);
 
 try {
@@ -20,7 +21,7 @@ try {
 
 $stats = p50_weekly_digest_load_stats(db(), $week, $preview);
 $view = p50_weekly_digest_view_model($stats);
-echo p50_weekly_digest_render_html($view, false);
+echo p50_weekly_digest_render_html($view, $embed);
 if ($autoprint) {
     echo '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),300));</script>';
 }

@@ -6,25 +6,35 @@
   <meta name="robots" content="noindex">
   <title>Prototype — Bilan PDF PASS50</title>
   <style>
-    :root{--lime:#b7ff00;--muted:#8a968a}
+    :root{--lime:#b7ff00;--muted:#8a968a;--paper:#eef1ec}
     body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#e8ebe4;color:#0b0f0b}
-    .wrap{max-width:760px;margin:0 auto;padding:28px 16px 48px}
-    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #cfd6cb;background:#fff;font-weight:900;text-decoration:none;color:inherit}
+    .wrap{max-width:920px;margin:0 auto;padding:28px 16px 48px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #cfd6cb;background:#fff;font-weight:900;text-decoration:none;color:inherit;cursor:pointer}
     .btn.primary{background:var(--lime);border-color:var(--lime)}
     .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
     p{color:var(--muted);line-height:1.5}
+    .preview-shell{margin-top:20px;border:1px solid #d5dbd2;border-radius:18px;overflow:hidden;background:#d8ddd4;box-shadow:0 18px 60px rgba(0,0,0,.12)}
+    .preview-label{padding:12px 16px;font-size:11px;font-weight:900;letter-spacing:.14em;color:#0e7c7c;background:var(--paper);border-bottom:1px solid #d5dbd2}
+    .preview-frame{display:block;width:100%;min-height:1120px;border:0;background:var(--paper)}
+    @media (max-width:720px){.preview-frame{min-height:980px}}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div style="font-size:11px;font-weight:900;letter-spacing:.14em;color:#0e7c7c">PROTOTYPE PDF</div>
-    <h1 style="margin:8px 0 6px;letter-spacing:-.03em">Bilan vendredi — 1 page, 3 infos</h1>
-    <p>Le PDF regroupe sur une seule page A4 : le live le plus suivi, le N°1 du classement le plus souvent, et l’influenceur le plus pronostiqué.</p>
+    <h1 style="margin:8px 0 6px;letter-spacing:-.03em">Bilan vendredi — aperçu image, puis PDF</h1>
+    <p>Validez d’abord le rendu visuel ci-dessous (1 page A4, 3 blocs). Ensuite seulement, téléchargez le PDF.</p>
+
+    <div class="preview-shell">
+      <div class="preview-label">Aperçu du rendu final</div>
+      <iframe class="preview-frame" title="Aperçu bilan de la semaine" src="./bilan-semaine.php?preview=1&amp;embed=1"></iframe>
+    </div>
+
     <div class="toolbar">
       <a class="btn primary" href="./api/weekly-digest-pdf.php?preview=1">Télécharger le PDF (démo)</a>
-      <a class="btn" href="./bilan-semaine.php?preview=1" target="_blank" rel="noopener">Voir la page A4</a>
+      <a class="btn" href="./bilan-semaine.php?preview=1" target="_blank" rel="noopener">Ouvrir en plein écran</a>
     </div>
-    <p>Depuis l’app : notification du vendredi soir → <strong>Télécharger le PDF</strong> ou <strong>Ouvrir la page</strong>.</p>
+    <p>Depuis l’app : notification du vendredi soir → <strong>Aperçu</strong> puis <strong>Télécharger le PDF</strong>.</p>
   </div>
 </body>
 </html>
