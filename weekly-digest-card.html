@@ -2,57 +2,29 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Prototype — Bilan vendredi PASS50</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="./index.html" disabled>
+  <title>Prototype — Bilan PDF PASS50</title>
   <style>
-    :root{--lime:#b7ff00;--line:#1f261f;--muted:#8a968a}
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#0a0f0b;color:#eef1ec}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border-radius:12px;border:1px solid #2a322a;background:#121812;color:#eef1ec;font-weight:900;cursor:pointer}
-    .btn.primary{background:var(--lime);border-color:var(--lime);color:#050705}
-    .eyebrow{font-size:11px;font-weight:900;letter-spacing:.14em;color:var(--lime)}
-    .wrap{max-width:1040px;margin:0 auto;padding:24px 16px 48px}
+    :root{--lime:#b7ff00;--muted:#8a968a}
+    body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#e8ebe4;color:#0b0f0b}
+    .wrap{max-width:760px;margin:0 auto;padding:28px 16px 48px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #cfd6cb;background:#fff;font-weight:900;text-decoration:none;color:inherit}
+    .btn.primary{background:var(--lime);border-color:var(--lime)}
     .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
-    .notice-demo{margin-top:22px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#0c100c}
-    .share-note{font-size:12px;color:var(--muted);line-height:1.45}
+    p{color:var(--muted);line-height:1.5}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="eyebrow">PROTOTYPE V1</div>
-    <h1 style="margin:8px 0 6px;letter-spacing:-.03em">Bilan du vendredi soir — carte partageable</h1>
-    <p class="share-note">Aperçu de la notification hebdomadaire (21h Abidjan) sous forme de carte cliquable, téléchargeable (PNG / PDF) et partageable à l’externe.</p>
+    <div style="font-size:11px;font-weight:900;letter-spacing:.14em;color:#0e7c7c">PROTOTYPE PDF</div>
+    <h1 style="margin:8px 0 6px;letter-spacing:-.03em">Bilan vendredi — 1 page, 3 infos</h1>
+    <p>Le PDF regroupe sur une seule page A4 : le live le plus suivi, le N°1 du classement le plus souvent, et l’influenceur le plus pronostiqué.</p>
     <div class="toolbar">
-      <button class="btn primary" type="button" id="openProto">Ouvrir la carte</button>
-      <button class="btn" type="button" id="openLive">Données API (semaine courante)</button>
-      <a class="btn" href="./bilan-semaine.php?preview=1" target="_blank" rel="noopener">Page publique (lien externe)</a>
+      <a class="btn primary" href="./api/weekly-digest-pdf.php?preview=1">Télécharger le PDF (démo)</a>
+      <a class="btn" href="./bilan-semaine.php?preview=1" target="_blank" rel="noopener">Voir la page A4</a>
     </div>
-    <section class="notice-demo">
-      <strong>Comme dans le centre de notifications</strong>
-      <p class="share-note" style="margin:6px 0 12px">La vignette est cliquable et ouvre la carte en plein écran.</p>
-      <div id="noticeHost"></div>
-    </section>
+    <p>Depuis l’app : notification du vendredi soir → <strong>Télécharger le PDF</strong> ou <strong>Ouvrir la page</strong>.</p>
   </div>
-  <script src="./weekly-digest-share-v1.js?v=1.0"></script>
-  <script>
-  const demo=window.PASS50_WEEKLY_DIGEST_DEMO?.()||null;
-  document.getElementById('openProto')?.addEventListener('click',()=>openWeeklyDigestCard(demo));
-  document.getElementById('openLive')?.addEventListener('click',async()=>{
-    try{
-      const r=await fetch('./api/weekly-digest-card.php',{cache:'no-store'});
-      const data=await r.json();
-      if(data?.ok)openWeeklyDigestCard(data.stats);
-      else throw new Error();
-    }catch{openWeeklyDigestCard(demo);alert('API indisponible — affichage démo');}
-  });
-  const host=document.getElementById('noticeHost');
-  if(host&&typeof weeklyDigestNoticePreviewHtml==='function'){
-    host.innerHTML=weeklyDigestNoticePreviewHtml(demo);
-    host.querySelector('[data-weekly-digest-open]')?.setAttribute('data-weekly-digest-stats',JSON.stringify(demo));
-    paintWeeklyDigestNoticeThumbs(host);
-  }
-  </script>
 </body>
 </html>

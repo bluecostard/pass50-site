@@ -229,6 +229,14 @@ function p50_weekly_digest_format_viewers(int $n): string {
     return number_format(max(0, $n), 0, ',', ' ');
 }
 
+function p50_weekly_digest_pdf_url(string $weekKey = ''): string {
+    return '/api/weekly-digest-pdf.php' . ($weekKey !== '' ? '?week=' . rawurlencode($weekKey) : '');
+}
+
+function p50_weekly_digest_page_url(string $weekKey = ''): string {
+    return '/bilan-semaine.php' . ($weekKey !== '' ? '?week=' . rawurlencode($weekKey) : '');
+}
+
 function p50_weekly_digest_build_message(array $stats): array {
     $label = (string)($stats['window']['label'] ?? '');
     $title = 'Bilan de la semaine PASS50';
@@ -261,7 +269,8 @@ function p50_weekly_digest_build_message(array $stats): array {
         'title' => $title,
         'body' => $body,
         'kind' => P50_WEEKLY_DIGEST_KIND,
-        'actionUrl' => '/bilan-semaine.php?week=' . rawurlencode((string)$stats['weekKey']),
+        'actionUrl' => p50_weekly_digest_page_url((string)$stats['weekKey']),
+        'pdfUrl' => p50_weekly_digest_pdf_url((string)$stats['weekKey']),
     ];
 }
 
