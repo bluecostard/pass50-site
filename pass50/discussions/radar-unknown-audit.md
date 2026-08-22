@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-22 04:00 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `aya-robert` @aya.robert27 — 7676621029871045409 · 716 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7676587137415842593 · 135 viewers
+- TikTok `ennemi-des-djandjou` @ennemidesdjandjou — 7676669382254742293 · 268 viewers
+
 ### 2026-08-22 01:53 UTC
 
 Erreur : `GET HTTP 500`
