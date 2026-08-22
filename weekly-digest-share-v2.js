@@ -1,11 +1,13 @@
 'use strict';
 
 (() => {
-  const ACCENT = '#0e7c7b';
-  const PAPER = '#eef1ec';
-  const INK = '#0b0f0b';
-  const MUTED = '#5c665c';
+  const BG = '#050705';
+  const PANEL = '#0d110d';
+  const LINE = '#293129';
+  const TEXT = '#f6f8f4';
+  const MUTED = '#9da79b';
   const LIME = '#b7ff00';
+  const LIVE = '#ff4b4b';
   const API = './api/weekly-digest-card.php';
   const FALLBACK_VIEW = {
     weekKey: '2026-W34',
@@ -73,111 +75,182 @@
     });
   }
 
-  function drawAvatar(ctx, image, x, y, size, fallback) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-    ctx.clip();
-    if (image) {
-      const ratio = Math.max(size / image.width, size / image.height);
-      const width = image.width * ratio;
-      const height = image.height * ratio;
-      ctx.drawImage(image, x + (size - width) / 2, y + (size - height) / 2, width, height);
-    } else {
-      ctx.fillStyle = '#dde3d8';
-      ctx.fillRect(x, y, size, size);
-      ctx.fillStyle = INK;
-      ctx.textAlign = 'center';
-      ctx.font = `1000 ${Math.max(13, Math.round(size * .31))}px Arial, sans-serif`;
-      ctx.fillText(fallback || 'P50', x + size / 2, y + size * .62);
-      ctx.textAlign = 'left';
-    }
-    ctx.restore();
-    ctx.strokeStyle = ACCENT;
-    ctx.lineWidth = Math.max(2, Math.round(size * .035));
-    ctx.beginPath();
-    ctx.arc(x + size / 2, y + size / 2, size / 2 - ctx.lineWidth / 2, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  function photoUrl(profileId, size = 240) {
+  function photoUrl(profileId, size = 480) {
     const id = String(profileId || '').trim();
     if (!/^[A-Za-z0-9._:-]{1,100}$/.test(id)) return '';
     return `./partage-photo.php?id=${encodeURIComponent(id)}&size=${size}`;
   }
 
-  function drawBase(ctx, weekLabel) {
-    ctx.fillStyle = PAPER;
+  function drawPosterBackground(ctx) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 1350);
+    gradient.addColorStop(0, '#101510');
+    gradient.addColorStop(0.45, BG);
+    gradient.addColorStop(1, '#020302');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1080, 1350);
-    ctx.fillStyle = ACCENT;
-    ctx.fillRect(0, 0, 1080, 18);
+
+    const glow = ctx.createRadialGradient(540, 260, 40, 540, 320, 520);
+    glow.addColorStop(0, 'rgba(183,255,0,.22)');
+    glow.addColorStop(0.55, 'rgba(183,255,0,.06)');
+    glow.addColorStop(1, 'rgba(183,255,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 1080, 720);
+
+    ctx.fillStyle = 'rgba(5,7,5,.55)';
+    ctx.fillRect(0, 500, 1080, 220);
+
+    ctx.strokeStyle = LIME;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 18);
+    ctx.lineTo(1080, 18);
+    ctx.stroke();
+  }
+
+  function drawBrandHeader(ctx) {
     ctx.fillStyle = LIME;
-    ctx.fillRect(64, 56, 22, 22);
-    ctx.fillStyle = INK;
-    ctx.font = '1000 42px Arial, sans-serif';
-    ctx.fillText('PASS50', 100, 76);
-    ctx.fillStyle = ACCENT;
-    ctx.font = '800 22px Arial, sans-serif';
-    ctx.fillText('BILAN DE LA SEMAINE', 64, 140);
-    ctx.fillStyle = INK;
-    ctx.font = '1000 58px Arial, sans-serif';
-    ctx.fillText('Bilan du vendredi', 64, 250);
+    ctx.fillRect(54, 48, 18, 18);
+    ctx.fillStyle = TEXT;
+    ctx.font = '1000 34px Arial, sans-serif';
+    ctx.fillText('PASS', 82, 66);
+    ctx.fillStyle = LIME;
+    ctx.fillText('50', 198, 66);
     ctx.fillStyle = MUTED;
-    ctx.font = '600 28px Arial, sans-serif';
-    ctx.fillText(`Semaine ${weekLabel}`, 64, 300);
+    ctx.font = '700 18px Arial, sans-serif';
+    ctx.fillText('BILAN DU VENDREDI SOIR', 54, 98);
+  }
+
+  function drawPhotoFrame(ctx, image, x, y, w, h, fallback, accent = LIME) {
+    ctx.save();
+    roundedRect(ctx, x, y, w, h, 18);
+    ctx.clip();
+    if (image) {
+      const ratio = Math.max(w / image.width, h / image.height);
+      const width = image.width * ratio;
+      const height = image.height * ratio;
+      ctx.drawImage(image, x + (w - width) / 2, y + (h - height) / 2, width, height);
+    } else {
+      const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+      grad.addColorStop(0, '#1a221a');
+      grad.addColorStop(1, '#0a0d0a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = TEXT;
+      ctx.textAlign = 'center';
+      ctx.font = `1000 ${Math.max(28, Math.round(w * .18))}px Arial, sans-serif`;
+      ctx.fillText(fallback, x + w / 2, y + h * .56);
+      ctx.textAlign = 'left';
+    }
+    ctx.restore();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 4;
+    roundedRect(ctx, x, y, w, h, 18);
+    ctx.stroke();
+  }
+
+  function drawNameTag(ctx, name, x, y, maxWidth = 300) {
+    const label = compact(name, 22).toUpperCase();
+    ctx.font = '1000 22px Arial, sans-serif';
+    const width = Math.min(maxWidth, ctx.measureText(label).width + 28);
+    roundedRect(ctx, x, y, width, 38, 8);
+    ctx.fillStyle = 'rgba(5,7,5,.82)';
+    ctx.fill();
+    ctx.strokeStyle = LIME;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = TEXT;
+    ctx.fillText(label, x + 14, y + 27);
+  }
+
+  function drawPhotoCollage(ctx, sections, images) {
+    const slots = [
+      { x: 300, y: 130, w: 480, h: 430, accent: LIVE },
+      { x: 54, y: 250, w: 300, h: 360, accent: LIME },
+      { x: 726, y: 250, w: 300, h: 360, accent: LIME }
+    ];
+    slots.forEach((slot, index) => {
+      const section = sections[index];
+      if (!section) return;
+      drawPhotoFrame(ctx, images[index], slot.x, slot.y, slot.w, slot.h, initials(section.name), slot.accent);
+      drawNameTag(ctx, section.name, slot.x + 12, slot.y + slot.h - 52, slot.w - 24);
+    });
+  }
+
+  function drawStatRows(ctx, sections, weekLabel) {
+    const startY = 640;
+    sections.forEach((section, index) => {
+      const y = startY + index * 118;
+      const num = String(section.num || index + 1).padStart(2, '0');
+      ctx.fillStyle = LIME;
+      ctx.font = '1000 58px Arial, sans-serif';
+      ctx.fillText(num, 54, y + 52);
+      ctx.fillStyle = index === 0 ? LIVE : LIME;
+      ctx.font = '800 18px Arial, sans-serif';
+      ctx.fillText(String(section.title || '').toUpperCase(), 150, y + 10);
+      ctx.fillStyle = TEXT;
+      ctx.font = '1000 34px Arial, sans-serif';
+      ctx.fillText(compact(section.name, 28), 150, y + 48);
+      ctx.fillStyle = MUTED;
+      ctx.font = '700 22px Arial, sans-serif';
+      wrapCanvas(ctx, section.detail, 760, 2).forEach((line, lineIndex) => {
+        ctx.fillText(line, 150, y + 82 + lineIndex * 28);
+      });
+      if (index < sections.length - 1) {
+        ctx.strokeStyle = LINE;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(54, y + 98);
+        ctx.lineTo(1026, y + 98);
+        ctx.stroke();
+      }
+    });
+
+    ctx.fillStyle = MUTED;
+    ctx.font = '700 20px Arial, sans-serif';
+    ctx.fillText(`Semaine ${weekLabel}`, 54, startY + sections.length * 118 + 18);
+  }
+
+  function drawPosterTitle(ctx) {
+    ctx.save();
+    ctx.translate(760, 1120);
+    ctx.rotate(-0.08);
+    ctx.fillStyle = 'rgba(183,255,0,.12)';
+    ctx.font = '1000 118px Arial, sans-serif';
+    ctx.fillText('BILAN', -10, 0);
+    ctx.fillStyle = TEXT;
+    ctx.font = '1000 108px Arial, sans-serif';
+    ctx.fillText('BILAN', -14, -4);
+    ctx.fillStyle = LIME;
+    ctx.font = '1000 92px Arial, sans-serif';
+    ctx.fillText('SEMAINE', 8, 92);
+    ctx.restore();
+  }
+
+  function drawFooter(ctx, weekLabel) {
+    ctx.fillStyle = LIME;
+    ctx.fillRect(0, 1248, 1080, 102);
+    ctx.fillStyle = BG;
+    ctx.font = '1000 42px Arial, sans-serif';
+    ctx.fillText('PASS50.STORE', 54, 1312);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = BG;
+    ctx.font = '800 24px Arial, sans-serif';
+    ctx.fillText('3 TOPS · 1 AFFICHE', 1026, 1300);
+    ctx.font = '700 20px Arial, sans-serif';
+    ctx.fillText(compact(`Semaine ${weekLabel}`, 40), 1026, 1328);
+    ctx.textAlign = 'left';
   }
 
   async function drawWeeklyDigestCard(ctx, view) {
-    drawBase(ctx, view.weekLabel || '');
     const sections = Array.isArray(view.sections) ? view.sections.slice(0, 3) : [];
-    const images = await Promise.all(sections.map(section => loadImage(photoUrl(section.profileId, 240))));
-    const startY = 360;
-    const rowHeight = 210;
+    const images = await Promise.all(sections.map(section => loadImage(photoUrl(section.profileId, 480))));
 
-    sections.forEach((section, index) => {
-      const y = startY + index * rowHeight;
-      roundedRect(ctx, 60, y, 960, rowHeight - 18, 16);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#d5dbd2';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      const avatarSize = 108;
-      drawAvatar(ctx, images[index], 92, y + 36, avatarSize, initials(section.name));
-
-      ctx.fillStyle = ACCENT;
-      ctx.font = '800 20px Arial, sans-serif';
-      ctx.fillText(String(section.title || '').toUpperCase(), 230, y + 58);
-      ctx.fillStyle = INK;
-      ctx.font = '1000 38px Arial, sans-serif';
-      wrapCanvas(ctx, section.name, 620, 2).forEach((line, lineIndex) => {
-        ctx.fillText(line, 230, y + 104 + lineIndex * 42);
-      });
-      ctx.fillStyle = MUTED;
-      ctx.font = '700 24px Arial, sans-serif';
-      wrapCanvas(ctx, section.detail, 700, 2).forEach((line, lineIndex) => {
-        ctx.fillText(line, 230, y + 156 + lineIndex * 30);
-      });
-
-      ctx.fillStyle = ACCENT;
-      ctx.font = '1000 34px Arial, sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(String(section.num || index + 1), 990, y + 92);
-      ctx.textAlign = 'left';
-    });
-
-    ctx.fillStyle = LIME;
-    roundedRect(ctx, 60, 1230, 960, 78, 12);
-    ctx.fill();
-    ctx.fillStyle = INK;
-    ctx.textAlign = 'center';
-    ctx.font = '1000 28px Arial, sans-serif';
-    ctx.fillText('Voir le bilan complet', 540, 1280);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = MUTED;
-    ctx.font = '600 22px Arial, sans-serif';
-    ctx.fillText('pass50.store', 64, 1330);
+    drawPosterBackground(ctx);
+    drawBrandHeader(ctx);
+    drawPhotoCollage(ctx, sections, images);
+    drawStatRows(ctx, sections, view.weekLabel || '');
+    drawPosterTitle(ctx);
+    drawFooter(ctx, view.weekLabel || '');
   }
 
   async function renderPreview(canvas, view) {
