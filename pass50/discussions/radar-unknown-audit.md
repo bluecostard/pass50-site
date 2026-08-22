@@ -11,6 +11,10 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-22 13:04 UTC
+
+Erreur : `GET HTTP 500`
+
 ### 2026-08-22 09:47 UTC
 
 - Unknown sondés : **200**
