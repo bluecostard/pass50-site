@@ -67,9 +67,9 @@ function p50_weekly_digest_view_model(array $stats): array {
         'weekKey' => (string)($stats['weekKey'] ?? ''),
         'weekLabel' => (string)($stats['window']['label'] ?? ''),
         'sections' => [
-            ['num' => '1', 'title' => 'Live le plus suivi', 'name' => $liveName !== '' ? $liveName : '—', 'detail' => $liveDetail],
-            ['num' => '2', 'title' => 'N°1 du classement le plus souvent', 'name' => $rankName !== '' ? $rankName : '—', 'detail' => $rankDetail],
-            ['num' => '3', 'title' => 'Influenceur le plus pronostiqué', 'name' => $pronoName !== '' ? $pronoName : '—', 'detail' => $pronoDetail],
+            ['num' => '1', 'title' => 'Live le plus suivi', 'name' => $liveName !== '' ? $liveName : '—', 'detail' => $liveDetail, 'profileId' => trim((string)($live['profileId'] ?? ''))],
+            ['num' => '2', 'title' => 'N°1 du classement le plus souvent', 'name' => $rankName !== '' ? $rankName : '—', 'detail' => $rankDetail, 'profileId' => trim((string)($rank['profileId'] ?? ''))],
+            ['num' => '3', 'title' => 'Influenceur le plus pronostiqué', 'name' => $pronoName !== '' ? $pronoName : '—', 'detail' => $pronoDetail, 'profileId' => trim((string)($prono['profileId'] ?? ''))],
         ],
     ];
 }

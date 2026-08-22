@@ -4,37 +4,77 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Prototype — Bilan PDF PASS50</title>
+  <title>Prototype — Carte bilan PASS50</title>
   <style>
     :root{--lime:#b7ff00;--muted:#8a968a;--paper:#eef1ec}
-    body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#e8ebe4;color:#0b0f0b}
-    .wrap{max-width:920px;margin:0 auto;padding:28px 16px 48px}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Inter,system-ui,sans-serif;background:#e8ebe4;color:#0b0f0b}
+    .wrap{max-width:980px;margin:0 auto;padding:28px 16px 48px}
+    .eyebrow{font-size:11px;font-weight:900;letter-spacing:.14em;color:#0e7c7c}
+    h1{margin:8px 0 6px;letter-spacing:-.03em;font-size:clamp(28px,4vw,40px)}
+    p{color:var(--muted);line-height:1.55}
     .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #cfd6cb;background:#fff;font-weight:900;text-decoration:none;color:inherit;cursor:pointer}
     .btn.primary{background:var(--lime);border-color:var(--lime)}
     .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
-    p{color:var(--muted);line-height:1.5}
-    .preview-shell{margin-top:20px;border:1px solid #d5dbd2;border-radius:18px;overflow:hidden;background:#d8ddd4;box-shadow:0 18px 60px rgba(0,0,0,.12)}
-    .preview-label{padding:12px 16px;font-size:11px;font-weight:900;letter-spacing:.14em;color:#0e7c7c;background:var(--paper);border-bottom:1px solid #d5dbd2}
-    .preview-frame{display:block;width:100%;min-height:1120px;border:0;background:var(--paper)}
-    @media (max-width:720px){.preview-frame{min-height:980px}}
+    .preview-shell{margin-top:22px;padding:18px;border-radius:22px;background:#d8ddd4;border:1px solid #cfd6cb;box-shadow:0 18px 60px rgba(0,0,0,.12)}
+    .preview-label{font-size:11px;font-weight:900;letter-spacing:.14em;color:#0e7c7c;margin-bottom:14px}
+    .preview-frame{display:flex;justify-content:center;align-items:flex-start;overflow:auto}
+    canvas#weeklyDigestCanvas{width:min(100%,420px);height:auto;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.16);background:var(--paper)}
+    #weeklyDigestStatus{margin-top:12px;color:var(--muted);font-weight:700;font-size:14px}
+    .note{margin-top:16px;padding:14px 16px;border-radius:14px;background:#fff;border:1px solid #d5dbd2;color:#5c665c;font-size:14px;line-height:1.5}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div style="font-size:11px;font-weight:900;letter-spacing:.14em;color:#0e7c7c">PROTOTYPE PDF</div>
-    <h1 style="margin:8px 0 6px;letter-spacing:-.03em">Bilan vendredi — aperçu image, puis PDF</h1>
-    <p>Validez d’abord le rendu visuel ci-dessous (1 page A4, 3 blocs). Ensuite seulement, téléchargez le PDF.</p>
+    <div class="eyebrow">PROTOTYPE CARTE PARTAGE</div>
+    <h1>Bilan vendredi — aperçu image d’abord</h1>
+    <p>Même style que les cartes PASS50 (classement, live, Mon fil) : fond papier clair, avatars, 3 blocs sur une seule image 1080×1350.</p>
 
     <div class="preview-shell">
       <div class="preview-label">Aperçu du rendu final</div>
-      <iframe class="preview-frame" title="Aperçu bilan de la semaine" src="./bilan-semaine.php?preview=1&amp;embed=1"></iframe>
+      <div class="preview-frame">
+        <canvas id="weeklyDigestCanvas" width="1080" height="1350" aria-label="Aperçu carte bilan de la semaine"></canvas>
+      </div>
+      <div id="weeklyDigestStatus">Chargement…</div>
     </div>
 
     <div class="toolbar">
-      <a class="btn primary" href="./api/weekly-digest-pdf.php?preview=1">Télécharger le PDF (démo)</a>
-      <a class="btn" href="./bilan-semaine.php?preview=1" target="_blank" rel="noopener">Ouvrir en plein écran</a>
+      <button class="btn primary" id="weeklyDigestDownload" type="button">Télécharger l’image PNG</button>
+      <button class="btn" id="weeklyDigestRefresh" type="button">Rafraîchir l’aperçu</button>
     </div>
-    <p>Depuis l’app : notification du vendredi soir → <strong>Aperçu</strong> puis <strong>Télécharger le PDF</strong>.</p>
+
+    <div class="note">
+      Ce n’est <strong>pas</strong> un document A4 administratif. C’est une carte visuelle partageable (WhatsApp, stories, notification).
+      Le PDF pourra reprendre exactement ce visuel une fois validé.
+    </div>
   </div>
+
+  <script src="./weekly-digest-share-v2.js"></script>
+  <script>
+    (async () => {
+      const api = window.PASS50_WEEKLY_DIGEST_SHARE_V2;
+      const canvas = document.getElementById('weeklyDigestCanvas');
+      let currentView = null;
+
+      async function refresh() {
+        currentView = await api.boot({ preview: true });
+      }
+
+      document.getElementById('weeklyDigestRefresh')?.addEventListener('click', () => {
+        refresh().catch(() => {});
+      });
+
+      document.getElementById('weeklyDigestDownload')?.addEventListener('click', async () => {
+        try {
+          if (!currentView) currentView = await api.boot({ preview: true });
+          await api.downloadPng(canvas, currentView.weekKey || 'demo');
+        } catch (error) {
+          document.getElementById('weeklyDigestStatus').textContent = error?.message || 'Téléchargement impossible';
+        }
+      });
+
+      await refresh();
+    })();
+  </script>
 </body>
 </html>
