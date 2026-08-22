@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Bilan demo</title>
+<style>body{margin:0;background:#e8ebe4;display:grid;place-items:center;min-height:100vh}canvas{width:420px;height:auto;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.16)}</style>
+</head><body>
+<canvas id="weeklyDigestCanvas" width="1080" height="1350"></canvas>
+<script src="./weekly-digest-share-v2.js"></script>
+<script>
+(async () => {
+  await PASS50_WEEKLY_DIGEST_SHARE_V2.renderPreview(document.getElementById('weeklyDigestCanvas'), {
+    weekKey:'2026-W34',
+    weekLabel:'15/08 → 22/08/2026',
+    sections:[
+      {num:'1',title:'Live le plus suivi',name:'Samuella Kouassi',detail:'12 840 auditeurs · TikTok',metric:'12 840',metricLabel:'auditeurs',profileId:'census-samuella-kouassi',photoUrl:'/api/weekly-digest-photo.php?id=census-samuella-kouassi&size=480'},
+      {num:'2',title:'N°1 du classement le plus souvent',name:'Roseline Layo',detail:'5 fois en tête (24H)',metric:'5×',metricLabel:'en tête',profileId:'census-roseline-layo',photoUrl:'/api/weekly-digest-photo.php?id=census-roseline-layo&size=480'},
+      {num:'3',title:'Influenceur le plus pronostiqué',name:'Jordan Evraa',detail:'312 pronostics · 186 votants',metric:'312',metricLabel:'pronostics',profileId:'census-jordan-evraa',photoUrl:'/api/weekly-digest-photo.php?id=census-jordan-evraa&size=480'}
+    ]
+  });
+})();
+</script></body></html>
