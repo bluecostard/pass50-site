@@ -53,7 +53,10 @@ function profileIdFromBadge(badge){
 }
 
 function profileName(profileId,live){
-  try{return String(profile?.(profileId)?.name||live?.profileName||'Influenceur')}catch{return String(live?.profileName||'Influenceur')}
+  try{
+    const p=profile?.(profileId);
+    return String(p?.name||p?.realName||live?.profileName||live?.handle||live?.title||'Direct');
+  }catch{return String(live?.profileName||live?.handle||live?.title||'Direct')}
 }
 
 function initials(name){

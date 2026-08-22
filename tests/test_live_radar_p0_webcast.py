@@ -61,6 +61,7 @@ class LiveRadarP0WebcastTests(unittest.TestCase):
         self.assertIn('continue-on-error: true', QUICK)
         self.assertIn("cron: '*/15 * * * *'", QUICK)
         self.assertIn('webcast.tiktok.com/webcast/room/info_by_user', SCRIPT)
+        self.assertIn('www.tiktok.com/api-live/user/room', (ROOT / 'scripts' / 'live_radar_unknown_audit.py').read_text(encoding='utf-8'))
         self.assertIn('live-radar-unknown-audit.php', SCRIPT)
         self.assertIn('POST lot tentative', SCRIPT)
         self.assertIn('ROTATION_LIMIT', SCRIPT)

@@ -18,6 +18,7 @@ UA = (
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
 WEBCAST_URL = "https://webcast.tiktok.com/webcast/room/info_by_user/?aid=1988&unique_id="
+ROOM_API_URL = "https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId="
 ENDPOINT_DEFAULT = "https://pass50.store/api/live-radar-unknown-audit.php"
 DISCUSSION_PATH = Path("pass50/discussions/radar-unknown-audit.md")
 LATEST_PATH = Path("pass50/discussions/radar-unknown-audit-latest.json")
@@ -84,6 +85,63 @@ def parse_tiktok_webcast(payload: dict[str, Any], handle: str) -> dict[str, Any]
     }
 
 
+def parse_tiktok_room_api(payload: dict[str, Any], handle: str) -> dict[str, Any] | None:
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    user = data.get("user") if isinstance(data.get("user"), dict) else {}
+    live_room = data.get("liveRoom") if isinstance(data.get("liveRoom"), dict) else {}
+    unique = str(user.get("uniqueId") or "").strip().lstrip("@")
+    expected = handle.strip().lstrip("@")
+    if expected and unique and unique.lower() != expected.lower():
+        return None
+    status = user.get("status")
+    if status is None:
+        status = live_room.get("status")
+    try:
+        status_int = int(status)
+    except (TypeError, ValueError):
+        return None
+    if status_int != 2:
+        return None
+    room_id = str(user.get("roomId") or live_room.get("roomId") or live_room.get("id") or "").strip()
+    if not re.match(r"^[1-9]\d{5,}$", room_id):
+        return None
+    stats = live_room.get("liveRoomStats") if isinstance(live_room.get("liveRoomStats"), dict) else {}
+    viewers = stats.get("userCount")
+    title = str(live_room.get("title") or user.get("nickname") or "").strip()
+    return {
+        "roomId": room_id,
+        "title": title,
+        "viewers": int(viewers) if isinstance(viewers, int) and viewers > 0 else None,
+        "startedAt": None,
+        "handle": unique or expected,
+    }
+
+
+def probe_tiktok_handle(handle: str) -> dict[str, Any] | None:
+    handle = str(handle or "").strip().lstrip("@")
+    if not handle:
+        return None
+    headers = {
+        "Referer": f"https://www.tiktok.com/@{handle}",
+        "Origin": "https://www.tiktok.com",
+    }
+    status, body = fetch(WEBCAST_URL + urllib.parse.quote(handle), headers=headers)
+    if status == 200:
+        try:
+            parsed = parse_tiktok_webcast(json.loads(body), handle)
+        except json.JSONDecodeError:
+            parsed = None
+        if parsed:
+            return parsed
+    status, body = fetch(ROOM_API_URL + urllib.parse.quote(handle), headers=headers)
+    if status != 200:
+        return None
+    try:
+        return parse_tiktok_room_api(json.loads(body), handle)
+    except json.JSONDecodeError:
+        return None
+
+
 def parse_youtube_live_html(html: str) -> dict[str, Any] | None:
     if not re.search(r'"isLiveNow"\s*:\s*true', html, re.I):
         return None
@@ -124,21 +182,7 @@ def probe_source(source: dict[str, Any]) -> dict[str, Any] | None:
     platform = str(source.get("platform") or "")
     handle = str(source.get("handle") or "")
     if platform == "TikTok" and handle:
-        url = WEBCAST_URL + urllib.parse.quote(handle)
-        status, body = fetch(
-            url,
-            headers={
-                "Referer": f"https://www.tiktok.com/@{handle}",
-                "Origin": "https://www.tiktok.com",
-            },
-        )
-        if status != 200:
-            return None
-        try:
-            payload = json.loads(body)
-        except json.JSONDecodeError:
-            return None
-        parsed = parse_tiktok_webcast(payload, handle)
+        parsed = probe_tiktok_handle(handle)
         if not parsed:
             return None
         return {

@@ -13,9 +13,12 @@ class PeakLoadCacheLiveV1Tests(unittest.TestCase):
     def test_status_uses_fast_cache_path(self):
         legacy = read("api/live-status.php")
         cache = read("api/live-status-cache-core.php")
+        endpoint = read("api/live-status-v4.php")
         self.assertIn("live-status-cache-core.php", legacy)
         self.assertIn("p50_live_status_cache_respond", legacy)
         self.assertIn("mode === 'status'", legacy)
+        self.assertIn("if($mode==='status'&&!$force)", endpoint)
+        self.assertLess(endpoint.find("p50_live_status_cache_respond()"), endpoint.find("p50_de_sync_registry_from_state()"))
         self.assertIn("PASS50-LIVE-STATUS-CACHE-V1", cache)
         self.assertIn("GET_LOCK('pass50_live_status_cache'", cache)
         self.assertIn("p50_public_edge_cache(P50_LIVE_STATUS_CACHE_MAX_AGE", cache)

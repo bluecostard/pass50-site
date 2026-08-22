@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-public-copy]')) return;
   var script = document.createElement('script');
-  script.src = './public-copy-fixes.js?v=1.15';
+  script.src = './public-copy-fixes.js?v=1.16';
   script.dataset.pass50PublicCopy = '1.10';
   document.head.appendChild(script);
 })();
@@ -95,8 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-ennemi-djandjou]')) return;
   var script = document.createElement('script');
-  script.src = './profile-ennemi-des-djandjou.js?v=1.2';
-  script.dataset.pass50ProfileEnnemiDjandjou = '1.2';
+  script.src = './profile-ennemi-des-djandjou.js?v=1.3';
+  script.dataset.pass50ProfileEnnemiDjandjou = '1.3';
   document.head.appendChild(script);
 })();
 
@@ -104,8 +104,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-isouch]')) return;
   var script = document.createElement('script');
-  script.src = './profile-isouch.js?v=1.0';
-  script.dataset.pass50ProfileIsouch = '1.0';
+  script.src = './profile-isouch.js?v=1.1';
+  script.dataset.pass50ProfileIsouch = '1.1';
   document.head.appendChild(script);
 })();
 
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-live-radar]')) return;
   var script = document.createElement('script');
-  script.src = './live-radar-v3.js?v=1.11';
+  script.src = './live-radar-v3.js?v=1.12';
   script.dataset.pass50LiveRadar = '4.4';
   document.head.appendChild(script);
 })();

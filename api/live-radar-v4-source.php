@@ -297,6 +297,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-daniel-m|youtube'=>'https://www.youtube.com/@wisdombydaniel.m',
         'census-akalajoie|tiktok'=>'https://www.tiktok.com/@akalajoie',
         'ennemi-des-djandjou|tiktok'=>'https://www.tiktok.com/@ennemidesdjandjou',
+        'ennemi-des-djandjou|facebook'=>'https://www.facebook.com/profile.php?id=61582125968813',
         'census-isouch|tiktok'=>'https://www.tiktok.com/@prince_du_pays',
     ];
     return $overrides[$key]??$url;
@@ -388,6 +389,15 @@ function p50_live_v4_sources(array $state): array {
             'profile_id'=>$forced['id'],'public_name'=>$forced['name'],'handle'=>'@'.$forced['handle'],
             'platform'=>'TikTok','url'=>'https://www.tiktok.com/@'.$forced['handle'],'confidence'=>100,
             'verification_status'=>'manual_verified',
+            'verification_priority'=>'P0',
+        ];
+    }
+    $ennemiFbKey='Facebook|ennemi-des-djandjou';
+    if(!isset($seen[$ennemiFbKey])){
+        $seen[$ennemiFbKey]=true;$out[]=[
+            'profile_id'=>'ennemi-des-djandjou','public_name'=>'Ennemi des Djandjou','handle'=>'@ennemidesdjandjou',
+            'platform'=>'Facebook','url'=>'https://www.facebook.com/profile.php?id=61582125968813','confidence'=>100,
+            'verification_status'=>'owner_verified',
             'verification_priority'=>'P0',
         ];
     }

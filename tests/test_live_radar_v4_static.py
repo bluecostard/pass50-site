@@ -30,7 +30,7 @@ class LiveRadarV41StaticTests(unittest.TestCase):
     def test_endpoint_uses_v4_only(self):
         self.assertIn("live-radar-v4-core.php", FILES['endpoint'])
         self.assertNotIn("live-status-v3.php", FILES['client'])
-        self.assertIn("live-status-v4.php", FILES['client'])
+        self.assertIn("live-status.php", FILES['client'])
 
     def test_reported_youtube_false_positive_is_scoped_to_one_video(self):
         parser = FILES['parsers']

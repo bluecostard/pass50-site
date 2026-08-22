@@ -1,7 +1,7 @@
 name: PASS50 Live Radar P0
 
 # GitHub n’honore pas un cron plus serré que 5 min (souvent 10–30 min).
-# Ce job ne fait QUE du webcast GitHub + POST IONOS. Pas de scan IONOS TikTok.
+# Ce job sonde TikTok depuis GitHub (webcast, puis api-live/user/room si 4003110) et POST IONOS.
 
 on:
   schedule:

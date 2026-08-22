@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const ENDPOINT='./api/live-status-v4.php';
+const ENDPOINT='./api/live-status.php';
 const QUICK_INTERVAL=30_000;
 const FULL_CYCLE_KEY='pass50_live_radar_v4_cycle';
 const DEFAULT_TRUST_SECONDS={TikTok:1800,Facebook:600,YouTube:1200,Instagram:600};
@@ -235,7 +235,7 @@ function ensureLiveTrustGate(){
 function ensureLiveExperience(){
   ensureLiveTrustGate();
   if(document.querySelector('script[data-pass50-live-experience-v41]'))return;
-  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.7';script.dataset.pass50LiveExperienceV41='1.7';document.head.appendChild(script);
+  const script=document.createElement('script');script.src='./live-experience-v4-1.js?v=1.8';script.dataset.pass50LiveExperienceV41='1.8';document.head.appendChild(script);
 }
 
 function bind(){

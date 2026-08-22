@@ -8,6 +8,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 from live_radar_unknown_audit import (  # noqa: E402
     format_discussion_entry,
     parse_facebook_live_html,
+    parse_tiktok_room_api,
     parse_tiktok_webcast,
     parse_youtube_live_html,
     write_discussion_log,
@@ -39,6 +40,25 @@ class LiveRadarUnknownAuditTests(unittest.TestCase):
         payload = {'status_code': 0, 'data': {'status': 4, 'id_str': '7675133122324843295', 'owner': {'display_id': 'x'}}}
         self.assertIsNone(parse_tiktok_webcast(payload, 'x'))
 
+    def test_room_api_status_2_is_live_when_webcast_misses(self):
+        payload = {
+            'data': {
+                'user': {
+                    'uniqueId': 'ennemidesdjandjou',
+                    'nickname': 'ENNEMI DES DJANDJOU',
+                    'roomId': '7676642940831566612',
+                    'status': 2,
+                },
+                'liveRoom': {'status': 2, 'title': '', 'liveRoomStats': {'userCount': 0}},
+            }
+        }
+        parsed = parse_tiktok_room_api(payload, 'ennemidesdjandjou')
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed['roomId'], '7676642940831566612')
+        self.assertEqual(parsed['handle'], 'ennemidesdjandjou')
+        self.assertIsNone(parse_tiktok_room_api(payload, 'prince_du_pays'))
+        self.assertIsNone(parse_tiktok_webcast({'status_code': 4003110}, 'ennemidesdjandjou'))
+
     def test_youtube_requires_islivenow(self):
         live = parse_youtube_live_html('<title>Direct - YouTube</title><script>{"isLiveNow":true,"videoId":"abcDEF123456"}</script>')
         self.assertEqual(live['videoId'], 'abcDEF123456')
@@ -54,6 +74,7 @@ class LiveRadarUnknownAuditTests(unittest.TestCase):
 
     def test_wiring(self):
         self.assertIn('webcast.tiktok.com/webcast/room/info_by_user', SOURCE)
+        self.assertIn('www.tiktok.com/api-live/user/room', (ROOT / 'scripts' / 'live_radar_unknown_audit.py').read_text(encoding='utf-8'))
         self.assertIn('function p50_live_v4_merge_p0_watch', SOURCE)
         self.assertIn('function p50_live_v4_is_p0_source', SOURCE)
         self.assertIn('p50_live_v4_needs_p0_rescan', STATUS)

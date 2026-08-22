@@ -9,6 +9,16 @@ set_time_limit(60);
 
 try { db()->exec("SET time_zone = '+00:00'"); } catch (Throwable) {}
 
+$mode=strtolower(trim((string)($_GET['mode']??'quick')));
+if(!in_array($mode,['quick','full','profile','status'],true))$mode='quick';
+$force=p50_live_v4_bool_query('force')||in_array($mode,['full','profile'],true);
+
+// Lecture publique : snapshot cache, sans sync registry ni scrape TikTok.
+if($mode==='status'&&!$force){
+    require_once __DIR__.'/live-status-cache-core.php';
+    p50_live_status_cache_respond();
+}
+
 p50_live_v4_ensure_schema();
 p50_de_sync_registry_from_state();
 $state=p50_de_load_public_state();
@@ -30,9 +40,6 @@ $profileFilter=trim((string)($_GET['profileId']??''));
 if($profileFilter!=='')$sources=array_values(array_filter($sources,static fn($source)=>(string)$source['profile_id']===$profileFilter));
 $sourceMap=[];foreach($sources as $source)$sourceMap[(string)$source['source_key']]=$source;
 
-$mode=strtolower((string)($_GET['mode']??'quick'));
-if(!in_array($mode,['quick','full','profile','status'],true))$mode='quick';
-$force=p50_live_v4_bool_query('force')||in_array($mode,['full','profile'],true);
 $batch=max(1,min(16,(int)($_GET['batch']??14)));
 $refresh=30;
 $lastScan=(string)p50_de_get_setting('live_radar_v4_last_scan_at','');
