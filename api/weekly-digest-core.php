@@ -261,7 +261,7 @@ function p50_weekly_digest_build_message(array $stats): array {
         'title' => $title,
         'body' => $body,
         'kind' => P50_WEEKLY_DIGEST_KIND,
-        'actionUrl' => '/',
+        'actionUrl' => '/bilan-semaine.php?week=' . rawurlencode((string)$stats['weekKey']),
     ];
 }
 
