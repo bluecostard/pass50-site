@@ -5,6 +5,9 @@ IONOS rate souvent `tiktok_embed_uninformative` alors que
 webcast.tiktok.com/webcast/room/info_by_user (depuis GitHub) voit status=2.
 Le POST réutilise live-radar-unknown-audit.php, qui stocke déjà les P0
 sans les recopier dans la watchlist dynamique.
+
+Un live détecté reste publié jusqu’à une preuve de fin (replay / ended / dismiss) :
+pas de fenêtre de fraîcheur. Ce job republie les P0 encore en direct.
 """
 from __future__ import annotations
 

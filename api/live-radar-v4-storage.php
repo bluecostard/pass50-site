@@ -112,21 +112,30 @@ function p50_live_v4_mark_ended(string $profileId,string $platform,string $reaso
 }
 function p50_live_v4_active_rows(): array {
     p50_live_v4_ensure_dismissals();
-    db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='automatic' AND status='unconfirmed' AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR)");
+    db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='automatic' AND status='unconfirmed' AND platform NOT IN ('TikTok','YouTube') AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR)");
     db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='meta_authorized' AND status='live' AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE)");
-    // Offline/replay explicite → retrait immédiat.
-    db()->exec("UPDATE p50_live_streams s JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform SET s.status='unconfirmed',s.metadata=JSON_SET(COALESCE(s.metadata,'{}'),'$.withdrawalReason','latest_probe_offline') WHERE s.source='automatic' AND s.status='live' AND h.last_state IN ('offline','replay')");
-    // Grâce de reconfirmation serveur (pas la fenêtre publique).
+    // TikTok/YouTube : un live retiré uniquement pour « trop vieux » redevient public.
+    db()->exec("UPDATE p50_live_streams SET status='live',ended_at=NULL,metadata=JSON_REMOVE(COALESCE(metadata,'{}'),'$.withdrawalReason') WHERE source='automatic' AND status='unconfirmed' AND platform IN ('TikTok','YouTube') AND ended_at IS NULL AND JSON_UNQUOTE(JSON_EXTRACT(COALESCE(metadata,'{}'),'$.withdrawalReason'))='confirmation_grace_expired'");
+    // Replay → retrait. TikTok offline HTML IONOS n’est pas une preuve de fin.
+    db()->exec("UPDATE p50_live_streams s JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform SET s.status='unconfirmed',s.metadata=JSON_SET(COALESCE(s.metadata,'{}'),'$.withdrawalReason','latest_probe_offline') WHERE s.source='automatic' AND s.status='live' AND ((s.platform IN ('TikTok','YouTube') AND h.last_state='replay') OR (s.platform NOT IN ('TikTok','YouTube') AND h.last_state IN ('offline','replay')))");
+    // Grâce d’âge : Instagram / Facebook seulement (minutes=0 = jamais).
     foreach(p50_live_v4_reconfirm_grace_map() as $platform=>$configured){
-        $minutes=max(1,(int)$configured);
+        $minutes=(int)$configured;
+        if($minutes<=0||p50_live_v4_detected_live_has_no_time_limit($platform))continue;
+        $minutes=max(1,$minutes);
         $stmt=db()->prepare("UPDATE p50_live_streams SET status='unconfirmed',metadata=JSON_SET(COALESCE(metadata,'{}'),'$.withdrawalReason','confirmation_grace_expired') WHERE source='automatic' AND status='live' AND platform=? AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$minutes} MINUTE)");
         $stmt->execute([$platform]);
     }
-    // Trust Gate public : uniquement last_state=live + confirmation encore fraîche.
-    // Un unknown / blocage ne maintient plus le LIVE dans la liste publique.
+    // TikTok/YouTube : status=live suffit (unknown IONOS ne masque pas). IG/FB : fenêtre.
     $conditions=[];$params=[];
     foreach(p50_live_v4_trust_seconds_map() as $platform=>$seconds){
-        $seconds=max(30,(int)$seconds);
+        $seconds=max(0,(int)$seconds);
+        if(p50_live_v4_detected_live_has_no_time_limit($platform)||$seconds<=0){
+            $conditions[]="(s.source='automatic' AND s.platform=? AND (h.last_state IS NULL OR h.last_state<>'replay'))";
+            $params[]=$platform;
+            continue;
+        }
+        $seconds=max(30,$seconds);
         $conditions[]="(s.source='automatic' AND s.platform=? AND h.last_state='live' AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$seconds} SECOND) AND h.last_checked_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL {$seconds} SECOND))";
         $params[]=$platform;
     }
@@ -162,6 +171,10 @@ function p50_live_v4_active_rows(): array {
             ],
         ];
         if(!p50_live_v4_is_publicly_fresh($candidate))continue;
+        if(p50_live_v4_detected_live_has_no_time_limit($platform,$source)){
+            $candidate['lastCheckState']='live';
+            $candidate['lastConfirmedAt']=gmdate(DATE_ATOM);
+        }
         unset($candidate['last_state'],$candidate['last_seen_at']);
         $candidate['trust']=['gate'=>P50_LIVE_V4_TRUST_REVISION,'maxAgeSeconds'=>p50_live_v4_public_max_age((string)$candidate['platform']),'fresh'=>true];
         $out[]=$candidate;
@@ -237,7 +250,7 @@ function p50_live_v4_health_summary(array $sources,array $activeAutomatic): arra
         $state=$health[$key]??null;
         if(isset($active[$key]))$category='live';
         elseif(($streams[$key]??'')==='unconfirmed'||$state==='probable')$category='unconfirmed';
-        elseif($state==='live')$category='unconfirmed'; // live en health mais pas encore public (fenêtre/filtre)
+        elseif($state==='live')$category='unconfirmed'; // live en health mais pas encore public (preuve/filtre)
         elseif($state==='replay')$category='replay';
         elseif($state==='offline')$category='offline';
         elseif($state==='unknown')$category='unknown';

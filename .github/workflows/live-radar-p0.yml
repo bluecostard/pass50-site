@@ -14,6 +14,8 @@ on:
       - 'scripts/live_radar_p0_webcast.py'
       - 'scripts/live_radar_unknown_audit.py'
       - 'api/live-radar-v4-source.php'
+      - 'api/live-radar-v4-storage.php'
+      - 'api/live-radar-v4-trust.php'
       - 'profile-ennemi-des-djandjou.js'
       - 'profile-isouch.js'
 

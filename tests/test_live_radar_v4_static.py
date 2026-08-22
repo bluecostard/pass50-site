@@ -39,13 +39,13 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn('p50_live_v4_known_false_positive($stream)', FILES['endpoint'])
         self.assertNotIn("profileId']==='kevine'", parser)
 
-    def test_unknown_block_hides_public_live(self):
+    def test_unknown_ionos_does_not_use_unknown_as_end_state(self):
         self.assertIn("'continuityPreserved'=>false", FILES['endpoint'])
         self.assertIn("tiktok_blocked_or_challenged", FILES['parsers'])
         self.assertIn("latest_probe_offline", FILES['storage'])
         self.assertIn("h.last_state IN ('offline','replay')", FILES['storage'])
         self.assertIn("h.last_state='live'", FILES['storage'])
-        self.assertNotIn("h.last_state='unknown'", FILES['storage'])
+        self.assertIn("h.last_state<>'replay'", FILES['storage'])
 
     def test_tiktok_trust_gate_allows_fresh_api_confirmation(self):
         parser = FILES['parsers']
@@ -103,7 +103,7 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         manual_key_check = endpoint.index("return isset($officialKeys[$key])")
         self.assertLess(meta_check, manual_key_check)
 
-    def test_public_rows_use_trust_gate(self):
+    def test_public_rows_keep_detected_lives(self):
         storage = FILES['storage']
         source = FILES['source']
         self.assertIn("h.last_state='live'", storage)
@@ -112,6 +112,8 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn("'TikTok'=>40", source)
         self.assertNotIn("$platform==='TikTok'?2", storage)
         self.assertIn("latest_probe_offline", storage)
+        self.assertIn("h.last_state<>'replay'", storage)
+        self.assertIn('p50_live_v4_detected_live_has_no_time_limit', storage)
 
     def test_facebook_uses_specific_video_and_independent_probes(self):
         parser = FILES['parsers']

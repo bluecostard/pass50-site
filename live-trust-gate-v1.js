@@ -4,13 +4,20 @@
 if(window.__pass50LiveTrustGateV1)return;
 window.__pass50LiveTrustGateV1=true;
 
-const VERSION='1.2.0';
-const DEFAULT_TRUST_SECONDS={TikTok:1800,YouTube:1200,Instagram:600,Facebook:600};
+const VERSION='1.3.0';
+const DEFAULT_TRUST_SECONDS={TikTok:0,YouTube:0,Instagram:600,Facebook:600};
 
 function trustSeconds(platform){
   const configured=Number(window.PASS50_LIVE_RADAR?.trustSeconds?.[platform]);
-  if(Number.isFinite(configured)&&configured>0)return configured;
-  return Number(DEFAULT_TRUST_SECONDS[platform]||120);
+  if(Number.isFinite(configured)&&configured>=0)return configured;
+  return Number(DEFAULT_TRUST_SECONDS[platform]||0);
+}
+
+function detectedLiveStays(item){
+  const source=String(item?.source||'automatic');
+  if(source!=='automatic')return false;
+  const platform=String(item?.platform||'').toLowerCase();
+  return platform==='tiktok'||platform==='youtube';
 }
 
 function serverNow(){
@@ -24,13 +31,18 @@ function isFreshLive(item,now=serverNow()){
     const endsAt=new Date(item.endsAt||'').getTime();
     return Number.isFinite(endsAt)&&endsAt>now;
   }
+  const state=String(item.lastCheckState||'live');
+  if(state==='replay')return false;
+  if(detectedLiveStays(item))return true;
+  if(state!=='live')return false;
   let confirmedAt=new Date(item.lastConfirmedAt||item.lastSeenAt||'').getTime();
   if(!Number.isFinite(confirmedAt))return false;
   const skew=confirmedAt-now;
   if(skew>5*60_000&&skew<=6*60*60_000)confirmedAt=now;
   else if(skew>6*60*60_000)return false;
-  if(String(item.lastCheckState||'live')!=='live'&&item.source!=='manual')return false;
-  return (now-confirmedAt)<=trustSeconds(String(item.platform||''))*1000;
+  const max=trustSeconds(String(item.platform||''));
+  if(max<=0)return true;
+  return (now-confirmedAt)<=max*1000;
 }
 
 function filterPublicLives(list){

@@ -19,7 +19,7 @@ $pdo->exec('DROP TABLE IF EXISTS p50_live_streams');
 p50_live_v4_ensure_schema();
 p50_live_v4_ensure_dismissals();
 
-$live=['profileId'=>'tiktok-test','platform'=>'TikTok','title'=>'Test est en direct','url'=>'https://www.tiktok.com/@test/live','thumbnail'=>'','confidence'=>99,'startedAt'=>null,'viewers'=>42,'metadata'=>['roomId'=>'741234567890']];
+        $live=['profileId'=>'tiktok-test','platform'=>'TikTok','title'=>'Test est en direct','url'=>'https://www.tiktok.com/@test/live','thumbnail'=>'','confidence'=>99,'startedAt'=>null,'viewers'=>42,'metadata'=>['roomId'=>'741234567890','strictApiLabels'=>['api_webcast']]];
 p50_live_v4_store_live($live);
 $pdo->prepare("INSERT INTO p50_live_source_health(profile_id,platform,url_hash,official_url,last_state,last_checked_at,last_live_at,metadata) VALUES(?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP(),'{}')")->execute(['tiktok-test','TikTok',hash('sha256','x'),'https://www.tiktok.com/@test','live']);
 $active=p50_live_v4_active_rows();
@@ -27,9 +27,9 @@ must(count($active)===1,'Une confirmation live récente doit publier le flux.');
 
 $pdo->prepare("UPDATE p50_live_source_health SET last_state='unknown',last_checked_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
 $active=p50_live_v4_active_rows();
-must(count($active)===0,'Trust Gate : un unknown retire immédiatement le LIVE public.');
+must(count($active)===1,'Trust Gate : un unknown IONOS ne retire pas un LIVE TikTok détecté.');
 $status=$pdo->query("SELECT status FROM p50_live_streams WHERE profile_id='tiktok-test'")->fetchColumn();
-must($status==='live','Le flux peut rester live en base pour reconfirmation.');
+must($status==='live','Le flux reste live en base.');
 
 p50_live_v4_store_live($live);
 $pdo->prepare("UPDATE p50_live_source_health SET last_state='live',last_checked_at=UTC_TIMESTAMP(),last_live_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
@@ -44,9 +44,9 @@ must(count($active)===1,'Le LIVE public reste visible pendant la fenêtre si la 
 
 $pdo->prepare("UPDATE p50_live_source_health SET last_state='unknown',last_checked_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
 $active=p50_live_v4_active_rows();
-must(count($active)===0,'Un offline explicite retire immédiatement le live public.');
+must(count($active)===1,'Un unknown IONOS laisse le LIVE TikTok public.');
 $status=$pdo->query("SELECT status FROM p50_live_streams WHERE profile_id='tiktok-test'")->fetchColumn();
-must($status==='unconfirmed','Le flux retiré reste en historique à confirmer.');
+must($status==='live','Le flux TikTok unknown reste live, pas unconfirmé.');
 
 p50_live_v4_store_live($live);
 $pdo->prepare("UPDATE p50_live_source_health SET last_state='live',last_checked_at=UTC_TIMESTAMP(),last_live_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
@@ -55,15 +55,15 @@ must(count($active)===1,'Une nouvelle confirmation live peut republier le flux.'
 $pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 MINUTE) WHERE profile_id='tiktok-test'");
 $pdo->exec("UPDATE p50_live_source_health SET last_checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 MINUTE) WHERE profile_id='tiktok-test'");
 $active=p50_live_v4_active_rows();
-must(count($active)===1,'TikTok reste public 2 minutes après confirmation (fenêtre 30 min).');
+must(count($active)===1,'TikTok reste public 2 minutes après confirmation.');
 $pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 13 MINUTE) WHERE profile_id='tiktok-test'");
 $pdo->exec("UPDATE p50_live_source_health SET last_checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 13 MINUTE),last_state='live' WHERE profile_id='tiktok-test'");
 $active=p50_live_v4_active_rows();
-must(count($active)===1,'TikTok reste public 13 minutes après confirmation (fenêtre 30 min).');
+must(count($active)===1,'TikTok reste public 13 minutes après confirmation.');
 $pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 31 MINUTE) WHERE profile_id='tiktok-test'");
 $pdo->exec("UPDATE p50_live_source_health SET last_checked_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 31 MINUTE),last_state='live' WHERE profile_id='tiktok-test'");
 $active=p50_live_v4_active_rows();
-must(count($active)===0,'TikTok sort du public après 30 minutes sans reconfirmation.');
+must(count($active)===1,'TikTok reste public 31 minutes après confirmation — pas de limite de temps.');
 
 p50_live_v4_store_live($live);
 $pdo->prepare("UPDATE p50_live_source_health SET last_state='live',last_checked_at=UTC_TIMESTAMP(),last_live_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?")->execute(['tiktok-test','TikTok']);
@@ -72,7 +72,13 @@ $status=$pdo->query("SELECT status FROM p50_live_streams WHERE profile_id='tikto
 must($status==='live','Un HTML IONOS sans JSON ne clôture pas un LIVE TikTok GitHub.');
 $pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 41 MINUTE) WHERE profile_id='tiktok-test'");
 $active=p50_live_v4_active_rows();
-must(count($active)===0,'TikTok expire après la grâce de reconfirmation (40 min).');
+must(count($active)===1,'TikTok reste public après 41 min — la grâce d’âge ne s’applique plus.');
+$pdo->exec("UPDATE p50_live_streams SET last_seen_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 2 HOUR) WHERE profile_id='tiktok-test'");
+$active=p50_live_v4_active_rows();
+must(count($active)===1,'TikTok reste public 2 heures après détection.');
+$pdo->exec("UPDATE p50_live_streams SET status='unconfirmed',metadata=JSON_SET(COALESCE(metadata,'{}'),'$.withdrawalReason','confirmation_grace_expired') WHERE profile_id='tiktok-test'");
+$active=p50_live_v4_active_rows();
+must(count($active)===1,'Un live retiré seulement pour âge est republié.');
 
 p50_live_v4_store_live($live);
 p50_live_v4_mark_ended('tiktok-test','TikTok','replay',['url'=>'https://example.test/replay']);
@@ -81,7 +87,7 @@ must($row['status']==='ended','Une preuve de fin clôt le direct.');
 $metadata=json_decode((string)$row['metadata'],true);
 must(($metadata['endReason']??'')==='replay','Le motif de fin est conservé.');
 
-$false=['profileId'=>'youtube-false','platform'=>'YouTube','title'=>'Image figée','url'=>'https://www.youtube.com/watch?v=falseLive123','thumbnail'=>'','confidence'=>99,'startedAt'=>null,'viewers'=>null,'metadata'=>['videoId'=>'falseLive123']];
+        $false=['profileId'=>'youtube-false','platform'=>'YouTube','title'=>'Image figée','url'=>'https://www.youtube.com/watch?v=falseLive123','thumbnail'=>'','confidence'=>99,'startedAt'=>null,'viewers'=>null,'metadata'=>['videoId'=>'falseLive123','liveSignal'=>'isLiveNow']];
 p50_live_v4_store_live($false);
 $pdo->prepare("INSERT INTO p50_live_source_health(profile_id,platform,url_hash,official_url,last_state,last_checked_at,last_live_at,metadata) VALUES(?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP(),'{}')")->execute(['youtube-false','YouTube',hash('sha256','y'),'https://www.youtube.com/@false','live']);
 $key=p50_live_v4_stream_key($false);
@@ -92,8 +98,8 @@ must(!array_filter($active,static fn($item)=>(string)$item['profileId']==='youtu
 $status=$pdo->query("SELECT status FROM p50_live_streams WHERE profile_id='youtube-false'")->fetchColumn();
 must($status==='ended','Le faux direct supprimé est clôturé en base.');
 
-$future=$false;$future['url']='https://www.youtube.com/watch?v=realFuture456';$future['metadata']=['videoId'=>'realFuture456'];p50_live_v4_store_live($future);
+        $future=$false;$future['url']='https://www.youtube.com/watch?v=realFuture456';$future['metadata']=['videoId'=>'realFuture456','liveSignal'=>'isLiveNow'];p50_live_v4_store_live($future);
 $active=p50_live_v4_active_rows();
 must((bool)array_filter($active,static fn($item)=>(string)$item['profileId']==='youtube-false'),'Un futur live avec une autre URL reste détectable.');
 
-echo json_encode(['ok'=>true,'trustGate'=>true,'unknownHidesPublic'=>true,'publicMaxAge'=>true,'dismissalPersistent'=>true,'futureLiveAllowed'=>true],JSON_UNESCAPED_SLASHES).PHP_EOL;
+echo json_encode(['ok'=>true,'trustGate'=>true,'unknownKeepsTikTok'=>true,'detectedStays'=>true,'dismissalPersistent'=>true,'futureLiveAllowed'=>true],JSON_UNESCAPED_SLASHES).PHP_EOL;

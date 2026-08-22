@@ -33,9 +33,10 @@ class LiveRadarRuntimeV4Tests(unittest.TestCase):
         v9 = (ROOT / 'v9-tools.js').read_text(encoding='utf-8')
         self.assertNotIn("10*60_000:3*60_000", index)
         self.assertNotIn("10*60_000:3*60_000", v9)
-        self.assertIn('TikTok:1800', CLIENT)
-        self.assertIn('1800*1000', index)
-        self.assertIn('1800*1000', v9)
+        self.assertIn('TikTok:0', CLIENT)
+        self.assertIn('detectedLiveStays', (ROOT / 'live-trust-gate-v1.js').read_text(encoding='utf-8'))
+        self.assertIn("key==='tiktok'||key==='youtube'", index)
+        self.assertIn("key==='tiktok'||key==='youtube'", v9)
         self.assertIn('preservedRadarLives', index)
         self.assertIn('if(!window.__pass50LiveNormalizerV4)normalizeLiveStreams=', v9)
 

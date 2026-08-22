@@ -2,12 +2,13 @@
 declare(strict_types=1);
 
 /**
- * PASS50 Live Trust Gate (strict publish)
- * - Public : uniquement des directs à preuve forte encore frais
- * - TikTok : API propriétaire (status 2 + room + owner)
- * - YouTube : isLiveNow uniquement
+ * PASS50 Live Trust Gate
+ * - Publication : preuve forte (TikTok API status 2 + room, YouTube isLiveNow)
+ * - Un live TikTok/YouTube détecté reste public jusqu’à une preuve de fin
+ *   (replay, tiktok_live_ended, dismiss). Pas de limite de temps.
+ * - Instagram / Facebook gardent une fenêtre courte (sondes HTML).
  */
-const P50_LIVE_V4_TRUST_REVISION = 'LIVE-STRICT-PUBLISH-2026-08-11-1';
+const P50_LIVE_V4_TRUST_REVISION = 'LIVE-DETECTED-STAYS-2026-08-22-1';
 
 /** Parse une datetime MySQL/ISO en timestamp Unix (UTC). */
 function p50_live_v4_parse_utc(?string $value): ?int {
@@ -29,31 +30,45 @@ function p50_live_v4_parse_utc(?string $value): ?int {
 }
 
 /**
- * Âge max depuis la dernière confirmation live positive pour rester visible.
- * Doit rester > le vrai rythme GitHub (cron min 5 min, souvent 10–30 min).
- * IONOS ne confirme pas TikTok : sans cette fenêtre le radar se vide entre deux jobs.
+ * 0 = pas de limite de temps : le live reste public jusqu’à une preuve de fin.
+ * Instagram / Facebook conservent une fenêtre (HTML peut confirmer une fin).
  */
 const P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS = [
-    'TikTok' => 1800,     // 30 min — cadence GitHub réelle
-    'YouTube' => 1200,    // 20 min
-    'Instagram' => 600,   // 10 min
-    'Facebook' => 600,    // 10 min
+    'TikTok' => 0,
+    'YouTube' => 0,
+    'Instagram' => 600,
+    'Facebook' => 600,
 ];
 
-/** Grâce serveur pour retester un direct sans le clôturer trop tôt ( ≥ fenêtre publique ). */
+/** 0 = ne jamais unconfirm par âge. IG/FB seulement. */
 const P50_LIVE_V4_RECONFIRM_GRACE_MINUTES = [
-    'TikTok' => 40,
-    'YouTube' => 25,
+    'TikTok' => 0,
+    'YouTube' => 0,
     'Instagram' => 15,
     'Facebook' => 15,
 ];
 
 function p50_live_v4_public_max_age(string $platform): int {
-    return max(120, (int)(P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS[$platform] ?? 900));
+    if (!array_key_exists($platform, P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS)) {
+        return 900;
+    }
+    return max(0, (int)P50_LIVE_V4_PUBLIC_MAX_AGE_SECONDS[$platform]);
 }
 
 function p50_live_v4_reconfirm_grace_minutes(string $platform): int {
-    return max(5, (int)(P50_LIVE_V4_RECONFIRM_GRACE_MINUTES[$platform] ?? 18));
+    if (!array_key_exists($platform, P50_LIVE_V4_RECONFIRM_GRACE_MINUTES)) {
+        return 18;
+    }
+    return max(0, (int)P50_LIVE_V4_RECONFIRM_GRACE_MINUTES[$platform]);
+}
+
+/** TikTok / YouTube automatiques : un live détecté n’expire pas. */
+function p50_live_v4_detected_live_has_no_time_limit(string $platform, string $source = 'automatic'): bool {
+    if ($source !== 'automatic') {
+        return false;
+    }
+    $platform = strtolower(trim($platform));
+    return $platform === 'tiktok' || $platform === 'youtube';
 }
 
 function p50_live_v4_trust_seconds_map(): array {
@@ -64,7 +79,7 @@ function p50_live_v4_reconfirm_grace_map(): array {
     return P50_LIVE_V4_RECONFIRM_GRACE_MINUTES;
 }
 
-/** Un flux n’est publiable que s’il a une confirmation live positive encore fraîche. */
+/** Un flux n’est publiable que s’il est live et n’a pas de preuve de fin. */
 function p50_live_v4_is_publicly_fresh(array $row, ?int $now = null): bool {
     $now ??= time();
     $platform = (string)($row['platform'] ?? '');
@@ -72,17 +87,27 @@ function p50_live_v4_is_publicly_fresh(array $row, ?int $now = null): bool {
     $status = (string)($row['status'] ?? '');
     if ($status !== 'live') return false;
 
-    $seen = p50_live_v4_parse_utc((string)($row['last_seen_at'] ?? $row['lastSeenAt'] ?? ''));
-    if ($seen === null) return false;
+    $state = strtolower((string)($row['last_state'] ?? $row['lastCheckState'] ?? ''));
 
     if ($source === 'meta_authorized') {
+        $seen = p50_live_v4_parse_utc((string)($row['last_seen_at'] ?? $row['lastSeenAt'] ?? ''));
+        if ($seen === null) return false;
         return ($now - $seen) <= 20 * 60;
     }
 
-    $state = strtolower((string)($row['last_state'] ?? $row['lastCheckState'] ?? ''));
-    if ($state !== 'live') return false;
+    if (p50_live_v4_detected_live_has_no_time_limit($platform, $source)) {
+        return $state !== 'replay';
+    }
 
-    return ($now - $seen) <= p50_live_v4_public_max_age($platform);
+    if (in_array($state, ['offline', 'replay'], true)) return false;
+
+    $seen = p50_live_v4_parse_utc((string)($row['last_seen_at'] ?? $row['lastSeenAt'] ?? ''));
+    if ($seen === null) return false;
+    if ($state !== '' && $state !== 'live') return false;
+
+    $maxAge = p50_live_v4_public_max_age($platform);
+    if ($maxAge <= 0) return true;
+    return ($now - $seen) <= $maxAge;
 }
 
 function p50_live_v4_filter_public_streams(array $streams): array {

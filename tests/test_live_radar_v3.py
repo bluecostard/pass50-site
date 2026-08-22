@@ -54,21 +54,23 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('Strict Publish', CORE_TESTS)
         self.assertIn("['state']==='live'", CORE_TESTS)
 
-    def test_unknown_block_hides_public_live(self):
+    def test_unknown_ionos_does_not_hide_detected_tiktok(self):
         self.assertIn("'continuityPreserved'=>false", ENDPOINT)
         self.assertIn("status='unconfirmed'", STORAGE)
         self.assertIn('latest_probe_offline', STORAGE)
-        self.assertIn("h.last_state IN ('offline','replay')", STORAGE)
+        self.assertIn("h.last_state='replay'", STORAGE)
         self.assertIn("h.last_state='live'", STORAGE)
-        self.assertNotIn("h.last_state='unknown'", STORAGE)
+        self.assertIn("h.last_state<>'replay'", STORAGE)
 
-    def test_public_live_uses_trust_gate_windows(self):
+    def test_public_live_keeps_detected_tiktok_without_age_limit(self):
         active = re.search(r'function p50_live_v4_active_rows\(.*?\n}', STORAGE, re.S).group(0)
         self.assertNotIn("$platform==='TikTok'?2", active)
         self.assertIn("h.last_state='live'", active)
+        self.assertIn("h.last_state<>'replay'", active)
         self.assertIn('INTERVAL {$seconds} SECOND', active)
         self.assertIn("'lastConfirmedAt'=>p50_live_v4_iso($row['last_seen_at']", active)
         self.assertIn('confirmation_grace_expired', active)
+        self.assertIn('p50_live_v4_detected_live_has_no_time_limit', active)
         self.assertIn("'trustSeconds'=>p50_live_v4_trust_seconds_map()", ENDPOINT)
 
     def test_dismissed_stream_never_returns(self):
@@ -180,12 +182,12 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('coverageRevision', contract)
 
     def test_client_is_compatibly_loaded_but_uses_v4(self):
-        self.assertIn("live-radar-v3.js?v=1.12", CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.13", CONFIG)
         self.assertIn("const ENDPOINT='./api/live-status.php'", CLIENT)
         self.assertIn('RADAR LIVE V4', CLIENT)
-        self.assertIn('TikTok:1800', CLIENT)
+        self.assertIn('TikTok:0', CLIENT)
         self.assertIn('PASS50_LIVE_EXPERIENCE_VERSION', EXPERIENCE)
-        self.assertIn('live-trust-gate-v1.js?v=1.4', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
+        self.assertIn('live-trust-gate-v1.js?v=1.5', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
         self.assertIn('live-experience-v4-1.js?v=1.8', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
 
     def test_server_sweep_uses_v4(self):

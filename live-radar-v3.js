@@ -4,7 +4,7 @@
 const ENDPOINT='./api/live-status.php';
 const QUICK_INTERVAL=30_000;
 const FULL_CYCLE_KEY='pass50_live_radar_v4_cycle';
-const DEFAULT_TRUST_SECONDS={TikTok:1800,Facebook:600,YouTube:1200,Instagram:600};
+const DEFAULT_TRUST_SECONDS={TikTok:0,Facebook:600,YouTube:0,Instagram:600};
 const PLATFORM_PRIORITY=['TikTok','Facebook','YouTube','Instagram'];
 const RADAR_BATCH_SIZE='14';
 let runningMode='';
@@ -14,7 +14,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 
 function trustSeconds(platform){
   const configured=Number(window.PASS50_LIVE_RADAR?.trustSeconds?.[platform]);
-  return Number.isFinite(configured)&&configured>0?configured:Number(DEFAULT_TRUST_SECONDS[platform]||120);
+  return Number.isFinite(configured)&&configured>=0?configured:Number(DEFAULT_TRUST_SECONDS[platform]||0);
 }
 
 function installLiveNormalizerV4(){
@@ -34,6 +34,11 @@ function installLiveNormalizerV4(){
           const endsAt=new Date(item.endsAt||'').getTime();
           if(!Number.isFinite(endsAt)||endsAt<=now)return false;
         }else{
+          if(String(item.lastCheckState||'')==='replay')return false;
+          const platform=String(item.platform||'').toLowerCase();
+          if((item.source||'automatic')==='automatic'&&(platform==='tiktok'||platform==='youtube')){
+            // Live détecté : pas de limite de temps.
+          }else{
           let confirmedAt=new Date(item.lastConfirmedAt||item.lastSeenAt||'').getTime();
           if(!Number.isFinite(confirmedAt))return false;
           const futureSkew=confirmedAt-now;
@@ -45,7 +50,9 @@ function installLiveNormalizerV4(){
           }else if(futureSkew>6*60*60_000){
             return false;
           }
-          if(now-confirmedAt>trustSeconds(String(item.platform||''))*1000)return false;
+          const max=trustSeconds(String(item.platform||''));
+          if(max>0&&now-confirmedAt>max*1000)return false;
+          }
         }
         const key=[item.profileId,item.platform||'',String(item.url).replace(/\/+$/,'')].map(value=>String(value).trim().toLowerCase()).join('|');
         if(seen.has(key))return false;
@@ -230,7 +237,7 @@ function badgeProfileId(badge){
 
 function ensureLiveTrustGate(){
   if(document.querySelector('script[data-pass50-live-trust-gate]'))return;
-  const script=document.createElement('script');script.src='./live-trust-gate-v1.js?v=1.4';script.dataset.pass50LiveTrustGate='1.4';document.head.appendChild(script);
+  const script=document.createElement('script');script.src='./live-trust-gate-v1.js?v=1.5';script.dataset.pass50LiveTrustGate='1.5';document.head.appendChild(script);
 }
 function ensureLiveExperience(){
   ensureLiveTrustGate();

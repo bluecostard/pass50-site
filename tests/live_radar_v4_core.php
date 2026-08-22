@@ -18,12 +18,17 @@ function room_id_for(int $timestamp,int $suffix=123456): string {return (string)
 
 must(defined('P50_LIVE_V4_LOGIC_REVISION'),'Le moteur LIVE doit exposer une révision opérationnelle.');
 must(P50_LIVE_V4_LOGIC_REVISION==='LIVE-STRICT-PUBLISH-2026-08-11-1','La révision Strict Publish doit être active.');
-must(P50_LIVE_V4_TRUST_REVISION==='LIVE-STRICT-PUBLISH-2026-08-11-1','Le module Trust Gate Strict Publish doit être chargé.');
+must(P50_LIVE_V4_TRUST_REVISION==='LIVE-DETECTED-STAYS-2026-08-22-1','Le module Trust Gate detected-stays doit être chargé.');
 must(P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS===3600,'La fenêtre TikTok candidat est d’une heure.');
-must(p50_live_v4_public_max_age('TikTok')===1800,'TikTok public max age = 30 min.');
+must(p50_live_v4_public_max_age('TikTok')===0,'TikTok public : pas de limite de temps.');
+must(p50_live_v4_detected_live_has_no_time_limit('TikTok'),'Un live TikTok automatique n’expire pas.');
 $utcNow=gmdate('Y-m-d H:i:s');
 must(p50_live_v4_parse_utc($utcNow)!==null&&abs(time()-(int)p50_live_v4_parse_utc($utcNow))<=2,'Les datetimes MySQL UTC doivent être lues en UTC.');
 must(p50_live_v4_is_publicly_fresh(['status'=>'live','platform'=>'TikTok','source'=>'automatic','last_state'=>'live','last_seen_at'=>$utcNow]),'Un LIVE confirmé à l’instant doit rester public.');
+$twoHoursAgo=gmdate('Y-m-d H:i:s',time()-7200);
+must(p50_live_v4_is_publicly_fresh(['status'=>'live','platform'=>'TikTok','source'=>'automatic','last_state'=>'live','last_seen_at'=>$twoHoursAgo]),'Un LIVE TikTok détecté reste public 2 h plus tard.');
+must(p50_live_v4_is_publicly_fresh(['status'=>'live','platform'=>'TikTok','source'=>'automatic','last_state'=>'unknown','last_seen_at'=>$twoHoursAgo]),'Un unknown IONOS ne retire pas un LIVE TikTok détecté.');
+must(!p50_live_v4_is_publicly_fresh(['status'=>'live','platform'=>'TikTok','source'=>'automatic','last_state'=>'replay','last_seen_at'=>$utcNow]),'Un replay retire le LIVE public.');
 
 $source=['profile_id'=>'coach-test','public_name'=>'Coach Test','platform'=>'TikTok','url'=>'https://www.tiktok.com/@coachtest'];
 $api=p50_live_v4_parse_tiktok($source,['api'=>response('{"status":2,"room_id":"741234567890","uniqueId":"coachtest"}')]);

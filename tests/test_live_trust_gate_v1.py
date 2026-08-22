@@ -15,22 +15,25 @@ WORKFLOW = (ROOT / '.github' / 'workflows' / 'live-radar-sweep.yml').read_text(e
 
 
 class LiveTrustGateV1Tests(unittest.TestCase):
-    def test_trust_module_defines_balanced_public_windows(self):
-        self.assertIn("P50_LIVE_V4_TRUST_REVISION = 'LIVE-STRICT-PUBLISH-2026-08-11-1'", TRUST)
+    def test_trust_module_defines_detected_stay_windows(self):
+        self.assertIn("P50_LIVE_V4_TRUST_REVISION = 'LIVE-DETECTED-STAYS-2026-08-22-1'", TRUST)
         self.assertIn('p50_live_v4_parse_utc', TRUST)
-        self.assertIn("'TikTok' => 1800", TRUST)
-        self.assertIn("'YouTube' => 1200", TRUST)
+        self.assertIn("'TikTok' => 0", TRUST)
+        self.assertIn("'YouTube' => 0", TRUST)
         self.assertIn("'Instagram' => 600", TRUST)
         self.assertIn('p50_live_v4_is_publicly_fresh', TRUST)
         self.assertIn('p50_live_v4_filter_public_streams', TRUST)
+        self.assertIn('p50_live_v4_detected_live_has_no_time_limit', TRUST)
 
-    def test_public_rows_require_positive_live_state(self):
+    def test_public_rows_keep_detected_tiktok_without_age_limit(self):
         self.assertIn("h.last_state='live'", STORAGE)
+        self.assertIn("h.last_state<>'replay'", STORAGE)
         self.assertIn('INTERVAL {$seconds} SECOND', STORAGE)
-        self.assertNotIn("h.last_state='unknown'", STORAGE)
         self.assertIn('p50_live_v4_is_publicly_fresh', STORAGE)
         self.assertIn('p50_live_v4_is_publishable_proof', STORAGE)
         self.assertIn('insufficient_publish_proof', STORAGE)
+        self.assertIn('confirmation_grace_expired', STORAGE)
+        self.assertIn("platform IN ('TikTok','YouTube')", STORAGE)
 
     def test_quick_scan_reconfirms_active_lives_first(self):
         self.assertIn("status='live'", ENDPOINT)
@@ -48,12 +51,12 @@ class LiveTrustGateV1Tests(unittest.TestCase):
         self.assertIn('PASS50_OPEN_THEN_VERIFY_LIVE', CLIENT)
         self.assertIn('PASS50_VERIFY_THEN_OPEN_LIVE', CLIENT)
         self.assertIn('Ce direct est terminé', CLIENT)
-        self.assertIn('TikTok:1800', CLIENT + RADAR)
+        self.assertIn('TikTok:0', CLIENT + RADAR)
         self.assertNotIn("closest('.live-watch-link", CLIENT)
         self.assertNotIn('event.preventDefault()', CLIENT)
         self.assertIn('ensureLiveTrustGate', RADAR)
-        self.assertIn('live-trust-gate-v1.js?v=1.3', RADAR + SW + CONFIG)
-        self.assertIn("live-radar-v3.js?v=1.9", CONFIG + SW)
+        self.assertIn('live-trust-gate-v1.js?v=1.5', RADAR + SW + CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.13", CONFIG + SW)
 
     def test_contract_exposes_trust_gate(self):
         self.assertIn("'trustGate'=>P50_LIVE_V4_TRUST_REVISION", CONTRACT)

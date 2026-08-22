@@ -523,10 +523,9 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function liveTrustMs(platform){
   const name=String(platform||'');
   const configured=Number(window.PASS50_LIVE_RADAR?.trustSeconds?.[name]);
-  if(Number.isFinite(configured)&&configured>0)return configured*1000;
+  if(Number.isFinite(configured)&&configured>=0)return configured*1000;
   const key=name.toLowerCase();
-  if(key==='tiktok')return 1800*1000;
-  if(key==='youtube')return 1200*1000;
+  if(key==='tiktok'||key==='youtube')return 0;
   return 600*1000;
 }
 function isFreshPublicLive(x){
@@ -537,12 +536,17 @@ function isFreshPublicLive(x){
     const endsAt=new Date(x.endsAt||'').getTime();
     return Number.isFinite(endsAt)&&endsAt>now;
   }
+  if(String(x.lastCheckState||'')==='replay')return false;
+  const platform=String(x.platform||'').toLowerCase();
+  if((x.source||'automatic')==='automatic'&&(platform==='tiktok'||platform==='youtube'))return true;
   let confirmedAt=new Date(x.lastConfirmedAt||x.lastSeenAt||'').getTime();
   if(!Number.isFinite(confirmedAt))return false;
   const futureSkew=confirmedAt-now;
   if(futureSkew>5*60_000&&futureSkew<=6*60*60_000)confirmedAt=now;
   else if(futureSkew>6*60*60_000)return false;
-  return now-confirmedAt<=liveTrustMs(x.platform);
+  const max=liveTrustMs(x.platform);
+  if(max<=0)return true;
+  return now-confirmedAt<=max;
 }
 function normalizeLiveStreams(){
   if(typeof window.PASS50_LIVE_FILTER_PUBLIC==='function'){
@@ -1904,7 +1908,7 @@ initCloud();
 
 </script>
   <script src="./public-ui-sanitizer-v1.js?v=1.1"></script>
-<script src="./v9-tools.js?v=15.33"></script>
+<script src="./v9-tools.js?v=15.34"></script>
 <script src="./pronostics-coules-tab-v1.js?v=1.2" data-pass50-prono-coules-tab="1.2"></script>
 </body>
 </html>
