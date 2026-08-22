@@ -80,6 +80,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('INTERVAL 24 HOUR', STORAGE)
         self.assertIn('LEFT JOIN p50_live_dismissals', STORAGE)
         self.assertIn('d.stream_key IS NULL', STORAGE)
+        self.assertIn('dp.stream_key IS NULL', STORAGE)
+        self.assertIn('profile_dismiss|', STORAGE)
 
     def test_replay_is_separate_from_live(self):
         self.assertIn("'state'=>'replay'", PARSERS)

@@ -37,7 +37,8 @@ class LiveRadarRuntimeV4Tests(unittest.TestCase):
         self.assertIn('detectedLiveStays', (ROOT / 'live-trust-gate-v1.js').read_text(encoding='utf-8'))
         self.assertIn("key==='tiktok'||key==='youtube'", index)
         self.assertIn("key==='tiktok'||key==='youtube'", v9)
-        self.assertIn('preservedRadarLives', index)
+        self.assertNotIn('preservedRadarLives', index)
+        self.assertIn('db.liveStreams=Array.isArray(cloud.liveStreams)?cloud.liveStreams:[]', index)
         self.assertIn('if(!window.__pass50LiveNormalizerV4)normalizeLiveStreams=', v9)
 
     def test_radar_boots_immediately_and_keeps_lives_without_cloud(self):

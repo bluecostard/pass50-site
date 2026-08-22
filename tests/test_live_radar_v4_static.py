@@ -85,6 +85,8 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertIn('SELECT stream_key,url FROM p50_live_streams', dismiss)
         self.assertIn("ORDER BY (url=?) DESC,last_seen_at DESC LIMIT 1", dismiss)
         self.assertIn("(string)$row['stream_key']", dismiss)
+        self.assertIn('p50_live_v4_profile_dismiss_key', dismiss)
+        self.assertIn('profile_id=? AND platform=? AND source IN', dismiss)
 
     def test_operational_contract_and_complete_sweep(self):
         self.assertIn("'contract'=>P50_LIVE_V4_LOGIC_REVISION", FILES['contract'])

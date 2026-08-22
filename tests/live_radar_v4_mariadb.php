@@ -102,4 +102,18 @@ must($status==='ended','Le faux direct supprimé est clôturé en base.');
 $active=p50_live_v4_active_rows();
 must((bool)array_filter($active,static fn($item)=>(string)$item['profileId']==='youtube-false'),'Un futur live avec une autre URL reste détectable.');
 
-echo json_encode(['ok'=>true,'trustGate'=>true,'unknownKeepsTikTok'=>true,'detectedStays'=>true,'dismissalPersistent'=>true,'futureLiveAllowed'=>true],JSON_UNESCAPED_SLASHES).PHP_EOL;
+        $isouch=['profileId'=>'census-isouch','platform'=>'TikTok','title'=>'Isouch est en direct','url'=>'https://www.tiktok.com/@prince_du_pays/live','thumbnail'=>'','confidence'=>99,'startedAt'=>null,'viewers'=>42,'metadata'=>['roomId'=>'7676641654631107360','strictApiLabels'=>['api_webcast']]];
+        $isouchKey=p50_live_v4_stream_key($isouch);
+        $isouchProfileKey=p50_live_v4_profile_dismiss_key('census-isouch','TikTok');
+        p50_live_v4_store_live($isouch);
+        $pdo->prepare("INSERT INTO p50_live_source_health(profile_id,platform,url_hash,official_url,last_state,last_checked_at,last_live_at,metadata) VALUES(?,?,?,?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP(),'{}')")->execute(['census-isouch','TikTok',hash('sha256','z'),'https://www.tiktok.com/@prince_du_pays','live']);
+        $pdo->prepare("INSERT INTO p50_live_dismissals(stream_key,profile_id,platform,url_hash,dismissed_by,reason,dismissed_at) VALUES(?,?,?,?,?,'false_positive',UTC_TIMESTAMP())")->execute([$isouchProfileKey,'census-isouch','TikTok',hash('sha256',strtolower(rtrim($isouch['url'],'/'))),'owner-test']);
+        $isouch['metadata']['roomId']='9999999999999999999';
+        $isouch['url']='https://www.tiktok.com/@prince_du_pays/live?room_id=9999999999999999999';
+        p50_live_v4_store_live($isouch);
+        $active=p50_live_v4_active_rows();
+        must(!array_filter($active,static fn($item)=>(string)$item['profileId']==='census-isouch'),'Isouch supprimé ne revient pas avec un nouveau roomId TikTok.');
+        $status=$pdo->query("SELECT status FROM p50_live_streams WHERE profile_id='census-isouch' ORDER BY last_seen_at DESC LIMIT 1")->fetchColumn();
+        must($status==='ended','Le faux direct Isouch est clôturé en base.');
+
+echo json_encode(['ok'=>true,'trustGate'=>true,'unknownKeepsTikTok'=>true,'detectedStays'=>true,'dismissalPersistent'=>true,'futureLiveAllowed'=>true,'profileSuppressBlocksRotatingRoomId'=>true],JSON_UNESCAPED_SLASHES).PHP_EOL;

@@ -28,12 +28,23 @@ function p50_live_v4_stream_key(array $live): string {
     $identity=$eventId!==''?'event:'.$eventId:'url:'.rtrim((string)$live['url'],'/');
     return hash('sha256',strtolower((string)$live['profileId'].'|'.(string)$live['platform'].'|'.$identity));
 }
+function p50_live_v4_profile_dismiss_key(string $profileId, string $platform): string {
+    return hash('sha256', strtolower('profile_dismiss|'.$profileId.'|'.$platform));
+}
 function p50_live_v4_is_dismissed(string $key): bool {
     p50_live_v4_ensure_dismissals();
     // TTL 7j : un dismiss admin ne doit pas bloquer définitivement, mais assez long pour casser les boucles FP.
     $stmt=db()->prepare('SELECT 1 FROM p50_live_dismissals WHERE stream_key=? AND dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) LIMIT 1');
     $stmt->execute([$key]);
     return (bool)$stmt->fetchColumn();
+}
+function p50_live_v4_is_profile_suppressed(string $profileId, string $platform): bool {
+    return p50_live_v4_is_dismissed(p50_live_v4_profile_dismiss_key($profileId, $platform));
+}
+function p50_live_v4_live_is_blocked(array $live): bool {
+    $profileId=(string)($live['profileId']??'');$platform=(string)($live['platform']??'');
+    if($profileId===''||$platform==='')return false;
+    return p50_live_v4_is_dismissed(p50_live_v4_stream_key($live))||p50_live_v4_is_profile_suppressed($profileId, $platform);
 }
 
 /** Preuve minimale avant écriture status=live (défense en profondeur vs parsers). */
@@ -56,7 +67,7 @@ function p50_live_v4_store_live(array $live): bool {
         return false;
     }
     $key=p50_live_v4_stream_key($live);$profileId=(string)$live['profileId'];$platform=(string)$live['platform'];
-    if(p50_live_v4_is_dismissed($key)){$stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()),metadata=JSON_SET(COALESCE(metadata,'{}'),'$.endReason','manually_dismissed') WHERE stream_key=?");$stmt->execute([$key]);return false;}
+    if(p50_live_v4_live_is_blocked($live)){$stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()),metadata=JSON_SET(COALESCE(metadata,'{}'),'$.endReason','manually_dismissed') WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed')");$stmt->execute([$profileId,$platform]);return false;}
     $end=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE profile_id=? AND platform=? AND source='automatic' AND status IN ('live','unconfirmed') AND stream_key<>?");$end->execute([$profileId,$platform,$key]);
     $title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata) VALUES(?,?,?,?,?,?,'live','automatic',?,?,?,UTC_TIMESTAMP(),NULL,?) ON DUPLICATE KEY UPDATE title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='live',confidence=VALUES(confidence),viewers=VALUES(viewers),started_at=COALESCE(started_at,VALUES(started_at)),last_seen_at=UTC_TIMESTAMP(),ended_at=NULL,metadata=VALUES(metadata)");
@@ -64,7 +75,7 @@ function p50_live_v4_store_live(array $live): bool {
     return true;
 }
 function p50_live_v4_store_candidate(array $live,string $reason): void {
-    $key=p50_live_v4_stream_key($live);if(p50_live_v4_is_dismissed($key))return;$title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);$metadata=(array)($live['metadata']??[]);$metadata['candidateReason']=$reason;$metadata['candidateSeenAt']=gmdate(DATE_ATOM);
+    $key=p50_live_v4_stream_key($live);if(p50_live_v4_live_is_blocked($live))return;$title=(string)$live['title'];$safeTitle=function_exists('mb_substr')?mb_substr($title,0,255,'UTF-8'):substr($title,0,255);$metadata=(array)($live['metadata']??[]);$metadata['candidateReason']=$reason;$metadata['candidateSeenAt']=gmdate(DATE_ATOM);
     $stmt=db()->prepare("INSERT INTO p50_live_streams(stream_key,profile_id,platform,title,url,thumbnail_url,status,source,confidence,viewers,started_at,last_seen_at,ended_at,metadata) VALUES(?,?,?,?,?,?,'unconfirmed','automatic',?,?,?,UTC_TIMESTAMP(),NULL,?) ON DUPLICATE KEY UPDATE title=VALUES(title),url=VALUES(url),thumbnail_url=VALUES(thumbnail_url),status='unconfirmed',confidence=VALUES(confidence),viewers=COALESCE(VALUES(viewers),viewers),last_seen_at=UTC_TIMESTAMP(),metadata=VALUES(metadata),ended_at=NULL");
     $stmt->execute([$key,(string)$live['profileId'],(string)$live['platform'],$safeTitle,(string)$live['url'],(string)($live['thumbnail']??''),(int)$live['confidence'],$live['viewers']??null,$live['startedAt']??null,json_encode($metadata,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
 }
@@ -140,7 +151,7 @@ function p50_live_v4_active_rows(): array {
         $params[]=$platform;
     }
     $conditions[]="(s.source='meta_authorized' AND s.last_seen_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE))";
-    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform LEFT JOIN p50_live_dismissals d ON d.stream_key=s.stream_key AND d.dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) WHERE d.stream_key IS NULL AND s.source IN ('automatic','meta_authorized') AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY (s.source='meta_authorized') DESC,s.last_seen_at DESC");
+    $stmt=db()->prepare("SELECT s.*,h.last_state,h.last_checked_at,h.last_live_at,h.last_error,h.response_ms FROM p50_live_streams s LEFT JOIN p50_live_source_health h ON h.profile_id=s.profile_id AND h.platform=s.platform LEFT JOIN p50_live_dismissals d ON d.stream_key=s.stream_key AND d.dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) LEFT JOIN p50_live_dismissals dp ON dp.stream_key=SHA2(LOWER(CONCAT('profile_dismiss|',s.profile_id,'|',s.platform)),256) AND dp.dismissed_at>=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 7 DAY) WHERE d.stream_key IS NULL AND dp.stream_key IS NULL AND s.source IN ('automatic','meta_authorized') AND s.status='live' AND (".implode(' OR ',$conditions).") ORDER BY (s.source='meta_authorized') DESC,s.last_seen_at DESC");
     $stmt->execute($params);$out=[];
     foreach($stmt->fetchAll() as $row){
         $source=(string)$row['source'];

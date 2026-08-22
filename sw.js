@@ -40,7 +40,7 @@ const ASSETS=[
   './profile-lionel-pcs.js?v=1.0','./profile-yasmine-fofana.js?v=1.0',
   './profile-ange-morel.js?v=1.1','./profile-ange-morel.js?v=1.0','./profile-laguepe.js?v=1.0','./profile-rosemark-marcel.js?v=1.2','./profile-rosemark-marcel.js?v=1.1','./profile-rosemark-marcel.js?v=1.0','./profile-jiaan-wu.js?v=1.0','./profile-samuella-kouassi.js?v=1.1','./profile-samuella-kouassi.js?v=1.0','./profile-daniel-m.js?v=1.0','./profile-akalajoie.js?v=1.0',
   './live-radar-v3.js?v=1.13','./live-radar-v3.js?v=1.12','./live-radar-v3.js?v=1.11','./live-radar-v3.js?v=1.10','./live-radar-v3.js?v=1.9','./live-trust-gate-v1.js?v=1.5','./live-trust-gate-v1.js?v=1.4','./live-trust-gate-v1.js?v=1.3',
-  './live-experience-v4-1.js?v=1.8','./live-experience-v4-1.js?v=1.7','./live-dismiss-ui-v1.js?v=1.0',
+  './live-experience-v4-1.js?v=1.8','./live-experience-v4-1.js?v=1.7','./live-dismiss-ui-v1.js?v=1.1','./live-dismiss-ui-v1.js?v=1.0',
   './official-links-persistence-v3.js?v=3.4','./public-copy-fixes.js?v=1.16','./public-copy-fixes.js?v=1.15','./public-copy-fixes.js?v=1.14','./public-copy-fixes.js?v=1.13','./public-copy-fixes.js?v=1.12','./public-copy-fixes.js?v=1.11','./admin-fi-edit-preserve-v1.js?v=1.0',
   './connector-sections-v1.js?v=1.1','./account-mobile-nav-v1.js?v=1.1','./youtube-analytics-ui-v1.js?v=1.0',
   './meta-oauth-ui-v1.js?v=1.7','./tiktok-oauth-ui-v1.js?v=1.1',
