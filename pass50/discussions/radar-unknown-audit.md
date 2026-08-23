@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-23 09:47 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
+
 ### 2026-08-23 07:06 UTC
 
 - Unknown sondés : **200**
@@ -386,7 +396,3 @@ Statut Aya Robert au passage 05:03 : `tiktok_live_ended` (radar) · webcast `sta
 Nouveaux P0 (seed radar, rescan ~2 min) :
 - TikTok `aya-robert` @aya.robert27
 - YouTube `census-observateur-ebene` @Observateur
-
-### 2026-08-18 05:03 UTC
-
-Erreur : `GET HTTP 404`
