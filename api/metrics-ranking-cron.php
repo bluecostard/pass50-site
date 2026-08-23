@@ -6,6 +6,7 @@ require __DIR__.'/metrics-orchestrator-core.php';
 require __DIR__.'/metrics-ranking-core.php';
 require __DIR__.'/metrics-ranking-fresh-capture-core.php';
 require __DIR__.'/metrics-ranking-readiness-core.php';
+require __DIR__.'/metrics-ranking-publication-apply-core.php';
 
 header('Content-Type: application/json; charset=utf-8');
 if($_SERVER['REQUEST_METHOD']!=='POST')json_response(['error'=>'Méthode refusée.'],405);
@@ -64,6 +65,7 @@ try{
         $response['runUuid']=(string)$result['runUuid'];
         $response['classableCount']=(int)$result['classableCount'];
         $response['scoresWritten']=(int)$result['scoresWritten'];
+        p50_mrp_apply_clear_preview_cache($pdo);
     }
     $response['durationMs']=(int)round((microtime(true)-$started)*1000);
     json_response($response);

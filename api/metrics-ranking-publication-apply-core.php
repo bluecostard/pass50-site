@@ -163,6 +163,11 @@ function p50_mrp_apply_load_preview_cache(PDO $pdo): ?array {
     return $payload;
 }
 
+function p50_mrp_apply_clear_preview_cache(PDO $pdo): void {
+    if(!p50_metrics_table_exists($pdo,'p50_metric_publication_preview_cache'))return;
+    try{$pdo->exec("DELETE FROM p50_metric_publication_preview_cache WHERE id=1");}catch(Throwable){}
+}
+
 function p50_mrp_apply_has_prior_success(PDO $pdo): bool {
     if(!p50_metrics_table_exists($pdo,'p50_metric_publication_applies'))return false;
     $count=(int)$pdo->query("SELECT COUNT(*) FROM p50_metric_publication_applies WHERE status='applied'")->fetchColumn();
@@ -261,8 +266,50 @@ function p50_mrp_apply_is_skippable_plan(array $plan): bool {
     if(!$gates)return false;
     // Sans candidat / sans run : exit_ratio et mouvements extrêmes sont mécaniques → skip période.
     if(!in_array('candidate_non_empty',$gates,true)&&!in_array('successful_run',$gates,true))return false;
-    $extra=array_values(array_diff($gates,['candidate_non_empty','successful_run','exit_ratio','entry_ratio','maximum_rank_movement']));
+    $extra=array_values(array_diff($gates,['candidate_non_empty','successful_run','public_ranking_non_empty','exit_ratio','entry_ratio','maximum_rank_movement']));
     return $extra===[];
+}
+
+/**
+ * Quand plusieurs runUuid coexistent (ex. zero_score_backfill sur une période),
+ * conserve le lot le plus riche plutôt que de bloquer toute la publication.
+ *
+ * @return array{publishPlans:array,runUuid:?string,skippedRuns:array,mutations:int,entries:int,exits:int}
+ */
+function p50_mrp_apply_resolve_publish_plans(array $publishPlans): array {
+    $empty=['publishPlans'=>[],'runUuid'=>null,'skippedRuns'=>[],'mutations'=>0,'entries'=>0,'exits'=>0];
+    if(!$publishPlans)return $empty;
+    $byRun=[];
+    foreach($publishPlans as $period=>$plan){
+        if(!is_array($plan))continue;
+        $run=trim((string)($plan['runUuid']??''));
+        if($run==='')continue;
+        $byRun[$run][$period]=$plan;
+    }
+    if(!$byRun)return $empty;
+    $scoreRun=static function(array $plans): int {
+        $mutations=0;
+        foreach($plans as $plan)$mutations+=(int)(($plan['counts']??[])['mutations']??0);
+        return $mutations*10+count($plans)+(isset($plans['24H'])?100:0);
+    };
+    $bestRun=null;$bestScore=-1;
+    foreach($byRun as $run=>$plans){
+        $score=$scoreRun($plans);
+        if($score>$bestScore){$bestScore=$score;$bestRun=$run;}
+    }
+    if($bestRun===null)return $empty;
+    $chosen=$byRun[$bestRun];$skippedRuns=[];
+    foreach($byRun as $run=>$plans){
+        if($run===$bestRun)continue;
+        $skippedRuns[]=['runUuid'=>$run,'periods'=>array_keys($plans)];
+    }
+    $mutations=$entries=$exits=0;
+    foreach($chosen as $plan){
+        $mutations+=(int)(($plan['counts']??[])['mutations']??0);
+        $entries+=(int)(($plan['counts']??[])['entries']??0);
+        $exits+=(int)(($plan['counts']??[])['exits']??0);
+    }
+    return ['publishPlans'=>$chosen,'runUuid'=>$bestRun,'skippedRuns'=>$skippedRuns,'mutations'=>$mutations,'entries'=>$entries,'exits'=>$exits];
 }
 
 function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $now=null,bool $forceBootstrap=false): array {
@@ -271,7 +318,7 @@ function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $
     $now=$now??p50_metrics_now_utc();
     $periods=$periods?:P50_MRP_APPLY_PERIODS;
     $bootstrap=$cfg['bootstrapAllowed']&&($forceBootstrap||!p50_mrp_apply_has_prior_success($pdo));
-    $plans=[];$publishPlans=[];$blocked=false;$runUuid=null;$totalMutations=0;$entries=0;$exits=0;$skipped=[];
+    $plans=[];$draftPublishPlans=[];$blocked=false;$skipped=[];$runUuidMismatch=[];
     foreach($periods as $period){
         if(!array_key_exists($period,p50_mr_periods()))continue;
         $plan=p50_mrp_apply_plan_period($pdo,$period,$bootstrap,$now);
@@ -288,15 +335,27 @@ function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $
         if(!in_array($plan['status'],['ready','review'],true))continue;
         $mut=(int)$plan['counts']['mutations'];
         if($mut<=0)continue;
-        $publishPlans[$period]=$plan;
-        $totalMutations+=$mut;
-        $entries+=(int)$plan['counts']['entries'];
-        $exits+=(int)$plan['counts']['exits'];
-        $planRun=(string)$plan['runUuid'];
-        if($planRun===''){$blocked=true;continue;}
-        if($runUuid===null)$runUuid=$planRun;
-        elseif($runUuid!==$planRun)$blocked=true;
+        if(trim((string)($plan['runUuid']??''))===''){$blocked=true;continue;}
+        $draftPublishPlans[$period]=$plan;
     }
+    $resolved=p50_mrp_apply_resolve_publish_plans($draftPublishPlans);
+    $publishPlans=$resolved['publishPlans'];
+    $runUuid=$resolved['runUuid'];
+    $totalMutations=$resolved['mutations'];
+    $entries=$resolved['entries'];
+    $exits=$resolved['exits'];
+    foreach($resolved['skippedRuns'] as $conflict){
+        foreach((array)($conflict['periods']??[]) as $period){
+            if(!isset($plans[$period])||!is_array($plans[$period]))continue;
+            $plans[$period]['status']='skipped';
+            $plans[$period]['skipReason']='run_uuid_mismatch';
+            if(!in_array($period,$skipped,true))$skipped[]=$period;
+            $runUuidMismatch[]=$period;
+        }
+    }
+    $previewReasons=[];
+    if($runUuidMismatch)$previewReasons[]='global:run_uuid_mismatch';
+    if(!$blocked&&$runUuid!==null&&$totalMutations<=0&&$draftPublishPlans!==[])$previewReasons[]='global:no_mutations';
     $eligible=!$blocked&&$runUuid!==null&&$totalMutations>0&&$publishPlans!==[]&&$cfg['publicationEnabled'];
     $autoEligible=$eligible&&$cfg['automaticPublicationEnabled'];
     $preview=[
@@ -325,12 +384,12 @@ function p50_mrp_apply_preview(PDO $pdo,array $periods=null,?DateTimeImmutable $
             'blockedPeriods'=>array_values(array_filter(array_keys($plans),static fn($p)=>($plans[$p]['status']??'')==='blocked')),
             'skippedPeriods'=>$skipped,
             'publishablePeriods'=>array_keys($publishPlans),
-            'reasons'=>array_values(array_filter(array_map(static function($period) use ($plans){
+            'reasons'=>array_values(array_filter(array_merge($previewReasons,array_map(static function($period) use ($plans){
                 $plan=$plans[$period]??[];
                 if(($plan['status']??'')==='blocked')return $period.':'.implode(',',(array)($plan['blockedGates']??['blocked']));
                 if(($plan['status']??'')==='skipped')return $period.':skipped:'.(string)($plan['skipReason']??'');
                 return null;
-            },array_keys($plans)))),
+            },array_keys($plans))))),
         ],
         'plans'=>$plans,
         'nextPhase'=>$eligible?'apply_with_backup':'resolve_gates_or_enable_publication',

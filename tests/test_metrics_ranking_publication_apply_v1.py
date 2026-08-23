@@ -19,7 +19,7 @@ class MetricsRankingPublicationApplyV1Tests(unittest.TestCase):
         self.assertIn("bootstrap", core)
         self.assertIn("p50_mrp_apply_is_skippable_plan", core)
         # Empty candidate periods must remain skippable even when exit_ratio co-fires.
-        self.assertIn("'candidate_non_empty','successful_run','exit_ratio','entry_ratio','maximum_rank_movement'", core)
+        self.assertIn("'candidate_non_empty','successful_run','public_ranking_non_empty','exit_ratio','entry_ratio','maximum_rank_movement'", core)
         self.assertIn("publishPlans", core)
         self.assertIn("p50_de_load_public_state_for_update", core)
         self.assertIn("p50_mrp_apply_mutate_state", core)

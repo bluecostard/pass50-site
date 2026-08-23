@@ -542,14 +542,16 @@
       document.head.appendChild(style);
     }
   }
-  async function deCalculateRankingLab(button){await deAction(button,async()=>{await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});DE.rankingLab=null;DE.rankingCalibration=null;await deLoadRankingLab(true);if(DE.rankingLabView!=='current')await deLoadRankingCalibration(true);toast('Classements expérimentaux calculés');},'Calcul…');}
+  async function deCalculateRankingLab(button){await deAction(button,async()=>{await apiFetch('metrics-ranking.php',{method:'POST',body:{action:'calculate',periods:['2H','24H','48H','7J','15J']}});DE.rankingLab=null;DE.rankingCalibration=null;await deLoadRankingLab(true);if(DE.rankingLabView!=='current')await deLoadRankingCalibration(true);toast('Classements expérimentaux calculés — vous pouvez publier');},'Calcul…');}
   const DE_PUBLISH_GATE_LABELS={
     run_freshness:'calcul expérimental trop ancien (> 6 h) — cliquez d’abord « Calculer les 5 périodes »',
     candidate_non_empty:'aucun profil classable sur cette période',
-    successful_run:'aucun cycle MR‑V1.0 réussi pour la période',
+    successful_run:'aucun cycle MR réussi pour la période — relancez le calcul',
     public_ranking_non_empty:'classement public vide pour la période',
     candidate_run_consistency:'lignes candidates incohérentes avec le dernier cycle',
     candidate_profiles_exist:'profils candidats absents de l’état public (ignorés à la publication)',
+    run_uuid_mismatch:'cycles expérimentaux différents entre périodes — relancez « Calculer les 5 périodes »',
+    no_mutations:'aucun score à publier (déjà identiques au public)',
     exit_ratio:'trop de sorties vs classement public',
     entry_ratio:'trop d’entrées vs classement public',
     maximum_rank_movement:'mouvements de rang élevés (avertissement, non bloquant)',
@@ -570,7 +572,7 @@
   function dePublishNeedsRecalculate(preview){
     const reasons=preview?.summary?.reasons||[];
     if(!reasons.length)return false;
-    const dataGates=new Set(['run_freshness','successful_run','candidate_run_consistency','candidate_non_empty']);
+    const dataGates=new Set(['run_freshness','successful_run','candidate_run_consistency','candidate_non_empty','run_uuid_mismatch','no_mutations']);
     return reasons.every(raw=>{
       const gates=String(raw).split(/:(.+)/)[1]||'';
       return gates.split(',').every(g=>{
