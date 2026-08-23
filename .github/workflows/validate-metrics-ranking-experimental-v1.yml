@@ -52,6 +52,8 @@ jobs:
           python3 -m unittest tests.test_metrics_observability_v1
           python3 -m unittest tests.test_metrics_orchestrator_v1
           python3 -m unittest tests.test_metrics_ranking_fair_diversity_v1
+          python3 -m unittest tests.test_ranking_tail_score_scale_v1
+          python3 -m unittest tests.test_score_everyone_classable_v1
       - name: MariaDB integration
         run: |
           php tests/metrics_ranking_integration.php
