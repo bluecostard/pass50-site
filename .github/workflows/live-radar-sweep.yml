@@ -58,8 +58,30 @@ jobs:
           cycle="github_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
           : > live-radar-passes.ndjson
           complete=false
-          for attempt in $(seq 1 100); do
-            response="$(curl --fail --silent --show-error --location --max-time 45 --retry 2 --retry-delay 2 "${ENDPOINT}?mode=full&force=1&batch=14&cycle=${cycle}&t=$(date +%s)")"
+          failures=0
+          for attempt in $(seq 1 120); do
+            http_code=0
+            response=""
+            for retry in 1 2 3 4; do
+              http_code="$(curl --silent --show-error --location --max-time 90 --output /tmp/live-radar-pass.json --write-out '%{http_code}' \
+                "${ENDPOINT}?mode=full&force=1&batch=10&cycle=${cycle}&t=$(date +%s)" || true)"
+              if [[ "$http_code" == "200" ]] && jq -e '.ok == true' /tmp/live-radar-pass.json >/dev/null 2>&1; then
+                response="$(cat /tmp/live-radar-pass.json)"
+                break
+              fi
+              echo "Passe radar HTTP ${http_code} (essai ${retry}/4) — nouvel essai…"
+              sleep $((retry * 2))
+            done
+            if [[ -z "$response" ]]; then
+              failures=$((failures + 1))
+              echo "Passe radar échouée après retries (${failures} échec(s) cumulé(s))."
+              if [[ "$failures" -ge 12 ]]; then
+                echo "::error::Trop d'échecs HTTP pendant le balayage radar."
+                exit 1
+              fi
+              sleep 4
+              continue
+            fi
             printf '%s' "$response" | jq -c '.' >> live-radar-passes.ndjson
             readarray -t values < <(printf '%s' "$response" | python3 -c '
           import json,sys

@@ -372,12 +372,32 @@ function p50_live_v4_parse_source(array $source,array $responses): array {
 
 function p50_live_v4_scan_batch(array $sources): array {
     $jobs=[];$groups=[];
-    foreach($sources as $index=>$source)foreach(p50_live_v4_probe_requests($source) as $label=>$job){$jobId=$index.'|'.$label;$jobs[$jobId]=$job;$groups[$index][$label]=$jobId;}
+    foreach($sources as $index=>$source){
+        try{
+            foreach(p50_live_v4_probe_requests($source) as $label=>$job){$jobId=$index.'|'.$label;$jobs[$jobId]=$job;$groups[$index][$label]=$jobId;}
+        }catch(Throwable $error){
+            $groups[$index]=[];
+            $jobs[$index.'|error']=['url'=>'','error'=>$error->getMessage()];
+        }
+    }
     $raw=p50_live_v4_parallel_fetch($jobs,7);$results=[];
     foreach($sources as $index=>$source){
-        $responses=[];foreach((array)($groups[$index]??[]) as $label=>$jobId)$responses[$label]=$raw[$jobId]??[];
-        $parsed=p50_live_v4_parse_source($source,$responses);$parsed['source']=$source;
-        $parsed['probes']=array_map(static fn($r)=>['ok'=>(bool)($r['ok']??false),'status'=>(int)($r['status']??0),'timeMs'=>(int)($r['timeMs']??0),'error'=>(string)($r['error']??'')],$responses);$results[]=$parsed;
+        try{
+            $responses=[];foreach((array)($groups[$index]??[]) as $label=>$jobId)$responses[$label]=$raw[$jobId]??[];
+            $parsed=p50_live_v4_parse_source($source,$responses);$parsed['source']=$source;
+            $parsed['probes']=array_map(static fn($r)=>['ok'=>(bool)($r['ok']??false),'status'=>(int)($r['status']??0),'timeMs'=>(int)($r['timeMs']??0),'error'=>(string)($r['error']??'')],$responses);$results[]=$parsed;
+        }catch(Throwable $error){
+            $results[]=[
+                'source'=>$source,
+                'state'=>'unknown',
+                'confidence'=>'scan_batch_exception',
+                'confidenceDetail'=>substr($error->getMessage(),0,180),
+                'confidence'=>0,
+                'live'=>null,
+                'probes'=>[],
+                'evidence'=>[],
+            ];
+        }
     }
     return $results;
 }

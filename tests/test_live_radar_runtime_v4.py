@@ -38,7 +38,10 @@ class LiveRadarRuntimeV4Tests(unittest.TestCase):
         self.assertIn("key==='tiktok'||key==='youtube'", index)
         self.assertIn("key==='tiktok'||key==='youtube'", v9)
         self.assertNotIn('preservedRadarLives', index)
-        self.assertIn('db.liveStreams=Array.isArray(cloud.liveStreams)?cloud.liveStreams:[]', index)
+        self.assertIn('mergeLiveStreams(radarLivesKeep,cloud.liveStreams)', index)
+        self.assertIn('function mergeLiveStreams(', index)
+        self.assertNotIn('db.liveStreams=Array.isArray(cloud.liveStreams)?cloud.liveStreams:[]', index)
+        self.assertIn('await refreshLiveStatus();', index)
         self.assertIn('if(!window.__pass50LiveNormalizerV4)normalizeLiveStreams=', v9)
 
     def test_radar_boots_immediately_and_keeps_lives_without_cloud(self):
