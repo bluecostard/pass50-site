@@ -1914,6 +1914,7 @@
     "eligible": false,
     "classable": false,
     "official_socials": {
+      "TikTok": "https://www.tiktok.com/@bebe.sans.os.de.m",
       "Web": "https://music.apple.com/fr/artist/bb-sans-os-de-man/1713200344"
     },
     "source": {
@@ -1929,6 +1930,12 @@
       "\"BB Sans Os de Man\" vidéo récente vues 2026"
     ],
     "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@bebe.sans.os.de.m",
+        "source_name": "TikTok",
+        "source_url": "https://www.tiktok.com/@bebe.sans.os.de.m",
+        "confidence": 96
+      },
       "Web": {
         "url": "https://music.apple.com/fr/artist/bb-sans-os-de-man/1713200344",
         "source_name": "Apple Music",

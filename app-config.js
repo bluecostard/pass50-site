@@ -367,6 +367,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : BB Sans Os de Man (TikTok @bebe.sans.os.de.m).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-bb-sans-os]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-bb-sans-os-de-man.js?v=1.0';
+  script.dataset.pass50ProfileBbSansOs = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Lise Akrassi.
 (function () {
   if (document.querySelector('script[data-pass50-profile-lise-akrassi]')) return;

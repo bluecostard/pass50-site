@@ -231,6 +231,10 @@ function p50_live_v4_dedup(array $automatic,array $manual): array {
                 $stream['profileName']='Samuella Kouassi';
                 if(trim($handle)==='')$stream['handle']='@samuellakouassiofficiel';
             }
+            if($canonical==='census-bb-sans-os-de-man'){
+                $stream['profileName']='BB Sans Os de Man';
+                if(trim($handle)==='')$stream['handle']='@bebe.sans.os.de.m';
+            }
         }
         $normalized[]=$stream;
     }
