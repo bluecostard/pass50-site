@@ -141,9 +141,9 @@ class AdminHomeNavigationTests(unittest.TestCase):
 
 class AdminCacheTests(unittest.TestCase):
     def test_data_engine_versions_and_cache_are_coherent(self):
-        self.assertIn("data-engine-ui.js?v=18.26", TOOLS)
+        self.assertIn("data-engine-ui.js?v=18.27", TOOLS)
         self.assertIn("data-engine-ui.css?v=27.1", TOOLS)
-        self.assertIn("data-engine-ui.js?v=18.26", SW)
+        self.assertIn("data-engine-ui.js?v=18.27", SW)
         self.assertIn("data-engine-ui.css?v=27.1", SW)
         self.assertNotIn("data-engine-ui.js?v=15.0", TOOLS + SW + INDEX)
         self.assertIn("const CACHE='pass50-v89-stable-public-copy'", SW)

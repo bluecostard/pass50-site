@@ -35,6 +35,16 @@ class YoutubeKeyDetectV1Tests(unittest.TestCase):
         self.assertIn("youtube.keySource", ui)
         self.assertIn("youtube.keyLength", ui)
 
+    def test_maj_loads_youtube_key_status_independently(self):
+        ui = (ROOT / "data-engine-ui.js").read_text(encoding="utf-8")
+        self.assertIn("async function deLoadYoutubeKeyStatus()", ui)
+        self.assertIn("youtube-key-status.php", ui)
+        self.assertIn("deApplyYoutubeKeyStatus(totals,await deLoadYoutubeKeyStatus())", ui)
+        self.assertIn("status_unavailable", ui)
+        cf = (ROOT / "cloudflare" / "PASS50-CLOUDFLARE-SETUP.txt").read_text(encoding="utf-8")
+        self.assertIn("youtube-key-status.php", cf)
+        self.assertIn("Bot Fight", cf)
+
 
 if __name__ == "__main__":
     unittest.main()

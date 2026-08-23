@@ -737,6 +737,7 @@
     return Math.max(0,Math.min(100,Math.round(DE.majSeen.size/DE.majTarget*100)));
   }
   function deYoutubeMajStatus(youtube,captures){
+    if(youtube.keySource==='status_unavailable')return 'Statut clé YouTube inaccessible (réseau / Cloudflare) — la clé peut être présente sur le serveur';
     if(!youtube.configured)return 'API YouTube non configurée';
     if(youtube.callsAttempted===0)return 'API configurée mais aucun appel tenté';
     if(youtube.callsSucceeded===0)return 'Appels tentés mais tous échoués';
@@ -749,6 +750,35 @@
     const source=youtube.keySource?` · source ${youtube.keySource}`:'';
     const length=Number(youtube.keyLength||0)>0?` · longueur ${Number(youtube.keyLength)}`:'';
     return `YouTube — Clé configurée : ${configured}${source}${length} · ${youtube.profilesWithLink} profil(s) avec lien · ${youtube.callsAttempted} appel(s) tenté(s) · ${youtube.callsSucceeded} réussi(s) · ${youtube.videosRetrieved} vidéo(s) récupérée(s) · ${youtube.errors403} erreur(s) 403 · ${youtube.errors429} erreur(s) 429 · ${youtube.budgetExceeded} budget(s) dépassé(s) · ${youtube.invalidUrls} URL(s) invalide(s) · ${youtube.noRecentProfiles} profil(s) sans vidéo récente · ${deYoutubeMajStatus(youtube,captures)}.`;
+  }
+  /** Lecture directe de la clé (indépendante des lots radar, sensibles aux challenges Cloudflare). */
+  async function deLoadYoutubeKeyStatus(){
+    try{
+      const status=await apiFetch(`youtube-key-status.php?_=${Date.now()}`);
+      return {
+        configured:Boolean(status?.configured),
+        keySource:String(status?.source||''),
+        keyLength:Number(status?.keyLength||0),
+        keyPrefix:String(status?.keyPrefix||''),
+        hint:String(status?.hint||'')
+      };
+    }catch(err){
+      return {
+        configured:false,
+        keySource:'status_unavailable',
+        keyLength:0,
+        keyPrefix:'',
+        hint:String(err?.message||err||'Statut YouTube inaccessible')
+      };
+    }
+  }
+  function deApplyYoutubeKeyStatus(totals,status){
+    if(!totals?.youtube||!status)return;
+    if(status.configured)totals.youtube.configured=true;
+    if(status.keySource&&status.keySource!=='status_unavailable')totals.youtube.keySource=status.keySource;
+    else if(status.keySource==='status_unavailable'&&!totals.youtube.keySource)totals.youtube.keySource='status_unavailable';
+    if(Number(status.keyLength||0)>0)totals.youtube.keyLength=Number(status.keyLength);
+    if(status.keyPrefix)totals.youtube.keyPrefix=status.keyPrefix;
   }
   function deMajCanResume(saved){
     return Boolean(saved&&saved.status!=='success'&&Array.isArray(saved.processedIds)&&saved.processedIds.length>0);
@@ -829,12 +859,13 @@
     DE.majRunning=true;DE.majStopRequested=false;DE.majSeen=new Set(resume?saved.processedIds.map(String):[]);DE.majStartedAt=(resume&&saved.startedAt)?saved.startedAt:new Date().toISOString();DE.majLastResult=null;
     let completedSuccessfully=false;
     DE.majStage='1/7 · Synchronisation des FI';DE.majMessage=resume?`Reprise à ${DE.majSeen.size} FI déjà parcourues. Envoi des fiches actuelles vers le registre serveur…`:'Envoi des fiches actuelles vers le registre serveur…';deRenderMajPass50($('#adminPane'));
-    let totals={found:0,verified:0,historicalMetrics:0,fiTraversed:0,officialLinksAnalyzed:0,recentPublications:0,uniqueEvents:0,capturesRecorded:0,activeMetrics:0,unavailablePlatforms:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0,skipped:0,intelligence:{profilesAnalyzed:0,profilesIgnored:0,strongTrends:0,buzzDetected:0,declinesDetected:0,errors:0},youtube:{configured:false,profilesWithLink:0,callsAttempted:0,callsSucceeded:0,videosRetrieved:0,errors403:0,errors429:0,budgetExceeded:0,invalidUrls:0,noRecentProfiles:0}};
+    let totals={found:0,verified:0,historicalMetrics:0,fiTraversed:0,officialLinksAnalyzed:0,recentPublications:0,uniqueEvents:0,capturesRecorded:0,activeMetrics:0,unavailablePlatforms:0,measurableProfiles:0,published:0,recalculated:0,notRecalculated:0,scoresChanged:0,ranksChanged:0,captured:0,batches:0,skipped:0,intelligence:{profilesAnalyzed:0,profilesIgnored:0,strongTrends:0,buzzDetected:0,declinesDetected:0,errors:0},youtube:{configured:false,keySource:'',keyLength:0,keyPrefix:'',profilesWithLink:0,callsAttempted:0,callsSucceeded:0,videosRetrieved:0,errors403:0,errors429:0,budgetExceeded:0,invalidUrls:0,noRecentProfiles:0}};
     try{
       if(typeof window.PASS50_STEP12_STATUS==='object'&&Number(window.PASS50_STEP12_STATUS.present||0)<7&&typeof window.p50EnsureStep12Profiles==='function')window.p50EnsureStep12Profiles();
+      deApplyYoutubeKeyStatus(totals,await deLoadYoutubeKeyStatus());
       const sync=await apiFetch('data-hub.php',{method:'POST',body:{action:'sync'}});
       DE.hub=sync.hub||DE.hub;DE.majTarget=Number(DE.hub?.kpis?.profiles||sync.syncedProfiles||db?.profiles?.length||0);
-      DE.majStage='2/7 · Collecte et conservation';DE.majMessage='Le moteur parcourt les FI une par une…';deDrawMajProgress();
+      DE.majStage='2/7 · Collecte et conservation';DE.majMessage=totals.youtube.configured?`Clé YouTube détectée (${totals.youtube.keySource||'ok'}). Le moteur parcourt les FI une par une…`:'Le moteur parcourt les FI une par une…';deDrawMajProgress();
 
       let consecutiveSkips=0;
       while(!DE.majStopRequested&&DE.majSeen.size<DE.majTarget){
@@ -873,6 +904,9 @@
         const intelligence=data.intelligence||{};
         for(const counter of ['profilesAnalyzed','profilesIgnored','strongTrends','buzzDetected','declinesDetected','errors'])totals.intelligence[counter]+=Number(intelligence[counter]||0);
         totals.youtube.configured=totals.youtube.configured||Boolean(youtube.configured);
+        if(youtube.keySource)totals.youtube.keySource=String(youtube.keySource);
+        if(Number(youtube.keyLength||0)>0)totals.youtube.keyLength=Number(youtube.keyLength);
+        if(youtube.keyPrefix)totals.youtube.keyPrefix=String(youtube.keyPrefix);
         for(const counter of ['profilesWithLink','callsAttempted','callsSucceeded','videosRetrieved','errors403','errors429','budgetExceeded','invalidUrls','noRecentProfiles'])totals.youtube[counter]+=Number(youtube[counter]||0);
         DE.hub=data.hub||DE.hub;
         DE.majStage='3/7 · Calcul des 15 critères';
@@ -903,6 +937,7 @@
       try{const snap=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});totals.captured=Number(snap.captured||0);}catch(error){console.warn('Capture classement non bloquante',error);}
 
       try{await deLoadHub(true);}catch(hubError){console.warn('Hub MAJ non bloquant',hubError);}
+      deApplyYoutubeKeyStatus(totals,await deLoadYoutubeKeyStatus());
       const result={status:'success',startedAt:DE.majStartedAt,finishedAt:new Date().toISOString(),processed:DE.majSeen.size,processedIds:[...DE.majSeen],target:DE.majTarget,totals,totalProfiles:Number(db?.profiles?.length||0),period:ui.period};
       const rankingChanged=totals.scoresChanged>0||totals.ranksChanged>0;
       const counters=`${totals.fiTraversed} FI parcourue(s) · ${totals.officialLinksAnalyzed} lien(s) officiel(s) analysé(s) · ${totals.recentPublications} publication(s) récente(s) détectée(s) · ${totals.uniqueEvents} événement(s) unique(s) · ${totals.capturesRecorded} capture(s) métrique(s) enregistrée(s) · ${totals.activeMetrics} métrique(s) active(s) · Intelligence : ${totals.intelligence.profilesAnalyzed} analysé(s), ${totals.intelligence.profilesIgnored} ignoré(s), ${totals.intelligence.strongTrends} tendance(s), ${totals.intelligence.buzzDetected} buzz, ${totals.intelligence.declinesDetected} recul(s), ${totals.intelligence.errors} erreur(s) non bloquante(s) · ${totals.unavailablePlatforms} plateforme(s) indisponible(s) · ${totals.recalculated} profil(s) recalculé(s) · ${totals.scoresChanged} score(s) modifié(s) · ${totals.ranksChanged} rang(s) modifié(s) · ${totals.published} profil(s) publié(s). ${deYoutubeMajSummary(totals.youtube,totals.capturesRecorded)}`;
