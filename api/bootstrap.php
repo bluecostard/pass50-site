@@ -31,6 +31,7 @@ if (!is_file($configFile)) {
 }
 
 $config = require $configFile;
+$GLOBALS['config'] = $config;
 
 function json_response(array $data, int $status = 200): never {
     http_response_code($status);

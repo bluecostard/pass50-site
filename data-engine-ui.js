@@ -746,7 +746,9 @@
   }
   function deYoutubeMajSummary(youtube,captures){
     const configured=youtube.configured?'oui':'non';
-    return `YouTube — Clé configurée : ${configured} · ${youtube.profilesWithLink} profil(s) avec lien · ${youtube.callsAttempted} appel(s) tenté(s) · ${youtube.callsSucceeded} réussi(s) · ${youtube.videosRetrieved} vidéo(s) récupérée(s) · ${youtube.errors403} erreur(s) 403 · ${youtube.errors429} erreur(s) 429 · ${youtube.budgetExceeded} budget(s) dépassé(s) · ${youtube.invalidUrls} URL(s) invalide(s) · ${youtube.noRecentProfiles} profil(s) sans vidéo récente · ${deYoutubeMajStatus(youtube,captures)}.`;
+    const source=youtube.keySource?` · source ${youtube.keySource}`:'';
+    const length=Number(youtube.keyLength||0)>0?` · longueur ${Number(youtube.keyLength)}`:'';
+    return `YouTube — Clé configurée : ${configured}${source}${length} · ${youtube.profilesWithLink} profil(s) avec lien · ${youtube.callsAttempted} appel(s) tenté(s) · ${youtube.callsSucceeded} réussi(s) · ${youtube.videosRetrieved} vidéo(s) récupérée(s) · ${youtube.errors403} erreur(s) 403 · ${youtube.errors429} erreur(s) 429 · ${youtube.budgetExceeded} budget(s) dépassé(s) · ${youtube.invalidUrls} URL(s) invalide(s) · ${youtube.noRecentProfiles} profil(s) sans vidéo récente · ${deYoutubeMajStatus(youtube,captures)}.`;
   }
   function deMajCanResume(saved){
     return Boolean(saved&&saved.status!=='success'&&Array.isArray(saved.processedIds)&&saved.processedIds.length>0);
