@@ -23,7 +23,7 @@ function p50_mc_platform(string $value): string {
 function p50_mc_config(string $platform): string {
     global $config;
     return $platform==='YouTube'
-        ?trim((string)($config['metrics']['PASS50_YOUTUBE_API_KEY']??''))
+        ?(function_exists('p50m_youtube_key')?p50m_youtube_key():trim((string)($config['metrics']['PASS50_YOUTUBE_API_KEY']??'')))
         :trim((string)($config['metrics']['x_bearer_token']??(defined('PASS50_X_BEARER_TOKEN')?PASS50_X_BEARER_TOKEN:(getenv('PASS50_X_BEARER_TOKEN')?:''))));
 }
 

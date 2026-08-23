@@ -6,14 +6,17 @@ declare(strict_types=1);
  * Fichier de configuration : api/data/youtube-channels.json
  */
 require __DIR__.'/bootstrap.php';
-$key = trim((string)($config['metrics']['PASS50_YOUTUBE_API_KEY']??''));
-$token = trim((string)($config['data_engine']['live_admin_token']??''));
-if ($key === '' || $token === '') json_response(['error'=>'Configuration serveur manquante'],500);
-$configFile = __DIR__.'/data/youtube-channels.json';
-$config = json_decode(@file_get_contents($configFile) ?: '[]', true);
-if (!is_array($config)) $config=[];
+require_once __DIR__.'/metrics-core.php';
+$keyStatus = p50m_youtube_key_status();
+$key = $keyStatus['configured'] ? p50m_youtube_key() : '';
+$token = trim((string)(($GLOBALS['config']['data_engine']['live_admin_token'] ?? '') ?: ''));
+if ($key === '') json_response(['error'=>'Clé YouTube absente dans api/config.php (metrics.PASS50_YOUTUBE_API_KEY).','configured'=>false],500);
+if ($token === '') json_response(['error'=>'live_admin_token manquant dans api/config.php (data_engine).','configured'=>true,'keyLength'=>$keyStatus['keyLength']],500);
+$channelsFile = __DIR__.'/data/youtube-channels.json';
+$channels = json_decode(@file_get_contents($channelsFile) ?: '[]', true);
+if (!is_array($channels)) $channels=[];
 $streams=[];
-foreach ($config as $row) {
+foreach ($channels as $row) {
     $profileId = $row['profileId'] ?? '';
     $channelId = $row['channelId'] ?? '';
     if (!$profileId || !$channelId) continue;

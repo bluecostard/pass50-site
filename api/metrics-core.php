@@ -74,9 +74,51 @@ function p50m_sync_accounts_from_state(): int {
     return $count;
 }
 
-function p50m_youtube_key(): string {
+/**
+ * Résout la clé YouTube Data API v3 sans jamais l’exposer.
+ * Ordre : metrics.PASS50_YOUTUBE_API_KEY → getenv → constante.
+ *
+ * @return array{key:string,source:string}
+ */
+function p50m_youtube_key_resolve(): array {
     global $config;
-    return trim((string)($config['metrics']['PASS50_YOUTUBE_API_KEY']??''));
+    $fromConfig = '';
+    if (isset($GLOBALS['config']) && is_array($GLOBALS['config'])) {
+        $fromConfig = trim((string)(($GLOBALS['config']['metrics']['PASS50_YOUTUBE_API_KEY'] ?? '') ?: ''));
+    }
+    if ($fromConfig === '' && is_array($config ?? null)) {
+        $fromConfig = trim((string)(($config['metrics']['PASS50_YOUTUBE_API_KEY'] ?? '') ?: ''));
+    }
+    if ($fromConfig !== '') {
+        return ['key' => $fromConfig, 'source' => 'config.metrics'];
+    }
+    $fromEnv = trim((string)(getenv('PASS50_YOUTUBE_API_KEY') ?: ''));
+    if ($fromEnv !== '') {
+        return ['key' => $fromEnv, 'source' => 'env'];
+    }
+    if (defined('PASS50_YOUTUBE_API_KEY')) {
+        $fromConst = trim((string)PASS50_YOUTUBE_API_KEY);
+        if ($fromConst !== '') {
+            return ['key' => $fromConst, 'source' => 'constant'];
+        }
+    }
+    return ['key' => '', 'source' => 'none'];
+}
+
+function p50m_youtube_key(): string {
+    return p50m_youtube_key_resolve()['key'];
+}
+
+/** Statut public (sans secret) pour admin / MAJ. */
+function p50m_youtube_key_status(): array {
+    $resolved = p50m_youtube_key_resolve();
+    $key = $resolved['key'];
+    return [
+        'configured' => $key !== '',
+        'source' => $resolved['source'],
+        'keyLength' => strlen($key),
+        'keyPrefix' => $key !== '' ? substr($key, 0, 6) : '',
+    ];
 }
 
 function p50m_x_token(): string {
