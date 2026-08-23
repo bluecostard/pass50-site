@@ -1,32 +1,9 @@
 {
-  "at": "2026-08-23 09:47 UTC",
+  "at": "2026-08-23 13:05 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
-  "lives": [
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7676964513236781857",
-      "title": "Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "dezcocrane.225"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 1,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 7
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
