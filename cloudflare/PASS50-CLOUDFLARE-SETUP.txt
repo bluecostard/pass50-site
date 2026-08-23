@@ -5,6 +5,23 @@ Objectif : mettre Cloudflare devant IONOS (0 €) pour absorber les pics
 de lecture sur ranking / fil / live / bootstrap, sans changer le code PHP
 d’hébergement.
 
+Important — secrets & MAJ
+-------------------------
+La clé YouTube (`PASS50_YOUTUBE_API_KEY`) vit uniquement dans
+`api/config.php` sur IONOS (hors git, hors Cloudflare). Cloudflare ne
+supprime pas ce fichier.
+
+Si la MAJ affiche « Clé configurée : non » alors que `config.php` contient
+toujours la clé (cas observé après le passage derrière Cloudflare) :
+1) Vérifier en staff connecté : GET `/api/youtube-key-status.php`
+   → `configured: true`, `source: config.metrics`, `keyPrefix: AIzaSy…`
+2) Purger le cache Cloudflare (Caching → Configuration → Purge Everything)
+   puis recharger PASS50 sans cache navigateur (Ctrl+Shift+R)
+3) Security → Bots : ne pas activer Bot Fight / Super Bot Fight Mode sur
+   les POST admin (`/api/data-collect.php`, `/api/data-hub.php`, etc.)
+   sinon les lots MAJ échouent et le résumé YouTube reste à « non »
+4) Speed → Optimization : Rocket Loader = Off (casse le JS admin)
+
 Prérequis
 ---------
 - Compte Cloudflare (Free)
@@ -41,6 +58,10 @@ Prérequis
    Règle B — « PASS50 bypass privé »
    If :
      (http.request.uri.path eq "/api/state.php")
+     or (http.request.uri.path eq "/api/youtube-key-status.php")
+     or (http.request.uri.path eq "/api/data-collect.php")
+     or (http.request.uri.path eq "/api/data-hub.php")
+     or (http.request.uri.path eq "/api/data-publish.php")
      or (http.request.uri.path contains "/api/login")
      or (http.request.uri.path contains "/api/admin")
      or (http.request.method ne "GET")
@@ -51,12 +72,14 @@ Prérequis
 10) Vérifier :
     curl -sSI 'https://pass50.store/api/public-ranking.php' | grep -iE 'cf-ray|cf-cache-status|cache-control'
     curl -sS -D - -o /dev/null 'https://pass50.store/api/live-status.php?mode=status' | grep -iE 'cf-cache-status|cache-control|x-pass50'
+    curl -sSI 'https://pass50.store/api/youtube-key-status.php' | grep -iE 'cf-cache-status|cache-control'
+    # Attendu youtube-key-status : cf-cache-status DYNAMIC (jamais HIT)
 
 Attendu après warm
 ------------------
 - Header cf-ray présent
-- cf-cache-status : MISS puis HIT / STALE
-- cache-control : public, max-age=…
+- cf-cache-status : MISS puis HIT / STALE (APIs publiques uniquement)
+- cache-control : public, max-age=… (publiques) / no-store (privées)
 - live status < 1 s
 
 Rollback
