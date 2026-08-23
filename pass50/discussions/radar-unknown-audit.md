@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-23 04:05 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-isouch` @prince_du_pays — 7677029021292628768 · 405 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
+
+Ignorés : 1
+
 ### 2026-08-23 02:02 UTC
 
 Erreur : `GET HTTP 500`
