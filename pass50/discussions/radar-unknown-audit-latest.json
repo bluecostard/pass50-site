@@ -1,9 +1,32 @@
 {
-  "at": "2026-08-23 13:05 UTC",
+  "at": "2026-08-23 15:41 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "ennemi-des-djandjou",
+      "platform": "TikTok",
+      "roomId": "7677245903140391700",
+      "title": "",
+      "viewers": 1574,
+      "startedAt": "2026-08-23 15:15:18",
+      "handle": "ennemidesdjandjou"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "ennemi-des-djandjou",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 7
+  },
   "enabled": true,
   "error": null
 }
