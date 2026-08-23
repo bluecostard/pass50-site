@@ -2615,5 +2615,104 @@
       "\"elprofesor_off\" TikTok officiel",
       "\"El Profesor\" influenceur ivoirien réseaux sociaux"
     ]
+  },
+  {
+    "id": "census-le-grand-bicongo",
+    "name": "Le grand Bicongo",
+    "known_alias": "Le grand Bicongo / @legrandbicongo",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "TikTok / Live / Divertissement",
+    "census_status": "Recensé confirmé — compte TikTok fourni en direct par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@legrandbicongo"
+    },
+    "source": {
+      "publisher": "Compte TikTok direct fourni par le propriétaire PASS50",
+      "date": "2026-08-23",
+      "url": "https://www.tiktok.com/@legrandbicongo"
+    },
+    "notes": "Créateur TikTok. Compte officiel @legrandbicongo, signalé par le propriétaire PASS50 le 23 août 2026. La bio publique de Chocolat show officiel le cite comme manager — deux personnes distinctes, non fusionnées. Identité civile et date de naissance non confirmées. Profil non classable jusqu’à validation des métriques.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@legrandbicongo",
+        "source_name": "Compte TikTok direct fourni par le propriétaire PASS50",
+        "source_url": "https://www.tiktok.com/@legrandbicongo",
+        "confidence": 100
+      }
+    },
+    "research_queries": [
+      "\"legrandbicongo\" TikTok officiel",
+      "\"Le grand Bicongo\" Chocolat Show manager TikTok"
+    ]
+  },
+  {
+    "id": "census-chocolat-show-officiel",
+    "name": "Chocolat show officiel",
+    "known_alias": "Chocolat show officiel / @chocolat.show.officiel",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Comédie / Humour / Divertissement",
+    "census_status": "Recensé confirmé — compte TikTok fourni en direct par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@chocolat.show.officiel"
+    },
+    "source": {
+      "publisher": "Compte TikTok direct fourni par le propriétaire PASS50",
+      "date": "2026-08-23",
+      "url": "https://www.tiktok.com/@chocolat.show.officiel"
+    },
+    "notes": "Comédien / humoriste. Compte TikTok officiel @chocolat.show.officiel, signalé par le propriétaire PASS50 le 23 août 2026. La bio publique du compte indique le management @legrandbicongo — deux fiches distinctes. Date de naissance non confirmée. Profil non classable jusqu’à validation des métriques.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@chocolat.show.officiel",
+        "source_name": "Compte TikTok direct fourni par le propriétaire PASS50",
+        "source_url": "https://www.tiktok.com/@chocolat.show.officiel",
+        "confidence": 100
+      }
+    },
+    "research_queries": [
+      "\"chocolat.show.officiel\" TikTok officiel",
+      "\"Chocolat show officiel\" humoriste TikTok"
+    ]
+  },
+  {
+    "id": "census-la-legende",
+    "name": "La légende",
+    "known_alias": "La légende / @lalegende777",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "Comédie / Humour / Divertissement",
+    "census_status": "Recensé confirmé — compte TikTok fourni en direct par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@lalegende777"
+    },
+    "source": {
+      "publisher": "Compte TikTok direct fourni par le propriétaire PASS50",
+      "date": "2026-08-23",
+      "url": "https://www.tiktok.com/@lalegende777"
+    },
+    "notes": "Humoriste. Compte TikTok officiel unique @lalegende777 (bio publique : « Le meilleur humoriste du moment »), signalé par le propriétaire PASS50 le 23 août 2026. Nom civil et date de naissance non confirmés. Profil non classable jusqu’à validation des métriques.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@lalegende777",
+        "source_name": "Compte TikTok direct fourni par le propriétaire PASS50",
+        "source_url": "https://www.tiktok.com/@lalegende777",
+        "confidence": 100
+      }
+    },
+    "research_queries": [
+      "\"lalegende777\" TikTok officiel",
+      "\"La légende\" humoriste TikTok"
+    ]
   }
 ]

@@ -5,3 +5,6 @@
 - **Dougoutigui Lobert** — alias Dougoutigui Lobeh/Lobê, personnalité web ivoirienne révélée par une vidéo virale. Source principale : Newstories Africa, 4 mars 2024.
 - **Adjinaya « El Professor » Coulibaly** — makeup artist, formatrice et entrepreneure de la diaspora, compte connu `@adjinaya`. Sources : Adjinaya Makeup Studio et sources professionnelles publiques.
 - **No Limit** — piste utilisateur conservée en statut « identité exacte à confirmer » à cause des nombreux homonymes. Aucun score ni compte officiel n’est publié automatiquement.
+- **Le grand Bicongo** — créateur TikTok, manager public de Chocolat Show. Compte `@legrandbicongo`. Source : profil TikTok officiel + signalement propriétaire PASS50, 23 août 2026. Identité civile non confirmée.
+- **Chocolat show officiel** — comédien / humoriste. Compte `@chocolat.show.officiel`. Source : profil TikTok officiel + signalement propriétaire PASS50, 23 août 2026.
+- **La légende** — humoriste. Compte unique `@lalegende777`. Source : profil TikTok officiel + signalement propriétaire PASS50, 23 août 2026. Nom civil non confirmé.
