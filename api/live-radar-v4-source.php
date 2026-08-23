@@ -3,6 +3,14 @@ declare(strict_types=1);
 
 const P50_LIVE_V4_PLATFORMS = ['TikTok','YouTube','Instagram','Facebook'];
 const P50_LIVE_V4_OFFICIAL_STATUSES = ['verified','owner_verified','manual_verified','ok','blocked_but_exists'];
+/**
+ * RÈGLE FIGÉE — autonomie radar LIVE (ne pas affaiblir).
+ * Détection serveur 24/7, tick 1 s, jamais conditionnée à l’app ouverte.
+ */
+const P50_LIVE_RADAR_AUTONOMY_REVISION = 'PASS50_LIVE_RADAR_AUTONOMY_V1';
+const P50_LIVE_RADAR_REQUIRES_APP_OPEN = false;
+const P50_LIVE_RADAR_CONTINUOUS_TICK_SECONDS = 1;
+const P50_LIVE_RADAR_DETECTION_OWNER = 'server';
 /** Couverture rolling (scan récent) — distincte du trust gate anti-ghost. */
 const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-3';
 const P50_LIVE_V4_COVERAGE_WINDOW_SECONDS = 7200;

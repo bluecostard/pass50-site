@@ -193,7 +193,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('coverageRevision', contract)
 
     def test_client_is_compatibly_loaded_but_uses_v4(self):
-        self.assertIn("live-radar-v3.js?v=1.13", CONFIG)
+        self.assertIn("live-radar-v3.js?v=1.14", CONFIG)
         self.assertIn("const ENDPOINT='./api/live-status.php'", CLIENT)
         self.assertIn('RADAR LIVE V4', CLIENT)
         self.assertIn('TikTok:0', CLIENT)
@@ -209,7 +209,7 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('publishedStreams', SWEEP)
         self.assertIn('pass50/live-radar', SWEEP)
         quick = (ROOT / '.github' / 'workflows' / 'live-radar-quick.yml').read_text(encoding='utf-8')
-        self.assertIn('*/15 * * * *', quick)
+        self.assertIn('*/5 * * * *', quick)
         self.assertIn('mode=quick', quick)
         self.assertIn('batch=16', quick)
 
