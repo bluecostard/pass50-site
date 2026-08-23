@@ -43,6 +43,9 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-isouch',
     'census-bb-sans-os-de-man',
     'hassan',
+    'census-le-grand-bicongo',
+    'census-chocolat-show-officiel',
+    'census-la-legende',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -164,6 +167,9 @@ function p50_live_v4_tiktok_handle_canonicals(): array {
         'bebe_sans_os'=>'census-bb-sans-os-de-man',
         'hassanhayekofficiel'=>'hassan',
         'hassanhayek'=>'hassan',
+        'legrandbicongo'=>'census-le-grand-bicongo',
+        'chocolat.show.officiel'=>'census-chocolat-show-officiel',
+        'lalegende777'=>'census-la-legende',
     ];
 }
 
@@ -216,6 +222,18 @@ function p50_live_v4_collapse_identity_sources(array $sources): array {
                 if($canonical==='hassan'){
                     $source['public_name']='Hassan Hayek';
                     $source['handle']='@hassanhayekofficiel';
+                }
+                if($canonical==='census-le-grand-bicongo'){
+                    $source['public_name']='Le grand Bicongo';
+                    $source['handle']='@legrandbicongo';
+                }
+                if($canonical==='census-chocolat-show-officiel'){
+                    $source['public_name']='Chocolat show officiel';
+                    $source['handle']='@chocolat.show.officiel';
+                }
+                if($canonical==='census-la-legende'){
+                    $source['public_name']='La légende';
+                    $source['handle']='@lalegende777';
                 }
                 $id=$canonical;
             }
@@ -315,6 +333,9 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-isouch|tiktok'=>'https://www.tiktok.com/@prince_du_pays',
         'census-bb-sans-os-de-man|tiktok'=>'https://www.tiktok.com/@bebe.sans.os.de.m',
         'hassan|tiktok'=>'https://www.tiktok.com/@hassanhayekofficiel',
+        'census-le-grand-bicongo|tiktok'=>'https://www.tiktok.com/@legrandbicongo',
+        'census-chocolat-show-officiel|tiktok'=>'https://www.tiktok.com/@chocolat.show.officiel',
+        'census-la-legende|tiktok'=>'https://www.tiktok.com/@lalegende777',
     ];
     return $overrides[$key]??$url;
 }
@@ -400,6 +421,9 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-isouch','name'=>'Isouch','handle'=>'prince_du_pays'],
         ['id'=>'census-bb-sans-os-de-man','name'=>'BB Sans Os de Man','handle'=>'bebe.sans.os.de.m'],
         ['id'=>'hassan','name'=>'Hassan Hayek','handle'=>'hassanhayekofficiel'],
+        ['id'=>'census-le-grand-bicongo','name'=>'Le grand Bicongo','handle'=>'legrandbicongo'],
+        ['id'=>'census-chocolat-show-officiel','name'=>'Chocolat show officiel','handle'=>'chocolat.show.officiel'],
+        ['id'=>'census-la-legende','name'=>'La légende','handle'=>'lalegende777'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;

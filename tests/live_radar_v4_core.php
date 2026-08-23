@@ -143,7 +143,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane','census-daniel-m','census-akalajoie','ennemi-des-djandjou','census-isouch','census-bb-sans-os-de-man','hassan'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane','census-daniel-m','census-akalajoie','ennemi-des-djandjou','census-isouch','census-bb-sans-os-de-man','hassan','census-le-grand-bicongo','census-chocolat-show-officiel','census-la-legende'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -270,6 +270,9 @@ must(p50_live_v4_canonical_profile_id('ennemi-des-djandjou','TikTok','prince_du_
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','bebe.sans.os.de.m')==='census-bb-sans-os-de-man','@bebe.sans.os.de.m est BB Sans Os de Man.');
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','hassanhayekofficiel')==='hassan','@hassanhayekofficiel est Hassan Hayek.');
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','hassanhayek')==='hassan','@hassanhayek reste Hassan Hayek.');
+must(p50_live_v4_canonical_profile_id('ghost','TikTok','legrandbicongo')==='census-le-grand-bicongo','@legrandbicongo est Le grand Bicongo.');
+must(p50_live_v4_canonical_profile_id('ghost','TikTok','chocolat.show.officiel')==='census-chocolat-show-officiel','@chocolat.show.officiel est Chocolat show officiel.');
+must(p50_live_v4_canonical_profile_id('ghost','TikTok','lalegende777')==='census-la-legende','@lalegende777 est La légende.');
 
 $hassanSource=['profile_id'=>'hassan','public_name'=>'Hassan Hayek','platform'=>'TikTok','url'=>'https://www.tiktok.com/@hassanhayekofficiel'];
 $hassanLive=p50_live_v4_parse_tiktok($hassanSource,['api_webcast'=>response('{"data":{"status":2,"id":7677247476674824980,"id_str":"7677247476674824980","title":"Ouech","user_count":333,"owner":{"display_id":"hassanhayekofficiel","nickname":"hassanhayekofficiel"}},"status_code":0}')]);
@@ -280,6 +283,21 @@ $bbSource=['profile_id'=>'census-bb-sans-os-de-man','public_name'=>'BB Sans Os d
 $bbLive=p50_live_v4_parse_tiktok($bbSource,['api_webcast'=>response('{"data":{"status":2,"id":7677011297735707413,"id_str":"7677011297735707413","title":"En direct","user_count":731,"owner":{"display_id":"bebe.sans.os.de.m","nickname":"BÉBÉ SANS OS DE MAN OFFICIEL"}},"status_code":0}')]);
 must($bbLive['state']==='live','BB Sans Os de Man webcast status=2 doit publier le LIVE.');
 must(($bbLive['live']['metadata']['roomId']??'')==='7677011297735707413','Le roomId BB Sans Os de Man doit être conservé.');
+
+$bicongoSource=['profile_id'=>'census-le-grand-bicongo','public_name'=>'Le grand Bicongo','platform'=>'TikTok','url'=>'https://www.tiktok.com/@legrandbicongo'];
+$bicongoLive=p50_live_v4_parse_tiktok($bicongoSource,['api_webcast'=>response('{"data":{"status":2,"id":7678247476674824101,"id_str":"7678247476674824101","title":"En direct","user_count":120,"owner":{"display_id":"legrandbicongo","nickname":"Le grand Bicongo"}},"status_code":0}')]);
+must($bicongoLive['state']==='live','Le grand Bicongo webcast status=2 doit publier le LIVE.');
+must(($bicongoLive['live']['metadata']['roomId']??'')==='7678247476674824101','Le roomId Le grand Bicongo doit être conservé.');
+
+$chocolatSource=['profile_id'=>'census-chocolat-show-officiel','public_name'=>'Chocolat show officiel','platform'=>'TikTok','url'=>'https://www.tiktok.com/@chocolat.show.officiel'];
+$chocolatLive=p50_live_v4_parse_tiktok($chocolatSource,['api_webcast'=>response('{"data":{"status":2,"id":7678247476674824102,"id_str":"7678247476674824102","title":"En direct","user_count":88,"owner":{"display_id":"chocolat.show.officiel","nickname":"Chocolat show officiel"}},"status_code":0}')]);
+must($chocolatLive['state']==='live','Chocolat show officiel webcast status=2 doit publier le LIVE.');
+must(($chocolatLive['live']['metadata']['roomId']??'')==='7678247476674824102','Le roomId Chocolat show officiel doit être conservé.');
+
+$legendeSource=['profile_id'=>'census-la-legende','public_name'=>'La légende','platform'=>'TikTok','url'=>'https://www.tiktok.com/@lalegende777'];
+$legendeLive=p50_live_v4_parse_tiktok($legendeSource,['api_webcast'=>response('{"data":{"status":2,"id":7678247476674824103,"id_str":"7678247476674824103","title":"En direct","user_count":64,"owner":{"display_id":"lalegende777","nickname":"La légende"}},"status_code":0}')]);
+must($legendeLive['state']==='live','La légende webcast status=2 doit publier le LIVE.');
+must(($legendeLive['live']['metadata']['roomId']??'')==='7678247476674824103','Le roomId La légende doit être conservé.');
 must(!p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_no_live_signal']),'Un HTML IONOS sans JSON ne clôture pas un LIVE encore confirmé.');
 must(!p50_live_v4_should_end_from_probe('never_checked',['state'=>'offline','error'=>'tiktok_no_live_signal']),'IONOS sans API TikTok ne clôture jamais un compte, même jamais sondé.');
 must(!p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_api_failed']),'Un 403 IONOS ne clôture pas un LIVE confirmé.');

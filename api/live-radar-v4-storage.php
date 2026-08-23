@@ -239,6 +239,18 @@ function p50_live_v4_dedup(array $automatic,array $manual): array {
                 $stream['profileName']='Hassan Hayek';
                 if(trim($handle)==='')$stream['handle']='@hassanhayekofficiel';
             }
+            if($canonical==='census-le-grand-bicongo'){
+                $stream['profileName']='Le grand Bicongo';
+                if(trim($handle)==='')$stream['handle']='@legrandbicongo';
+            }
+            if($canonical==='census-chocolat-show-officiel'){
+                $stream['profileName']='Chocolat show officiel';
+                if(trim($handle)==='')$stream['handle']='@chocolat.show.officiel';
+            }
+            if($canonical==='census-la-legende'){
+                $stream['profileName']='La légende';
+                if(trim($handle)==='')$stream['handle']='@lalegende777';
+            }
         }
         $normalized[]=$stream;
     }
