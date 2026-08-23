@@ -28,7 +28,7 @@ class MetricsRankingFairDiversityTests(unittest.TestCase):
         self.assertIn("function p50_mr_assign_feature_percentiles", RANK)
         self.assertIn("p50_mr_assign_feature_percentiles($raw,$weights)", RANK)
         self.assertIn("if(count($values)<$minPool)", RANK)
-        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.4'", RANK)
+        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.5'", RANK)
 
     def test_publication_primary_period_matches_default_ui(self):
         self.assertIn("$primaryPeriod='24H'", APPLY)

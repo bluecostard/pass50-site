@@ -3,9 +3,12 @@ declare(strict_types=1);
 
 require_once __DIR__.'/metrics-schema-core.php';
 
-const P50_MR_ALGORITHM_VERSION='MR-V1.4';
+const P50_MR_ALGORITHM_VERSION='MR-V1.5';
 const P50_MR_LOCK='pass50_metrics_ranking_experimental_v1';
 const P50_MR_MIN_PERCENTILE_POOL=20;
+/** Plafond score « présence audience » (sans delta contenu dans la fenêtre) — évite la falaise ~23e en 24H. */
+const P50_MR_AUDIENCE_PRESENCE_CAP_SHORT = 30.0;
+const P50_MR_AUDIENCE_PRESENCE_CAP_LONG = 35.0;
 
 function p50_mr_periods(): array {
     return ['2H'=>2,'24H'=>24,'48H'=>48,'7J'=>168,'15J'=>360];
@@ -24,6 +27,20 @@ function p50_mr_freshness_hours(): array { return ['2H'=>6,'24H'=>6,'48H'=>8,'7J
 function p50_mr_window_hours(string $periodKey,int $hours): int { return $periodKey==='2H'?3:$hours; }
 function p50_mr_classability_thresholds(string $periodKey): array {
     return $periodKey==='2H'?['coverage'=>5.0,'confidence'=>35.0]:['coverage'=>30.0,'confidence'=>40.0];
+}
+
+/** Cap audience seule par période (0–100). Le mélange dynamique garde audience=0.05. */
+function p50_mr_audience_presence_cap(string $periodKey): float {
+    return in_array($periodKey,['2H','24H','48H'],true)?P50_MR_AUDIENCE_PRESENCE_CAP_SHORT:P50_MR_AUDIENCE_PRESENCE_CAP_LONG;
+}
+
+/**
+ * Score de base quand seule l’audience est mesurable (pas de reach/engagement dans la fenêtre).
+ * MR-V1.4 : percentile×0.05 → ~3–5 % dès le ~23e en 24H. MR-V1.5 : échelle 0–30 % (prod avant migration).
+ */
+function p50_mr_audience_only_base(float $audiencePercentile,string $periodKey): float {
+    $cap=p50_mr_audience_presence_cap($periodKey);
+    return max(0.0,min(100.0,$audiencePercentile/100.0*$cap));
 }
 
 
@@ -345,7 +362,7 @@ function p50_mr_period_rows(array $loaded,string $periodKey,int $hours,DateTimeI
         $audiencePercentile=$available['audience']??null;
         if($dynamicWeightSum<=0){
             if($audiencePercentile===null)continue;
-            $base=$audiencePercentile*$weights['audience'];
+            $base=p50_mr_audience_only_base((float)$audiencePercentile,$periodKey);
         }else{
             $dynamicBase=$dynamicWeighted/$dynamicWeightSum;
             $base=$dynamicBase*(1-$weights['audience'])+($audiencePercentile===null?0.0:$audiencePercentile*$weights['audience']);

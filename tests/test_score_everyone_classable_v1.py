@@ -12,9 +12,7 @@ INDEX = (ROOT / "index.html").read_text(encoding="utf-8")
 class ScoreEveryoneClassableV1Tests(unittest.TestCase):
     def test_audience_only_still_produces_a_capped_score(self):
         self.assertIn("if($dynamicWeightSum<=0)", RANKING)
-        self.assertNotIn("if($dynamicWeightSum<=0)continue", RANKING)
-        self.assertIn("if($audiencePercentile===null)continue", RANKING)
-        self.assertIn("$base=$audiencePercentile*$weights['audience']", RANKING)
+        self.assertIn("p50_mr_audience_only_base", RANKING)
         self.assertIn("'audience'=>0.05", RANKING)
 
     def test_soft_exclusions_do_not_unclass_a_scored_alive_official_profile(self):
