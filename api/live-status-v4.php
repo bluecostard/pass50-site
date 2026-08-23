@@ -5,7 +5,7 @@ require __DIR__.'/bootstrap.php';
 require __DIR__.'/data-engine-core.php';
 require __DIR__.'/live-radar-v4-core.php';
 require_method('GET');
-set_time_limit(60);
+set_time_limit(120);
 
 try { db()->exec("SET time_zone = '+00:00'"); } catch (Throwable) {}
 
@@ -172,6 +172,17 @@ if($canScan&&$selected&&$lock){
             p50_de_set_setting(p50_live_v4_cycle_key((string)$cycleId),$manifest);
             if($cycleComplete)p50_de_set_setting('live_radar_v4_last_full_sweep',['completedAt'=>gmdate(DATE_ATOM),'total'=>$cycleTotal,'found'=>$cycleFound,'candidates'=>$cycleCandidates]);
         }
+    }catch(Throwable $error){
+        error_log('PASS50 live radar scan: '.substr($error->getMessage(),0,300));
+        $diagnostics[]=[
+            'profileId'=>'','name'=>'scan_pass','platform'=>'',
+            'state'=>'unknown','publicState'=>'unknown',
+            'lastCheckedAt'=>gmdate(DATE_ATOM),'lastConfirmedAt'=>null,
+            'continuityPreserved'=>false,'trustGate'=>P50_LIVE_V4_TRUST_REVISION,
+            'withdrawalReason'=>'scan_pass_exception','confidence'=>0,
+            'error'=>substr($error->getMessage(),0,180),'evidence'=>[],'probes'=>[],
+        ];
+        // Ne pas faire échouer toute la passe : le snapshot public reste servi.
     }finally{
         try{db()->query("SELECT RELEASE_LOCK('pass50_live_radar_v4')");}catch(Throwable){}
     }

@@ -2,7 +2,7 @@
 'use strict';
 
 const ENDPOINT='./api/live-status.php';
-const QUICK_INTERVAL=30_000;
+const QUICK_INTERVAL=20_000;
 const FULL_CYCLE_KEY='pass50_live_radar_v4_cycle';
 const DEFAULT_TRUST_SECONDS={TikTok:0,Facebook:600,YouTube:0,Instagram:600};
 const PLATFORM_PRIORITY=['TikTok','Facebook','YouTube','Instagram'];

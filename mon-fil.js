@@ -884,10 +884,10 @@
     await Promise.all([refreshFeed(), refreshRadar()]);
     restoreFeedOrigin();
     if (typeof window.PASS50_RUN_LIVE_RADAR === 'function') {
-      setTimeout(() => window.PASS50_RUN_LIVE_RADAR(false), 2500);
+      setTimeout(() => window.PASS50_RUN_LIVE_RADAR(false), 0);
     }
     setInterval(syncLiveUi, 5000);
-    setInterval(refreshRadar, 30000);
+    setInterval(refreshRadar, 20000);
     setInterval(() => refreshFeed({ silent: true }), 60000);
     window.PASS50_FOLLOW_FEED_PAGE = Object.freeze({ contract: CONTRACT, maxFollowed: MAX_FOLLOWED, newsPerProfile: NEWS_PER_PROFILE, duelAudio: true });
   }
