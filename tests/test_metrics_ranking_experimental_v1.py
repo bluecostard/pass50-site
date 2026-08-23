@@ -14,7 +14,7 @@ WORKFLOW = (ROOT / ".github/workflows/validate-metrics-ranking-experimental-v1.y
 
 class MetricsRankingExperimentalV1Tests(unittest.TestCase):
     def test_algorithm_periods_and_exact_weights(self):
-        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.4'", CORE)
+        self.assertIn("P50_MR_ALGORITHM_VERSION='MR-V1.5'", CORE)
         for key, hours in (("2H", 2), ("24H", 24), ("48H", 48), ("7J", 168), ("15J", 360)):
             self.assertIn(f"'{key}'=>{hours}", CORE)
         weights = [0.05, 0.28, 0.18, 0.16, 0.18, 0.12, 0.03]
@@ -103,17 +103,19 @@ class MetricsRankingExperimentalV1Tests(unittest.TestCase):
         self.assertIn("$periodKey==='2H'&&!$recentActivity", period)
         self.assertNotIn("$shortFallback", period)
 
-    def test_audience_never_expands_beyond_five_percent(self):
+    def test_audience_never_expands_beyond_five_percent_in_blended_mix(self):
         period = self._function("p50_mr_period_rows")
         self.assertIn("if($feature==='audience')continue", period)
         self.assertIn("$dynamicWeighted/$dynamicWeightSum", period)
         self.assertIn("$dynamicBase*(1-$weights['audience'])", period)
         self.assertIn("$audiencePercentile*$weights['audience']", period)
         self.assertIn("if($dynamicWeightSum<=0)", period)
+        self.assertIn("p50_mr_audience_only_base((float)$audiencePercentile,$periodKey)", period)
         self.assertNotIn("if($dynamicWeightSum<=0)continue", period)
         self.assertIn("if($audiencePercentile===null)continue", period)
         self.assertNotIn("$weighted/$weightSum", period)
         self.assertIn("'audience'=>0.05", CORE)
+        self.assertIn("P50_MR_AUDIENCE_PRESENCE_CAP_SHORT = 30.0", CORE)
         self.assertIn("'velocity'=>0.18", CORE)
         self.assertNotIn("'audience'=>0.07", CORE)
 
