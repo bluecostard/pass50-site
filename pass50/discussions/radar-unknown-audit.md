@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-23 21:40 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7677334783362091809 · 17641 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7677315703598304033 · 1150 viewers
+- TikTok `tma` @tmacrush_officiel — 7677316043026877200 · 3499 viewers
+
 ### 2026-08-23 18:51 UTC
 
 - Unknown sondés : **200**
@@ -338,16 +350,3 @@ Nouveaux P0 :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-08-18 14:16 UTC
-
-- Unknown sondés : **183**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **1**
-
-Vraiment en live :
-- TikTok `hamondchic` @coachhamond — Allô yougoss · 10507 viewers
-
-Nouveaux P0 :
-- TikTok `hamondchic`
