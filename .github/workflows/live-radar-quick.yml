@@ -2,7 +2,7 @@ name: PASS50 Live Radar Quick
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
   push:
     branches: [main]

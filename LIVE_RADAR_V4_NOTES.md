@@ -2,6 +2,17 @@
 
 Cette version stabilise la chaîne de données LIVE sans modifier le classement public.
 
+## Autonomie 24/7 (RÈGLE FIGÉE)
+
+**`PASS50_LIVE_RADAR_AUTONOMY_V1`** — ne pas affaiblir :
+
+1. La détection tourne **24 h/24 côté serveur**, même si l’app, l’onglet ou le owner est éteint.
+2. Tick cible **1 seconde** : le job GitHub `live-radar-p0` boucle ~280 s à 1 Hz (schedule `*/5` = plancher GitHub).
+3. Le client (`live-radar-v3.js`) lit uniquement `mode=status` (cache) ; il **ne détecte pas**.
+4. Contrat machine : `GET /api/live-radar-contract.php` → `autonomy.requiresAppOpen === false`.
+
+Cadences serveur associées : full sweep `*/5`, quick `*/5`, audit unknown `*/3 h`.
+
 ## Chaîne couverte
 
 1. lien officiel vérifié ;

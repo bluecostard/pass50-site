@@ -56,7 +56,7 @@ class LiveTrustGateV1Tests(unittest.TestCase):
         self.assertNotIn('event.preventDefault()', CLIENT)
         self.assertIn('ensureLiveTrustGate', RADAR)
         self.assertIn('live-trust-gate-v1.js?v=1.5', RADAR + SW + CONFIG)
-        self.assertIn("live-radar-v3.js?v=1.13", CONFIG + SW)
+        self.assertIn("live-radar-v3.js?v=1.14", CONFIG + SW)
 
     def test_contract_exposes_trust_gate(self):
         self.assertIn("'trustGate'=>P50_LIVE_V4_TRUST_REVISION", CONTRACT)

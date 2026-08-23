@@ -161,7 +161,8 @@ async function fetchRadar(params){
 }
 
 async function runQuick(){
-  // Poll cache-only : les scrapes massifs restent sur cron / bouton full / admin.
+  // RÈGLE FIGÉE PASS50_LIVE_RADAR_AUTONOMY_V1 :
+  // le client ne lit que le cache. La détection 24/7 (tick 1 s) tourne hors app (cron serveur).
   if(runningMode||document.hidden)return null;
   runningMode='status';
   try{return await fetchRadar({mode:'status',batch:RADAR_BATCH_SIZE});}
