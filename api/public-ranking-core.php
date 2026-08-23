@@ -35,13 +35,24 @@ function p50_public_ranking_scores(array $profile): array {
     return $scores;
 }
 
+function p50_public_ranking_canonical_name(array $profile): string {
+    $name = trim((string)($profile['name'] ?? ''));
+    $id = (string)($profile['id'] ?? '');
+    $handle = strtolower(ltrim((string)($profile['handle'] ?? ''), '@'));
+    $folded = strtolower((string)preg_replace('/[^a-z0-9]+/i', '', $name));
+    if ($id === 'census-sarara-messan' || $handle === 'sarra_messan' || in_array($folded, ['sarara', 'sararamessan', 'sarramessan'], true)) {
+        return 'Sara';
+    }
+    return $name;
+}
+
 function p50_public_ranking_row(array $profile, int $rank, string $period): array {
     $scores = p50_public_ranking_scores($profile);
     $badges = array_values(array_filter(array_map('strval', (array)($profile['badges'] ?? []))));
     return [
         'rank' => $rank,
         'id' => (string)($profile['id'] ?? ''),
-        'name' => (string)($profile['name'] ?? ''),
+        'name' => p50_public_ranking_canonical_name($profile),
         'handle' => (string)($profile['handle'] ?? ''),
         'initials' => (string)($profile['initials'] ?? ''),
         'category' => (string)($profile['category'] ?? ''),
@@ -150,6 +161,17 @@ function p50_public_ranking_load(PDO $pdo): ?array {
     $data['ok'] = true;
     $data['contract'] = P50_PUBLIC_RANKING_CONTRACT;
     $data['cached'] = true;
+    foreach ((array)($data['periods'] ?? []) as $period => $rows) {
+        if (!is_array($rows)) {
+            continue;
+        }
+        foreach ($rows as $index => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $data['periods'][$period][$index]['name'] = p50_public_ranking_canonical_name($row);
+        }
+    }
     return $data;
 }
 

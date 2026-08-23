@@ -1809,8 +1809,8 @@
   },
   {
     "id": "census-sarara-messan",
-    "name": "Sarara Messan",
-    "known_alias": "",
+    "name": "Sara",
+    "known_alias": "Sara / Sara Messan / Sarra Messan / @sarra_messan",
     "entity_type": "Personne",
     "zone": "CI",
     "category": "Humour",
@@ -1818,13 +1818,15 @@
     "verification_priority": "P2",
     "eligible": false,
     "classable": false,
-    "official_socials": {},
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@sarra_messan"
+    },
     "source": {
       "publisher": "Pulse Côte d’Ivoire",
       "date": "2025-03-11",
       "url": "https://www.pulse.ci/article/lhumour-adn-de-livoirien-quand-rire-devient-un-art-de-vivre-2025031112223351393"
     },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
+    "notes": "Nom public : Sara (pas Sarara). Compte TikTok @sarra_messan. Date de naissance non confirmée."
   },
   {
     "id": "census-papa-ado",

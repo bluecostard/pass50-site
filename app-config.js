@@ -412,6 +412,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Sara (TikTok @sarra_messan) — nom public Sara, pas Sarara.
+(function () {
+  if (document.querySelector('script[data-pass50-profile-sara]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-sara.js?v=1.0';
+  script.dataset.pass50ProfileSara = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Lise Akrassi.
 (function () {
   if (document.querySelector('script[data-pass50-profile-lise-akrassi]')) return;

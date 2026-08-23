@@ -23,6 +23,7 @@ HASSAN = (ROOT / "profile-hassan-hayek.js").read_text(encoding="utf-8")
 BICONGO = (ROOT / "profile-le-grand-bicongo.js").read_text(encoding="utf-8")
 CHOCOLAT = (ROOT / "profile-chocolat-show-officiel.js").read_text(encoding="utf-8")
 LA_LEGENDE = (ROOT / "profile-la-legende.js").read_text(encoding="utf-8")
+SARA = (ROOT / "profile-sara.js").read_text(encoding="utf-8")
 
 
 def extract_function(source, name):
@@ -68,7 +69,7 @@ class PlausibleBirthAgeV1Tests(unittest.TestCase):
         self.assertIn("p50BirthDateIsPlausible(date)", UI)
 
     def test_new_census_fiches_do_not_seed_2026_as_birth(self):
-        for source in (ROSEMARK, JIAAN, SAMUELLA, LEXES, ANGE, JPNDA, DANIEL, AKA, BB_SANS_OS, HASSAN, BICONGO, CHOCOLAT, LA_LEGENDE):
+        for source in (ROSEMARK, JIAAN, SAMUELLA, LEXES, ANGE, JPNDA, DANIEL, AKA, BB_SANS_OS, HASSAN, BICONGO, CHOCOLAT, LA_LEGENDE, SARA):
             self.assertIn("birthDate:null", source)
             self.assertIn("birthYear:null", source)
             self.assertIn("ageStatus:'unconfirmed'", source)

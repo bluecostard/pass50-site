@@ -16,6 +16,7 @@ class PublicRankingAppV1Tests(unittest.TestCase):
         self.assertIn("p50_public_ranking_build", core)
         self.assertIn("p50_public_ranking_persist", core)
         self.assertIn("p50_public_ranking_response", core)
+        self.assertIn("p50_public_ranking_canonical_name", core)
         self.assertIn("public_ranking", core)
         self.assertIn("'2H', '24H', '48H', '7J', '15J'", core)
         self.assertIn("P50_PUBLIC_RANKING_LIMIT = 50", core)

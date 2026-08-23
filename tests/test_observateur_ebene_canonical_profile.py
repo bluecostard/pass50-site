@@ -8,5 +8,5 @@ class ObservateurEbeneCanonicalProfileTests(unittest.TestCase):
  def test_profile(self):
   p=next(x for x in CENSUS if x.get('id')=='census-observateur-ebene');self.assertEqual(p['birth_date'],'1989-07-04');self.assertFalse(p['classable']);self.assertEqual(p['official_socials']['TikTok'],'https://www.tiktok.com/@observateur_ebene')
  def test_revision(self):
-  self.assertIn("CENSUS_VERSION='99-v33'",V9)
+  self.assertIn("CENSUS_VERSION='99-v34'",V9)
 if __name__=='__main__':unittest.main()

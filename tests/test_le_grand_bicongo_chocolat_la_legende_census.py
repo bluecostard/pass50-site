@@ -131,11 +131,11 @@ class LeGrandBicongoChocolatLaLegendeCensusTests(unittest.TestCase):
             self.assertIn(tag, self.sw)
 
     def test_browser_loads_census_revision(self):
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.16", self.v9)
-        self.assertIn("CENSUS_VERSION='99-v33'", self.v9)
-        self.assertIn("v9-tools.js?v=15.35", self.index)
-        self.assertIn("v9-tools.js?v=15.35", self.sw)
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.16", self.sw)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.17", self.v9)
+        self.assertIn("CENSUS_VERSION='99-v34'", self.v9)
+        self.assertIn("v9-tools.js?v=15.36", self.index)
+        self.assertIn("v9-tools.js?v=15.36", self.sw)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.17", self.sw)
 
 
 if __name__ == "__main__":

@@ -601,8 +601,8 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
    leurs comptes et leurs métriques n'ont pas été vérifiés. */
 (function(){
   'use strict';
-  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.16';
-  const CENSUS_VERSION='99-v33';
+  const CENSUS_URL='./pass50_nouveaux_candidats_90_v19.json?v=22.17';
+  const CENSUS_VERSION='99-v34';
   let importing=false;
 
   function p50CensusNormalize(value=''){
@@ -689,6 +689,14 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
         profileItem.initials='CN';
         profileItem.category='Beauté / Lifestyle / Mode';
         profileItem.knownAlias='Louisette Cadic';
+      }
+      const saraName=p50CensusNormalize(profileItem.name);
+      const saraHandle=p50CensusNormalize(profileItem.handle);
+      if(profileItem.id==='census-sarara-messan'||['sarara','sararamessan','sarramessan'].includes(saraName)||saraHandle==='sarramessan'){
+        profileItem.name='Sara';
+        profileItem.handle=profileItem.handle||'@sarra_messan';
+        profileItem.initials=profileItem.initials||'S';
+        profileItem.knownAlias='Sara / Sara Messan / Sarra Messan / @sarra_messan';
       }
     });
 

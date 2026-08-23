@@ -398,7 +398,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'dbz','name'=>'DBZ','handle'=>'dbz.07'],
         ['id'=>'maabio','name'=>'Maabio','handle'=>'biodetoxminceur'],
         ['id'=>'p_1785175190809','name'=>'Ulrich Jordan','handle'=>'ulrich_jordan30'],
-        ['id'=>'census-sarara-messan','name'=>'Sarara Messan','handle'=>'sarra_messan'],
+        ['id'=>'census-sarara-messan','name'=>'Sara','handle'=>'sarra_messan'],
         ['id'=>'louissette','name'=>'Cadic N’Guessan','handle'=>'misscadic'],
         ['id'=>'aya-robert','name'=>'Aya Robert','handle'=>'aya.robert27'],
         ['id'=>'hamondchic','name'=>'Coach Hamond Chic','handle'=>'coachhamond'],
