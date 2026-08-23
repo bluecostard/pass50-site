@@ -101,8 +101,20 @@ function applyProfile(){
   return true;
 }
 
-function tick(){attempts++;const ready=applyProfile();if((ready&&window.__pass50CloudReady)||attempts>=240)clearInterval(timer);}
+function tick(){
+  attempts++;
+  const ready=applyProfile();
+  if(attempts>=240){clearInterval(timer);return;}
+  if(ready&&window.__pass50CloudReady){
+    clearInterval(timer);
+    setTimeout(applyProfile,800);
+  }
+}
 const timer=setInterval(tick,500);
 document.addEventListener('DOMContentLoaded',tick);
 window.addEventListener('load',tick,{once:true});
+window.addEventListener('pass50:cloud-ready',function(){
+  applyProfile();
+  setTimeout(applyProfile,800);
+});
 })();

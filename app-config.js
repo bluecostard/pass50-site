@@ -389,8 +389,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-le-grand-bicongo]')) return;
   var script = document.createElement('script');
-  script.src = './profile-le-grand-bicongo.js?v=1.0';
-  script.dataset.pass50ProfileLeGrandBicongo = '1.0';
+  script.src = './profile-le-grand-bicongo.js?v=1.1';
+  script.dataset.pass50ProfileLeGrandBicongo = '1.1';
   document.head.appendChild(script);
 })();
 
@@ -398,8 +398,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-chocolat-show]')) return;
   var script = document.createElement('script');
-  script.src = './profile-chocolat-show-officiel.js?v=1.0';
-  script.dataset.pass50ProfileChocolatShow = '1.0';
+  script.src = './profile-chocolat-show-officiel.js?v=1.1';
+  script.dataset.pass50ProfileChocolatShow = '1.1';
   document.head.appendChild(script);
 })();
 
@@ -407,8 +407,8 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   if (document.querySelector('script[data-pass50-profile-la-legende]')) return;
   var script = document.createElement('script');
-  script.src = './profile-la-legende.js?v=1.0';
-  script.dataset.pass50ProfileLaLegende = '1.0';
+  script.src = './profile-la-legende.js?v=1.1';
+  script.dataset.pass50ProfileLaLegende = '1.1';
   document.head.appendChild(script);
 })();
 

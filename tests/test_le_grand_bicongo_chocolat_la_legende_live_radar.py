@@ -79,7 +79,7 @@ class LeGrandBicongoChocolatLaLegendeLiveRadarTests(unittest.TestCase):
 
     def test_cache_bust_loaders(self):
         for spec in PROFILES:
-            tag = f"./{spec['overlay']}?v=1.0"
+            tag = f"./{spec['overlay']}?v=1.1"
             self.assertIn(tag, CONFIG)
             self.assertIn(tag, SW)
 

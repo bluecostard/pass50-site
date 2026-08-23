@@ -126,16 +126,25 @@ class LeGrandBicongoChocolatLaLegendeCensusTests(unittest.TestCase):
 
     def test_loaders_are_cache_busted(self):
         for spec in PROFILES:
-            tag = f"./{spec['overlay']}?v=1.0"
+            tag = f"./{spec['overlay']}?v=1.1"
             self.assertIn(tag, self.config)
             self.assertIn(tag, self.sw)
 
     def test_browser_loads_census_revision(self):
         self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.17", self.v9)
         self.assertIn("CENSUS_VERSION='99-v34'", self.v9)
-        self.assertIn("v9-tools.js?v=15.36", self.index)
-        self.assertIn("v9-tools.js?v=15.36", self.sw)
+        self.assertIn("v9-tools.js?v=15.37", self.index)
+        self.assertIn("v9-tools.js?v=15.37", self.sw)
         self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.17", self.sw)
+
+    def test_profiles_survive_cloud_hydrate(self):
+        self.assertIn("'pass50:cloud-ready'", self.index)
+        self.assertIn("120000", self.v9)
+        for spec in PROFILES:
+            self.assertIn(f'"id":"{spec["id"]}"', self.v9)
+            source = self.overlays[spec["id"]]
+            self.assertIn("'pass50:cloud-ready'", source)
+            self.assertIn("setTimeout(applyProfile,800)", source)
 
 
 if __name__ == "__main__":

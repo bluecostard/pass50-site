@@ -239,7 +239,7 @@
 <div class="modal" id="voteShareModal"><div class="modal-box" style="width:min(1080px,98vw)"><div class="modal-head"><strong>PARTAGER MON VOTE</strong><button class="close" data-close="voteShareModal">×</button></div><div class="modal-body" id="voteShareBody"></div></div></div>
 <div class="toast" id="toast"></div><div class="record-toast" id="recordToast">🏆 Nouveau record</div>
 
-<script src="./app-config.js"></script>
+<script src="./app-config.js?v=1.1"></script>
 <script src="./pass50-auth-session.js?v=1.0"></script>
 <script>
 'use strict';
@@ -541,6 +541,7 @@ async function restoreCloudSession(){
 }
 function finishCloudBoot(){
   CLOUD.ready=true;window.__pass50CloudReady=true;endBootSettling();scheduleRender({immediate:true});
+  try{window.dispatchEvent(new Event('pass50:cloud-ready'));}catch(_){}
 }
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function liveTrustMs(platform){
@@ -1392,7 +1393,7 @@ async function submitAuth(form){
       }else{
         const loginBody={email,password};if(typeof P50Auth!=='undefined')loginBody.deviceId=P50Auth.getDeviceId();
         const data=await apiFetch('login.php',{method:'POST',body:loginBody,auth:false});
-        CLOUD.token=data.token;if(typeof P50Auth!=='undefined')P50Auth.setToken(CLOUD.token);else localStorage.setItem('pass50_api_token',CLOUD.token);const notes=await loadCloudNotifications();hydrateApiUser(data.user,notes);CLOUD.ready=true;window.__pass50CloudReady=true;close('authModal');toast('Connexion réussie');render();openUser();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
+        CLOUD.token=data.token;if(typeof P50Auth!=='undefined')P50Auth.setToken(CLOUD.token);else localStorage.setItem('pass50_api_token',CLOUD.token);const notes=await loadCloudNotifications();hydrateApiUser(data.user,notes);CLOUD.ready=true;window.__pass50CloudReady=true;try{window.dispatchEvent(new Event('pass50:cloud-ready'));}catch(_){}close('authModal');toast('Connexion réussie');render();openUser();if(typeof window.p50AdminNotificationsStart==='function')window.p50AdminNotificationsStart();
       }
       return;
     }catch(err){console.error(err);return toast(err?.message||'Connexion impossible');}
@@ -1937,7 +1938,7 @@ initCloud();
 
 </script>
   <script src="./public-ui-sanitizer-v1.js?v=1.1"></script>
-<script src="./v9-tools.js?v=15.36"></script>
+<script src="./v9-tools.js?v=15.37"></script>
 <script src="./pronostics-coules-tab-v1.js?v=1.2" data-pass50-prono-coules-tab="1.2"></script>
 </body>
 </html>
