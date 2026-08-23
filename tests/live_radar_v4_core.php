@@ -143,7 +143,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane','census-daniel-m','census-akalajoie','ennemi-des-djandjou','census-isouch','census-bb-sans-os-de-man'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane','census-daniel-m','census-akalajoie','ennemi-des-djandjou','census-isouch','census-bb-sans-os-de-man','hassan'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -268,6 +268,13 @@ must(p50_live_v4_canonical_profile_id('ghost','TikTok','ennemidesdjandjou')==='e
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','prince_du_pays')==='census-isouch','@prince_du_pays reste Isouch.');
 must(p50_live_v4_canonical_profile_id('ennemi-des-djandjou','TikTok','prince_du_pays')==='census-isouch','Isouch ne fusionne pas sur Ennemi des Djandjou.');
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','bebe.sans.os.de.m')==='census-bb-sans-os-de-man','@bebe.sans.os.de.m est BB Sans Os de Man.');
+must(p50_live_v4_canonical_profile_id('ghost','TikTok','hassanhayekofficiel')==='hassan','@hassanhayekofficiel est Hassan Hayek.');
+must(p50_live_v4_canonical_profile_id('ghost','TikTok','hassanhayek')==='hassan','@hassanhayek reste Hassan Hayek.');
+
+$hassanSource=['profile_id'=>'hassan','public_name'=>'Hassan Hayek','platform'=>'TikTok','url'=>'https://www.tiktok.com/@hassanhayekofficiel'];
+$hassanLive=p50_live_v4_parse_tiktok($hassanSource,['api_webcast'=>response('{"data":{"status":2,"id":7677247476674824980,"id_str":"7677247476674824980","title":"Ouech","user_count":333,"owner":{"display_id":"hassanhayekofficiel","nickname":"hassanhayekofficiel"}},"status_code":0}')]);
+must($hassanLive['state']==='live','Hassan Hayek webcast status=2 doit publier le LIVE.');
+must(($hassanLive['live']['metadata']['roomId']??'')==='7677247476674824980','Le roomId Hassan Hayek doit être conservé.');
 
 $bbSource=['profile_id'=>'census-bb-sans-os-de-man','public_name'=>'BB Sans Os de Man','platform'=>'TikTok','url'=>'https://www.tiktok.com/@bebe.sans.os.de.m'];
 $bbLive=p50_live_v4_parse_tiktok($bbSource,['api_webcast'=>response('{"data":{"status":2,"id":7677011297735707413,"id_str":"7677011297735707413","title":"En direct","user_count":731,"owner":{"display_id":"bebe.sans.os.de.m","nickname":"BÉBÉ SANS OS DE MAN OFFICIEL"}},"status_code":0}')]);

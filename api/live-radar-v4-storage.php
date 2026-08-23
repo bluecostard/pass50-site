@@ -235,6 +235,10 @@ function p50_live_v4_dedup(array $automatic,array $manual): array {
                 $stream['profileName']='BB Sans Os de Man';
                 if(trim($handle)==='')$stream['handle']='@bebe.sans.os.de.m';
             }
+            if($canonical==='hassan'){
+                $stream['profileName']='Hassan Hayek';
+                if(trim($handle)==='')$stream['handle']='@hassanhayekofficiel';
+            }
         }
         $normalized[]=$stream;
     }

@@ -165,6 +165,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('samuellakouassiofficiel', source)
         self.assertIn("'census-bb-sans-os-de-man'", source)
         self.assertIn('bebe.sans.os.de.m', source)
+        self.assertIn("'hassan'", source)
+        self.assertIn('hassanhayekofficiel', source)
         self.assertIn('coachhamond', source)
         self.assertIn("'census-observateur-ebene'", source)
         self.assertIn("'oustaz-diane'", source)

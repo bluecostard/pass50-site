@@ -376,6 +376,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Hassan Hayek (TikTok @hassanhayekofficiel).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-hassan-hayek]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-hassan-hayek.js?v=1.0';
+  script.dataset.pass50ProfileHassanHayek = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Lise Akrassi.
 (function () {
   if (document.querySelector('script[data-pass50-profile-lise-akrassi]')) return;

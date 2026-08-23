@@ -42,6 +42,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'ennemi-des-djandjou',
     'census-isouch',
     'census-bb-sans-os-de-man',
+    'hassan',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -161,6 +162,8 @@ function p50_live_v4_tiktok_handle_canonicals(): array {
         'prince_du_pays'=>'census-isouch',
         'bebe.sans.os.de.m'=>'census-bb-sans-os-de-man',
         'bebe_sans_os'=>'census-bb-sans-os-de-man',
+        'hassanhayekofficiel'=>'hassan',
+        'hassanhayek'=>'hassan',
     ];
 }
 
@@ -209,6 +212,10 @@ function p50_live_v4_collapse_identity_sources(array $sources): array {
                 if($canonical==='census-bb-sans-os-de-man'){
                     $source['public_name']='BB Sans Os de Man';
                     $source['handle']='@bebe.sans.os.de.m';
+                }
+                if($canonical==='hassan'){
+                    $source['public_name']='Hassan Hayek';
+                    $source['handle']='@hassanhayekofficiel';
                 }
                 $id=$canonical;
             }
@@ -307,6 +314,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'ennemi-des-djandjou|facebook'=>'https://www.facebook.com/profile.php?id=61582125968813',
         'census-isouch|tiktok'=>'https://www.tiktok.com/@prince_du_pays',
         'census-bb-sans-os-de-man|tiktok'=>'https://www.tiktok.com/@bebe.sans.os.de.m',
+        'hassan|tiktok'=>'https://www.tiktok.com/@hassanhayekofficiel',
     ];
     return $overrides[$key]??$url;
 }
@@ -391,6 +399,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'ennemi-des-djandjou','name'=>'Ennemi des Djandjou','handle'=>'ennemidesdjandjou'],
         ['id'=>'census-isouch','name'=>'Isouch','handle'=>'prince_du_pays'],
         ['id'=>'census-bb-sans-os-de-man','name'=>'BB Sans Os de Man','handle'=>'bebe.sans.os.de.m'],
+        ['id'=>'hassan','name'=>'Hassan Hayek','handle'=>'hassanhayekofficiel'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
