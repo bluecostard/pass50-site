@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-23 07:06 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
+
 ### 2026-08-23 04:05 UTC
 
 - Unknown sondés : **200**
@@ -380,15 +390,3 @@ Nouveaux P0 (seed radar, rescan ~2 min) :
 ### 2026-08-18 05:03 UTC
 
 Erreur : `GET HTTP 404`
-
-### 2026-08-18 00:47 UTC
-
-Contrôle webcast des 11 comptes P0 déjà en liste (avant le premier cron prod).
-
-- Unknown sondés : **11**
-- Vraiment en live : **1**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-jordan-evraa` @realjordanevraa — Goumin tv, causerie ou Q/A · 141 viewers
