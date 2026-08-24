@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-24 04:10 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `ennemi-des-djandjou` @ennemidesdjandjou — 🥷🏻ENNEMI DES DJANDJOU 🥷🏻
+
 ### 2026-08-24 02:00 UTC
 
 - Unknown sondés : **200**
@@ -346,14 +356,6 @@ Nouveaux P0 :
 ### 2026-08-18 21:57 UTC
 
 - Unknown sondés : **91**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-08-18 19:42 UTC
-
-- Unknown sondés : **99**
 - Vraiment en live : **0**
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
