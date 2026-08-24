@@ -1,44 +1,66 @@
 {
-  "at": "2026-08-23 21:40 UTC",
+  "at": "2026-08-24 02:00 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 5,
   "lives": [
     {
-      "profileId": "apoutchou",
+      "profileId": "aya-robert",
       "platform": "TikTok",
-      "roomId": "7677334783362091809",
+      "roomId": "7677389443908520737",
       "title": "",
-      "viewers": 17641,
-      "startedAt": "2026-08-23 21:01:22",
-      "handle": "apoutchou_national1"
+      "viewers": 2293,
+      "startedAt": "2026-08-24 00:33:59",
+      "handle": "aya.robert27"
+    },
+    {
+      "profileId": "census-isouch",
+      "platform": "TikTok",
+      "roomId": "7677403931957267233",
+      "title": "",
+      "viewers": 843,
+      "startedAt": "2026-08-24 01:30:57",
+      "handle": "prince_du_pays"
+    },
+    {
+      "profileId": "census-samuella-kouassi",
+      "platform": "TikTok",
+      "roomId": "7677367737585617697",
+      "title": "Lets Go LIVE!",
+      "viewers": 2069,
+      "startedAt": "2026-08-23 23:09:13",
+      "handle": "samuellakouassiofficiel"
     },
     {
       "profileId": "dez-cocrane225",
       "platform": "TikTok",
       "roomId": "7677315703598304033",
       "title": "",
-      "viewers": 1150,
+      "viewers": 506,
       "startedAt": "2026-08-23 19:46:47",
       "handle": "dezcocrane.225"
     },
     {
-      "profileId": "tma",
+      "profileId": "ennemi-des-djandjou",
       "platform": "TikTok",
-      "roomId": "7677316043026877200",
+      "roomId": "7677372195979086613",
       "title": "",
-      "viewers": 3499,
-      "startedAt": "2026-08-23 19:47:39",
-      "handle": "tmacrush_officiel"
+      "viewers": 2344,
+      "startedAt": "2026-08-23 23:25:31",
+      "handle": "ennemidesdjandjou"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 4,
     "added": [],
     "stored": [
       {
-        "profileId": "apoutchou",
+        "profileId": "aya-robert",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-samuella-kouassi",
         "platform": "TikTok"
       },
       {
@@ -46,11 +68,17 @@
         "platform": "TikTok"
       },
       {
-        "profileId": "tma",
+        "profileId": "ennemi-des-djandjou",
         "platform": "TikTok"
       }
     ],
-    "skipped": [],
+    "skipped": [
+      {
+        "profileId": "census-isouch",
+        "platform": "TikTok",
+        "error": "not_publishable"
+      }
+    ],
     "p0Count": 10
   },
   "enabled": true,
