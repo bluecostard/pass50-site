@@ -9,10 +9,15 @@ on:
       - 'api/metrics-ranking-publication-core.php'
       - 'api/metrics-ranking.php'
       - 'api/metrics-ranking-cron.php'
+      - 'api/data-hub.php'
+      - 'api/data-publish.php'
+      - 'api/data-engine-core.php'
+      - 'index.html'
       - 'data-engine-ui.js'
       - '.github/workflows/metrics-ranking-publication-apply-bootstrap.yml'
       - 'tests/test_metrics_ranking_publication_apply_v1.py'
       - 'tests/test_metrics_ranking_publication_post_calc_v1.py'
+      - 'tests/test_data_hub_resilience_v1.py'
       - '.github/workflows/validate-metrics-ranking-publication-apply-safety-v1.yml'
   push:
     branches: [main]
@@ -23,10 +28,15 @@ on:
       - 'api/metrics-ranking-publication-core.php'
       - 'api/metrics-ranking.php'
       - 'api/metrics-ranking-cron.php'
+      - 'api/data-hub.php'
+      - 'api/data-publish.php'
+      - 'api/data-engine-core.php'
+      - 'index.html'
       - 'data-engine-ui.js'
       - '.github/workflows/metrics-ranking-publication-apply-bootstrap.yml'
       - 'tests/test_metrics_ranking_publication_apply_v1.py'
       - 'tests/test_metrics_ranking_publication_post_calc_v1.py'
+      - 'tests/test_data_hub_resilience_v1.py'
       - '.github/workflows/validate-metrics-ranking-publication-apply-safety-v1.yml'
 
 permissions:
@@ -48,10 +58,14 @@ jobs:
           php -l api/metrics-ranking-publication-core.php
           php -l api/metrics-ranking.php
           php -l api/metrics-ranking-cron.php
+          php -l api/data-hub.php
+          php -l api/data-publish.php
+          php -l api/data-engine-core.php
       - name: Publication apply safety contract
         run: |
           python3 -m unittest tests.test_metrics_ranking_publication_apply_v1 -v
           python3 -m unittest tests.test_metrics_ranking_publication_post_calc_v1 -v
+          python3 -m unittest tests.test_data_hub_resilience_v1 -v
       - name: Retired recovery markers
         run: |
           test ! -e .github/workflows/metrics-ranking-publication-apply-bootstrap.yml

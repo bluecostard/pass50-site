@@ -2112,21 +2112,97 @@ function p50_de_capture_snapshots(string $period='2H'): int {
     return $count;
 }
 
+function p50_de_hub_batch_verified_facts(array $profileIds,int $threshold): array {
+    if(!$profileIds)return [];
+    $placeholders=implode(',',array_fill(0,count($profileIds),'?'));
+    $stmt=db()->prepare("SELECT profile_id,fact_key,normalized_value,confidence,evidence_count,source_types,verified_at FROM p50_facts WHERE profile_id IN ($placeholders) AND status='verified' AND confidence>=? ORDER BY profile_id,confidence DESC");
+    $stmt->execute([...$profileIds,$threshold]);
+    $out=[];
+    foreach($stmt->fetchAll() as $row){
+        $pid=(string)$row['profile_id'];
+        if(!isset($out[$pid][$row['fact_key']]))$out[$pid][$row['fact_key']]=$row;
+    }
+    return $out;
+}
+
+function p50_de_hub_batch_best_facts(array $profileIds,array $factKeys): array {
+    if(!$profileIds||!$factKeys)return [];
+    $pPlaceholders=implode(',',array_fill(0,count($profileIds),'?'));
+    $kPlaceholders=implode(',',array_fill(0,count($factKeys),'?'));
+    $stmt=db()->prepare("SELECT profile_id,fact_key,normalized_value,confidence,evidence_count,source_types,status,verified_at,last_seen_at FROM p50_facts WHERE profile_id IN ($pPlaceholders) AND fact_key IN ($kPlaceholders) ORDER BY profile_id,fact_key,(status='verified') DESC,confidence DESC,evidence_count DESC,last_seen_at DESC");
+    $stmt->execute([...$profileIds,...$factKeys]);
+    $out=[];
+    foreach($stmt->fetchAll() as $row){
+        $pid=(string)$row['profile_id'];$key=(string)$row['fact_key'];
+        if(!isset($out[$pid][$key]))$out[$pid][$key]=$row;
+    }
+    return $out;
+}
+
+function p50_de_hub_batch_social_links(array $profileIds): array {
+    if(!$profileIds)return [];
+    $placeholders=implode(',',array_fill(0,count($profileIds),'?'));
+    $stmt=db()->prepare("SELECT profile_id,platform,normalized_url url,confidence,evidence_count,source_types,status,validation_json,checked_at,verified_at FROM p50_social_links WHERE profile_id IN ($placeholders) ORDER BY profile_id,platform");
+    $stmt->execute($profileIds);
+    $out=[];
+    foreach($stmt->fetchAll() as $row){
+        $pid=(string)$row['profile_id'];
+        $row['sourceTypes']=decode_json_column($row['source_types']??null,[]);
+        $row['validation']=decode_json_column($row['validation_json']??null,[]);
+        unset($row['source_types'],$row['validation_json']);
+        $out[$pid][]=$row;
+    }
+    return $out;
+}
+
+function p50_de_hub_batch_last_runs(array $profileIds): array {
+    if(!$profileIds)return [];
+    $placeholders=implode(',',array_fill(0,count($profileIds),'?'));
+    $sql="SELECT r.profile_id,r.status,r.collector,r.started_at,r.finished_at,r.error_message,r.items_found,r.items_verified
+        FROM p50_collection_runs r
+        INNER JOIN (
+            SELECT profile_id,MAX(started_at) AS max_started
+            FROM p50_collection_runs
+            WHERE profile_id IN ($placeholders)
+            GROUP BY profile_id
+        ) latest ON r.profile_id=latest.profile_id AND r.started_at=latest.max_started";
+    $stmt=db()->prepare($sql);$stmt->execute($profileIds);
+    $out=[];
+    foreach($stmt->fetchAll() as $row)$out[(string)$row['profile_id']]=$row;
+    return $out;
+}
+
+function p50_de_hub_trend_candidate(array $stateProfile): array {
+    $cached=$stateProfile['dataEngine']['trend']??null;
+    if(is_array($cached)&&array_key_exists('score',$cached))return $cached;
+    return ['score'=>0,'classable'=>false,'events'=>0,'stale'=>true];
+}
+
 function p50_de_hub_payload(): array {
     p50_de_ensure_schema();
     p50_de_sync_registry_from_state();
     $state=p50_de_load_public_state();$stateMap=p50_de_profile_state_map($state);
-    $profiles=[];$threshold=p50_de_threshold();
-    foreach(p50_de_registry_profiles(null,1000,0,false) as $r){
+    $registry=p50_de_registry_profiles(null,1000,0,false);
+    $profileIds=array_values(array_map(static fn(array $r): string => (string)$r['profile_id'],$registry));
+    $threshold=p50_de_threshold();
+    $factKeys=['birth_date','photo_url','category','bio','education','nationality'];
+    $verifiedFactsByProfile=p50_de_hub_batch_verified_facts($profileIds,$threshold);
+    $bestFactsByProfile=p50_de_hub_batch_best_facts($profileIds,$factKeys);
+    $socialByProfile=p50_de_hub_batch_social_links($profileIds);
+    $lastRunsByProfile=p50_de_hub_batch_last_runs($profileIds);
+    $profiles=[];
+    foreach($registry as $r){
         $id=(string)$r['profile_id'];$sp=$stateMap[$id]??[];
-        $facts=p50_de_verified_facts($id);$social=p50_de_social_links($id,false);
-        $birthBest=p50_de_best_fact($id,'birth_date',1);
-        $photoBest=p50_de_best_fact($id,'photo_url',1);
-        $categoryBest=p50_de_best_fact($id,'category',1);
-        $bioBest=p50_de_best_fact($id,'bio',1);
-        $educationBest=p50_de_best_fact($id,'education',1);
-        $nationalityBest=p50_de_best_fact($id,'nationality',1);
-        $runStmt=db()->prepare('SELECT status,collector,started_at,finished_at,error_message,items_found,items_verified FROM p50_collection_runs WHERE profile_id=? ORDER BY started_at DESC LIMIT 1');$runStmt->execute([$id]);$lastRun=$runStmt->fetch()?:null;
+        $facts=$verifiedFactsByProfile[$id]??[];
+        $bestFacts=$bestFactsByProfile[$id]??[];
+        $social=$socialByProfile[$id]??[];
+        $birthBest=$bestFacts['birth_date']??null;
+        $photoBest=$bestFacts['photo_url']??null;
+        $categoryBest=$bestFacts['category']??null;
+        $bioBest=$bestFacts['bio']??null;
+        $educationBest=$bestFacts['education']??null;
+        $nationalityBest=$bestFacts['nationality']??null;
+        $lastRun=$lastRunsByProfile[$id]??null;
         $photoConfidence=((string)($sp['photoStatus']??'')==='validated')?100:(int)($photoBest['confidence']??0);
         $scoreConfidence=(int)($sp['quality']['score']??0);
         $liveConfidence=(int)($sp['quality']['live']??0);
@@ -2142,7 +2218,7 @@ function p50_de_hub_payload(): array {
             'quality'=>$qualities,'completeness'=>(int)round($complete/count($qualities)*100),
             'facts'=>$facts,'birthBest'=>$birthBest,'birthDate'=>(string)($birthBest['normalized_value']??''),'birthStatus'=>(string)($birthBest['status']??''),'photoBest'=>$photoBest,'categoryBest'=>$categoryBest,'bioBest'=>$bioBest,'nationalityBest'=>$nationalityBest,
             'socialLinks'=>$social,'verifiedSocialCount'=>$verifiedSocial,'lastRun'=>$lastRun,'educationBest'=>$educationBest,
-            'priorityWave'=>p50_de_is_priority_profile($id)?'V22-16':'','trendCandidate'=>p50_de_compute_trend_score($id),
+            'priorityWave'=>p50_de_is_priority_profile($id)?'V22-16':'','trendCandidate'=>p50_de_hub_trend_candidate($sp),
             'lastCollectedAt'=>$lastRun['finished_at']??null,
         ];
     }
