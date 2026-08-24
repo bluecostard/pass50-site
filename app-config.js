@@ -439,6 +439,25 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+
+// Profil recensé : Billal (TikTok @billal_off2).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-billal]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-billal.js?v=1.0';
+  script.dataset.pass50ProfileBillal = '1.0';
+  document.head.appendChild(script);
+})();
+
+// Profil recensé : Ange Boli (TikTok @angeboli7).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-ange-boli]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-ange-boli.js?v=1.0';
+  script.dataset.pass50ProfileAngeBoli = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Sara (TikTok @sarra_messan) — nom public Sara, pas Sarara.
 (function () {
   if (document.querySelector('script[data-pass50-profile-sara]')) return;

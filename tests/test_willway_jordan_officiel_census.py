@@ -87,11 +87,11 @@ class WillwayJordanOfficielCensusTests(unittest.TestCase):
         self.assertIn("./profile-willway-jordan-officiel.js?v=1.0", CONFIG)
         self.assertIn("./profile-willway-jordan-officiel.js?v=1.0", SW)
         self.assertIn(f'"id":"{PROFILE_ID}"', V9)
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.21", V9)
-        self.assertIn("CENSUS_VERSION='99-v38'", V9)
-        self.assertIn("v9-tools.js?v=15.42", INDEX)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.22", V9)
+        self.assertIn("CENSUS_VERSION='99-v39'", V9)
+        self.assertIn("v9-tools.js?v=15.43", INDEX)
         self.assertIn("v9-tools.js?v=15.41", SW)
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.21", SW)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.22", SW)
 
 
 if __name__ == "__main__":

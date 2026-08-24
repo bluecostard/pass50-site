@@ -263,6 +263,14 @@ function p50_live_v4_dedup(array $automatic,array $manual): array {
                 $stream['profileName']='Souley de Paris';
                 if(trim($handle)==='')$stream['handle']='@souleydeparis';
             }
+            if($canonical==='census-billal'){
+                $stream['profileName']='Billal';
+                if(trim($handle)==='')$stream['handle']='@billal_off2';
+            }
+            if($canonical==='census-ange-boli'){
+                $stream['profileName']='Ange Boli';
+                if(trim($handle)==='')$stream['handle']='@angeboli7';
+            }
         }
         $normalized[]=$stream;
     }

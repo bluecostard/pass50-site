@@ -56,6 +56,8 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-willway-jordan-officiel',
     'census-guyguy-le-grouilleur-de-bologne',
     'census-souley-de-paris',
+    'census-billal',
+    'census-ange-boli',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -183,6 +185,8 @@ function p50_live_v4_tiktok_handle_canonicals(): array {
         'jack.carter39'=>'census-willway-jordan-officiel',
         'guyguylegrouilleur07'=>'census-guyguy-le-grouilleur-de-bologne',
         'souleydeparis'=>'census-souley-de-paris',
+        'billal_off2'=>'census-billal',
+        'angeboli7'=>'census-ange-boli',
     ];
 }
 
@@ -259,6 +263,14 @@ function p50_live_v4_collapse_identity_sources(array $sources): array {
                 if($canonical==='census-souley-de-paris'){
                     $source['public_name']='Souley de Paris';
                     $source['handle']='@souleydeparis';
+                }
+                if($canonical==='census-billal'){
+                    $source['public_name']='Billal';
+                    $source['handle']='@billal_off2';
+                }
+                if($canonical==='census-ange-boli'){
+                    $source['public_name']='Ange Boli';
+                    $source['handle']='@angeboli7';
                 }
                 $id=$canonical;
             }
@@ -363,6 +375,8 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-willway-jordan-officiel|tiktok'=>'https://www.tiktok.com/@jack.carter39',
         'census-guyguy-le-grouilleur-de-bologne|tiktok'=>'https://www.tiktok.com/@guyguylegrouilleur07',
         'census-souley-de-paris|tiktok'=>'https://www.tiktok.com/@souleydeparis',
+        'census-billal|tiktok'=>'https://www.tiktok.com/@billal_off2',
+        'census-ange-boli|tiktok'=>'https://www.tiktok.com/@angeboli7',
     ];
     return $overrides[$key]??$url;
 }
@@ -453,6 +467,8 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-willway-jordan-officiel','name'=>'Willway Jordan officiel','handle'=>'jack.carter39'],
         ['id'=>'census-guyguy-le-grouilleur-de-bologne','name'=>'Guyguy le grouilleur de Bologne','handle'=>'guyguylegrouilleur07'],
         ['id'=>'census-souley-de-paris','name'=>'Souley de Paris','handle'=>'souleydeparis'],
+        ['id'=>'census-billal','name'=>'Billal','handle'=>'billal_off2'],
+        ['id'=>'census-ange-boli','name'=>'Ange Boli','handle'=>'angeboli7'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;

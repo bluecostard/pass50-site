@@ -9,13 +9,13 @@ V9 = (ROOT / "v9-tools.js").read_text(encoding="utf-8")
 INDEX = (ROOT / "index.html").read_text(encoding="utf-8")
 SW = (ROOT / "sw.js").read_text(encoding="utf-8")
 CONFIG = (ROOT / "app-config.js").read_text(encoding="utf-8")
-OVERLAY = (ROOT / "profile-guyguy-le-grouilleur-de-bologne.js").read_text(encoding="utf-8")
+OVERLAY = (ROOT / "profile-billal.js").read_text(encoding="utf-8")
 
-PROFILE_ID = "census-guyguy-le-grouilleur-de-bologne"
-NAME = "Guyguy le grouilleur de Bologne"
-HANDLE = "@guyguylegrouilleur07"
-TIKTOK = "https://www.tiktok.com/@guyguylegrouilleur07"
-OTHER_ID = "census-le-grouilleur-3-0"
+PROFILE_ID = "census-billal"
+NAME = "Billal"
+HANDLE = "@billal_off2"
+TIKTOK = "https://www.tiktok.com/@billal_off2"
+INSTAGRAM = "https://www.instagram.com/billal_off_1/"
 
 FORBIDDEN = (
     "influenceur",
@@ -23,18 +23,18 @@ FORBIDDEN = (
     "whatsapp",
     "tel:",
     "+225",
-    "07 15 12 84 77",
-    "07 04 74 03 43",
+    "chrisbillalbabou",
+    "icloud.com",
 )
 
 
-class GuyguyLeGrouilleurDeBologneCensusTests(unittest.TestCase):
+class BillalCensusTests(unittest.TestCase):
     def census_row(self):
         matches = [item for item in CENSUS if item.get("id") == PROFILE_ID]
         self.assertEqual(len(matches), 1)
         return matches[0]
 
-    def test_unique_and_not_grouilleur_3_0(self):
+    def test_unique_handle_and_public_name(self):
         profile = self.census_row()
         self.assertEqual(profile["name"], NAME)
         by_handle = [
@@ -44,12 +44,7 @@ class GuyguyLeGrouilleurDeBologneCensusTests(unittest.TestCase):
             or HANDLE in str(item.get("known_alias", ""))
         ]
         self.assertEqual(len(by_handle), 1)
-        other = next(item for item in CENSUS if item.get("id") == OTHER_ID)
-        self.assertEqual(other["name"], "Le Grouilleur 3.0")
-        self.assertNotEqual(other["id"], PROFILE_ID)
-        self.assertNotIn("guyguylegrouilleur07", str(other.get("official_socials", {})).lower())
-        self.assertNotIn("iburaim", str(profile.get("official_socials", {})).lower())
-        self.assertNotIn("iburaim", str(profile.get("known_alias", "")).lower())
+        self.assertEqual(by_handle[0]["id"], PROFILE_ID)
 
     def test_identity_tiktok_and_unclassable(self):
         profile = self.census_row()
@@ -57,8 +52,12 @@ class GuyguyLeGrouilleurDeBologneCensusTests(unittest.TestCase):
         self.assertEqual(profile["verification_priority"], "P0")
         self.assertFalse(profile["eligible"])
         self.assertFalse(profile["classable"])
-        self.assertEqual(profile["official_socials"], {"TikTok": TIKTOK})
+        self.assertEqual(
+            profile["official_socials"],
+            {"TikTok": TIKTOK, "Instagram": INSTAGRAM},
+        )
         self.assertIn(HANDLE, profile["known_alias"])
+        self.assertIn("Bibi National", profile["known_alias"])
         self.assertNotIn("birth_date", profile)
         self.assertNotIn("birth_year", profile)
 
@@ -71,17 +70,20 @@ class GuyguyLeGrouilleurDeBologneCensusTests(unittest.TestCase):
             for needle in FORBIDDEN:
                 self.assertNotIn(needle, blob)
             self.assertIsNone(re.search(r"(?:\+|00)\s*225", blob))
+            self.assertNotIn("source:'manual'", blob)
+            self.assertNotIn("babou", blob)
 
-    def test_overlay_matches_census_and_skips_other_grouilleur(self):
+    def test_overlay_matches_census_exactly(self):
         self.assertIn(f"const PROFILE_ID='{PROFILE_ID}'", OVERLAY)
         self.assertIn(f"const TIKTOK_URL='{TIKTOK}'", OVERLAY)
         self.assertIn(f"handle:'{HANDLE}'", OVERLAY)
         self.assertIn("occupation:'Créateur TikTok'", OVERLAY)
+        self.assertIn("region:'CI'", OVERLAY)
         self.assertIn("birthDate:null", OVERLAY)
         self.assertIn("birthYear:null", OVERLAY)
         self.assertIn("ageStatus:'unconfirmed'", OVERLAY)
-        self.assertNotIn("census-le-grouilleur-3-0", OVERLAY)
-        self.assertNotIn("name.includes('grouilleur')", OVERLAY)
+        self.assertNotIn("name.includes('billal')", OVERLAY)
+        self.assertNotIn("name.includes('bibi')", OVERLAY)
         self.assertIn("eligible:false", OVERLAY.split("function applyProfile", 1)[0])
         self.assertIn("classable:false", OVERLAY.split("function applyProfile", 1)[0])
         apply_body = OVERLAY.split("function applyProfile", 1)[1]
@@ -91,13 +93,12 @@ class GuyguyLeGrouilleurDeBologneCensusTests(unittest.TestCase):
         self.assertIn("'pass50:cloud-ready'", OVERLAY)
 
     def test_loaders_and_persistence(self):
-        self.assertIn("./profile-guyguy-le-grouilleur-de-bologne.js?v=1.0", CONFIG)
-        self.assertIn("./profile-guyguy-le-grouilleur-de-bologne.js?v=1.0", SW)
+        self.assertIn("./profile-billal.js?v=1.0", CONFIG)
+        self.assertIn("./profile-billal.js?v=1.0", SW)
         self.assertIn(f'"id":"{PROFILE_ID}"', V9)
         self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.22", V9)
         self.assertIn("CENSUS_VERSION='99-v39'", V9)
         self.assertIn("v9-tools.js?v=15.43", INDEX)
-        self.assertIn("v9-tools.js?v=15.41", SW)
         self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.22", SW)
 
 
