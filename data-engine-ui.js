@@ -608,7 +608,10 @@
   async function deLoadMetricsDiagnostic(force=false){
     if(DE.metricsDiagnosticLoading||(!force&&DE.metricsDiagnostic))return;
     DE.metricsDiagnosticLoading=true;
-    try{DE.metricsDiagnostic=await apiFetch('metrics-diagnostic.php');}
+    try{
+      const data=await apiFetch('metrics-diagnostic.php',{timeoutMs:120000});
+      DE.metricsDiagnostic=data?.error&&!data?.volumes?{error:data.error,detail:data.detail}:data;
+    }
     catch(error){DE.metricsDiagnostic={error:error.message||'Diagnostic indisponible'};}
     finally{DE.metricsDiagnosticLoading=false;if(ui.adminTab==='metricsdiag')deDrawMetricsDiagnostic($('#adminPane'));}
   }
@@ -650,7 +653,7 @@
     if(!pane)return;
     const data=DE.metricsDiagnostic;
     if(!data){pane.innerHTML='<div class="de-loading">Lecture du pipeline de métriques…</div>';return;}
-    if(data.error){pane.innerHTML=`<div class="de-error">${deEsc(data.error)}</div><button class="btn de-metrics-refresh">Réessayer</button>`;return;}
+    if(data.error){pane.innerHTML=`<div class="de-error">${deEsc(data.error)}</div>${data.detail?`<div class="muted">${deEsc(data.detail)}</div>`:''}<button class="btn de-metrics-refresh">Réessayer</button>`;return;}
     const ranking=data.ranking||{},volumes=data.volumes||{},fresh=data.freshness||{},collections=data.collections||{},canonical=data.canonicalSchema||{},metricCollectors=data.collectors||{},metricAutomation=data.automation?.metricsOrchestrator||{},platforms=data.platforms||[],errors=collections.recentErrors||[],failedJobs=Array.isArray(metricAutomation.recentFailedJobs)?metricAutomation.recentFailedJobs:[],schemaApplied=canonical.migrationStatus==='applied';
     const controlCenter=data.controlCenter||{},controlPlatforms=Array.isArray(controlCenter.platforms)?controlCenter.platforms:[],youtubeOAuth=controlCenter.youtubeOAuth||{},youtubeConnections=Array.isArray(youtubeOAuth.connections)?youtubeOAuth.connections:[],metaOAuth=controlCenter.metaOAuth||{},metaAssets=Array.isArray(metaOAuth.assets)?metaOAuth.assets:[],controlSummary=controlCenter.summary||{};
     const metricProfileOptions=(db?.profiles||[]).filter(profile=>profile?.id&&profile?.alive!==false).sort((a,b)=>String(a.name||a.id).localeCompare(String(b.name||b.id),'fr'));
@@ -994,10 +997,14 @@
     deLoadHub();deSetAutoUi();
   }
 
+  function deApiErrorMessage(err,fallback='Erreur serveur'){
+    const parts=[err?.message||fallback,err?.detail||''].map(x=>String(x||'').trim()).filter(Boolean);
+    return parts.length?parts.join(' — '):fallback;
+  }
   async function deLoadHub(force=false){
     if(DE.loading&&!force)return;DE.loading=true;
-    try{DE.hub=await apiFetch('data-hub.php');DE.lastError='';const ages=deApplyVerifiedBirthsFromHub();deDrawHub();if(ages)render();}
-    catch(err){DE.lastError=err.message||'Moteur indisponible';const el=$('#deHubContent');if(el)el.innerHTML=`<div class="de-error">${deEsc(DE.lastError)}<br><small>Vérifie que les fichiers API V19 sont déployés et que tu es connecté comme propriétaire.</small></div>`;}
+    try{DE.hub=await apiFetch('data-hub.php',{timeoutMs:180000});DE.lastError='';const ages=deApplyVerifiedBirthsFromHub();deDrawHub();if(ages)render();}
+    catch(err){DE.lastError=deApiErrorMessage(err,'Moteur indisponible');const el=$('#deHubContent');if(el)el.innerHTML=`<div class="de-error">${deEsc(DE.lastError)}<br><small>Vérifie ta connexion propriétaire/admin et que les fichiers API sont déployés sur IONOS.</small></div>`;}
     finally{DE.loading=false;}
   }
 
@@ -1074,7 +1081,7 @@
     finally{DE.autoRunning=false;DE.stopRequested=false;deSetAutoUi();deAutoProgress();await deLoadHub(true);}
   }
   async function dePriority16(btn){await deAction(btn,async()=>{const data=await apiFetch('priority-refresh.php',{method:'POST',body:{}});DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();toast(`${data.processed} profils prioritaires parcourus · ${data.classable} classables sur preuves récentes`);},'Actualisation des 16…');}
-  async function dePublish(btn){await deAction(btn,async()=>{const data=await apiFetch('data-publish.php',{method:'POST',body:{includeHub:false},timeoutMs:180000});if(data.hub)DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();try{await deLoadHub(true);}catch(hubError){console.warn('Hub publication non bloquant',hubError);}toast(`${data.publishedProfiles} profils publiés`);},'Publication…');}
+  async function dePublish(btn){await deAction(btn,async()=>{const data=await apiFetch('data-publish.php',{method:'POST',body:{includeHub:false},timeoutMs:180000});if(data.hub)DE.hub=data.hub;deApplyVerifiedBirthsFromHub();deDrawHub();await loadCloudState();deApplyVerifiedBirthsFromHub();render();try{await deLoadHub(true);}catch(hubError){console.warn('Hub publication non bloquant',hubError);}toast(`${data.publishedProfiles} profils publiés`);},'Publication…').catch(err=>{toast(deApiErrorMessage(err,'Publication impossible'));throw err;});}
   async function deSnapshot(btn){await deAction(btn,async()=>{const data=await apiFetch('data-snapshot.php',{method:'POST',body:{period:ui.period}});toast(`${data.captured} positions enregistrées`);},'Capture…');}
 
   async function deOpenBirth(profileId){

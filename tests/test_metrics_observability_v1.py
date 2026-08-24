@@ -45,7 +45,12 @@ class MetricsObservabilitySecurityTests(unittest.TestCase):
         self.assertNotRegex(CORE, r"(?i)\bUPDATE\s+app_state\b")
         self.assertNotRegex(CORE, r"(?i)\bINSERT\s+INTO\s+app_state\b")
 
-    def test_error_details_are_limited_and_redacted(self):
+    def test_endpoint_handles_failures_gracefully(self):
+        self.assertIn('set_time_limit(120)', ENDPOINT)
+        self.assertIn('register_shutdown_function', ENDPOINT)
+        self.assertIn('Diagnostic métrique interrompu', ENDPOINT)
+        self.assertIn('metrics-diagnostic controlCenter', ENDPOINT)
+        self.assertIn('missingLegacyTables', CORE)
         self.assertIn("ORDER BY started_at DESC LIMIT 20", CORE)
         self.assertIn("WHERE status='failed'", CORE)
         self.assertIn("function p50_obs_recent_metric_failures(PDO $pdo, int $limit=20)", CORE)
@@ -186,7 +191,7 @@ class MetricsObservabilityAdminTests(unittest.TestCase):
             flags=re.DOTALL,
         )
         self.assertIsNotNone(diagnostic_call)
-        self.assertIn("apiFetch('metrics-diagnostic.php')", diagnostic_call.group(0))
+        self.assertIn("apiFetch('metrics-diagnostic.php'", diagnostic_call.group(0))
         self.assertNotIn("method:'POST'", diagnostic_call.group(0))
 
     def test_admin_styles_are_scoped(self):

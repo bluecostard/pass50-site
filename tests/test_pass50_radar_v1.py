@@ -228,12 +228,11 @@ class RadarPipelineContractTests(unittest.TestCase):
         self.assertIn("$config = require $configFile;", BOOTSTRAP)
         key_function = re.search(r"function p50_radar_youtube_key\(\): string \{.*?\n}", RADAR, re.S)
         self.assertIsNotNone(key_function)
+        self.assertIn("p50m_youtube_key()", key_function.group(0))
         self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", key_function.group(0))
-        self.assertNotIn("getenv(", key_function.group(0))
+        self.assertIn("getenv('PASS50_YOUTUBE_API_KEY')", key_function.group(0))
         self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", METRICS_CORE)
-        self.assertIn("$config['metrics']['PASS50_YOUTUBE_API_KEY']", LIVE_CHECK)
-        for source in (RADAR, METRICS_CORE, LIVE_CHECK):
-            self.assertNotRegex(source, r"getenv\(['\"](?:PASS50_)?YOUTUBE_API_KEY")
+        self.assertIn("p50m_youtube_key()", LIVE_CHECK)
 
     def test_youtube_api_has_persistent_cache_and_quota_guard(self):
         self.assertIn("CREATE TABLE IF NOT EXISTS p50_youtube_api_cache", RADAR)
@@ -254,7 +253,7 @@ class RadarPipelineContractTests(unittest.TestCase):
         self.assertIn("$metadata['videos']", RADAR)
 
     def test_missing_key_is_explicit_and_public_collection_remains(self):
-        self.assertIn("'mode'=>!empty($run['configured'])?'youtube_data_api_v3':'public_only'", RADAR)
+        self.assertIn("'mode'=>$configured?'youtube_data_api_v3':'public_only'", RADAR)
         self.assertIn("youtube_api_unconfigured", RADAR)
         self.assertIn("p50_radar_content_document($url,'YouTube')", RADAR)
 

@@ -1706,7 +1706,7 @@ async function apiFetch(path,{method='GET',body=null,formData=null,auth=true,tim
     throw err;
   }finally{if(timer)clearTimeout(timer);}
   let data={};try{data=await res.json()}catch{}
-  if(!res.ok){const err=new Error(data.error||data.message||(res.status?`Erreur serveur (${res.status})`:'Erreur serveur'));err.status=res.status;throw err;}
+  if(!res.ok){const err=new Error(data.error||data.message||(res.status?`Erreur serveur (${res.status})`:'Erreur serveur'));err.status=res.status;err.detail=data.detail||'';throw err;}
   return data;
 }
 function cloudSafeState(){const copy=clone(db);copy.users=[];copy.notifications=[];copy.coulesPoll={votesByPoll:{},previousSharesByPoll:{}};copy.liveStreams=(copy.liveStreams||[]).filter(stream=>{if(stream?.source!=='manual'||String(stream?.id||'').startsWith('auto_')||stream?.status!=='live'||!/^https?:\/\//i.test(String(stream?.url||'')))return false;const endsAt=new Date(stream?.endsAt||'').getTime();return Number.isFinite(endsAt)&&endsAt>Date.now()});return copy;}

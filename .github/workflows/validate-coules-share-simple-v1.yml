@@ -27,6 +27,8 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: JavaScript syntax
         run: |
           node --check coules-share-simple-v1.js

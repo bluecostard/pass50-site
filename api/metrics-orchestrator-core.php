@@ -94,8 +94,7 @@ function p50_mo_fair_rotation_profiles(PDO $pdo,int $limit,array $excludeIds=[])
       AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')";
     $params=[$threshold];
     if($excludeIds){$sql.=" AND r.profile_id NOT IN (".implode(',',array_fill(0,count($excludeIds),'?')).")";$params=array_merge($params,$excludeIds);}
-    $sql.=" GROUP BY r.profile_id ORDER BY last_capture IS NULL DESC,last_capture ASC,r.profile_id ASC LIMIT ?";
-    $params[]=$limit;
+    $sql.=" GROUP BY r.profile_id ORDER BY last_capture IS NULL DESC,last_capture ASC,r.profile_id ASC LIMIT ".max(1,(int)$limit);
     $stmt=$pdo->prepare($sql);$stmt->execute($params);
     return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
 }
@@ -137,8 +136,7 @@ function p50_mo_exploration_profiles(PDO $pdo,int $limit,int $topRankCutoff,arra
       AND r.profile_id NOT IN ($topSub)";
     $params=[$threshold];
     if($excludeIds){$sql.=" AND r.profile_id NOT IN (".implode(',',array_fill(0,count($excludeIds),'?')).")";$params=array_merge($params,$excludeIds);}
-    $sql.=" GROUP BY r.profile_id ORDER BY last_capture IS NULL DESC,last_capture ASC,r.profile_id ASC LIMIT ?";
-    $params[]=$limit;
+    $sql.=" GROUP BY r.profile_id ORDER BY last_capture IS NULL DESC,last_capture ASC,r.profile_id ASC LIMIT ".max(1,(int)$limit);
     $stmt=$pdo->prepare($sql);$stmt->execute($params);
     return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
 }

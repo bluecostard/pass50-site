@@ -39,9 +39,11 @@ function p50mcc_status(PDO $pdo,int $threshold): array {
         $eligibleQueries[]="SELECT DISTINCT a.platform,a.profile_id FROM p50_meta_oauth_assets a JOIN p50_meta_oauth_connections c ON BINARY c.user_id=BINARY a.user_id WHERE a.profile_id IS NOT NULL AND a.platform IN ('Facebook','Instagram') AND a.status='active' AND c.status='active' AND a.access_token_encrypted<>''";
     }
     if($eligibleQueries){
-        $stmt=$pdo->prepare('SELECT platform,COUNT(*) profiles FROM ('.implode(' UNION ',$eligibleQueries).') eligible GROUP BY platform');
-        $stmt->execute($eligibleParams);
-        foreach($stmt->fetchAll() as $row){$platform=(string)$row['platform'];if(!isset($platforms[$platform]))continue;$platforms[$platform]['eligibleProfiles']=(int)$row['profiles'];$platforms[$platform]['eligibleLinks']=(int)$row['profiles'];}
+        try{
+            $stmt=$pdo->prepare('SELECT platform,COUNT(*) profiles FROM ('.implode(' UNION ',$eligibleQueries).') eligible GROUP BY platform');
+            $stmt->execute($eligibleParams);
+            foreach($stmt->fetchAll() as $row){$platform=(string)$row['platform'];if(!isset($platforms[$platform]))continue;$platforms[$platform]['eligibleProfiles']=(int)$row['profiles'];$platforms[$platform]['eligibleLinks']=(int)$row['profiles'];}
+        }catch(Throwable){}
     }
     if(p50_metrics_table_exists($pdo,'p50_metric_accounts')){
         foreach($pdo->query("SELECT platform,COUNT(*) accounts,COUNT(DISTINCT profile_id) profiles FROM p50_metric_accounts WHERE status='active' GROUP BY platform")->fetchAll() as $row){$platform=(string)$row['platform'];if(!isset($platforms[$platform]))continue;$platforms[$platform]['canonicalAccounts']=(int)$row['accounts'];$platforms[$platform]['coveredProfiles']=(int)$row['profiles'];}
