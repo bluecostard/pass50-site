@@ -13,6 +13,7 @@ $today = gmdate('Y-m-d');
 $static = [
     ['loc' => $base.'/', 'lastmod' => $today, 'changefreq' => 'hourly', 'priority' => '1.0'],
     ['loc' => $base.'/pronostics.html', 'lastmod' => $today, 'changefreq' => 'hourly', 'priority' => '0.9'],
+    ['loc' => $base.'/telecharger.html', 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.8'],
     ['loc' => $base.'/informations-legales.html', 'lastmod' => '2026-07-20', 'changefreq' => 'yearly', 'priority' => '0.3'],
     ['loc' => $base.'/conditions-utilisation.html', 'lastmod' => '2026-07-29', 'changefreq' => 'yearly', 'priority' => '0.3'],
     ['loc' => $base.'/politique-confidentialite.html', 'lastmod' => '2026-07-29', 'changefreq' => 'yearly', 'priority' => '0.3'],

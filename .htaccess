@@ -26,6 +26,8 @@ Options -Indexes
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
   RewriteRule ^fi/([A-Za-z0-9][A-Za-z0-9_-]{0,99})/?$ fi.php?id=$1 [L,QSA]
+  # Lien d'installation (hors stores : PWA, pas App Store / Play)
+  RewriteRule ^telecharger/?$ telecharger.html [L]
   # Liens courts Les Coulés (partage WhatsApp)
   RewriteRule ^c/([A-Za-z0-9][A-Za-z0-9._:-]{0,99})/audio/?$ partage.php?type=coules-audio&id=$1&choice=$1 [L,QSA]
   RewriteRule ^c/([A-Za-z0-9][A-Za-z0-9._:-]{0,99})/?$ partage.php?type=coules&id=$1&choice=$1 [L,QSA]

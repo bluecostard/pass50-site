@@ -21,7 +21,7 @@ const ASSETS=[
   'pass50-v81-service-worker-disabled',
   'pass50-v82-hero-ghost-covers',
   'pass50-app-shell-v1',
-  './','./index.html','./mon-fil.html','./app.html','./app-client.js?v=1.1','./app-client.js?v=1.0','./offline.html','./app-config.js?v=1.4','./app-config.js?v=1.3','./app-config.js?v=1.2','./app-config.js?v=1.1','./app-config.js',
+  './','./index.html','./mon-fil.html','./app.html','./telecharger.html','./app-client.js?v=1.1','./app-client.js?v=1.0','./offline.html','./app-config.js?v=1.4','./app-config.js?v=1.3','./app-config.js?v=1.2','./app-config.js?v=1.1','./app-config.js',
   './content-intelligence.js?v=1.15','./content-intelligence.js?v=1.14','./mon-fil.js?v=2.23','./mon-fil.js?v=2.22','./mon-fil.js?v=2.21',
   './duel-audio-feed-v1.js?v=1.1','./mobile-modal-video-progress-v1.js?v=1.0',
   './context-share-v1.js?v=1.0','./context-share-v2.js?v=2.6',

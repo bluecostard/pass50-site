@@ -43,11 +43,12 @@ json_response([
     ],
     'guidance' => [
         'desktop' => 'Plateforme complète (classement, fil, prono, compte, admin).',
-        'mobileApp' => 'Client web installable : ./app.html — même API ; live en mode=status uniquement. Coque Capacitor : shell/ (store.pass50.app).',
+        'mobileApp' => 'Client web installable : ./app.html — même API ; live en mode=status uniquement. Lien d’installation hors stores : ./telecharger.html. Coque Capacitor : shell/ (store.pass50.app).',
         'auth' => 'Authorization: Bearer <token> après login.php',
     ],
     'client' => [
         'webApp' => 'app.html',
+        'download' => 'telecharger.html',
         'contract' => 'PASS50-APP-CLIENT-V1.1',
         'nativeShell' => 'store.pass50.app',
         'manifest' => 'manifest.webmanifest',

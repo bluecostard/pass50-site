@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050705">
+  <meta name="robots" content="index,follow">
+  <meta name="description" content="Installer PASS50 sur ton téléphone. L’app n’est pas encore sur l’App Store ni Google Play.">
+  <meta property="og:title" content="Télécharger PASS50">
+  <meta property="og:description" content="Installe PASS50 sur ton téléphone — classement, lives et pronos. Pas encore sur les stores.">
+  <meta property="og:url" content="https://pass50.store/telecharger">
+  <meta property="og:image" content="https://pass50.store/icon-512.png">
+  <link rel="canonical" href="https://pass50.store/telecharger">
+  <link rel="manifest" href="./manifest.webmanifest?v=24.0">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg?v=22.4">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=22.4">
+  <title>Télécharger PASS50</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#050705;--panel:#0d110d;--line:#293129;--text:#f6f8f4;--muted:#9da79b;--lime:#b7ff00;
+      --safe-bottom:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text)}
+    body{
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(900px 420px at 50% -8%, rgba(183,255,0,.14), transparent 55%),
+        linear-gradient(180deg,#0a100a 0%, var(--bg) 42%);
+      padding:calc(18px + var(--safe-top)) 16px calc(28px + var(--safe-bottom));
+    }
+    main{width:min(560px,100%);margin:0 auto}
+    .brand{margin:0;font-size:42px;font-weight:1000;letter-spacing:-2.4px;line-height:1}
+    .brand span{color:var(--lime)}
+    .eyebrow{margin:18px 0 0;color:var(--lime);font-size:11px;font-weight:1000;letter-spacing:.8px;text-transform:uppercase}
+    h1{margin:8px 0 10px;font-size:clamp(28px,7vw,40px);letter-spacing:-1.6px;line-height:1.05}
+    .lede,.muted,li{color:var(--muted);line-height:1.5}
+    .lede{margin:0 0 18px;font-size:15px}
+    .panel{
+      border:1px solid var(--line);border-radius:22px;background:var(--panel);padding:18px;margin:14px 0;
+    }
+    .qr-wrap{display:grid;justify-items:center;gap:10px;padding:8px 0 4px}
+    .qr-wrap img{
+      width:min(260px,70vw);height:auto;background:#fff;border-radius:18px;padding:12px;
+    }
+    .url{
+      font-weight:900;color:var(--text);word-break:break-all;text-align:center;font-size:14px
+    }
+    .btn{
+      display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;
+      border-radius:999px;border:1px solid var(--lime);background:var(--lime);color:#050705;
+      font:inherit;font-weight:1000;text-decoration:none;cursor:pointer;margin-top:10px;
+    }
+    .btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+    .note{
+      margin:0;padding:12px 14px;border-radius:14px;background:#131913;border:1px solid var(--line);
+      color:var(--muted);font-size:13px;line-height:1.45;
+    }
+    ol{margin:8px 0 0;padding-left:18px}
+    li{margin:6px 0;font-size:14px}
+    nav{display:flex;gap:14px;flex-wrap:wrap;margin-top:22px}
+    nav a{color:var(--lime);font-weight:800;text-decoration:none}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+<main data-download-url="https://pass50.store/telecharger">
+  <p class="brand">PASS<span>50</span></p>
+  <p class="eyebrow">Installation directe</p>
+  <h1>Télécharger PASS50</h1>
+  <p class="lede">L’application n’est pas encore sur l’App Store ni Google Play. Ce lien installe PASS50 directement sur ton téléphone.</p>
+
+  <section class="panel">
+    <p class="note" id="storeNote">Pas de fiche store pour l’instant — tu ajoutes PASS50 à l’écran d’accueil, comme une app.</p>
+    <a class="btn" id="installBtn" href="./app.html?source=download">Installer PASS50</a>
+    <button class="btn ghost" id="copyBtn" type="button">Copier le lien</button>
+    <p class="muted" id="hint" style="margin:12px 0 0;font-size:13px"></p>
+    <ol id="iosSteps" class="hidden">
+      <li>Ouvre cette page dans <strong>Safari</strong>.</li>
+      <li>Appuie sur <strong>Partager</strong>.</li>
+      <li>Choisis <strong>Sur l’écran d’accueil</strong>.</li>
+    </ol>
+    <ol id="androidSteps" class="hidden">
+      <li>Ouvre cette page dans <strong>Chrome</strong>.</li>
+      <li>Appuie sur <strong>Installer PASS50</strong>, ou Menu → <strong>Installer l’application</strong>.</li>
+    </ol>
+  </section>
+
+  <section class="panel">
+    <p class="eyebrow" style="margin:0">QR code</p>
+    <h2 style="margin:8px 0 0;font-size:22px;letter-spacing:-.6px">Scanne pour ouvrir ce lien</h2>
+    <div class="qr-wrap">
+      <img src="./assets/qr-telecharger-pass50.svg" width="260" height="260" alt="QR code vers https://pass50.store/telecharger">
+      <p class="url">pass50.store/telecharger</p>
+    </div>
+    <a class="btn ghost" href="./assets/qr-telecharger-pass50.png" download="pass50-qr-telecharger.png">Télécharger le QR (PNG)</a>
+  </section>
+
+  <nav>
+    <a href="./app.html?source=download">Ouvrir l’app</a>
+    <a href="./">Site complet</a>
+  </nav>
+</main>
+<script>
+(() => {
+  const DOWNLOAD_URL = 'https://pass50.store/telecharger';
+  const APP_URL = './app.html?source=download';
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/i.test(ua);
+  const android = /Android/i.test(ua);
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const installBtn = document.getElementById('installBtn');
+  const hint = document.getElementById('hint');
+  const copyBtn = document.getElementById('copyBtn');
+  const iosSteps = document.getElementById('iosSteps');
+  const androidSteps = document.getElementById('androidSteps');
+  let deferredPrompt = null;
+
+  if (standalone) {
+    installBtn.textContent = 'Ouvrir PASS50';
+    hint.textContent = 'PASS50 est déjà installé sur cet appareil.';
+  } else if (ios) {
+    iosSteps.classList.remove('hidden');
+    hint.textContent = 'Sur iPhone, Safari peut ajouter PASS50 à l’écran d’accueil.';
+  } else if (android) {
+    androidSteps.classList.remove('hidden');
+    hint.textContent = 'Sur Android, Chrome peut installer PASS50 sans passer par Google Play.';
+  } else {
+    hint.textContent = 'Scanne le QR avec ton téléphone pour installer PASS50.';
+  }
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('./sw.js?v=91').catch(() => {});
+  }
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    if (!standalone) installBtn.textContent = 'Installer PASS50';
+  });
+
+  installBtn.addEventListener('click', async (event) => {
+    if (!deferredPrompt) return;
+    event.preventDefault();
+    deferredPrompt.prompt();
+    try { await deferredPrompt.userChoice; } catch (_) {}
+    deferredPrompt = null;
+    location.href = APP_URL;
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(DOWNLOAD_URL);
+      copyBtn.textContent = 'Lien copié';
+    } catch (_) {
+      copyBtn.textContent = DOWNLOAD_URL;
+    }
+  });
+})();
+</script>
+</body>
+</html>

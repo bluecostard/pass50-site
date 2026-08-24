@@ -116,7 +116,13 @@ jobs:
           put -O ${REMOTE_DIR@Q}/api .deploy/api/live-status-v4.php
           put -O ${REMOTE_DIR@Q} .deploy/app.html
           put -O ${REMOTE_DIR@Q} .deploy/app-client.js
+          put -O ${REMOTE_DIR@Q} .deploy/telecharger.html
           put -O ${REMOTE_DIR@Q} .deploy/manifest.webmanifest
+          set cmd:fail-exit no
+          mkdir ${REMOTE_DIR@Q}/assets
+          set cmd:fail-exit yes
+          put -O ${REMOTE_DIR@Q}/assets .deploy/assets/qr-telecharger-pass50.svg
+          put -O ${REMOTE_DIR@Q}/assets .deploy/assets/qr-telecharger-pass50.png
           set cmd:fail-exit no
           mkdir ${REMOTE_DIR@Q}/.well-known
           set cmd:fail-exit yes
