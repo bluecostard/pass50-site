@@ -608,7 +608,10 @@
   async function deLoadMetricsDiagnostic(force=false){
     if(DE.metricsDiagnosticLoading||(!force&&DE.metricsDiagnostic))return;
     DE.metricsDiagnosticLoading=true;
-    try{DE.metricsDiagnostic=await apiFetch('metrics-diagnostic.php');}
+    try{
+      const data=await apiFetch('metrics-diagnostic.php',{timeoutMs:120000});
+      DE.metricsDiagnostic=data?.error&&!data?.volumes?{error:data.error,detail:data.detail}:data;
+    }
     catch(error){DE.metricsDiagnostic={error:error.message||'Diagnostic indisponible'};}
     finally{DE.metricsDiagnosticLoading=false;if(ui.adminTab==='metricsdiag')deDrawMetricsDiagnostic($('#adminPane'));}
   }
@@ -650,7 +653,7 @@
     if(!pane)return;
     const data=DE.metricsDiagnostic;
     if(!data){pane.innerHTML='<div class="de-loading">Lecture du pipeline de métriques…</div>';return;}
-    if(data.error){pane.innerHTML=`<div class="de-error">${deEsc(data.error)}</div><button class="btn de-metrics-refresh">Réessayer</button>`;return;}
+    if(data.error){pane.innerHTML=`<div class="de-error">${deEsc(data.error)}</div>${data.detail?`<div class="muted">${deEsc(data.detail)}</div>`:''}<button class="btn de-metrics-refresh">Réessayer</button>`;return;}
     const ranking=data.ranking||{},volumes=data.volumes||{},fresh=data.freshness||{},collections=data.collections||{},canonical=data.canonicalSchema||{},metricCollectors=data.collectors||{},metricAutomation=data.automation?.metricsOrchestrator||{},platforms=data.platforms||[],errors=collections.recentErrors||[],failedJobs=Array.isArray(metricAutomation.recentFailedJobs)?metricAutomation.recentFailedJobs:[],schemaApplied=canonical.migrationStatus==='applied';
     const controlCenter=data.controlCenter||{},controlPlatforms=Array.isArray(controlCenter.platforms)?controlCenter.platforms:[],youtubeOAuth=controlCenter.youtubeOAuth||{},youtubeConnections=Array.isArray(youtubeOAuth.connections)?youtubeOAuth.connections:[],metaOAuth=controlCenter.metaOAuth||{},metaAssets=Array.isArray(metaOAuth.assets)?metaOAuth.assets:[],controlSummary=controlCenter.summary||{};
     const metricProfileOptions=(db?.profiles||[]).filter(profile=>profile?.id&&profile?.alive!==false).sort((a,b)=>String(a.name||a.id).localeCompare(String(b.name||b.id),'fr'));

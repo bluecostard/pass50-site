@@ -103,9 +103,13 @@ function p50mm_authorized_profile_ids(PDO $pdo): array {
 function p50mm_safe_status(PDO $pdo): array {
     $empty=['schemaReady'=>false,'assets'=>[],'summary'=>['total'=>0,'mapped'=>0,'unmapped'=>0,'facebookMapped'=>0,'instagramMapped'=>0,'insightsAuthorized'=>0]];
     if(!p50mm_schema_ready($pdo))return $empty;
-    $join=p50_metrics_table_exists($pdo,'p50_profile_registry')?'LEFT JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY a.profile_id':'';
-    $profileName=$join!==''?'r.public_name':'NULL';
-    $rows=$pdo->query("SELECT a.platform,a.asset_id,a.asset_name,a.username,a.profile_id,a.last_checked_at,a.last_error,a.updated_at,c.scopes,$profileName profile_name FROM p50_meta_oauth_assets a JOIN p50_meta_oauth_connections c ON BINARY c.user_id=BINARY a.user_id $join WHERE a.status='active' AND c.status='active' AND a.platform IN ('Facebook','Instagram') ORDER BY a.platform,a.asset_name LIMIT 100")->fetchAll();
+    try{
+        $join=p50_metrics_table_exists($pdo,'p50_profile_registry')?'LEFT JOIN p50_profile_registry r ON BINARY r.profile_id=BINARY a.profile_id':'';
+        $profileName=$join!==''?'r.public_name':'NULL';
+        $rows=$pdo->query("SELECT a.platform,a.asset_id,a.asset_name,a.username,a.profile_id,a.last_checked_at,a.last_error,a.updated_at,c.scopes,$profileName profile_name FROM p50_meta_oauth_assets a JOIN p50_meta_oauth_connections c ON BINARY c.user_id=BINARY a.user_id $join WHERE a.status='active' AND c.status='active' AND a.platform IN ('Facebook','Instagram') ORDER BY a.platform,a.asset_name LIMIT 100")->fetchAll();
+    }catch(Throwable){
+        return array_merge($empty,['error'=>'meta_oauth_unavailable']);
+    }
     $assets=[];$summary=$empty['summary'];
     foreach($rows as $row){
         $platform=(string)$row['platform'];$profileId=trim((string)($row['profile_id']??''));$summary['total']++;

@@ -143,6 +143,34 @@ function p50_obs_pipeline_state(PDO $pdo): array {
 
 function p50_obs_diagnostic(PDO $pdo, int $threshold=90): array {
     $generatedAt=gmdate('c');
+    $legacyTables=['p50_collection_runs','p50_activity_events','p50_profile_registry','p50_social_links'];
+    $missingLegacy=array_values(array_filter($legacyTables,static fn(string $table): bool=>!p50_metrics_table_exists($pdo,$table)));
+    if($missingLegacy){
+        $canonical=p50_metrics_schema_status($pdo);
+        return [
+            'ok'=>true,'readOnly'=>true,'generatedAt'=>$generatedAt,'status'=>'blocked','threshold'=>$threshold,
+            'partial'=>true,'missingLegacyTables'=>$missingLegacy,
+            'volumes'=>[],'freshness'=>[],'collections'=>['summary'=>[],'collectors'=>[],'recentErrors'=>[]],
+            'platforms'=>[],'platformsWithoutData'=>[],'freshnessWindows'=>[],
+            'ranking'=>['totalProfiles'=>0,'measurableProfiles'=>0,'classableProfiles'=>0,'nonClassableProfiles'=>0,'activeMetrics'=>0,'scoresChanged'=>0,'ranksChanged'=>0,'recalculatedProfiles'=>0,'lastAtomicPublicationAt'=>null,'lastAtomicPublicationAge'=>null],
+            'automation'=>['browserDependent'=>true,'summary'=>'Schéma historique incomplet : installez le schéma canonique depuis cet onglet.','metricsOrchestrator'=>p50_mo_status($pdo)],
+            'canonicalSchema'=>[
+                'schemaVersion'=>$canonical['schemaVersion']??null,
+                'migrationStatus'=>$canonical['migrationStatus']??'missing',
+                'accounts'=>$canonical['volumes']['p50_metric_accounts']??null,
+                'contents'=>$canonical['volumes']['p50_metric_contents']??null,
+                'captures'=>$canonical['volumes']['p50_metric_captures']??null,
+                'jobs'=>$canonical['volumes']['p50_metric_jobs']??null,
+                'runs'=>$canonical['volumes']['p50_metric_runs']??null,
+                'quarantinedCaptures'=>null,
+                'lastBackfillAt'=>$canonical['lastBackfillAt']??null,
+                'tables'=>$canonical['tables']??[],
+            ],
+            'collectors'=>p50_metrics_collectors_status($pdo),
+            'staticRankingReasons'=>['Tables historiques manquantes : '.implode(', ',$missingLegacy).'.'],
+            'limits'=>['eventRows'=>0,'captureSeries'=>0,'collectors'=>0,'recentErrors'=>0,'failedJobs'=>0],
+        ];
+    }
     $volumes=$pdo->query(
         "SELECT
         (SELECT COUNT(*) FROM p50_collection_runs) collection_runs,
