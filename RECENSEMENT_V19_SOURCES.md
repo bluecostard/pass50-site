@@ -8,3 +8,4 @@
 - **Le grand Bicongo** — créateur TikTok, manager public de Chocolat Show. Compte `@legrandbicongo`. Source : profil TikTok officiel + signalement propriétaire PASS50, 23 août 2026. Identité civile non confirmée.
 - **Chocolat show officiel** — comédien / humoriste. Compte `@chocolat.show.officiel`. Source : profil TikTok officiel + signalement propriétaire PASS50, 23 août 2026.
 - **La légende** — humoriste. Compte unique `@lalegende777`. Source : profil TikTok officiel + signalement propriétaire PASS50, 23 août 2026. Nom civil non confirmé.
+- **Willway Jordan officiel** — créateur TikTok. Compte `@jack.carter39`. Source : profil TikTok officiel + signalement propriétaire PASS50, 24 août 2026. Distinct de Jordan Evraa. Identité civile non confirmée.

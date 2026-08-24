@@ -2716,5 +2716,38 @@
       "\"lalegende777\" TikTok officiel",
       "\"La légende\" humoriste TikTok"
     ]
+  },
+  {
+    "id": "census-willway-jordan-officiel",
+    "name": "Willway Jordan officiel",
+    "known_alias": "Willway Jordan officiel / @jack.carter39",
+    "entity_type": "Personne",
+    "zone": "CI",
+    "category": "TikTok / Live / Divertissement",
+    "census_status": "Recensé confirmé — compte TikTok fourni en direct par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@jack.carter39"
+    },
+    "source": {
+      "publisher": "Compte TikTok direct fourni par le propriétaire PASS50",
+      "date": "2026-08-24",
+      "url": "https://www.tiktok.com/@jack.carter39"
+    },
+    "notes": "Créateur TikTok. Compte officiel @jack.carter39, signalé par le propriétaire PASS50 le 24 août 2026 alors que le compte était en direct. Distinct de Jordan Evraa (@realjordanevraa). Identité civile et date de naissance non confirmées. Profil non classable jusqu’à validation des métriques.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@jack.carter39",
+        "source_name": "Compte TikTok direct fourni par le propriétaire PASS50",
+        "source_url": "https://www.tiktok.com/@jack.carter39",
+        "confidence": 100
+      }
+    },
+    "research_queries": [
+      "\"jack.carter39\" TikTok officiel",
+      "\"Willway Jordan officiel\" TikTok"
+    ]
   }
 ]

@@ -52,14 +52,14 @@ class AndreaNaomiCanonicalProfileTests(unittest.TestCase):
         self.assertIn("Aucun compte social", profile["notes"])
 
     def test_browser_loads_the_new_census_revision(self):
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.17", self.v9)
-        self.assertIn("CENSUS_VERSION='99-v34'", self.v9)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.18", self.v9)
+        self.assertIn("CENSUS_VERSION='99-v35'", self.v9)
         index_version = re.search(r"v9-tools\.js\?v=([0-9.]+)", self.index)
         worker_version = re.search(r"v9-tools\.js\?v=([0-9.]+)", self.sw)
         self.assertIsNotNone(index_version)
         self.assertIsNotNone(worker_version)
         self.assertEqual(index_version.group(1), worker_version.group(1))
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.17", self.sw)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.18", self.sw)
 
 
 if __name__ == "__main__":
