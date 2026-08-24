@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-24 15:59 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-bb-sans-os-de-man` @bebe.sans.os.de.m — 7677626328921443092 · 476 viewers
+- TikTok `census-le-grand-bicongo` @legrandbicongo — 7677616791900293889 · 151 viewers
+- TikTok `census-stephane-galactik` @le_coach_des_debout — 7677624947437439765 · 102 viewers
+- TikTok `census-willway-jordan-officiel` @jack.carter39 — Bon debut de semaine · 569 viewers
+
 ### 2026-08-24 13:17 UTC
 
 - Unknown sondés : **200**
@@ -348,14 +361,6 @@ Nouveaux P0 :
 ### 2026-08-19 14:17 UTC
 
 - Unknown sondés : **134**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-08-19 10:50 UTC
-
-- Unknown sondés : **135**
 - Vraiment en live : **0**
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
