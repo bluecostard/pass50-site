@@ -2782,5 +2782,38 @@
       "\"guyguylegrouilleur07\" TikTok officiel",
       "\"Guyguy le grouilleur de Bologne\" TikTok"
     ]
+  },
+  {
+    "id": "census-souley-de-paris",
+    "name": "Souley de Paris",
+    "known_alias": "Souley de Paris / SOULEY DE-PARIS / B-52 / @souleydeparis",
+    "entity_type": "Personne",
+    "zone": "DIASPORA",
+    "category": "TikTok / Live / Actualité",
+    "census_status": "Recensé confirmé — compte TikTok fourni en direct par le propriétaire PASS50",
+    "verification_priority": "P0",
+    "eligible": false,
+    "classable": false,
+    "official_socials": {
+      "TikTok": "https://www.tiktok.com/@souleydeparis"
+    },
+    "source": {
+      "publisher": "Compte TikTok direct fourni par le propriétaire PASS50",
+      "date": "2026-08-24",
+      "url": "https://www.tiktok.com/@souleydeparis"
+    },
+    "notes": "Streamer TikTok. Compte officiel @souleydeparis, signalé par le propriétaire PASS50 le 24 août 2026 alors que le compte était en direct. Identité civile et date de naissance non confirmées. Profil non classable jusqu’à validation des métriques.",
+    "curated_social_sources": {
+      "TikTok": {
+        "url": "https://www.tiktok.com/@souleydeparis",
+        "source_name": "Compte TikTok direct fourni par le propriétaire PASS50",
+        "source_url": "https://www.tiktok.com/@souleydeparis",
+        "confidence": 100
+      }
+    },
+    "research_queries": [
+      "\"souleydeparis\" TikTok officiel",
+      "\"Souley de Paris\" TikTok"
+    ]
   }
 ]

@@ -430,6 +430,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Souley de Paris (TikTok @souleydeparis).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-souley-de-paris]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-souley-de-paris.js?v=1.0';
+  script.dataset.pass50ProfileSouleyDeParis = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Sara (TikTok @sarra_messan) — nom public Sara, pas Sarara.
 (function () {
   if (document.querySelector('script[data-pass50-profile-sara]')) return;
