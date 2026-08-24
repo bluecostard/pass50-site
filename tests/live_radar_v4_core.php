@@ -143,7 +143,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane','census-daniel-m','census-akalajoie','ennemi-des-djandjou','census-isouch','census-bb-sans-os-de-man','hassan','census-le-grand-bicongo','census-chocolat-show-officiel','census-la-legende','census-willway-jordan-officiel'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane','census-daniel-m','census-akalajoie','ennemi-des-djandjou','census-isouch','census-bb-sans-os-de-man','hassan','census-le-grand-bicongo','census-chocolat-show-officiel','census-la-legende','census-willway-jordan-officiel','census-guyguy-le-grouilleur-de-bologne'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -275,6 +275,8 @@ must(p50_live_v4_canonical_profile_id('ghost','TikTok','chocolat.show.officiel')
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','lalegende777')==='census-la-legende','@lalegende777 est La légende.');
 must(p50_live_v4_canonical_profile_id('ghost','TikTok','jack.carter39')==='census-willway-jordan-officiel','@jack.carter39 est Willway Jordan officiel.');
 must(p50_live_v4_canonical_profile_id('census-jordan-evraa','TikTok','jack.carter39')==='census-willway-jordan-officiel','Willway Jordan officiel ne fusionne pas sur Jordan Evraa.');
+must(p50_live_v4_canonical_profile_id('ghost','TikTok','guyguylegrouilleur07')==='census-guyguy-le-grouilleur-de-bologne','@guyguylegrouilleur07 est Guyguy le grouilleur de Bologne.');
+must(p50_live_v4_canonical_profile_id('census-le-grouilleur-3-0','TikTok','guyguylegrouilleur07')==='census-guyguy-le-grouilleur-de-bologne','Guyguy le grouilleur de Bologne ne fusionne pas sur Le Grouilleur 3.0.');
 
 $hassanSource=['profile_id'=>'hassan','public_name'=>'Hassan Hayek','platform'=>'TikTok','url'=>'https://www.tiktok.com/@hassanhayekofficiel'];
 $hassanLive=p50_live_v4_parse_tiktok($hassanSource,['api_webcast'=>response('{"data":{"status":2,"id":7677247476674824980,"id_str":"7677247476674824980","title":"Ouech","user_count":333,"owner":{"display_id":"hassanhayekofficiel","nickname":"hassanhayekofficiel"}},"status_code":0}')]);
@@ -305,6 +307,11 @@ $willwaySource=['profile_id'=>'census-willway-jordan-officiel','public_name'=>'W
 $willwayLive=p50_live_v4_parse_tiktok($willwaySource,['api_webcast'=>response('{"data":{"status":2,"id":7678247476674824104,"id_str":"7678247476674824104","title":"En direct","user_count":210,"owner":{"display_id":"jack.carter39","nickname":"Willway Jordan officiel"}},"status_code":0}')]);
 must($willwayLive['state']==='live','Willway Jordan officiel webcast status=2 doit publier le LIVE.');
 must(($willwayLive['live']['metadata']['roomId']??'')==='7678247476674824104','Le roomId Willway Jordan officiel doit être conservé.');
+
+$guyguySource=['profile_id'=>'census-guyguy-le-grouilleur-de-bologne','public_name'=>'Guyguy le grouilleur de Bologne','platform'=>'TikTok','url'=>'https://www.tiktok.com/@guyguylegrouilleur07'];
+$guyguyLive=p50_live_v4_parse_tiktok($guyguySource,['api_webcast'=>response('{"data":{"status":2,"id":7678247476674824105,"id_str":"7678247476674824105","title":"En direct","user_count":190,"owner":{"display_id":"guyguylegrouilleur07","nickname":"guyguylegrouilleurdebologne"}},"status_code":0}')]);
+must($guyguyLive['state']==='live','Guyguy le grouilleur de Bologne webcast status=2 doit publier le LIVE.');
+must(($guyguyLive['live']['metadata']['roomId']??'')==='7678247476674824105','Le roomId Guyguy le grouilleur de Bologne doit être conservé.');
 must(!p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_no_live_signal']),'Un HTML IONOS sans JSON ne clôture pas un LIVE encore confirmé.');
 must(!p50_live_v4_should_end_from_probe('never_checked',['state'=>'offline','error'=>'tiktok_no_live_signal']),'IONOS sans API TikTok ne clôture jamais un compte, même jamais sondé.');
 must(!p50_live_v4_should_end_from_probe('live',['state'=>'offline','error'=>'tiktok_api_failed']),'Un 403 IONOS ne clôture pas un LIVE confirmé.');

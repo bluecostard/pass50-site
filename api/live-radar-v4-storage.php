@@ -255,6 +255,10 @@ function p50_live_v4_dedup(array $automatic,array $manual): array {
                 $stream['profileName']='Willway Jordan officiel';
                 if(trim($handle)==='')$stream['handle']='@jack.carter39';
             }
+            if($canonical==='census-guyguy-le-grouilleur-de-bologne'){
+                $stream['profileName']='Guyguy le grouilleur de Bologne';
+                if(trim($handle)==='')$stream['handle']='@guyguylegrouilleur07';
+            }
         }
         $normalized[]=$stream;
     }
