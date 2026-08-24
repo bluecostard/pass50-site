@@ -58,7 +58,7 @@ class Top5LoadCleanupV1Tests(unittest.TestCase):
     def test_content_intelligence_loads_before_window_load(self):
         self.assertIn("content-intelligence.js?v=1.15", CONFIG)
         self.assertIn("content-intelligence.js?v=1.15", SW)
-        self.assertIn("v9-tools.js?v=15.38", INDEX)
+        self.assertIn("v9-tools.js?v=15.39", INDEX)
         self.assertIn("v9-tools.js?v=15.33", SW)
         self.assertIn("DOMContentLoaded", CONFIG)
         self.assertNotIn("addEventListener('load', loadContentIntelligence", CONFIG)

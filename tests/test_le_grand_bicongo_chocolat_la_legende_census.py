@@ -131,11 +131,11 @@ class LeGrandBicongoChocolatLaLegendeCensusTests(unittest.TestCase):
             self.assertIn(tag, self.sw)
 
     def test_browser_loads_census_revision(self):
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.18", self.v9)
-        self.assertIn("CENSUS_VERSION='99-v35'", self.v9)
-        self.assertIn("v9-tools.js?v=15.38", self.index)
-        self.assertIn("v9-tools.js?v=15.38", self.sw)
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.18", self.sw)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.19", self.v9)
+        self.assertIn("CENSUS_VERSION='99-v36'", self.v9)
+        self.assertIn("v9-tools.js?v=15.39", self.index)
+        self.assertIn("v9-tools.js?v=15.39", self.sw)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.19", self.sw)
 
     def test_profiles_survive_cloud_hydrate(self):
         self.assertIn("'pass50:cloud-ready'", self.index)

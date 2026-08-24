@@ -47,8 +47,8 @@ class SaraCanonicalNameTests(unittest.TestCase):
     def test_loader_is_cache_busted(self):
         self.assertIn("./profile-sara.js?v=1.0", CONFIG)
         self.assertIn("./profile-sara.js?v=1.0", SW)
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.18", V9)
-        self.assertIn("CENSUS_VERSION='99-v35'", V9)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.19", V9)
+        self.assertIn("CENSUS_VERSION='99-v36'", V9)
 
     def test_public_ranking_renames_sarara_to_sara(self):
         ranking = (ROOT / "api" / "public-ranking-core.php").read_text(encoding="utf-8")

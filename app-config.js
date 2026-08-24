@@ -421,6 +421,15 @@ document.addEventListener('DOMContentLoaded', function () {
   document.head.appendChild(script);
 })();
 
+// Profil recensé : Guyguy le grouilleur de Bologne (TikTok @guyguylegrouilleur07).
+(function () {
+  if (document.querySelector('script[data-pass50-profile-guyguy-grouilleur]')) return;
+  var script = document.createElement('script');
+  script.src = './profile-guyguy-le-grouilleur-de-bologne.js?v=1.0';
+  script.dataset.pass50ProfileGuyguyGrouilleur = '1.0';
+  document.head.appendChild(script);
+})();
+
 // Profil recensé : Sara (TikTok @sarra_messan) — nom public Sara, pas Sarara.
 (function () {
   if (document.querySelector('script[data-pass50-profile-sara]')) return;
