@@ -2,7 +2,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.8';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.9';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
   let linksRendererInstalled=false;
@@ -107,10 +107,8 @@
     const original=p50v9RenderLinks;
     p50v9RenderLinks=function(){
       if(window.PASS50_FI_EDIT_PRESERVE?.shouldSkip?.('links'))return;
-      const result=original.apply(this,arguments);
-      const select=document.getElementById('linksProfileSelect');
-      if(select&&!window.PASS50_FI_EDIT_PRESERVE?.busy?.())sortSelect(select);
-      return result;
+      // #linksProfileSelect is filled by search; do not reorder it here (DOM loops).
+      return original.apply(this,arguments);
     };
     linksRendererInstalled=true;
   }

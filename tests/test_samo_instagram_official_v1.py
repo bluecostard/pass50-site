@@ -36,7 +36,7 @@ class SamoInstagramOfficialV1Tests(unittest.TestCase):
         self.assertIn("observateur-official-links-lock-v1.js?v=1.1", CONFIG)
         self.assertIn("owner-current-links-lock-v1.js?v=1.2", OBS)
         self.assertIn("const VERSION='1.2'", LOCK)
-        self.assertIn("PASS50-OFFICIAL-LINKS-PROTECTION-V4.6", PROTECT)
+        self.assertIn("PASS50-OFFICIAL-LINKS-PROTECTION-V4.7", PROTECT)
         self.assertIn("put -O \"$REMOTE_DIR\" profile-samo-samo.js", FREEZE)
         self.assertIn("put -O \"$REMOTE_DIR\" app-config.js", FREEZE)
         self.assertIn("instagram.com/kommander_samo_samo/", FREEZE)

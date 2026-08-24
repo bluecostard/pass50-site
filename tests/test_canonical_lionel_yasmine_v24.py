@@ -40,7 +40,7 @@ class CanonicalLionelYasmineV24Tests(unittest.TestCase):
         self.assertIn("pass50-v81-service-worker-disabled", SW)
 
     def test_public_loader_is_cache_busted(self):
-        self.assertIn('public-copy-fixes.js?v=1.17', APP_CONFIG)
+        self.assertIn('public-copy-fixes.js?v=1.18', APP_CONFIG)
         self.assertIn("pass50PublicCopy = '1.10'", APP_CONFIG)
         self.assertIn('public-copy-fixes.js?v=1.14', SW)
         self.assertIn('public-copy-fixes.js?v=1.13', SW)

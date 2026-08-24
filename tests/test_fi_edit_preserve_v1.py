@@ -26,14 +26,14 @@ class FiEditPreserveV1Tests(unittest.TestCase):
         self.assertIn("id==='profileForm'", PRESERVE)
 
     def test_official_links_protection_keeps_open_search(self):
-        self.assertIn("PASS50-OFFICIAL-LINKS-PROTECTION-V4.6", PROTECT)
+        self.assertIn("PASS50-OFFICIAL-LINKS-PROTECTION-V4.7", PROTECT)
         self.assertIn("if(window.PASS50_FI_EDIT_PRESERVE?.busy?.())return;", PROTECT)
         self.assertIn("!window.PASS50_FI_EDIT_PRESERVE?.busy?.()", PROTECT)
 
     def test_runtime_is_loaded(self):
         self.assertIn("admin-fi-edit-preserve-v1.js?v=1.1", LOADER)
-        self.assertIn("official-links-protection-v4.js?v=4.6", LOADER)
-        self.assertIn("public-copy-fixes.js?v=1.17", CONFIG)
+        self.assertIn("official-links-protection-v4.js?v=4.7", LOADER)
+        self.assertIn("public-copy-fixes.js?v=1.18", CONFIG)
         self.assertIn("admin-fi-edit-preserve-v1.js?v=1.1", SW)
 
 

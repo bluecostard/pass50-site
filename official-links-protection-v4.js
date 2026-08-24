@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.6';
+  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.7';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
   const OWNER_LOCK_KEY='pass50_owner_locked_profiles_v1';
   const OFFICIAL_LINK_FIELDS=['TikTok','Instagram','Facebook','YouTube','X','Snapchat'];
@@ -179,7 +179,12 @@
     ].filter(Boolean).join(' '));
   }
 
+  function onOfficialLinksTab(){
+    try{return String(ui?.adminTab||'')==='links';}catch{return false;}
+  }
+
   function applyOfficialLinksSearch(){
+    if(!onOfficialLinksTab())return;
     const input=document.getElementById('linksProfileSearch');
     if(!input)return;
     const q=searchKey(input.value);
@@ -189,18 +194,14 @@
     const cards=[...document.querySelectorAll('#linksCards [data-link-profile]')];
     if(select){
       const current=(typeof PASS50_V9==='object'&&PASS50_V9.linksProfileId)||select.value||'';
-      select.innerHTML=matches.length?matches.map(p=>{
-        let label=p.name||p.id;
-        try{if(typeof p50ProfileOption==='function')label=p50ProfileOption(p);}catch{}
-        return `<option value="${String(p.id).replace(/"/g,'&quot;')}" ${p.id===current?'selected':''}>${String(label).replace(/</g,'&lt;')}</option>`;
-      }).join(''):'<option value="">Aucune fiche trouvée</option>';
-      if(matches.length&&!matches.some(p=>p.id===current)){
-        try{if(typeof PASS50_V9==='object'&&PASS50_V9)PASS50_V9.linksProfileId=matches[0].id;}catch{}
-        select.value=matches[0].id;
-        if(!window.__pass50OfficialLinksSearchRendering&&typeof p50v9RenderLinks==='function'){
-          window.__pass50OfficialLinksSearchRendering=true;
-          try{p50v9RenderLinks();}finally{window.__pass50OfficialLinksSearchRendering=false;}
-        }
+      const signature=matches.map(p=>String(p.id)).join('|')+'@'+current+'@'+q;
+      if(select.dataset.pass50SearchSig!==signature){
+        select.dataset.pass50SearchSig=signature;
+        select.innerHTML=matches.length?matches.map(p=>{
+          let label=p.name||p.id;
+          try{if(typeof p50ProfileOption==='function')label=p50ProfileOption(p);}catch{}
+          return `<option value="${String(p.id).replace(/"/g,'&quot;')}" ${p.id===current?'selected':''}>${String(label).replace(/</g,'&lt;')}</option>`;
+        }).join(''):'<option value="">Aucune fiche trouvée</option>';
       }
     }
     const visibleIds=new Set(matches.map(p=>String(p.id)));
@@ -218,6 +219,7 @@
   }
 
   function ensureOfficialLinksSearch(){
+    if(!onOfficialLinksTab())return false;
     if(window.PASS50_FI_EDIT_PRESERVE?.busy?.()){
       applyOfficialLinksSearch();
       return Boolean(document.getElementById('linksCards')||document.getElementById('linksProfileSearch')||document.getElementById('linksProfileSelect'));
@@ -372,11 +374,18 @@
         setTimeout(()=>restoreVerifiedLinks(true),350);
       }
     },true);
+    let searchObserverQueued=false;
     const observer=new MutationObserver(()=>{
-      if(document.getElementById('linksCards')||document.getElementById('linksProfileSelect')||document.querySelector('.links-v2')){
-        ensureOfficialLinksSearch();
-        restoreVerifiedLinks(false);
-      }
+      if(!onOfficialLinksTab())return;
+      if(searchObserverQueued)return;
+      searchObserverQueued=true;
+      requestAnimationFrame(()=>{
+        searchObserverQueued=false;
+        if(!onOfficialLinksTab())return;
+        if(document.getElementById('linksCards')||document.getElementById('linksProfileSelect')||document.querySelector('.links-v2')){
+          ensureOfficialLinksSearch();
+        }
+      });
     });
     observer.observe(document.documentElement,{childList:true,subtree:true});
     const readyTimer=setInterval(()=>{
