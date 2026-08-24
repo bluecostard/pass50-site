@@ -3,18 +3,30 @@ name: Validate Metrics Ranking Publication Apply Safety V1
 on:
   pull_request:
     paths:
+      - 'api/metrics-ranking-publication-apply-core.php'
       - 'api/metrics-ranking-publication-apply-cron.php'
       - 'api/metrics-ranking-publication-apply.php'
+      - 'api/metrics-ranking-publication-core.php'
+      - 'api/metrics-ranking.php'
+      - 'api/metrics-ranking-cron.php'
+      - 'data-engine-ui.js'
       - '.github/workflows/metrics-ranking-publication-apply-bootstrap.yml'
       - 'tests/test_metrics_ranking_publication_apply_v1.py'
+      - 'tests/test_metrics_ranking_publication_post_calc_v1.py'
       - '.github/workflows/validate-metrics-ranking-publication-apply-safety-v1.yml'
   push:
     branches: [main]
     paths:
+      - 'api/metrics-ranking-publication-apply-core.php'
       - 'api/metrics-ranking-publication-apply-cron.php'
       - 'api/metrics-ranking-publication-apply.php'
+      - 'api/metrics-ranking-publication-core.php'
+      - 'api/metrics-ranking.php'
+      - 'api/metrics-ranking-cron.php'
+      - 'data-engine-ui.js'
       - '.github/workflows/metrics-ranking-publication-apply-bootstrap.yml'
       - 'tests/test_metrics_ranking_publication_apply_v1.py'
+      - 'tests/test_metrics_ranking_publication_post_calc_v1.py'
       - '.github/workflows/validate-metrics-ranking-publication-apply-safety-v1.yml'
 
 permissions:
@@ -30,10 +42,16 @@ jobs:
           fetch-depth: 0
       - name: PHP lint
         run: |
+          php -l api/metrics-ranking-publication-apply-core.php
           php -l api/metrics-ranking-publication-apply-cron.php
           php -l api/metrics-ranking-publication-apply.php
+          php -l api/metrics-ranking-publication-core.php
+          php -l api/metrics-ranking.php
+          php -l api/metrics-ranking-cron.php
       - name: Publication apply safety contract
-        run: python3 -m unittest tests.test_metrics_ranking_publication_apply_v1 -v
+        run: |
+          python3 -m unittest tests.test_metrics_ranking_publication_apply_v1 -v
+          python3 -m unittest tests.test_metrics_ranking_publication_post_calc_v1 -v
       - name: Retired recovery markers
         run: |
           test ! -e .github/workflows/metrics-ranking-publication-apply-bootstrap.yml

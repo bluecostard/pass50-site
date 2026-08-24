@@ -206,7 +206,7 @@ function p50_mrp_simulate(PDO $pdo,string $period='2H',int $limit=200,?DateTimeI
         p50_mrp_gate('public_ranking_non_empty',$comparison['publicCount']>0?'pass':'block','Le classement public contient au moins un profil classable.',$comparison['publicCount']),
         p50_mrp_gate('experimental_profile_ids',!$experimental['duplicateIds']?'pass':'block','Identifiants expérimentaux uniques.',$experimental['duplicateIds']),
         p50_mrp_gate('experimental_ranks',!$experimental['duplicateRanks']?'pass':'block','Rangs expérimentaux uniques.',$experimental['duplicateRanks']),
-        p50_mrp_gate('successful_run',$latestRun!==null?'pass':'block','Un cycle MR-V1.0 réussi couvre la période.',$latestRun['runUuid']??null),
+        p50_mrp_gate('successful_run',$latestRun!==null?'pass':'block','Un cycle '.P50_MR_ALGORITHM_VERSION.' réussi couvre la période.',$latestRun['runUuid']??null),
         p50_mrp_gate('candidate_run_consistency',$latestRun!==null&&count($experimental['runUuids'])===1&&$experimental['runUuids'][0]===($latestRun['runUuid']??null)?'pass':'block','Toutes les lignes candidates proviennent du dernier cycle réussi.',$experimental['runUuids']),
         p50_mrp_gate('candidate_non_empty',$comparison['candidateCount']>0?'pass':'block','Le candidat contient au moins un profil classable.',$comparison['candidateCount']),
         // Warn (pas block) : l’apply ignore déjà les profils absents de app_state.
