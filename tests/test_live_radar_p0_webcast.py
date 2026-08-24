@@ -44,6 +44,7 @@ class LiveRadarP0WebcastTests(unittest.TestCase):
         self.assertEqual(by_handle['legrandbicongo'], 'census-le-grand-bicongo')
         self.assertEqual(by_handle['chocolat.show.officiel'], 'census-chocolat-show-officiel')
         self.assertEqual(by_handle['lalegende777'], 'census-la-legende')
+        self.assertEqual(by_handle['jack.carter39'], 'census-willway-jordan-officiel')
         self.assertNotEqual(by_handle.get('prince_du_pays'), 'ennemi-des-djandjou')
         self.assertEqual(sum(1 for row in sources if row['handle'].lower() == 'coachhamond'), 1)
         youtube = load_p0_youtube_sources(SOURCE)

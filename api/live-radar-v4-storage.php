@@ -251,6 +251,10 @@ function p50_live_v4_dedup(array $automatic,array $manual): array {
                 $stream['profileName']='La légende';
                 if(trim($handle)==='')$stream['handle']='@lalegende777';
             }
+            if($canonical==='census-willway-jordan-officiel'){
+                $stream['profileName']='Willway Jordan officiel';
+                if(trim($handle)==='')$stream['handle']='@jack.carter39';
+            }
         }
         $normalized[]=$stream;
     }

@@ -173,6 +173,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('chocolat.show.officiel', source)
         self.assertIn("'census-la-legende'", source)
         self.assertIn('lalegende777', source)
+        self.assertIn("'census-willway-jordan-officiel'", source)
+        self.assertIn('jack.carter39', source)
         self.assertIn('coachhamond', source)
         self.assertIn("'census-observateur-ebene'", source)
         self.assertIn("'oustaz-diane'", source)

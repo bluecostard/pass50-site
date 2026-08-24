@@ -54,6 +54,7 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'census-le-grand-bicongo',
     'census-chocolat-show-officiel',
     'census-la-legende',
+    'census-willway-jordan-officiel',
 ];
 /** YouTube à rescanner au même rythme P0. */
 const P50_LIVE_V4_P0_YOUTUBE = [
@@ -178,6 +179,7 @@ function p50_live_v4_tiktok_handle_canonicals(): array {
         'legrandbicongo'=>'census-le-grand-bicongo',
         'chocolat.show.officiel'=>'census-chocolat-show-officiel',
         'lalegende777'=>'census-la-legende',
+        'jack.carter39'=>'census-willway-jordan-officiel',
     ];
 }
 
@@ -242,6 +244,10 @@ function p50_live_v4_collapse_identity_sources(array $sources): array {
                 if($canonical==='census-la-legende'){
                     $source['public_name']='La légende';
                     $source['handle']='@lalegende777';
+                }
+                if($canonical==='census-willway-jordan-officiel'){
+                    $source['public_name']='Willway Jordan officiel';
+                    $source['handle']='@jack.carter39';
                 }
                 $id=$canonical;
             }
@@ -344,6 +350,7 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'census-le-grand-bicongo|tiktok'=>'https://www.tiktok.com/@legrandbicongo',
         'census-chocolat-show-officiel|tiktok'=>'https://www.tiktok.com/@chocolat.show.officiel',
         'census-la-legende|tiktok'=>'https://www.tiktok.com/@lalegende777',
+        'census-willway-jordan-officiel|tiktok'=>'https://www.tiktok.com/@jack.carter39',
     ];
     return $overrides[$key]??$url;
 }
@@ -432,6 +439,7 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'census-le-grand-bicongo','name'=>'Le grand Bicongo','handle'=>'legrandbicongo'],
         ['id'=>'census-chocolat-show-officiel','name'=>'Chocolat show officiel','handle'=>'chocolat.show.officiel'],
         ['id'=>'census-la-legende','name'=>'La légende','handle'=>'lalegende777'],
+        ['id'=>'census-willway-jordan-officiel','name'=>'Willway Jordan officiel','handle'=>'jack.carter39'],
     ] as $forced){
         $forcedKey='TikTok|'.$forced['id'];
         if(isset($seen[$forcedKey]))continue;
