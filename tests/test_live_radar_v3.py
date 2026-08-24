@@ -177,6 +177,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('jack.carter39', source)
         self.assertIn("'census-guyguy-le-grouilleur-de-bologne'", source)
         self.assertIn('guyguylegrouilleur07', source)
+        self.assertIn("'census-souley-de-paris'", source)
+        self.assertIn('souleydeparis', source)
         self.assertIn('coachhamond', source)
         self.assertIn("'census-observateur-ebene'", source)
         self.assertIn("'oustaz-diane'", source)

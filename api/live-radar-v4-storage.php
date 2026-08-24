@@ -259,6 +259,10 @@ function p50_live_v4_dedup(array $automatic,array $manual): array {
                 $stream['profileName']='Guyguy le grouilleur de Bologne';
                 if(trim($handle)==='')$stream['handle']='@guyguylegrouilleur07';
             }
+            if($canonical==='census-souley-de-paris'){
+                $stream['profileName']='Souley de Paris';
+                if(trim($handle)==='')$stream['handle']='@souleydeparis';
+            }
         }
         $normalized[]=$stream;
     }
