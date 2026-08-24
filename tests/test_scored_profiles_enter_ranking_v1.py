@@ -29,6 +29,7 @@ class ScoredProfilesEnterRankingV1Tests(unittest.TestCase):
             const end = source.indexOf('function coulesCandidates');
             if (tombStart < 0 || tombEnd < 0 || start < 0 || end < 0) throw new Error('ranking helpers missing');
             const context = {
+              CLOUD: { ready: true, enabled: false },
               ui: { period: '24H' },
               db: {
                 deletedProfileIds: [],

@@ -42,7 +42,9 @@ class MetricsRankingScheduleV2Tests(unittest.TestCase):
         self.assertIn("if(!$cfg['enabled'])", ENDPOINT)
 
     def test_endpoint_accepts_only_calculate_and_uses_v2_gate(self):
-        self.assertIn("$keys!==['action','dispatchId']", ENDPOINT)
+        self.assertIn("$allowedKeys=$force?['action','dispatchId','force']:['action','dispatchId']", ENDPOINT)
+        self.assertIn("if($keys!==$allowedKeys)", ENDPOINT)
+        self.assertIn("p50_mr_v2_force_calculate($pdo,$dispatchId)", ENDPOINT)
         self.assertIn("!=='calculate'", ENDPOINT)
         self.assertIn("!is_string($input['dispatchId']??null)", ENDPOINT)
         self.assertIn("strlen($dispatchId)>120", ENDPOINT)
