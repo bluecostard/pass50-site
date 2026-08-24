@@ -14,6 +14,11 @@ TOMBSTONE_IDS = [
     "census-le-brouteur",
     "census-oustaz-diakite-yaya",
     "census-reine-a",
+    "census-didi-b",
+    "census-himra",
+    "census-ks-bloom",
+    "census-roseline-layo",
+    "census-josey",
 ]
 KEPT_IDS = ["census-henri-michel", "census-aissa-amara", "obre-marie-pascale"]
 
@@ -41,9 +46,14 @@ class ProfileTombstoneV1Tests(unittest.TestCase):
         js_block = self.index.split("const P50_TOMBSTONE_PROFILE_IDS=", 1)[1].split("];", 1)[0]
         js_ids = re.findall(r"'census-[a-z0-9-]+'", js_block)
         self.assertEqual(php_ids, js_ids)
-        self.assertEqual(len(php_ids), 8)
+        self.assertEqual(len(php_ids), 13)
         self.assertIn("'census-reine-a'", php_ids)
         self.assertIn("'census-sheisthecode'", php_ids)
+        self.assertIn("'census-didi-b'", php_ids)
+        self.assertIn("'census-himra'", php_ids)
+        self.assertIn("'census-ks-bloom'", php_ids)
+        self.assertIn("'census-roseline-layo'", php_ids)
+        self.assertIn("'census-josey'", php_ids)
         self.assertNotIn("'census-henri-michel'", php_ids)
 
     def test_admin_delete_and_census_import_honor_tombstones(self):

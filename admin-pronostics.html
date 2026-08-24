@@ -179,7 +179,7 @@ n|Non|2.20</textarea>
     <input id="profileId" list="fiProfileList" placeholder="Rechercher ou choisir un influenceur…" autocomplete="off">
     <datalist id="fiProfileList"></datalist>
     <p id="profileIdHint" class="muted" style="margin:6px 0 0;font-size:12px">Chargement de la liste des influenceurs…</p>
-    <label>Clé sujet actu (si pas de FI — ex. himra-perte-tiktok)</label>
+    <label>Clé sujet actu (si pas de FI — ex. apoutchou-top5)</label>
     <input id="subjectKey" placeholder="Auto = thème + titre">
     <p class="muted" style="margin:6px 0 0;font-size:12px">Plusieurs questions OK sur le même sujet · plafond 6 actifs (open/draft/locked).</p>
     <label>Options (2 à 4, une par ligne : key|label|cote)</label>
@@ -283,7 +283,7 @@ function renderProfileDatalist(){
   if(hint){
     hint.textContent=FI_PROFILES.length
       ? `${FI_PROFILES.length} influenceur(s) — tape pour filtrer ou choisis dans la liste`
-      : 'Liste indisponible — saisis l’identifiant à la main (ex. himra)';
+      : 'Liste indisponible — saisis l’identifiant à la main (ex. apoutchou)';
   }
 }
 function roleLabel(role){

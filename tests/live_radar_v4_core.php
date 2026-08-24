@@ -143,7 +143,7 @@ must(!p50_live_v4_needs_tiktok_rescan($p0Fresh),'Un P0 TikTok contrôlé il y a 
 $noLimitP0=['profile_id'=>'census-no-limit','platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
 must(p50_live_v4_is_p0_tiktok($noLimitP0),'No Limit doit être en watchlist P0 TikTok même sans statut verified.');
 must(p50_live_v4_needs_tiktok_rescan($noLimitP0),'Un P0 No Limit unknown depuis 130 s doit être rescané.');
-foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-roseline-layo','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane','census-daniel-m','census-akalajoie','ennemi-des-djandjou','census-isouch','census-bb-sans-os-de-man','hassan','census-le-grand-bicongo','census-chocolat-show-officiel','census-la-legende','census-willway-jordan-officiel','census-guyguy-le-grouilleur-de-bologne','census-souley-de-paris'] as $liveId){
+foreach(['census-amour-ruth-poopy','census-jordan-evraa','dbz','maabio','census-el-profesor','census-sarara-messan','louissette','p_1785175190809','aya-robert','hamondchic','dez-cocrane225','census-rach-makosso','census-jp-nda','census-cahie-kunta','census-lise-akrassi','census-lexes','census-ange-morel','census-laguepe','census-rosemark-marcel','census-jiaan-wu','census-samuella-kouassi','oustaz-diane','census-daniel-m','census-akalajoie','ennemi-des-djandjou','census-isouch','census-bb-sans-os-de-man','hassan','census-le-grand-bicongo','census-chocolat-show-officiel','census-la-legende','census-willway-jordan-officiel','census-guyguy-le-grouilleur-de-bologne','census-souley-de-paris'] as $liveId){
     $p0=['profile_id'=>$liveId,'platform'=>'TikTok','verification_status'=>'ok','last_state'=>'unknown','last_checked_at'=>gmdate('Y-m-d H:i:s',time()-130)];
     must(p50_live_v4_is_p0_tiktok($p0),$liveId.' doit être en watchlist P0.');
 }
@@ -189,11 +189,6 @@ $dezSource=['profile_id'=>'dez-cocrane225','public_name'=>'Dez Cocrane 225','pla
 $dezLive=p50_live_v4_parse_tiktok($dezSource,['api_webcast'=>response('{"data":{"status":2,"id":7675422496225168161,"id_str":"7675422496225168161","title":"","user_count":504,"owner":{"display_id":"dezcocrane.225","nickname":"Dez Cocrane 225"}},"status_code":0}')]);
 must($dezLive['state']==='live','Dez Cocrane 225 webcast status=2 doit publier le LIVE.');
 must(($dezLive['live']['metadata']['roomId']??'')==='7675422496225168161','Le roomId Dez Cocrane doit être conservé.');
-
-$roselineSource=['profile_id'=>'census-roseline-layo','public_name'=>'Roseline Layo','platform'=>'TikTok','url'=>'https://www.tiktok.com/@roselinelayoofficiel'];
-$roselineLive=p50_live_v4_parse_tiktok($roselineSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344556,"id_str":"7675480011223344556","title":"En direct","user_count":3200,"owner":{"display_id":"roselinelayoofficiel","nickname":"Roseline Layo"}},"status_code":0}')]);
-must($roselineLive['state']==='live','Roseline Layo webcast status=2 doit publier le LIVE.');
-must(($roselineLive['live']['metadata']['roomId']??'')==='7675480011223344556','Le roomId Roseline Layo doit être conservé.');
 
 $rachSource=['profile_id'=>'census-rach-makosso','public_name'=>'Rach Makosso','platform'=>'TikTok','url'=>'https://www.tiktok.com/@rach_makosso1'];
 $rachLive=p50_live_v4_parse_tiktok($rachSource,['api_webcast'=>response('{"data":{"status":2,"id":7675480011223344666,"id_str":"7675480011223344666","title":"En direct","user_count":1800,"owner":{"display_id":"rach_makosso1","nickname":"Rach Makosso"}},"status_code":0}')]);

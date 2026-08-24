@@ -123,7 +123,7 @@ class LiveRadarV41Tests(unittest.TestCase):
 
     def test_coverage_rolling_and_unknown_first(self):
         source = (ROOT / 'api' / 'live-radar-v4-source.php').read_text(encoding='utf-8')
-        self.assertIn("P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-3'", source)
+        self.assertIn("P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-24-1'", source)
         self.assertIn('function p50_live_v4_coverage_stats', source)
         self.assertIn("$source['last_state']=(string)($health[$key]['last_state']??'never_checked')", source)
         self.assertIn('function p50_live_v4_discovery_rank', source)
@@ -148,8 +148,8 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn("'hamondchic'", source)
         self.assertIn("'dez-cocrane225'", source)
         self.assertIn('dezcocrane.225', source)
-        self.assertIn("'census-roseline-layo'", source)
-        self.assertIn('roselinelayoofficiel', source)
+        self.assertNotIn("'census-roseline-layo'", source)
+        self.assertNotIn('roselinelayoofficiel', source)
         self.assertIn("'census-rach-makosso'", source)
         self.assertIn('rach_makosso1', source)
         self.assertIn("'census-ange-morel'", source)

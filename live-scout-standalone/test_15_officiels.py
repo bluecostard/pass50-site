@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test Live Scout sur 15 comptes officiels vérifiés PASS50 (hors intégration)."""
+"""Test Live Scout sur 12 comptes officiels vérifiés PASS50 (hors intégration)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from server import probe_url  # noqa: E402
 
-# 15 noms + 1 lien officiel vérifié par profil (sources : fiches PASS50 / recensement).
+# 12 noms + 1 lien officiel vérifié par profil (sources : fiches PASS50 / recensement).
 TARGETS = [
     {"name": "Atoulé", "url": "https://www.tiktok.com/@atouleee.officiel"},
     {"name": "Dez Cocrane 225", "url": "https://www.tiktok.com/@dezcocrane.225"},
@@ -26,9 +26,6 @@ TARGETS = [
     {"name": "Mélanie TMS", "url": "https://www.tiktok.com/@melanie.tms"},
     {"name": "Oustaz Diané", "url": "https://www.tiktok.com/@oustazdianeofficiel1"},
     {"name": "Yasmine Fofana", "url": "https://www.youtube.com/@YasmineAfrofoodie"},
-    {"name": "Himra", "url": "https://www.instagram.com/himra_saiyen/"},
-    {"name": "Didi B", "url": "https://www.tiktok.com/@didib.mojaveli"},
-    {"name": "Roseline Layo", "url": "https://www.tiktok.com/@roselinelayoofficiel"},
 ]
 
 

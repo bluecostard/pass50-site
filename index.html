@@ -376,7 +376,7 @@ function applyPass50V6Patch(){
 function clone(x){return JSON.parse(JSON.stringify(x));}
 function load(){try{const raw=localStorage.getItem(APP_KEY);return raw?JSON.parse(raw):clone(seedData);}catch{return clone(seedData)}}
 let db=load();
-const P50_TOMBSTONE_PROFILE_IDS=['census-jai-horreur-des-fautes-lofficiel','census-simon-adingra','census-sheisthecode','census-les-adresses-de-chez-nous','census-epouse-gnahore','census-le-brouteur','census-oustaz-diakite-yaya','census-reine-a'];
+const P50_TOMBSTONE_PROFILE_IDS=['census-jai-horreur-des-fautes-lofficiel','census-simon-adingra','census-sheisthecode','census-les-adresses-de-chez-nous','census-epouse-gnahore','census-le-brouteur','census-oustaz-diakite-yaya','census-reine-a','census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey'];
 function p50NormalizeProfileId(id){return String(id||'').trim().toLowerCase();}
 function p50DeletedProfileIdSet(){
   const ids=[...P50_TOMBSTONE_PROFILE_IDS,...(Array.isArray(db.deletedProfileIds)?db.deletedProfileIds:[])];
@@ -1938,7 +1938,7 @@ initCloud();
 
 </script>
   <script src="./public-ui-sanitizer-v1.js?v=1.1"></script>
-<script src="./v9-tools.js?v=15.41"></script>
+<script src="./v9-tools.js?v=15.42"></script>
 <script src="./pronostics-coules-tab-v1.js?v=1.2" data-pass50-prono-coules-tab="1.2"></script>
 </body>
 </html>

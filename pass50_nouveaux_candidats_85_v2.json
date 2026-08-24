@@ -152,25 +152,6 @@
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
   },
   {
-    "id": "census-himra",
-    "name": "Himra",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2024-10-13",
-      "url": "https://www.pulse.ci/article/decouvrez-les-22-gagnants-des-pulse-influencers-awards-2024-en-cote-divoire-2024102810001168223"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
     "id": "census-ahou-lafricaine",
     "name": "Ahou L’Africaine",
     "known_alias": "",
@@ -557,25 +538,6 @@
     "entity_type": "Personne",
     "zone": "BOTH",
     "category": "Mode / Lifestyle",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2023-10-09",
-      "url": "https://www.pulse.ci/article/decouvrez-les-laureats-de-ledition-2023-des-pulse-influencer-awards-2024090512323480803"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-didi-b",
-    "name": "Didi B",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique",
     "census_status": "Recensé confirmé",
     "verification_priority": "P1",
     "eligible": false,
@@ -1064,25 +1026,6 @@
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
   },
   {
-    "id": "census-ks-bloom",
-    "name": "KS Bloom",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique / Gospel",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2022-12-05",
-      "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
     "id": "census-jonathan-morrison",
     "name": "Jonathan Morrison",
     "known_alias": "",
@@ -1127,25 +1070,6 @@
     "entity_type": "Personne",
     "zone": "CI",
     "category": "Danse / Musique",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2022-12-05",
-      "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-roseline-layo",
-    "name": "Roseline Layo",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique",
     "census_status": "Recensé confirmé",
     "verification_priority": "P1",
     "eligible": false,
@@ -1204,25 +1128,6 @@
     "zone": "CI",
     "category": "Mode / Beauté",
     "census_status": "Recensé confirmé",
-    "verification_priority": "P1",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {},
-    "source": {
-      "publisher": "ELLE Afrique francophone",
-      "date": "2025-12-26",
-      "url": "https://elleafriquefrancophone.com/elle-la-liste-ces-personnalites-ivoiriennes-qui-ont-marque-lannee-2025/"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-josey",
-    "name": "Josey",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique",
-    "census_status": "À vérifier – comptes officiels",
     "verification_priority": "P1",
     "eligible": false,
     "classable": false,

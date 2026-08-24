@@ -114,62 +114,6 @@
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
   },
   {
-    "id": "census-himra",
-    "name": "Himra",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P0",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {
-      "YouTube": "https://www.youtube.com/channel/UCck5J0M6YKnXCrnuXkCFuvw",
-      "X": "https://x.com/HimraOfficiel",
-      "Instagram": "https://www.instagram.com/himra_saiyen/",
-      "Facebook": "https://www.facebook.com/Himraofficiel/"
-    },
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2024-10-13",
-      "url": "https://www.pulse.ci/article/decouvrez-les-22-gagnants-des-pulse-influencers-awards-2024-en-cote-divoire-2024102810001168223"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
-    "priority_wave": "V22-16",
-    "research_queries": [
-      "\"Himra\" date de naissance école université diplôme",
-      "\"Himra\" officiel YouTube TikTok Instagram",
-      "\"Himra\" vidéo récente vues 2026"
-    ],
-    "curated_social_sources": {
-      "YouTube": {
-        "url": "https://www.youtube.com/channel/UCck5J0M6YKnXCrnuXkCFuvw",
-        "source_name": "Wikidata / YouTube API",
-        "source_url": "https://www.wikidata.org/wiki/Q131464985",
-        "confidence": 94
-      },
-      "X": {
-        "url": "https://x.com/HimraOfficiel",
-        "source_name": "Wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q131464985",
-        "confidence": 94
-      },
-      "Instagram": {
-        "url": "https://www.instagram.com/himra_saiyen/",
-        "source_name": "Wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q131464985",
-        "confidence": 94
-      },
-      "Facebook": {
-        "url": "https://www.facebook.com/Himraofficiel/",
-        "source_name": "Wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q131464985",
-        "confidence": 94
-      }
-    }
-  },
-  {
     "id": "census-ahou-lafricaine",
     "name": "Ahou L’Africaine",
     "known_alias": "",
@@ -572,62 +516,6 @@
       "url": "https://www.pulse.ci/article/decouvrez-les-laureats-de-ledition-2023-des-pulse-influencer-awards-2024090512323480803"
     },
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-didi-b",
-    "name": "Didi B",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P0",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {
-      "YouTube": "https://www.youtube.com/channel/UClzKdPhr7GrMtFFVcgpMiLg",
-      "Instagram": "https://www.instagram.com/didibofficial/",
-      "TikTok": "https://www.tiktok.com/@didib.mojaveli",
-      "X": "https://x.com/Didibofficial"
-    },
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2023-10-09",
-      "url": "https://www.pulse.ci/article/decouvrez-les-laureats-de-ledition-2023-des-pulse-influencer-awards-2024090512323480803"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
-    "priority_wave": "V22-16",
-    "research_queries": [
-      "\"Didi B\" date de naissance école université diplôme",
-      "\"Didi B\" officiel YouTube TikTok Instagram",
-      "\"Didi B\" vidéo récente vues 2026"
-    ],
-    "curated_social_sources": {
-      "YouTube": {
-        "url": "https://www.youtube.com/channel/UClzKdPhr7GrMtFFVcgpMiLg",
-        "source_name": "Wikidata / YouTube API",
-        "source_url": "https://www.wikidata.org/wiki/Q115791127",
-        "confidence": 94
-      },
-      "Instagram": {
-        "url": "https://www.instagram.com/didibofficial/",
-        "source_name": "Ivoireland",
-        "source_url": "https://www.ivoireland.com/24/qui-didi-rappeur-talentueux-cote",
-        "confidence": 94
-      },
-      "TikTok": {
-        "url": "https://www.tiktok.com/@didib.mojaveli",
-        "source_name": "Wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q115791127",
-        "confidence": 94
-      },
-      "X": {
-        "url": "https://x.com/Didibofficial",
-        "source_name": "Wikidata",
-        "source_url": "https://www.wikidata.org/wiki/Q115791127",
-        "confidence": 94
-      }
-    }
   },
   {
     "id": "census-le-grouilleur-3-0",
@@ -1244,41 +1132,6 @@
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
   },
   {
-    "id": "census-ks-bloom",
-    "name": "KS Bloom",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique / Gospel",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P0",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {
-      "YouTube": "https://www.youtube.com/@ksbloomofficiel"
-    },
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2022-12-05",
-      "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
-    "priority_wave": "V22-16",
-    "research_queries": [
-      "\"KS Bloom\" date de naissance école université diplôme",
-      "\"KS Bloom\" officiel YouTube TikTok Instagram",
-      "\"KS Bloom\" vidéo récente vues 2026"
-    ],
-    "curated_social_sources": {
-      "YouTube": {
-        "url": "https://www.youtube.com/@ksbloomofficiel",
-        "source_name": "vidIQ",
-        "source_url": "https://vidiq.com/youtube-stats/channel/%40ksbloomofficiel/",
-        "confidence": 94
-      }
-    }
-  },
-  {
     "id": "census-jonathan-morrison",
     "name": "Jonathan Morrison",
     "known_alias": "",
@@ -1399,55 +1252,6 @@
     }
   },
   {
-    "id": "census-roseline-layo",
-    "name": "Roseline Layo",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique",
-    "census_status": "Recensé confirmé",
-    "verification_priority": "P0",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {
-      "YouTube": "https://www.youtube.com/channel/UCqxktbqwGm859grAvvFiJFw",
-      "Instagram": "https://www.instagram.com/roselinelayooff/",
-      "TikTok": "https://www.tiktok.com/@roselinelayoofficiel"
-    },
-    "source": {
-      "publisher": "Pulse Côte d’Ivoire",
-      "date": "2022-12-05",
-      "url": "https://www.pulse.ci/article/les-10-ivoiriens-les-plus-influents-de-2022-pulse-picks-2024090511092244229"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
-    "priority_wave": "V22-16",
-    "research_queries": [
-      "\"Roseline Layo\" date de naissance école université diplôme",
-      "\"Roseline Layo\" officiel YouTube TikTok Instagram",
-      "\"Roseline Layo\" vidéo récente vues 2026"
-    ],
-    "curated_social_sources": {
-      "YouTube": {
-        "url": "https://www.youtube.com/channel/UCqxktbqwGm859grAvvFiJFw",
-        "source_name": "vidIQ",
-        "source_url": "https://vidiq.com/fr/youtube-stats/channel/UCqxktbqwGm859grAvvFiJFw/",
-        "confidence": 94
-      },
-      "Instagram": {
-        "url": "https://www.instagram.com/roselinelayooff/",
-        "source_name": "Ivoireland",
-        "source_url": "https://www.ivoireland.com/8955/biographie-roselyne-layo-chanteuse-auteur",
-        "confidence": 94
-      },
-      "TikTok": {
-        "url": "https://www.tiktok.com/@roselinelayoofficiel",
-        "source_name": "Ivoireland",
-        "source_url": "https://www.ivoireland.com/8955/biographie-roselyne-layo-chanteuse-auteur",
-        "confidence": 94
-      }
-    }
-  },
-  {
     "id": "census-olivia-yace",
     "name": "Olivia Yacé",
     "known_alias": "",
@@ -1503,41 +1307,6 @@
       "url": "https://elleafriquefrancophone.com/elle-la-liste-ces-personnalites-ivoiriennes-qui-ont-marque-lannee-2025/"
     },
     "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes."
-  },
-  {
-    "id": "census-josey",
-    "name": "Josey",
-    "known_alias": "",
-    "entity_type": "Personne",
-    "zone": "CI",
-    "category": "Musique",
-    "census_status": "À vérifier – comptes officiels",
-    "verification_priority": "P0",
-    "eligible": false,
-    "classable": false,
-    "official_socials": {
-      "YouTube": "https://www.youtube.com/@joseyofficiel"
-    },
-    "source": {
-      "publisher": "ELLE Afrique francophone",
-      "date": "2025-12-26",
-      "url": "https://elleafriquefrancophone.com/elle-la-liste-ces-personnalites-ivoiriennes-qui-ont-marque-lannee-2025/"
-    },
-    "notes": "Nouveau profil : ne pas intégrer au Top 50 avant vérification des comptes officiels, de la nationalité/zone et des métriques récentes. Priorité V22 : enrichissement biographique profond et calcul de score automatique sur données récentes.",
-    "priority_wave": "V22-16",
-    "research_queries": [
-      "\"Josey\" date de naissance école université diplôme",
-      "\"Josey\" officiel YouTube TikTok Instagram",
-      "\"Josey\" vidéo récente vues 2026"
-    ],
-    "curated_social_sources": {
-      "YouTube": {
-        "url": "https://www.youtube.com/@joseyofficiel",
-        "source_name": "vidIQ",
-        "source_url": "https://vidiq.com/youtube-stats/channel/%40joseyofficiel/",
-        "confidence": 94
-      }
-    }
   },
   {
     "id": "census-sefora-kodjo",

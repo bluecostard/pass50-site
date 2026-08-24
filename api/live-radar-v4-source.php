@@ -12,7 +12,7 @@ const P50_LIVE_RADAR_REQUIRES_APP_OPEN = false;
 const P50_LIVE_RADAR_CONTINUOUS_TICK_SECONDS = 1;
 const P50_LIVE_RADAR_DETECTION_OWNER = 'server';
 /** Couverture rolling (scan récent) — distincte du trust gate anti-ghost. */
-const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-12-3';
+const P50_LIVE_V4_COVERAGE_REVISION = 'LIVE-COVERAGE-ROLLING-2026-08-24-1';
 const P50_LIVE_V4_COVERAGE_WINDOW_SECONDS = 7200;
 /** TikTok à rescanner toutes les ~2 min. */
 const P50_LIVE_V4_P0_TIKTOK = [
@@ -33,7 +33,6 @@ const P50_LIVE_V4_P0_TIKTOK = [
     'coachhamond',
     'coachhamondchic',
     'dez-cocrane225',
-    'census-roseline-layo',
     'census-rach-makosso',
     'census-jp-nda',
     'census-cahie-kunta',
@@ -331,7 +330,6 @@ function p50_live_v4_official_url_override(string $profileId,string $platform,st
         'coachhamondchic|tiktok'=>'https://www.tiktok.com/@coachhamond',
         'coach-hamond|tiktok'=>'https://www.tiktok.com/@coachhamond',
         'dez-cocrane225|tiktok'=>'https://www.tiktok.com/@dezcocrane.225',
-        'census-roseline-layo|tiktok'=>'https://www.tiktok.com/@roselinelayoofficiel',
         'census-rach-makosso|tiktok'=>'https://www.tiktok.com/@rach_makosso1',
         'census-jp-nda|tiktok'=>'https://www.tiktok.com/@jpnda_1',
         'census-cahie-kunta|tiktok'=>'https://www.tiktok.com/@cahiekunta',
@@ -432,7 +430,6 @@ function p50_live_v4_sources(array $state): array {
         ['id'=>'aya-robert','name'=>'Aya Robert','handle'=>'aya.robert27'],
         ['id'=>'hamondchic','name'=>'Coach Hamond Chic','handle'=>'coachhamond'],
         ['id'=>'dez-cocrane225','name'=>'Dez Cocrane 225','handle'=>'dezcocrane.225'],
-        ['id'=>'census-roseline-layo','name'=>'Roseline Layo','handle'=>'roselinelayoofficiel'],
         ['id'=>'census-rach-makosso','name'=>'Rach Makosso','handle'=>'rach_makosso1'],
         ['id'=>'census-jp-nda','name'=>'JP N\'da','handle'=>'jpnda_1'],
         ['id'=>'census-cahie-kunta','name'=>'Cahié kunta','handle'=>'cahiekunta'],

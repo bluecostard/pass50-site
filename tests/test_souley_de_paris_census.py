@@ -88,11 +88,11 @@ class SouleyDeParisCensusTests(unittest.TestCase):
         self.assertIn("./profile-souley-de-paris.js?v=1.0", CONFIG)
         self.assertIn("./profile-souley-de-paris.js?v=1.0", SW)
         self.assertIn(f'"id":"{PROFILE_ID}"', V9)
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.20", V9)
-        self.assertIn("CENSUS_VERSION='99-v37'", V9)
-        self.assertIn("v9-tools.js?v=15.41", INDEX)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.21", V9)
+        self.assertIn("CENSUS_VERSION='99-v38'", V9)
+        self.assertIn("v9-tools.js?v=15.42", INDEX)
         self.assertIn("v9-tools.js?v=15.41", SW)
-        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.20", SW)
+        self.assertIn("pass50_nouveaux_candidats_90_v19.json?v=22.21", SW)
 
 
 if __name__ == "__main__":

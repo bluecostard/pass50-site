@@ -1,11 +1,11 @@
 {
   "ok": true,
   "tool": "live-scout-standalone",
-  "tested": 15,
+  "tested": 12,
   "summary": {
     "live": 1,
     "probable": 0,
-    "offline": 14,
+    "offline": 11,
     "unknown": 0,
     "replay": 0,
     "error": 0
@@ -374,96 +374,6 @@
           "status": 200,
           "timeMs": 787,
           "error": ""
-        }
-      }
-    },
-    {
-      "name": "Himra",
-      "url": "https://www.instagram.com/himra_saiyen/",
-      "platform": "Instagram",
-      "state": "offline",
-      "confidence": 86,
-      "title": "Himra est en direct",
-      "watchUrl": "https://www.instagram.com/himra_saiyen/",
-      "viewers": null,
-      "error": "no_signal",
-      "seconds": 3.04,
-      "probes": {
-        "profile_html": {
-          "ok": true,
-          "status": 200,
-          "timeMs": 1032,
-          "error": ""
-        },
-        "web_profile": {
-          "ok": true,
-          "status": 200,
-          "timeMs": 1866,
-          "error": ""
-        }
-      }
-    },
-    {
-      "name": "Didi B",
-      "url": "https://www.tiktok.com/@didib.mojaveli",
-      "platform": "TikTok",
-      "state": "offline",
-      "confidence": 96,
-      "title": "Didi B est en direct",
-      "watchUrl": "https://www.tiktok.com/@didib.mojaveli/live",
-      "viewers": null,
-      "error": "ended",
-      "seconds": 1.41,
-      "probes": {
-        "room_api": {
-          "ok": true,
-          "status": 200,
-          "timeMs": 766,
-          "error": ""
-        },
-        "live_page": {
-          "ok": true,
-          "status": 200,
-          "timeMs": 921,
-          "error": ""
-        },
-        "mobile_live": {
-          "ok": false,
-          "status": 404,
-          "timeMs": 1169,
-          "error": "http_404"
-        }
-      }
-    },
-    {
-      "name": "Roseline Layo",
-      "url": "https://www.tiktok.com/@roselinelayoofficiel",
-      "platform": "TikTok",
-      "state": "offline",
-      "confidence": 96,
-      "title": "Roseline Layo est en direct",
-      "watchUrl": "https://www.tiktok.com/@roselinelayoofficiel/live",
-      "viewers": null,
-      "error": "ended",
-      "seconds": 1.23,
-      "probes": {
-        "room_api": {
-          "ok": true,
-          "status": 200,
-          "timeMs": 499,
-          "error": ""
-        },
-        "live_page": {
-          "ok": true,
-          "status": 200,
-          "timeMs": 671,
-          "error": ""
-        },
-        "mobile_live": {
-          "ok": false,
-          "status": 404,
-          "timeMs": 904,
-          "error": "http_404"
         }
       }
     }

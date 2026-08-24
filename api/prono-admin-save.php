@@ -80,7 +80,7 @@ if ($subjectKey === '' && $theme !== '') {
     $subjectKey = mb_substr('theme:'.$theme.':'.$slug, 0, 120);
 }
 if ($subjectKey === '' && in_array($status, ['open', 'draft', 'locked'], true)) {
-    json_response(['error' => 'Choisis un thème, un Profile ID FI, ou une clé d’actualité (ex. himra-tiktok).'], 400);
+    json_response(['error' => 'Choisis un thème, un Profile ID FI, ou une clé d’actualité (ex. apoutchou-tiktok).'], 400);
 }
 if ($subjectKey !== '' && in_array($status, ['open', 'draft', 'locked'], true)) {
     $openCount = p50_prono_count_open_for_subject($pdo, $subjectKey, $id);

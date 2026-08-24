@@ -22,7 +22,7 @@ must(str_starts_with($pdf, '%PDF'), 'Le PDF doit commencer par %PDF.');
 must(strlen($pdf) > 400, 'Le PDF semble trop court.');
 must(str_contains($pdf, 'Live le plus suivi'), 'PDF : live manquant.');
 must(str_contains($pdf, 'Samuella Kouassi'), 'PDF : nom live manquant.');
-must(str_contains($pdf, 'Roseline Layo'), 'PDF : nom classement manquant.');
+must(str_contains($pdf, 'Apoutchou National'), 'PDF : nom classement manquant.');
 must(str_contains($pdf, 'Jordan Evraa'), 'PDF : nom prono manquant.');
 
 echo json_encode(['ok' => true, 'pdfBytes' => strlen($pdf), 'sections' => 3], JSON_UNESCAPED_SLASHES) . PHP_EOL;

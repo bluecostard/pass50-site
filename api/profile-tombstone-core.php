@@ -14,6 +14,11 @@ const P50_TOMBSTONE_PROFILE_IDS = [
     'census-le-brouteur',
     'census-oustaz-diakite-yaya',
     'census-reine-a',
+    'census-didi-b',
+    'census-himra',
+    'census-ks-bloom',
+    'census-roseline-layo',
+    'census-josey',
 ];
 
 function p50_normalize_profile_id(mixed $id): string

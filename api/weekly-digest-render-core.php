@@ -8,7 +8,7 @@ function p50_weekly_digest_preview_stats(): array {
         'weekKey' => p50_weekly_digest_week_key(),
         'window' => p50_weekly_digest_window(),
         'topLive' => ['profileId' => 'census-samuella-kouassi', 'name' => 'Samuella Kouassi', 'viewers' => 12840, 'platform' => 'TikTok'],
-        'topRankOne' => ['profileId' => 'census-roseline-layo', 'name' => 'Roseline Layo', 'timesFirst' => 5, 'periodKey' => '24H'],
+        'topRankOne' => ['profileId' => 'apoutchou', 'name' => 'Apoutchou National', 'timesFirst' => 5, 'periodKey' => '24H'],
         'topProno' => ['profileId' => 'census-jordan-evraa', 'name' => 'Jordan Evraa', 'voteCount' => 312, 'uniqueVoters' => 186],
     ];
 }

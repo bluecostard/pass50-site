@@ -56,11 +56,11 @@
 
   function demoStatuses() {
     return [
-      { id: 'st-1', authorPseudo: 'fan_abidjan', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 300 000', optionKey: 'b', odd: 2.1, stake: 100, potentialPayout: 210, likeCount: 18, likedByMe: false, durationHours: 24 },
-      { id: 'st-2', authorPseudo: 'koffi_buzz', questionTitle: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Oui, Top 3', optionKey: 'yes', odd: 1.85, stake: 100, potentialPayout: 185, likeCount: 42, likedByMe: false, durationHours: 12 },
+      { id: 'st-1', authorPseudo: 'fan_abidjan', questionTitle: 'Apoutchou National reste-t-il dans le Top 5 PASS50 sur 24 h ?', optionLabel: '+ de 300 000', optionKey: 'b', odd: 2.1, stake: 100, potentialPayout: 210, likeCount: 18, likedByMe: false, durationHours: 24 },
+      { id: 'st-2', authorPseudo: 'koffi_buzz', questionTitle: 'Doupi Papillon finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Oui, Top 3', optionKey: 'yes', odd: 1.85, stake: 100, potentialPayout: 185, likeCount: 42, likedByMe: false, durationHours: 12 },
       { id: 'st-3', authorPseudo: 'aya_ci', questionTitle: 'Lo Père Daloa passera-t-il en LIVE sous 24 h ?', optionLabel: 'Oui', optionKey: 'y', odd: 1.7, stake: 100, potentialPayout: 170, likeCount: 7, likedByMe: true, durationHours: 48 },
-      { id: 'st-4', authorPseudo: 'diaspora_tv', questionTitle: 'Himra — perte d’abonnés TikTok en 7 jours ?', optionLabel: '+ de 400 000', optionKey: 'a', odd: 3.4, stake: 100, potentialPayout: 340, likeCount: 11, likedByMe: false, durationHours: 24 },
-      { id: 'st-5', authorPseudo: 'yves_rank', questionTitle: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Non, hors Top 3', optionKey: 'no', odd: 2.05, stake: 100, potentialPayout: 205, likeCount: 3, likedByMe: false, durationHours: 24 },
+      { id: 'st-4', authorPseudo: 'diaspora_tv', questionTitle: 'Apoutchou National reste-t-il dans le Top 5 PASS50 sur 24 h ?', optionLabel: '+ de 400 000', optionKey: 'a', odd: 3.4, stake: 100, potentialPayout: 340, likeCount: 11, likedByMe: false, durationHours: 24 },
+      { id: 'st-5', authorPseudo: 'yves_rank', questionTitle: 'Doupi Papillon finit-il dans le Top 3 PASS50 sur 24 h ?', optionLabel: 'Non, hors Top 3', optionKey: 'no', odd: 2.05, stake: 100, potentialPayout: 205, likeCount: 3, likedByMe: false, durationHours: 24 },
     ].map((item) => ({ ...item, authorPhoto: syntheticPhoto(item.authorPseudo), coverPhoto: statusCoverDataUri(item, 'feed') }));
   }
 
@@ -98,7 +98,7 @@
           id: 'demo-1',
           theme: 'people_actualite',
           themeLabel: 'People Actualité',
-          title: 'Himra — perte d’abonnés TikTok en 7 jours ?',
+          title: 'Apoutchou National reste-t-il dans le Top 5 PASS50 sur 24 h ?',
           context: 'Après la polémique de la semaine, quel scénario te semble le plus probable ?',
           stake: 100,
           options: [
@@ -116,7 +116,7 @@
           id: 'demo-2',
           theme: 'people_influenceurs',
           themeLabel: 'People influenceurs',
-          title: 'Josey finit-il dans le Top 3 PASS50 sur 24 h ?',
+          title: 'Doupi Papillon finit-il dans le Top 3 PASS50 sur 24 h ?',
           context: 'Classement public Côte d’Ivoire + diaspora.',
           stake: 100,
           options: [

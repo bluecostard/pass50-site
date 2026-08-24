@@ -11,7 +11,6 @@ const P50_DE_CLASSABLE_MIN_CONFIDENCE = 40;
 const P50_DE_CLASSABLE_MIN_COVERAGE = 25.0;
 const P50_DE_CLASSABLE_MIN_CRITERIA = 4;
 const P50_PRIORITY_WAVE_V22 = [
-    'census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey',
     'census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo',
     'census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show',
     'census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man'
@@ -386,7 +385,7 @@ function p50_de_profiles_for_collection(int $limit = 5, ?string $profileId = nul
         $where.=' AND r.profile_id NOT IN ('.implode(',',array_fill(0,count($ids),'?')).')';
         $params=array_merge($params,$ids);
     }
-    $priority="'census-didi-b','census-himra','census-ks-bloom','census-roseline-layo','census-josey','census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo','census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show','census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man'";
+    $priority="'census-doupi-papillon','census-ange-freddy','census-eudoxie-yao','census-willy-dumbo','census-jonathan-morrison','census-lexes','census-chris-vital','census-mamie-show','census-artiste-de-poulet','census-jr-lamelo','census-bb-sans-os-de-man'";
     $sql="SELECT r.*,runs.last_run_at
           FROM p50_profile_registry r
           LEFT JOIN (
