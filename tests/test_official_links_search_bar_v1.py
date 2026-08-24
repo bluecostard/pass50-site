@@ -12,8 +12,10 @@ class OfficialLinksSearchBarTests(unittest.TestCase):
         self.assertIn('ensureOfficialLinksSearch', RUNTIME)
 
     def test_search_expands_all_profiles(self):
-        self.assertIn("all.map(p50v9LinkCard).join('')", RUNTIME)
+        self.assertIn("allOfficialLinkProfiles", RUNTIME)
+        self.assertIn("p50AllProfiles", RUNTIME)
         self.assertIn('linksSearchCount', RUNTIME)
+        self.assertNotIn("all.map(p50v9LinkCard).join('')", RUNTIME)
         self.assertNotIn('ranking().slice(0,30).map(p50v9LinkCard)', RUNTIME)
 
 if __name__=='__main__':

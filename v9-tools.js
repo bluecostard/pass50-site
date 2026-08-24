@@ -40,7 +40,10 @@ function p50v9NormalizeOfficialLink(platform,url=''){
     if(platform==='Instagram'&&host.endsWith('instagram.com'))host='instagram.com';
     if(platform==='TikTok'&&host.endsWith('tiktok.com'))host='tiktok.com';
     if(platform==='Facebook'&&host.endsWith('facebook.com'))host='facebook.com';
-    if(platform==='YouTube'&&(host.endsWith('youtube.com')||host==='youtu.be'))host=host==='youtu.be'?'youtube.com':host.replace(/^m\./,'');
+    if(platform==='YouTube'&&(host.endsWith('youtube.com')||host==='youtu.be')){
+      host=host==='youtu.be'?'youtube.com':host.replace(/^m\./,'');
+      path=path.replace(/\/(featured|videos|streams|live|about|community|playlists|channels)\/?$/i,'')||path;
+    }
     if(platform==='X'&&(host==='twitter.com'||host==='x.com'||host==='mobile.twitter.com'))host='x.com';
     if(platform==='Snapchat'&&host.endsWith('snapchat.com'))host='snapchat.com';
     let query='';
@@ -307,6 +310,9 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
       p.links=p.links||{};p.linkChecks=p.linkChecks||{};
       const byId=confirmedSocials[p.id]||null;
       const normalizedOwnerName=String(p.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+      if((p.id==='justecrepin'||normalizedOwnerName==='juste crepin')&&!String(p.knownAlias||'').toLowerCase().includes('gondo')){
+        p.knownAlias=[p.knownAlias,'Juste Crépin Gondo'].filter(Boolean).join(' / ');
+      }
       const byName=normalizedOwnerName==='no limit'?confirmedSocials['census-no-limit']:null;
       const ownerLinks=byId||byName||{};
       Object.entries(ownerLinks).forEach(([platform,url])=>{
@@ -364,6 +370,10 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
       return ra-rb||String(a.name||'').localeCompare(String(b.name||''),'fr');
     });
   }
+  function p50LinksSearchHaystack(p){
+    return [p?.name,p?.handle,p?.id,p?.category,p?.knownAlias,p?.realName,p?.occupation,...Object.keys(p?.links||{}),...Object.values(p?.links||{})]
+      .filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr');
+  }
   function p50ProfileOption(p){const m=p50RankMeta(p);return `${m.top50?'TOP 50 · ':''}${m.rank?'#'+m.rank+' · ':''}${p.name}`;}
   async function p50HydrateOfficialLinks(profileId){
     const p=profile(profileId);if(!p||PASS50_V9.socialHydrated.has(profileId)||PASS50_V9.socialHydrating.has(profileId))return;
@@ -371,9 +381,19 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
     try{
       const data=await apiFetch('social-links.php?profileId='+encodeURIComponent(profileId));
       const threshold=Number(data.threshold||90),verified=(data.links||[]).filter(x=>x.status==='verified'&&Number(x.confidence||0)>=threshold&&p50v9IsDirectPlatformLink(String(x.platform||''),String(x.url||'')));
-      verified.forEach(x=>{const platform=String(x.platform),url=String(x.url);p.links[platform]=url;p.platforms=[...new Set([...(p.platforms||[]),platform])];p.linkChecks[platform]={status:'ok',checkedAt:x.checked_at||new Date().toISOString(),message:'Lien officiel publié par le Data Engine'};});
-      PASS50_V9.socialHydrated.add(profileId);save();render();
-      if(ui.adminTab==='links'&&PASS50_V9.linksProfileId===profileId)p50v9RenderLinks();
+      let changed=false;
+      verified.forEach(x=>{
+        const platform=String(x.platform),url=String(x.url);
+        const current=String(p.links?.[platform]||'');
+        const status=String(p.linkChecks?.[platform]?.status||'');
+        if(p.officialLinkLocks?.[platform])return;
+        if(['owner_verified','manual_verified'].includes(status)&&current)return;
+        if(current&&p50v9IsDirectPlatformLink(platform,current))return;
+        p.links[platform]=url;p.platforms=[...new Set([...(p.platforms||[]),platform])];p.linkChecks[platform]={status:'ok',checkedAt:x.checked_at||new Date().toISOString(),message:'Lien officiel publié par le Data Engine'};
+        changed=true;
+      });
+      PASS50_V9.socialHydrated.add(profileId);if(changed)save();
+      if(changed&&ui.adminTab==='links'&&PASS50_V9.linksProfileId===profileId&&!window.PASS50_FI_EDIT_PRESERVE?.busy?.())p50v9RenderLinks();
     }catch(err){console.warn('Réseaux officiels non hydratés',err)}
     finally{PASS50_V9.socialHydrating.delete(profileId);}
   }
@@ -499,14 +519,18 @@ if(typeof scheduleRender==='function')scheduleRender();else render();
   document.addEventListener('input',e=>{
     if(e.target.id==='profileSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#profileAdminRows tr').forEach(r=>r.style.display=(r.dataset.adminProfileName||'').includes(q)?'':'none')}
     if(e.target.id==='linksProfileSearch'){
-      const q=e.target.value.trim().toLocaleLowerCase('fr');PASS50_V9.linksSearch=e.target.value;
-      const matches=p50AllProfiles().filter(p=>[p.name,p.handle,p.id,p.category].filter(Boolean).join(' ').toLocaleLowerCase('fr').includes(q));
+      const raw=e.target.value;PASS50_V9.linksSearch=raw;
+      const q=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase('fr');
+      const matches=p50AllProfiles().filter(p=>!q||p50LinksSearchHaystack(p).includes(q));
       const select=document.getElementById('linksProfileSelect'),count=document.getElementById('linksSearchCount');
       if(select){
         select.innerHTML=matches.length?matches.map(p=>`<option value="${safeAttr(p.id)}" ${p.id===PASS50_V9.linksProfileId?'selected':''}>${safeAttr(p50ProfileOption(p))}</option>`).join(''):'<option value="">Aucune fiche trouvée</option>';
-        if(matches.length&&!matches.some(p=>p.id===PASS50_V9.linksProfileId)){PASS50_V9.linksProfileId=matches[0].id;select.value=matches[0].id;}
+        if(matches.length&&!matches.some(p=>p.id===PASS50_V9.linksProfileId)){
+          PASS50_V9.linksProfileId=matches[0].id;select.value=matches[0].id;
+          if(!window.__pass50OfficialLinksSearchRendering){window.__pass50OfficialLinksSearchRendering=true;try{p50v9RenderLinks();}finally{window.__pass50OfficialLinksSearchRendering=false;}}
+        }
       }
-      if(count)count.textContent=matches.length+' fiche'+(matches.length>1?'s':'')+' trouvée'+(matches.length>1?'s':'');
+      if(count)count.textContent=q?(matches.length+' résultat'+(matches.length>1?'s':'')):(p50AllProfiles().length+' fiches');
     }
   });
 

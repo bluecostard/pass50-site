@@ -32,10 +32,10 @@ class AdminProfileAlphabeticalV1Tests(unittest.TestCase):
         self.assertNotIn("#contentGrid", MODULE)
 
     def test_loader_uses_versioned_non_async_module(self):
-        self.assertIn("admin-profile-alphabetical-v1.js?v=1.7", LOADER)
+        self.assertIn("admin-profile-alphabetical-v1.js?v=1.8", LOADER)
         self.assertIn("pass50AdminProfileAlphabetical", LOADER)
-        self.assertIn("'1.7',false", LOADER)
-        self.assertIn("admin-fi-edit-preserve-v1.js?v=1.0", LOADER)
+        self.assertIn("'1.8',false", LOADER)
+        self.assertIn("admin-fi-edit-preserve-v1.js?v=1.1", LOADER)
 
     def test_open_fi_edit_skips_full_list_reload(self):
         self.assertIn("if(window.PASS50_FI_EDIT_PRESERVE?.shouldSkip?.('links'))return", MODULE)

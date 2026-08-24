@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.5';
+  const VERSION='PASS50-OFFICIAL-LINKS-PROTECTION-V4.6';
   const RESTORE_KEY='pass50_official_links_protection_v4_restore';
   const OWNER_LOCK_KEY='pass50_owner_locked_profiles_v1';
   const OFFICIAL_LINK_FIELDS=['TikTok','Instagram','Facebook','YouTube','X','Snapchat'];
@@ -164,50 +164,67 @@
     });
   }
 
+  function allOfficialLinkProfiles(){
+    try{if(typeof p50AllProfiles==='function')return p50AllProfiles();}catch{}
+    try{return [...(db.profiles||[])];}catch{return [];}
+  }
+
+  function profileSearchHaystack(p){
+    return searchKey([
+      p?.name,p?.handle,p?.id,p?.category,p?.knownAlias,p?.realName,p?.occupation,
+      ...OFFICIAL_LINK_FIELDS,
+      ...(p?.platforms||[]),
+      ...Object.keys(p?.links||{}),
+      ...Object.values(p?.links||{})
+    ].filter(Boolean).join(' '));
+  }
+
   function applyOfficialLinksSearch(){
     const input=document.getElementById('linksProfileSearch');
-    const cards=[...document.querySelectorAll('#linksCards [data-link-profile]')];
-    if(!input||!cards.length)return;
+    if(!input)return;
     const q=searchKey(input.value);
-    let visible=0;
+    const profiles=allOfficialLinkProfiles();
+    const matches=profiles.filter(p=>!q||profileSearchHaystack(p).includes(q));
+    const select=document.getElementById('linksProfileSelect');
+    const cards=[...document.querySelectorAll('#linksCards [data-link-profile]')];
+    if(select){
+      const current=(typeof PASS50_V9==='object'&&PASS50_V9.linksProfileId)||select.value||'';
+      select.innerHTML=matches.length?matches.map(p=>{
+        let label=p.name||p.id;
+        try{if(typeof p50ProfileOption==='function')label=p50ProfileOption(p);}catch{}
+        return `<option value="${String(p.id).replace(/"/g,'&quot;')}" ${p.id===current?'selected':''}>${String(label).replace(/</g,'&lt;')}</option>`;
+      }).join(''):'<option value="">Aucune fiche trouvée</option>';
+      if(matches.length&&!matches.some(p=>p.id===current)){
+        try{if(typeof PASS50_V9==='object'&&PASS50_V9)PASS50_V9.linksProfileId=matches[0].id;}catch{}
+        select.value=matches[0].id;
+        if(!window.__pass50OfficialLinksSearchRendering&&typeof p50v9RenderLinks==='function'){
+          window.__pass50OfficialLinksSearchRendering=true;
+          try{p50v9RenderLinks();}finally{window.__pass50OfficialLinksSearchRendering=false;}
+        }
+      }
+    }
+    const visibleIds=new Set(matches.map(p=>String(p.id)));
+    let visibleCards=0;
     cards.forEach(card=>{
-      const id=card.getAttribute('data-link-profile')||'';
-      let p=null;
-      try{p=typeof profile==='function'?profile(id):null;}catch{}
-      const haystack=searchKey([
-        p?.name,p?.handle,p?.id,p?.category,
-        ...OFFICIAL_LINK_FIELDS,
-        ...(p?.platforms||[]),
-        ...Object.keys(p?.links||{}),
-        ...Object.values(p?.links||{})
-      ].filter(Boolean).join(' '));
-      const match=!q||haystack.includes(q);
+      const match=!q||visibleIds.has(String(card.getAttribute('data-link-profile')||''));
       const nextDisplay=match?'':'none';
       if(card.style.display!==nextDisplay)card.style.display=nextDisplay;
-      if(match)visible++;
+      if(match)visibleCards++;
     });
     const count=document.getElementById('linksSearchCount');
-    const nextCount=q?`${visible} résultat${visible>1?'s':''}`:`${cards.length} fiches`;
+    const shown=select?matches.length:(cards.length?visibleCards:matches.length);
+    const nextCount=q?`${shown} résultat${shown>1?'s':''}`:`${profiles.length} fiches`;
     if(count&&count.textContent!==nextCount)count.textContent=nextCount;
   }
 
   function ensureOfficialLinksSearch(){
     if(window.PASS50_FI_EDIT_PRESERVE?.busy?.()){
       applyOfficialLinksSearch();
-      return Boolean(document.getElementById('linksCards')||document.getElementById('linksProfileSearch'));
+      return Boolean(document.getElementById('linksCards')||document.getElementById('linksProfileSearch')||document.getElementById('linksProfileSelect'));
     }
     const cards=document.getElementById('linksCards');
-    if(!cards)return false;
-    try{
-      if(typeof ranking==='function'&&typeof p50v9LinkCard==='function'&&!cards.dataset.searchExpanded){
-        const all=ranking();
-        if(Array.isArray(all)&&all.length){
-          cards.innerHTML=all.map(p50v9LinkCard).join('');
-          cards.dataset.searchExpanded='1';
-        }
-      }
-    }catch(error){console.error('PASS50 recherche Liens officiels',error);}
-
+    const v2=document.querySelector('.links-v2');
+    if(!cards&&!v2)return false;
     ensureSixOfficialFields();
 
     let input=document.getElementById('linksProfileSearch');
@@ -216,9 +233,15 @@
       box.className='media-search-box links-search-box';
       box.setAttribute('data-pass50-links-search','v1');
       box.innerHTML='<input id="linksProfileSearch" type="search" autocomplete="off" placeholder="Rechercher un influenceur par nom, pseudo ou réseau…"><span id="linksSearchCount"></span>';
-      const toolbar=cards.parentElement?.querySelector('.admin-toolbar');
-      if(toolbar)toolbar.insertAdjacentElement('beforebegin',box);
-      else cards.insertAdjacentElement('beforebegin',box);
+      if(cards){
+        const toolbar=cards.parentElement?.querySelector('.admin-toolbar');
+        if(toolbar)toolbar.insertAdjacentElement('beforebegin',box);
+        else cards.insertAdjacentElement('beforebegin',box);
+      }else{
+        const hint=v2.querySelector('.media-hint');
+        if(hint)hint.insertAdjacentElement('afterend',box);
+        else v2.prepend(box);
+      }
       input=box.querySelector('#linksProfileSearch');
       input?.addEventListener('input',applyOfficialLinksSearch);
       input?.addEventListener('search',applyOfficialLinksSearch);
@@ -254,6 +277,7 @@
 
   function sanitizeBrowser(){
     try{
+      if(window.PASS50_FI_EDIT_PRESERVE?.busy?.())return 0;
       if(typeof db!=='object'||!db)return 0;
       const removed=sanitizeState(db);
       if(removed)persistBrowser();
@@ -349,7 +373,7 @@
       }
     },true);
     const observer=new MutationObserver(()=>{
-      if(document.getElementById('linksCards')){
+      if(document.getElementById('linksCards')||document.getElementById('linksProfileSelect')||document.querySelector('.links-v2')){
         ensureOfficialLinksSearch();
         restoreVerifiedLinks(false);
       }

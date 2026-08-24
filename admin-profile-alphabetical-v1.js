@@ -2,12 +2,11 @@
 (function(){
   'use strict';
 
-  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.7';
+  const VERSION='PASS50-ADMIN-PROFILE-ALPHABETICAL-V1.8';
   const collator=new Intl.Collator('fr',{sensitivity:'base',ignorePunctuation:true,numeric:true});
   let scheduled=false;
   let linksRendererInstalled=false;
   let redirectingSignalsTab=false;
-  let linksRenderToken=0;
 
   function label(value){
     return String(value||'').replace(/^[#\s\d.–—-]+/,'').trim();
@@ -104,27 +103,14 @@
   }
 
   function installOfficialLinksRenderer(){
-    if(linksRendererInstalled||typeof p50v9RenderLinks!=='function'||typeof p50v9LinkCard!=='function')return;
+    if(linksRendererInstalled||typeof p50v9RenderLinks!=='function')return;
+    const original=p50v9RenderLinks;
     p50v9RenderLinks=function(){
       if(window.PASS50_FI_EDIT_PRESERVE?.shouldSkip?.('links'))return;
-      const pane=document.querySelector('#adminPane');
-      if(!pane)return;
-      const profiles=alphabeticalProfiles();
-      const token=++linksRenderToken;
-      pane.innerHTML=`<div class="media-hint"><strong>Objectif :</strong> seuls les profils officiels directs sont visibles au public. Les liens de recherche sont masqués.</div><div class="admin-toolbar"><button class="btn primary" id="checkTop10Links">Vérifier les liens du Top 10</button></div><div id="linksCards"></div>`;
-      const cards=document.getElementById('linksCards');
-      if(!cards)return;
-      cards.dataset.searchExpanded='1';
-      let index=0;
-      const appendChunk=()=>{
-        if(token!==linksRenderToken||!cards.isConnected||currentAdminTab()!=='links')return;
-        if(window.PASS50_FI_EDIT_PRESERVE?.busy?.())return;
-        const next=profiles.slice(index,index+12);
-        if(next.length)cards.insertAdjacentHTML('beforeend',next.map(p50v9LinkCard).join(''));
-        index+=next.length;
-        if(index<profiles.length)requestAnimationFrame(appendChunk);
-      };
-      appendChunk();
+      const result=original.apply(this,arguments);
+      const select=document.getElementById('linksProfileSelect');
+      if(select&&!window.PASS50_FI_EDIT_PRESERVE?.busy?.())sortSelect(select);
+      return result;
     };
     linksRendererInstalled=true;
   }

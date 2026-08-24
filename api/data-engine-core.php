@@ -590,7 +590,10 @@ function p50_de_normalize_social_url(string $platform, string $url): string {
         }
     }
     elseif ($platform === 'facebook') $host='facebook.com';
-    elseif ($platform === 'youtube') $host='youtube.com';
+    elseif ($platform === 'youtube') {
+        $host='youtube.com';
+        $path = preg_replace('#/(featured|videos|streams|live|about|community|playlists|channels)$#i','',$path) ?: $path;
+    }
     elseif ($platform === 'x') $host='x.com';
     elseif ($platform === 'snapchat') $host='snapchat.com';
     $query = '';

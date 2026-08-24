@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='1.0';
+const VERSION='1.1';
 let allowUntil=0;
 let tabSwitchUntil=0;
 let wrappedNames=Object.create(null);
@@ -58,11 +58,10 @@ function isEditingFi(){
   const root=pane();
   if(!root)return false;
   if(root.querySelector('#profileForm,#hubForm'))return true;
-  const search=root.querySelector('#linksProfileSearch');
-  if(search&&String(search.value||'').trim())return true;
-  const active=document.activeElement;
-  if(active&&root.contains(active)&&active.matches('input,textarea,select'))return true;
   if(linksHaveDraft(root))return true;
+  const active=document.activeElement;
+  const search=root.querySelector('#linksProfileSearch');
+  if(active&&root.contains(active)&&active.matches('input,textarea')&&active!==search)return true;
   return false;
 }
 
