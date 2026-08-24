@@ -1,65 +1,26 @@
 {
-  "at": "2026-08-24 15:59 UTC",
+  "at": "2026-08-24 19:04 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "census-bb-sans-os-de-man",
+      "profileId": "dez-cocrane225",
       "platform": "TikTok",
-      "roomId": "7677626328921443092",
+      "roomId": "7677647180370955041",
       "title": "",
-      "viewers": 476,
-      "startedAt": "2026-08-24 15:51:36",
-      "handle": "bebe.sans.os.de.m"
-    },
-    {
-      "profileId": "census-le-grand-bicongo",
-      "platform": "TikTok",
-      "roomId": "7677616791900293889",
-      "title": "",
-      "viewers": 151,
-      "startedAt": "2026-08-24 15:14:33",
-      "handle": "legrandbicongo"
-    },
-    {
-      "profileId": "census-stephane-galactik",
-      "platform": "TikTok",
-      "roomId": "7677624947437439765",
-      "title": "",
-      "viewers": 102,
-      "startedAt": "2026-08-24 15:46:14",
-      "handle": "le_coach_des_debout"
-    },
-    {
-      "profileId": "census-willway-jordan-officiel",
-      "platform": "TikTok",
-      "roomId": "7677604772359490326",
-      "title": "Bon debut de semaine",
-      "viewers": 569,
-      "startedAt": "2026-08-24 14:28:19",
-      "handle": "jack.carter39"
+      "viewers": 414,
+      "startedAt": "2026-08-24 17:13:05",
+      "handle": "dezcocrane.225"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 4,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "census-bb-sans-os-de-man",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-le-grand-bicongo",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-stephane-galactik",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-willway-jordan-officiel",
+        "profileId": "dez-cocrane225",
         "platform": "TikTok"
       }
     ],
