@@ -35,12 +35,14 @@ class Pass50FirstOpenTutorialTests(unittest.TestCase):
     def test_left_and_right_corner_clicks_navigate(self):
         self.assertIn("p50-ob-hit-left", ONBOARDING)
         self.assertIn("p50-ob-hit-right", ONBOARDING)
+        self.assertIn("addEventListener('click', retreat)", ONBOARDING)
         self.assertIn("addEventListener('click', advance)", ONBOARDING)
-        self.assertEqual(ONBOARDING.count("addEventListener('click', advance)"), 2)
+        self.assertIn("aria-label=\"Écran précédent\"", ONBOARDING)
+        self.assertIn("aria-label=\"Écran suivant\"", ONBOARDING)
 
     def test_loader_and_replay_hook_exist(self):
-        self.assertIn("pass50-onboarding.js?v=1.1", LOADER)
-        self.assertIn("pass50-onboarding-approved-v1.js?v=1.1", LOADER)
+        self.assertIn("pass50-onboarding.js?v=1.2", LOADER)
+        self.assertIn("pass50-onboarding-approved-v1.js?v=1.2", LOADER)
         self.assertIn("Revoir le tutoriel", ONBOARDING)
         self.assertIn("p50-approved-boat", APPROVED)
 

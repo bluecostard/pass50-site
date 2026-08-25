@@ -270,11 +270,11 @@
     const root = document.createElement('div');
     root.id = ROOT_ID;
     root.hidden = true;
-    root.innerHTML = `<div class="p50-ob-backdrop" aria-hidden="true"></div><div class="p50-ob-shell"><section class="p50-ob-card" role="dialog" aria-modal="true" aria-label="Tutoriel PASS50"><div class="p50-ob-progress" aria-hidden="true"></div><div class="p50-ob-top"><div class="p50-ob-step-meta"></div><button class="p50-ob-skip" type="button">Passer</button></div><button class="p50-ob-hit p50-ob-hit-left" type="button" aria-label="Avancer"></button><button class="p50-ob-hit p50-ob-hit-right" type="button" aria-label="Avancer"></button><div class="p50-ob-content"></div><div class="p50-ob-footer"></div></section></div>`;
+    root.innerHTML = `<div class="p50-ob-backdrop" aria-hidden="true"></div><div class="p50-ob-shell"><section class="p50-ob-card" role="dialog" aria-modal="true" aria-label="Tutoriel PASS50"><div class="p50-ob-progress" aria-hidden="true"></div><div class="p50-ob-top"><div class="p50-ob-step-meta"></div><button class="p50-ob-skip" type="button">Passer</button></div><button class="p50-ob-hit p50-ob-hit-left" type="button" aria-label="Écran précédent"></button><button class="p50-ob-hit p50-ob-hit-right" type="button" aria-label="Écran suivant"></button><div class="p50-ob-content"></div><div class="p50-ob-footer"></div></section></div>`;
     document.body.appendChild(root);
 
     root.querySelector('.p50-ob-skip').addEventListener('click', () => close(true));
-    root.querySelector('.p50-ob-hit-left').addEventListener('click', advance);
+    root.querySelector('.p50-ob-hit-left').addEventListener('click', retreat);
     root.querySelector('.p50-ob-hit-right').addEventListener('click', advance);
     root.addEventListener('touchstart', event => { touchStartX = event.changedTouches[0].clientX; }, {passive: true});
     root.addEventListener('touchend', event => {

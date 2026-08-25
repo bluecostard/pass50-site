@@ -85,14 +85,14 @@
   if(!isHome||params.get('embed')==='coules'||window.__pass50OnboardingLoader)return;
   window.__pass50OnboardingLoader=true;
   const script=document.createElement('script');
-  script.src='./pass50-onboarding.js?v=1.1';
+  script.src='./pass50-onboarding.js?v=1.2';
   script.defer=true;
-  script.dataset.pass50Onboarding='1.1';
+  script.dataset.pass50Onboarding='1.2';
   script.addEventListener('load',()=>{
     const approved=document.createElement('script');
-    approved.src='./pass50-onboarding-approved-v1.js?v=1.1';
+    approved.src='./pass50-onboarding-approved-v1.js?v=1.2';
     approved.defer=true;
-    approved.dataset.pass50ApprovedOnboarding='1.1';
+    approved.dataset.pass50ApprovedOnboarding='1.2';
     document.head.appendChild(approved);
   },{once:true});
   document.head.appendChild(script);
