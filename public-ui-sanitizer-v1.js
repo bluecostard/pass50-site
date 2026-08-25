@@ -76,3 +76,17 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
 })();
+
+(function loadPass50FirstOpenTutorial(){
+  'use strict';
+  const path=(location.pathname||'/').replace(/\/+$/,'')||'/';
+  const params=new URLSearchParams(location.search);
+  const isHome=path==='/'||/\/index\.html$/i.test(path);
+  if(!isHome||params.get('embed')==='coules'||window.__pass50OnboardingLoader)return;
+  window.__pass50OnboardingLoader=true;
+  const script=document.createElement('script');
+  script.src='./pass50-onboarding.js?v=1.0';
+  script.defer=true;
+  script.dataset.pass50Onboarding='1.0';
+  document.head.appendChild(script);
+})();
