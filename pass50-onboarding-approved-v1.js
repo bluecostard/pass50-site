@@ -57,6 +57,10 @@
     document.head.appendChild(el);
   }
 
+  function setTextIfChanged(el, value) {
+    if (el && el.textContent !== value) el.textContent = value;
+  }
+
   function applyApprovedScreen() {
     const root = document.querySelector(ROOT);
     if (!root || root.hidden) return;
@@ -67,21 +71,23 @@
     const body = root.querySelector('.p50-ob-body');
 
     if (eyebrow.includes('PASS50') || eyebrow.includes('BIENVENUE')) {
-      if (body) body.textContent = 'Classement actualisé toutes les 2h - 24h - 48h';
+      setTextIfChanged(body, 'Classement actualisé toutes les 2h - 24h - 48h');
       return;
     }
 
     if (eyebrow.includes('CLASSEMENT')) {
-      if (title) title.textContent = 'Le classement';
+      setTextIfChanged(title, 'Le classement');
       const names = [...root.querySelectorAll('.p50-ob-rank-name')];
       const approvedNames = ['Blue', 'Costard', 'Compagnie'];
-      names.slice(0, 3).forEach((el, i) => el.textContent = approvedNames[i]);
+      names.slice(0, 3).forEach((el, i) => setTextIfChanged(el, approvedNames[i]));
 
       const photos = getRankingPhotos();
       const avatars = [...root.querySelectorAll('.p50-ob-rank-avatar')];
       avatars.slice(0, 3).forEach((avatar, i) => {
         if (!photos[i]) return;
-        avatar.textContent = '';
+        const existing = avatar.querySelector('img');
+        if (existing?.src === photos[i]) return;
+        avatar.replaceChildren();
         const img = document.createElement('img');
         img.src = photos[i];
         img.alt = '';
@@ -91,12 +97,12 @@
     }
 
     if (eyebrow.includes('PARIE')) {
-      if (title) title.textContent = 'Parie sur l’actualité';
+      setTextIfChanged(title, 'Parie sur l’actualité');
       return;
     }
 
     if (eyebrow.includes('COUL')) {
-      if (title) title.textContent = 'Les Coulés';
+      setTextIfChanged(title, 'Les Coulés');
       const old = root.querySelector('.p50-ob-downchart');
       if (old && !root.querySelector('.p50-approved-boat')) {
         const boat = document.createElement('div');
@@ -108,9 +114,30 @@
   }
 
   function boot() {
-    const observer = new MutationObserver(applyApprovedScreen);
-    observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-    applyApprovedScreen();
+    let rootObserver = null;
+    let lastRoot = null;
+    let queued = false;
+
+    const run = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        const root = document.querySelector(ROOT);
+        if (root && root !== lastRoot) {
+          if (rootObserver) rootObserver.disconnect();
+          rootObserver = new MutationObserver(run);
+          rootObserver.observe(root, { childList: true, subtree: true });
+          lastRoot = root;
+        }
+        applyApprovedScreen();
+      });
+    };
+
+    const mountObserver = new MutationObserver(run);
+    mountObserver.observe(document.body, { childList: true, subtree: true });
+    run();
+    setTimeout(() => mountObserver.disconnect(), 5000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
