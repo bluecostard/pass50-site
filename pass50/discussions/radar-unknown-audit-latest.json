@@ -1,32 +1,46 @@
 {
-  "at": "2026-08-25 16:04 UTC",
+  "at": "2026-08-25 21:47 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 4,
   "lives": [
+    {
+      "profileId": "apoutchou",
+      "platform": "TikTok",
+      "roomId": "7678087416380427041",
+      "title": "",
+      "viewers": 11413,
+      "startedAt": "2026-08-25 21:41:37",
+      "handle": "apoutchou_national1"
+    },
     {
       "profileId": "aya-robert",
       "platform": "TikTok",
-      "roomId": "7677998728585792288",
+      "roomId": "7678085029674699553",
       "title": "",
-      "viewers": 3529,
-      "startedAt": "2026-08-25 15:57:33",
+      "viewers": 5360,
+      "startedAt": "2026-08-25 21:32:15",
       "handle": "aya.robert27"
+    },
+    {
+      "profileId": "census-ange-boli",
+      "platform": "TikTok",
+      "roomId": "7678077287761300231",
+      "title": "",
+      "viewers": 993,
+      "startedAt": "2026-08-25 21:01:45",
+      "handle": "angeboli7"
+    },
+    {
+      "profileId": "tma",
+      "platform": "TikTok",
+      "roomId": "7678048286930930439",
+      "title": "Ekortipaa Au Bénin 🇧🇯",
+      "viewers": 4467,
+      "startedAt": "2026-08-25 19:09:27",
+      "handle": "tmacrush_officiel"
     }
   ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 1,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "aya-robert",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 16
-  },
+  "posted": null,
   "enabled": true,
-  "error": null
+  "error": "POST HTTP 500"
 }
