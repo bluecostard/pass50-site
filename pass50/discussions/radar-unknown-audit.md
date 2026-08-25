@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-25 16:04 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `aya-robert` @aya.robert27 — 7677998728585792288 · 3529 viewers
+
 ### 2026-08-25 13:15 UTC
 
 Erreur : `GET HTTP 429`
@@ -354,14 +364,6 @@ Erreur : `GET HTTP 500`
 ### 2026-08-20 17:02 UTC
 
 - Unknown sondés : **90**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-08-20 14:21 UTC
-
-- Unknown sondés : **118**
 - Vraiment en live : **0**
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
