@@ -1,70 +1,44 @@
 {
-  "at": "2026-08-24 21:48 UTC",
+  "at": "2026-08-25 01:56 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "aya-robert",
+      "profileId": "census-samuella-kouassi",
       "platform": "TikTok",
-      "roomId": "7677702709153221409",
-      "title": "",
-      "viewers": 14979,
-      "startedAt": "2026-08-24 20:48:34",
-      "handle": "aya.robert27"
+      "roomId": "7677745913372855073",
+      "title": "Lets Go LIVE!",
+      "viewers": 1307,
+      "startedAt": "2026-08-24 23:37:24",
+      "handle": "samuellakouassiofficiel"
     },
     {
       "profileId": "dez-cocrane225",
       "platform": "TikTok",
       "roomId": "7677647180370955041",
       "title": "",
-      "viewers": 494,
+      "viewers": 261,
       "startedAt": "2026-08-24 17:13:05",
       "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7677701665763461921",
-      "title": "",
-      "viewers": 3170,
-      "startedAt": "2026-08-24 20:44:34",
-      "handle": "oustazdianeofficiel1"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7677691095828548360",
-      "title": "",
-      "viewers": 8015,
-      "startedAt": "2026-08-24 20:03:07",
-      "handle": "tmacrush_officiel"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 4,
+    "published": 2,
     "added": [],
     "stored": [
       {
-        "profileId": "aya-robert",
+        "profileId": "census-samuella-kouassi",
         "platform": "TikTok"
       },
       {
         "profileId": "dez-cocrane225",
         "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
       }
     ],
     "skipped": [],
-    "p0Count": 13
+    "p0Count": 15
   },
   "enabled": true,
   "error": null
