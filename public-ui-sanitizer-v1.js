@@ -88,5 +88,12 @@
   script.src='./pass50-onboarding.js?v=1.0';
   script.defer=true;
   script.dataset.pass50Onboarding='1.0';
+  script.addEventListener('load',()=>{
+    const approved=document.createElement('script');
+    approved.src='./pass50-onboarding-approved-v1.js?v=1.0';
+    approved.defer=true;
+    approved.dataset.pass50ApprovedOnboarding='1.0';
+    document.head.appendChild(approved);
+  },{once:true});
   document.head.appendChild(script);
 })();
