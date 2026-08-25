@@ -46,19 +46,13 @@
     const el = document.createElement('style');
     el.id = 'p50ApprovedOnboardingStyles';
     el.textContent = `
-      ${ROOT} .p50-ob-eyebrow{font-size:15px!important;letter-spacing:.11em!important}
-      ${ROOT} .p50-ob-title{font-size:clamp(36px,10vw,52px)!important;line-height:.98!important;letter-spacing:-.045em!important}
       ${ROOT} .p50-ob-rank-avatar{overflow:hidden!important;border-radius:13px!important}
       ${ROOT} .p50-ob-rank-avatar img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 18%}
       ${ROOT} .p50-approved-boat{height:230px;margin:18px 0 6px;border:1px solid #432222;border-radius:16px;overflow:hidden;background:#060909;box-shadow:inset 0 0 35px rgba(0,0,0,.75)}
       ${ROOT} .p50-approved-boat svg{width:100%;height:100%;display:block}
-      @media(max-width:600px){${ROOT} .p50-ob-title{font-size:clamp(38px,12vw,50px)!important}${ROOT} .p50-approved-boat{height:220px}}
+      @media(max-width:600px){${ROOT} .p50-approved-boat{height:220px}}
     `;
     document.head.appendChild(el);
-  }
-
-  function setTextIfChanged(el, value) {
-    if (el && el.textContent !== value) el.textContent = value;
   }
 
   function applyApprovedScreen() {
@@ -67,42 +61,32 @@
     style();
 
     const eyebrow = (root.querySelector('.p50-ob-eyebrow')?.textContent || '').trim().toUpperCase();
-    const title = root.querySelector('.p50-ob-title');
-    const body = root.querySelector('.p50-ob-body');
-
-    if (eyebrow.includes('PASS50') || eyebrow.includes('BIENVENUE')) {
-      setTextIfChanged(body, 'Classement actualisé toutes les 2h - 24h - 48h');
-      return;
-    }
 
     if (eyebrow.includes('CLASSEMENT')) {
-      setTextIfChanged(title, 'Le classement');
       const names = [...root.querySelectorAll('.p50-ob-rank-name')];
       const approvedNames = ['Blue', 'Costard', 'Compagnie'];
-      names.slice(0, 3).forEach((el, i) => setTextIfChanged(el, approvedNames[i]));
+      names.slice(0, 3).forEach((el, i) => {
+        if (el.textContent !== approvedNames[i]) el.textContent = approvedNames[i];
+      });
 
       const photos = getRankingPhotos();
       const avatars = [...root.querySelectorAll('.p50-ob-rank-avatar')];
+      // Podium order in DOM: 2nd, 1st, 3rd → map photos accordingly when available.
+      const photoOrder = [photos[1] || photos[0], photos[0], photos[2] || photos[1]];
       avatars.slice(0, 3).forEach((avatar, i) => {
-        if (!photos[i]) return;
+        if (!photoOrder[i]) return;
         const existing = avatar.querySelector('img');
-        if (existing?.src === photos[i]) return;
+        if (existing?.src === photoOrder[i]) return;
         avatar.replaceChildren();
         const img = document.createElement('img');
-        img.src = photos[i];
+        img.src = photoOrder[i];
         img.alt = '';
         avatar.appendChild(img);
       });
       return;
     }
 
-    if (eyebrow.includes('PARIE')) {
-      setTextIfChanged(title, 'Parie sur l’actualité');
-      return;
-    }
-
     if (eyebrow.includes('COUL')) {
-      setTextIfChanged(title, 'Les Coulés');
       const old = root.querySelector('.p50-ob-downchart');
       if (old && !root.querySelector('.p50-approved-boat')) {
         const boat = document.createElement('div');
