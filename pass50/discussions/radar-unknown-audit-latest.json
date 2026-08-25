@@ -1,45 +1,9 @@
 {
-  "at": "2026-08-25 01:56 UTC",
+  "at": "2026-08-25 04:04 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7677745913372855073",
-      "title": "Lets Go LIVE!",
-      "viewers": 1307,
-      "startedAt": "2026-08-24 23:37:24",
-      "handle": "samuellakouassiofficiel"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7677647180370955041",
-      "title": "",
-      "viewers": 261,
-      "startedAt": "2026-08-24 17:13:05",
-      "handle": "dezcocrane.225"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 15
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
