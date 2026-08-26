@@ -1,14 +1,23 @@
 {
-  "at": "2026-08-26 13:27 UTC",
+  "at": "2026-08-26 16:35 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 2,
   "lives": [
+    {
+      "profileId": "dez-cocrane225",
+      "platform": "TikTok",
+      "roomId": "7678347106345569056",
+      "title": "",
+      "viewers": 1604,
+      "startedAt": "2026-08-26 14:29:43",
+      "handle": "dezcocrane.225"
+    },
     {
       "profileId": "hamondchic",
       "platform": "TikTok",
       "roomId": "7678326039008889622",
       "title": "C’est pour poser question",
-      "viewers": 9675,
+      "viewers": 20975,
       "startedAt": "2026-08-26 13:07:19",
       "handle": "coachhamond"
     }
@@ -16,9 +25,13 @@
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
+    "published": 2,
     "added": [],
     "stored": [
+      {
+        "profileId": "dez-cocrane225",
+        "platform": "TikTok"
+      },
       {
         "profileId": "hamondchic",
         "platform": "TikTok"

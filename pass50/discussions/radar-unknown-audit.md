@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-26 16:35 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7678347106345569056 · 1604 viewers
+- TikTok `hamondchic` @coachhamond — C’est pour poser question · 20975 viewers
+
 ### 2026-08-26 13:27 UTC
 
 - Unknown sondés : **200**
@@ -363,14 +374,6 @@ Erreur : `GET HTTP 500`
 ### 2026-08-21 15:51 UTC
 
 - Unknown sondés : **104**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-08-21 13:15 UTC
-
-- Unknown sondés : **136**
 - Vraiment en live : **0**
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
