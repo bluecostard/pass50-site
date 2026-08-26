@@ -1,9 +1,32 @@
 {
-  "at": "2026-08-26 10:01 UTC",
+  "at": "2026-08-26 13:27 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "hamondchic",
+      "platform": "TikTok",
+      "roomId": "7678326039008889622",
+      "title": "C’est pour poser question",
+      "viewers": 9675,
+      "startedAt": "2026-08-26 13:07:19",
+      "handle": "coachhamond"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "hamondchic",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 16
+  },
   "enabled": true,
   "error": null
 }
