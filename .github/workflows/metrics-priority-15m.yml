@@ -2,7 +2,8 @@ name: Metrics Priority P0
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    # Décalé :07/:22/:37/:52 — évite le pic :00/:15/:30/:45 avec les radars.
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
   push:
     branches:
