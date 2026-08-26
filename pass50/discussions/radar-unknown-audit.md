@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-26 02:02 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-dezouch-officiel` @dezouch_officiel — Je recherche une fille céliba😫 · 28 viewers
+- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — Lets Go LIVE! · 1072 viewers
+- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
+
 ### 2026-08-25 21:47 UTC
 
 Erreur : `POST HTTP 500`
@@ -352,14 +364,6 @@ Erreur : `GET HTTP 500`
 ### 2026-08-20 21:47 UTC
 
 - Unknown sondés : **91**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-08-20 19:50 UTC
-
-- Unknown sondés : **127**
 - Vraiment en live : **0**
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
