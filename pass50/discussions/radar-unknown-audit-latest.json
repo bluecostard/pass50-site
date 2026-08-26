@@ -1,56 +1,45 @@
 {
-  "at": "2026-08-26 02:02 UTC",
+  "at": "2026-08-26 04:07 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-dezouch-officiel",
+      "profileId": "census-isouch",
       "platform": "TikTok",
-      "roomId": "7678140527639841557",
-      "title": "Je recherche une fille céliba😫",
-      "viewers": 28,
-      "startedAt": "2026-08-26 01:06:57",
-      "handle": "dezouch_officiel"
+      "roomId": "7678156583041321760",
+      "title": "",
+      "viewers": 503,
+      "startedAt": "2026-08-26 02:12:49",
+      "handle": "prince_du_pays"
     },
     {
-      "profileId": "census-samuella-kouassi",
+      "profileId": "p_1785175190809",
       "platform": "TikTok",
-      "roomId": "7678112781782633248",
-      "title": "Lets Go LIVE!",
-      "viewers": 1072,
-      "startedAt": "2026-08-25 23:20:15",
-      "handle": "samuellakouassiofficiel"
-    },
-    {
-      "profileId": "census-souley-de-paris",
-      "platform": "TikTok",
-      "roomId": "7678119897611733793",
-      "title": "SOULEY DE-PARIS 🦅 B-52",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "souleydeparis"
+      "roomId": "7678161979148241682",
+      "title": "",
+      "viewers": 1637,
+      "startedAt": "2026-08-26 02:30:24",
+      "handle": "ulrich_jordan30"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "census-dezouch-officiel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-souley-de-paris",
+        "profileId": "p_1785175190809",
         "platform": "TikTok"
       }
     ],
-    "skipped": [],
+    "skipped": [
+      {
+        "profileId": "census-isouch",
+        "platform": "TikTok",
+        "error": "not_publishable"
+      }
+    ],
     "p0Count": 16
   },
   "enabled": true,
