@@ -18,6 +18,10 @@
       "android": {
         "buildType": "apk"
       },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
+      },
       "env": {
         "EXPO_PUBLIC_API_BASE": "https://pass50.store/api/"
       }

@@ -41,9 +41,24 @@ npx eas init
 
 | Profil | Usage | Commande |
 |--------|--------|----------|
-| `preview` | APK interne Android, test équipe | `npm run eas:preview:android` |
+| `preview` Android | APK interne | `npm run eas:preview:android` |
+| `preview` iOS | Install iPhone (compte Apple Developer) | `npm run eas:preview:ios` |
 | `production` | Play Store / App Store | `npm run eas:production` |
-| `development` | Simulateur iOS / dev interne | `npx eas build --platform ios --profile development` |
+| `development` | Simulateur iOS (Mac) | `npx eas build --platform ios --profile development` |
+
+### Tester sur iPhone **sans** build store (Expo Go)
+
+1. Installe **Expo Go** depuis l’App Store (même SDK que le projet : Expo 57).
+2. Sur le Mac, même Wi‑Fi que l’iPhone :
+
+```bash
+cd ~/pass50-site/apps/mobile
+npm start
+```
+
+3. Scanne le QR code avec l’appareil photo iPhone → ouvre dans Expo Go.
+
+C’est le moyen le plus rapide de valider l’UI. Pour une app installable hors Expo Go (TestFlight / icône PASS50), il faut un **compte Apple Developer** (~99 $/an) puis `npm run eas:preview:ios`.
 
 Variables d’environnement de build : `EXPO_PUBLIC_API_BASE` (définie dans `eas.json`).
 
