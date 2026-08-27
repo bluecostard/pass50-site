@@ -58,6 +58,17 @@ npm start
 
 3. Scanne le QR code avec l’appareil photo iPhone → ouvre dans Expo Go.
 
+**Timeout / `192.168.x.x` inaccessible ?** Utilise le tunnel (évite install globale — `@expo/ngrok` est déjà dans le projet) :
+
+```bash
+cd ~/pass50-site/apps/mobile
+git pull
+npm install
+npm run start:tunnel
+```
+
+Scanne le nouveau QR (URL `…exp.direct…`, pas une IP locale). Ne réponds **pas** « yes » à une install **globale** de ngrok — si Expo la propose, annule et relance après `npm install`.
+
 C’est le moyen le plus rapide de valider l’UI. Pour une app installable hors Expo Go (TestFlight / icône PASS50), il faut un **compte Apple Developer** (~99 $/an) puis `npm run eas:preview:ios`.
 
 Variables d’environnement de build : `EXPO_PUBLIC_API_BASE` (définie dans `eas.json`).
