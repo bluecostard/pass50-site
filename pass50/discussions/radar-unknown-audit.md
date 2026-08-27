@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-27 00:51 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-no-limit` @nolimit_vousdv — 7678499415909534482 · 1156 viewers
+- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — Lets Go LIVE! · 1052 viewers
+- TikTok `holy` @holysheilla — Bonjour je suis au Togo 🇹🇬❤️ · 471 viewers
+
 ### 2026-08-26 20:12 UTC
 
 - Unknown sondés : **200**
@@ -368,14 +380,6 @@ Erreur : `GET HTTP 500`
 ### 2026-08-21 21:43 UTC
 
 - Unknown sondés : **128**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-08-21 19:01 UTC
-
-- Unknown sondés : **113**
 - Vraiment en live : **0**
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
