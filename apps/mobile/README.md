@@ -17,30 +17,41 @@ Scan QR avec Expo Go, ou `npm run ios` / `npm run android` avec simulateur.
 
 ## EAS Build (stores)
 
+**Pas besoin d’installer `eas-cli` en global.** Le projet l’inclut déjà (`devDependencies`) — utilise `npm run` ou `npx eas` depuis `apps/mobile`.
+
 ### 1. Lier le projet Expo (une fois)
 
 ```bash
-npm install -g eas-cli
 cd apps/mobile
-eas login
-eas init   # crée projectId dans app.json → extra.eas.projectId
+npm install
+npm run eas:login
+npm run eas:init    # crée projectId dans app.json → extra.eas.projectId
 ```
+
+Équivalent sans scripts npm :
+
+```bash
+npx eas login
+npx eas init
+```
+
+> Si `npm install -g eas-cli` échoue avec **EACCES** sur Mac, c’est normal sans `sudo` — **n’utilise pas `-g`**, reste sur `npm run` / `npx eas` ci-dessus.
 
 ### 2. Builds
 
 | Profil | Usage | Commande |
 |--------|--------|----------|
-| `preview` | APK interne Android, test équipe | `eas build --platform android --profile preview` |
-| `production` | Play Store / App Store | `eas build --platform all --profile production` |
-| `development` | Simulateur iOS / dev interne | `eas build --platform ios --profile development` |
+| `preview` | APK interne Android, test équipe | `npm run eas:preview:android` |
+| `production` | Play Store / App Store | `npm run eas:production` |
+| `development` | Simulateur iOS / dev interne | `npx eas build --platform ios --profile development` |
 
 Variables d’environnement de build : `EXPO_PUBLIC_API_BASE` (définie dans `eas.json`).
 
 ### 3. Soumission stores
 
 ```bash
-eas submit --platform android --profile production
-eas submit --platform ios --profile production
+npm run eas:submit:android
+npm run eas:submit:ios
 ```
 
 Prérequis :

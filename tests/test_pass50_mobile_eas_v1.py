@@ -30,9 +30,10 @@ class Pass50MobileEasV1Tests(unittest.TestCase):
 
     def test_mobile_readme_documents_eas(self):
         readme = (MOBILE / "README.md").read_text(encoding="utf-8")
-        self.assertIn("eas build", readme)
+        self.assertIn("npm run eas:preview:android", readme)
+        self.assertIn("npx eas", readme)
         self.assertIn("store.pass50.app", readme)
-        self.assertIn("eas init", readme)
+        self.assertIn("eas:init", readme)
 
 
 if __name__ == "__main__":

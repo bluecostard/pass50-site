@@ -35,8 +35,12 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "config:check": "expo config --type public",
-    "eas:preview:android": "eas build --platform android --profile preview --non-interactive",
-    "eas:production": "eas build --platform all --profile production --non-interactive"
+    "eas:login": "eas login",
+    "eas:init": "eas init",
+    "eas:preview:android": "eas build --platform android --profile preview",
+    "eas:production": "eas build --platform all --profile production",
+    "eas:submit:android": "eas submit --platform android --profile production",
+    "eas:submit:ios": "eas submit --platform ios --profile production"
   },
   "private": true
 }
