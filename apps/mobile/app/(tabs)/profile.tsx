@@ -1,12 +1,15 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ScreenShell } from '@/components/ScreenShell';
 import { Pass50 } from '@/constants/Colors';
 import { clearToken, pass50Api, setToken } from '@/src/api/client';
+import { resetOnboarding } from '@/src/onboarding/storage';
 import { AppBootstrap } from '@/src/types';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [bootstrap, setBootstrap] = useState<AppBootstrap | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,6 +51,11 @@ export default function ProfileScreen() {
     await clearToken();
     setPassword('');
     await load();
+  }
+
+  async function onReplayTutorial() {
+    await resetOnboarding();
+    router.push('/onboarding');
   }
 
   const user = bootstrap?.user;
@@ -93,7 +101,10 @@ export default function ProfileScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
       <View style={styles.panel}>
-        <Text style={styles.label}>Client natif</Text>
+        <Text style={styles.label}>Paramètres</Text>
+        <Pressable style={styles.btnGhost} onPress={onReplayTutorial}>
+          <Text style={styles.btnGhostText}>Revoir le tutoriel</Text>
+        </Pressable>
         <Text style={styles.meta}>
           PASS50 Mobile · Expo · API pass50.store · mode=status pour les lives
         </Text>
@@ -161,6 +172,17 @@ const styles = StyleSheet.create({
   },
   btnDangerText: {
     color: Pass50.danger,
+    fontWeight: '900',
+  },
+  btnGhost: {
+    borderWidth: 1,
+    borderColor: 'rgba(183,255,0,.22)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  btnGhostText: {
+    color: Pass50.lime,
     fontWeight: '900',
   },
   error: {

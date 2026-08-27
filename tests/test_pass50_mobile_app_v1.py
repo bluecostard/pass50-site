@@ -34,6 +34,29 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn('"scheme": "pass50"', app_json)
         self.assertIn("#050705", app_json)
 
+    def test_onboarding_first_open_flow(self):
+        entry = (MOBILE / "app/index.tsx").read_text(encoding="utf-8")
+        layout = (MOBILE / "app/_layout.tsx").read_text(encoding="utf-8")
+        slides = (MOBILE / "src/onboarding/slides.ts").read_text(encoding="utf-8")
+        storage = (MOBILE / "src/onboarding/storage.ts").read_text(encoding="utf-8")
+        profile = (MOBILE / "app/(tabs)/profile.tsx").read_text(encoding="utf-8")
+
+        self.assertIn("hasCompletedOnboarding", entry)
+        self.assertIn('/onboarding', entry)
+        self.assertIn('name="onboarding/index"', layout)
+        self.assertIn("pass50_onboarding_seen_v1", slides)
+        self.assertIn("'final'", slides)
+        self.assertIn("'coules'", slides)
+        self.assertIn("resetOnboarding", storage)
+        self.assertIn("Revoir le tutoriel", profile)
+
+    def test_influencer_profile_from_public_ranking(self):
+        influencer = (MOBILE / "app/influencer/[id].tsx").read_text(encoding="utf-8")
+        lookup = (MOBILE / "src/ranking/lookup.ts").read_text(encoding="utf-8")
+        self.assertIn("findInfluencerInRanking", influencer)
+        self.assertIn("pass50Api.ranking", influencer)
+        self.assertIn("RANKING_PERIODS", lookup)
+
 
 if __name__ == "__main__":
     unittest.main()

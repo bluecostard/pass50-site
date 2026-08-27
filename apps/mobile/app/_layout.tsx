@@ -2,6 +2,7 @@ import { DarkTheme, ThemeProvider, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { Pass50 } from '@/constants/Colors';
@@ -28,21 +29,25 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider value={pass50Theme}>
-      <StatusBar style="light" />
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="influencer/[id]"
-          options={{
-            title: 'Influenceur',
-            presentation: 'modal',
-            headerStyle: { backgroundColor: Pass50.bg },
-            headerTintColor: Pass50.lime,
-            contentStyle: { backgroundColor: Pass50.bg },
-          }}
-        />
-      </Stack>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={pass50Theme}>
+        <StatusBar style="light" />
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding/index" options={{ headerShown: false, animation: 'fade' }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="influencer/[id]"
+            options={{
+              title: 'Influenceur',
+              presentation: 'modal',
+              headerStyle: { backgroundColor: Pass50.bg },
+              headerTintColor: Pass50.lime,
+              contentStyle: { backgroundColor: Pass50.bg },
+            }}
+          />
+        </Stack>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

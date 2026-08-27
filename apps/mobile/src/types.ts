@@ -6,10 +6,14 @@ export type RankingRow = {
   name: string;
   handle?: string;
   category?: string;
+  region?: string;
   score: number;
+  scores?: Partial<Record<RankingPeriod, number>>;
   delta?: number;
   photoUrl?: string;
   initials?: string;
+  badges?: string[];
+  photoStatus?: string;
 };
 
 export type PublicRanking = {
