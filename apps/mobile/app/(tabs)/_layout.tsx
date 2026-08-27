@@ -44,6 +44,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="prono"
+        options={{
+          title: 'Paris',
+          tabBarIcon: ({ color, size }) => <Ionicons name="flash-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="live"
         options={{
           title: 'Live',

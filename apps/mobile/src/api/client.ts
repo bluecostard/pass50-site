@@ -1,6 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { AppBootstrap, LiveStatus, PublicFeed, PublicRanking } from '@/src/types';
+import type {
+  AppBootstrap,
+  CoulesHistory,
+  CoulesPoll,
+  LiveStatus,
+  PronoFeed,
+  PublicFeed,
+  PublicRanking,
+} from '@/src/types';
 
 const TOKEN_KEY = 'pass50_api_token';
 const API_BASE = (process.env.EXPO_PUBLIC_API_BASE ?? 'https://pass50.store/api/').replace(/\/?$/, '/');
@@ -65,6 +73,20 @@ export const pass50Api = {
   feed: (period: string) =>
     apiFetch<PublicFeed>(`public-feed.php?period=${encodeURIComponent(period)}&newsLimit=18`),
   live: () => apiFetch<LiveStatus>('live-status.php?mode=status'),
+  pronoFeed: () => apiFetch<PronoFeed>('prono-feed.php'),
+  pronoVote: (questionId: string, optionKey: string) =>
+    apiFetch<{ ok?: boolean; message?: string; balance?: PronoFeed['balance']; oddLocked?: number; potentialPayout?: number; stakeLocked?: number; totalVotes?: number; tallies?: Array<{ key: string; count: number; percent: number }> }>(
+      'prono-vote.php',
+      { method: 'POST', body: { questionId, optionKey } },
+    ),
+  coulesHistory: () => apiFetch<CoulesHistory>('coules-history.php', { auth: false }),
+  coulesPoll: (pollKey: string) =>
+    apiFetch<CoulesPoll>(`coules.php?poll=${encodeURIComponent(pollKey)}`),
+  coulesVote: (pollKey: string, profileId: string) =>
+    apiFetch<{ ok?: boolean }>('coules.php', {
+      method: 'POST',
+      body: { pollKey, profileId },
+    }),
   login: (email: string, password: string) =>
     apiFetch<{ token?: string; user?: unknown }>('login.php', {
       method: 'POST',

@@ -7,12 +7,13 @@ MOBILE = ROOT / "apps" / "mobile"
 
 
 class Pass50MobileAppV1Tests(unittest.TestCase):
-    def test_expo_app_has_four_pass50_tabs(self):
+    def test_expo_app_has_pass50_tabs(self):
         layout = (MOBILE / "app/(tabs)/_layout.tsx").read_text(encoding="utf-8")
-        for tab in ("index", "feed", "live", "profile"):
+        for tab in ("index", "feed", "prono", "live", "profile"):
             self.assertIn(f'name="{tab}"', layout)
         self.assertIn("Classement", layout)
         self.assertIn("Fil", layout)
+        self.assertIn("Paris", layout)
         self.assertIn("Live", layout)
         self.assertIn("Compte", layout)
 
@@ -21,6 +22,8 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("https://pass50.store/api/", client)
         self.assertIn("live-status.php?mode=status", client)
         self.assertIn("public-ranking.php", client)
+        self.assertIn("prono-feed.php", client)
+        self.assertIn("coules-history.php", client)
         self.assertNotIn("mode=quick", client)
 
     def test_live_screen_polls_read_only_status(self):
@@ -56,6 +59,15 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("findInfluencerInRanking", influencer)
         self.assertIn("pass50Api.ranking", influencer)
         self.assertIn("RANKING_PERIODS", lookup)
+
+    def test_prono_screen_has_pronostics_and_coules_modes(self):
+        prono = (MOBILE / "app/(tabs)/prono.tsx").read_text(encoding="utf-8")
+        self.assertIn("pass50Api.pronoFeed", prono)
+        self.assertIn("pass50Api.coulesHistory", prono)
+        self.assertIn("Pronostics", prono)
+        self.assertIn("Coulés", prono)
+        self.assertIn("CoulesDuelCard", prono)
+        self.assertIn("PronoCard", prono)
 
 
 if __name__ == "__main__":
