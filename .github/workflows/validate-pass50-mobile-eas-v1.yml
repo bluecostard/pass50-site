@@ -1,0 +1,39 @@
+name: Validate PASS50 mobile EAS
+
+on:
+  push:
+    paths:
+      - 'apps/mobile/**'
+      - 'tests/test_pass50_mobile_app_v1.py'
+      - 'tests/test_pass50_mobile_eas_v1.py'
+      - '.github/workflows/validate-pass50-mobile-eas-v1.yml'
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'tests/test_pass50_mobile_app_v1.py'
+      - 'tests/test_pass50_mobile_eas_v1.py'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Expo config
+        run: npm run config:check
+
+      - name: Run mobile tests
+        working-directory: ${{ github.workspace }}
+        run: python3 -m unittest tests.test_pass50_mobile_app_v1 tests.test_pass50_mobile_eas_v1 -v

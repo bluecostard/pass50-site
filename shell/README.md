@@ -1,5 +1,8 @@
 # PASS50 — Coque native (Capacitor)
 
+> **Successeur :** l’app native Expo vit dans [`apps/mobile/`](../apps/mobile/README.md) (EAS Build iOS/Android).  
+> Cette coque Capacitor reste pour transition ; ne plus l’enrichir pour les nouvelles features.
+
 Coque **iOS / Android** autour du client mobile déjà en prod :
 `https://pass50.store/app.html`
 

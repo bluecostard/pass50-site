@@ -1,0 +1,35 @@
+{
+  "cli": {
+    "version": ">= 16.6.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://pass50.store/api/"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://pass50.store/api/"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://pass50.store/api/"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
