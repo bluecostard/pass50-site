@@ -75,7 +75,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiBase": "https://pass50.store/api/"
-    }
+      "apiBase": "https://pass50.store/api/",
+      "eas": {
+        "projectId": "5f122043-730b-45d5-bc92-1bb88706bb5e"
+      }
+    },
+    "owner": "bluecostard"
   }
 }
