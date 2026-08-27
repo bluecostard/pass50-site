@@ -13,6 +13,7 @@ class Pass50MobileEasV1Tests(unittest.TestCase):
         self.assertIn("preview", eas["build"])
         self.assertIn("production", eas["build"])
         self.assertEqual(eas["build"]["preview"]["android"]["buildType"], "apk")
+        self.assertFalse(eas["build"]["preview"]["ios"]["simulator"])
         self.assertTrue(eas["build"]["production"]["autoIncrement"])
         self.assertIn("EXPO_PUBLIC_API_BASE", eas["build"]["production"]["env"])
 
@@ -31,6 +32,8 @@ class Pass50MobileEasV1Tests(unittest.TestCase):
     def test_mobile_readme_documents_eas(self):
         readme = (MOBILE / "README.md").read_text(encoding="utf-8")
         self.assertIn("npm run eas:preview:android", readme)
+        self.assertIn("eas:preview:ios", readme)
+        self.assertIn("Expo Go", readme)
         self.assertIn("npx eas", readme)
         self.assertIn("store.pass50.app", readme)
         self.assertIn("eas:init", readme)
