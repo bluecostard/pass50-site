@@ -1,109 +1,78 @@
 {
-  "at": "2026-08-28 00:26 UTC",
+  "at": "2026-08-28 15:29 UTC",
   "unknownCount": 200,
-  "liveCount": 7,
+  "liveCount": 4,
   "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7678819431081839393",
-      "title": "APOUTCHOU NATIONAL",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "aya-robert",
-      "platform": "TikTok",
-      "roomId": "7678819534521764641",
-      "title": "",
-      "viewers": 618,
-      "startedAt": "2026-08-27 21:02:08",
-      "handle": "aya.robert27"
-    },
-    {
-      "profileId": "census-ange-morel",
-      "platform": "TikTok",
-      "roomId": "7678860970334112533",
-      "title": "",
-      "viewers": 12540,
-      "startedAt": "2026-08-27 23:42:42",
-      "handle": "angemorel4"
-    },
     {
       "profileId": "census-dezouch-officiel",
       "platform": "TikTok",
-      "roomId": "7678869333587528468",
-      "title": "Je recherche une fille céliba😫",
-      "viewers": 103,
-      "startedAt": "2026-08-28 00:15:17",
+      "roomId": "7679094187142040340",
+      "title": "",
+      "viewers": 60,
+      "startedAt": "2026-08-28 14:47:31",
       "handle": "dezouch_officiel"
     },
     {
-      "profileId": "census-no-limit",
+      "profileId": "census-gaelle-taglao",
       "platform": "TikTok",
-      "roomId": "7678851598977714962",
+      "roomId": "7679100461259000596",
       "title": "",
-      "viewers": 600,
-      "startedAt": "2026-08-27 23:06:45",
-      "handle": "nolimit_vousdv"
+      "viewers": 1008,
+      "startedAt": "2026-08-28 15:11:54",
+      "handle": "gaelletaglao02"
     },
     {
-      "profileId": "census-samuella-kouassi",
+      "profileId": "dez-cocrane225",
       "platform": "TikTok",
-      "roomId": "7678829891407629089",
-      "title": "",
-      "viewers": 1250,
-      "startedAt": "2026-08-27 21:42:43",
-      "handle": "samuellakouassiofficiel"
+      "roomId": "7679088708624157473",
+      "title": "Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "dezcocrane.225"
     },
     {
-      "profileId": "census-willway-jordan-officiel",
+      "profileId": "hamondchic",
       "platform": "TikTok",
-      "roomId": "7678720290398063363",
-      "title": "Rebellion de 2002 a 2011:analyse",
-      "viewers": 110,
-      "startedAt": "2026-08-27 14:37:01",
-      "handle": "jack.carter39"
+      "roomId": "7679066112809585430",
+      "title": "C’est pour poser question",
+      "viewers": 20139,
+      "startedAt": "2026-08-28 12:59:06",
+      "handle": "coachhamond"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 7,
-    "added": [],
+    "published": 4,
+    "added": [
+      {
+        "profileId": "census-gaelle-taglao",
+        "platform": "TikTok",
+        "handle": "gaelletaglao02",
+        "addedAt": "2026-08-28T15:29:25+00:00",
+        "reason": "unknown_audit_live"
+      }
+    ],
     "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "aya-robert",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-ange-morel",
-        "platform": "TikTok"
-      },
       {
         "profileId": "census-dezouch-officiel",
         "platform": "TikTok"
       },
       {
-        "profileId": "census-no-limit",
+        "profileId": "census-gaelle-taglao",
         "platform": "TikTok"
       },
       {
-        "profileId": "census-samuella-kouassi",
+        "profileId": "dez-cocrane225",
         "platform": "TikTok"
       },
       {
-        "profileId": "census-willway-jordan-officiel",
+        "profileId": "hamondchic",
         "platform": "TikTok"
       }
     ],
     "skipped": [],
-    "p0Count": 16
+    "p0Count": 17
   },
   "enabled": true,
   "error": null

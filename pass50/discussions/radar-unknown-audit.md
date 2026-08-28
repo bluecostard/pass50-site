@@ -11,6 +11,22 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-28 15:29 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **1**
+
+Vraiment en live :
+- TikTok `census-dezouch-officiel` @dezouch_officiel — 7679094187142040340 · 60 viewers
+- TikTok `census-gaelle-taglao` @gaelletaglao02 — 7679100461259000596 · 1008 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
+- TikTok `hamondchic` @coachhamond — C’est pour poser question · 20139 viewers
+
+Nouveaux P0 :
+- TikTok `census-gaelle-taglao`
+
 ### 2026-08-28 00:26 UTC
 
 - Unknown sondés : **200**
@@ -387,15 +403,3 @@ Erreur : `GET HTTP 500`
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-08-22 04:00 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `aya-robert` @aya.robert27 — 7676621029871045409 · 716 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7676587137415842593 · 135 viewers
-- TikTok `ennemi-des-djandjou` @ennemidesdjandjou — 7676669382254742293 · 268 viewers
