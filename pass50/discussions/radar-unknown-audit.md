@@ -11,6 +11,22 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-28 00:26 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **7**
+- Publiés radar : **7**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — APOUTCHOU NATIONAL
+- TikTok `aya-robert` @aya.robert27 — 7678819534521764641 · 618 viewers
+- TikTok `census-ange-morel` @angemorel4 — 7678860970334112533 · 12540 viewers
+- TikTok `census-dezouch-officiel` @dezouch_officiel — Je recherche une fille céliba😫 · 103 viewers
+- TikTok `census-no-limit` @nolimit_vousdv — 7678851598977714962 · 600 viewers
+- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7678829891407629089 · 1250 viewers
+- TikTok `census-willway-jordan-officiel` @jack.carter39 — Rebellion de 2002 a 2011:analyse · 110 viewers
+
 ### 2026-08-27 14:19 UTC
 
 - Unknown sondés : **200**
@@ -383,7 +399,3 @@ Vraiment en live :
 - TikTok `aya-robert` @aya.robert27 — 7676621029871045409 · 716 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7676587137415842593 · 135 viewers
 - TikTok `ennemi-des-djandjou` @ennemidesdjandjou — 7676669382254742293 · 268 viewers
-
-### 2026-08-22 01:53 UTC
-
-Erreur : `GET HTTP 500`
