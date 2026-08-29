@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-29 20:59 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-jordan-evraa` @realjordanevraa — Goumin tv, causerie ou Q/A · 261 viewers
+- TikTok `census-no-limit` @nolimit_vousdv — nolimit
+- TikTok `holy` @holysheilla — Bonjour je suis au Togo 🇹🇬❤️ · 171 viewers
+- TikTok `tma` @tmacrush_officiel — Ekortipaa Au Bénin 🇧🇯 · 3791 viewers
+
 ### 2026-08-29 16:47 UTC
 
 - Unknown sondés : **200**
@@ -408,7 +421,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-08-22 13:04 UTC
-
-Erreur : `GET HTTP 500`
