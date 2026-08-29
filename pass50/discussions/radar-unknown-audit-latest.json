@@ -1,65 +1,39 @@
 {
-  "at": "2026-08-29 20:59 UTC",
+  "at": "2026-08-29 23:24 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-jordan-evraa",
+      "profileId": "aya-robert",
       "platform": "TikTok",
-      "roomId": "7679478471243991839",
-      "title": "Goumin tv, causerie ou Q/A",
-      "viewers": 261,
-      "startedAt": "2026-08-29 15:40:43",
-      "handle": "realjordanevraa"
+      "roomId": "7679595533618416416",
+      "title": "",
+      "viewers": 1244,
+      "startedAt": "2026-08-29 23:13:50",
+      "handle": "aya.robert27"
     },
     {
-      "profileId": "census-no-limit",
+      "profileId": "census-samuella-kouassi",
       "platform": "TikTok",
-      "roomId": "7679539139389197064",
-      "title": "nolimit",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "nolimit_vousdv"
-    },
-    {
-      "profileId": "holy",
-      "platform": "TikTok",
-      "roomId": "7679552859213466390",
-      "title": "Bonjour je suis au Togo 🇹🇬❤️",
-      "viewers": 171,
-      "startedAt": "2026-08-29 20:27:36",
-      "handle": "holysheilla"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7679551063772236551",
-      "title": "Ekortipaa Au Bénin 🇧🇯",
-      "viewers": 3791,
-      "startedAt": "2026-08-29 20:20:35",
-      "handle": "tmacrush_officiel"
+      "roomId": "7679586890311387937",
+      "title": "",
+      "viewers": 2007,
+      "startedAt": "2026-08-29 22:40:20",
+      "handle": "samuellakouassiofficiel"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 4,
+    "published": 2,
     "added": [],
     "stored": [
       {
-        "profileId": "census-jordan-evraa",
+        "profileId": "aya-robert",
         "platform": "TikTok"
       },
       {
-        "profileId": "census-no-limit",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "holy",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
+        "profileId": "census-samuella-kouassi",
         "platform": "TikTok"
       }
     ],
