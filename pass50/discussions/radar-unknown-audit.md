@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-29 01:47 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-eudoxie-yao` @eudoxie_yao — Venez on va causer mes bb · 1279 viewers
+- TikTok `census-no-limit` @nolimit_vousdv — 7679230641908566802 · 1126 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7679224338498784032 · 444 viewers
+
 ### 2026-08-28 15:29 UTC
 
 - Unknown sondés : **200**
@@ -389,14 +401,6 @@ Vraiment en live :
 Erreur : `GET HTTP 500`
 
 ### 2026-08-22 09:47 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-08-22 07:04 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
