@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-29 16:47 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-jordan-evraa` @realjordanevraa — Goumin tv, causerie ou Q/A · 59 viewers
+- TikTok `census-no-limit` @nolimit_vousdv — 7679492370588928775 · 535 viewers
+- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
+- TikTok `census-stephane-galactik` @le_coach_des_debout — 7679492912964406037 · 14 viewers
+
 ### 2026-08-29 01:47 UTC
 
 - Unknown sondés : **200**
@@ -399,11 +412,3 @@ Vraiment en live :
 ### 2026-08-22 13:04 UTC
 
 Erreur : `GET HTTP 500`
-
-### 2026-08-22 09:47 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
