@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-30 16:46 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `aya-robert` @aya.robert27 — 7679850981982522145 · 2631 viewers
+- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
+
 ### 2026-08-30 12:00 UTC
 
 - Unknown sondés : **200**
@@ -415,7 +426,3 @@ Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
 
 Ignorés : 1
-
-### 2026-08-23 02:02 UTC
-
-Erreur : `GET HTTP 500`
