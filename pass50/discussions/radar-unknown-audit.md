@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-30 05:31 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-08-29 23:24 UTC
 
 - Unknown sondés : **200**
@@ -416,11 +424,3 @@ Vraiment en live :
 - TikTok `aya-robert` @aya.robert27 — 7676969544175192864 · 1158 viewers
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — Lets Go LIVE! · 4563 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7676964513236781857 · 515 viewers
-
-### 2026-08-22 18:52 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.

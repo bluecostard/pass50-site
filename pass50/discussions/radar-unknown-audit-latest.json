@@ -1,45 +1,9 @@
 {
-  "at": "2026-08-29 23:24 UTC",
+  "at": "2026-08-30 05:31 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "aya-robert",
-      "platform": "TikTok",
-      "roomId": "7679595533618416416",
-      "title": "",
-      "viewers": 1244,
-      "startedAt": "2026-08-29 23:13:50",
-      "handle": "aya.robert27"
-    },
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7679586890311387937",
-      "title": "",
-      "viewers": 2007,
-      "startedAt": "2026-08-29 22:40:20",
-      "handle": "samuellakouassiofficiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "aya-robert",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 17
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
