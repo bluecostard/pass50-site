@@ -1,25 +1,25 @@
 {
-  "at": "2026-08-30 16:46 UTC",
+  "at": "2026-08-30 21:13 UTC",
   "unknownCount": 200,
   "liveCount": 2,
   "lives": [
     {
-      "profileId": "aya-robert",
+      "profileId": "dez-cocrane225",
       "platform": "TikTok",
-      "roomId": "7679850981982522145",
+      "roomId": "7679905849262787360",
       "title": "",
-      "viewers": 2631,
-      "startedAt": "2026-08-30 15:45:02",
-      "handle": "aya.robert27"
+      "viewers": 802,
+      "startedAt": "2026-08-30 19:17:49",
+      "handle": "dezcocrane.225"
     },
     {
-      "profileId": "census-ange-boli",
+      "profileId": "ismael-aka",
       "platform": "TikTok",
-      "roomId": "7679864929823099666",
-      "title": "Ange Boli LA VAR 💡🐬⭕️",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "angeboli7"
+      "roomId": "7679905027246312214",
+      "title": "",
+      "viewers": 951,
+      "startedAt": "2026-08-30 19:14:11",
+      "handle": "ismael.aka.ddr"
     }
   ],
   "posted": {
@@ -29,16 +29,16 @@
     "added": [],
     "stored": [
       {
-        "profileId": "aya-robert",
+        "profileId": "dez-cocrane225",
         "platform": "TikTok"
       },
       {
-        "profileId": "census-ange-boli",
+        "profileId": "ismael-aka",
         "platform": "TikTok"
       }
     ],
     "skipped": [],
-    "p0Count": 17
+    "p0Count": 18
   },
   "enabled": true,
   "error": null

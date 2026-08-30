@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-30 21:13 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7679905849262787360 · 802 viewers
+- TikTok `ismael-aka` @ismael.aka.ddr — 7679905027246312214 · 951 viewers
+
 ### 2026-08-30 16:46 UTC
 
 - Unknown sondés : **200**
@@ -413,16 +424,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
-
-### 2026-08-23 04:05 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-isouch` @prince_du_pays — 7677029021292628768 · 405 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
-
-Ignorés : 1
