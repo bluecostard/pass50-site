@@ -1,44 +1,52 @@
 {
-  "at": "2026-08-30 21:13 UTC",
+  "at": "2026-08-30 23:35 UTC",
   "unknownCount": 200,
   "liveCount": 2,
   "lives": [
+    {
+      "profileId": "census-joshua-cooker",
+      "platform": "TikTok",
+      "roomId": "7679962107411958546",
+      "title": "",
+      "viewers": 1812,
+      "startedAt": "2026-08-30 22:55:55",
+      "handle": "paaa.persil"
+    },
     {
       "profileId": "dez-cocrane225",
       "platform": "TikTok",
       "roomId": "7679905849262787360",
       "title": "",
-      "viewers": 802,
+      "viewers": 339,
       "startedAt": "2026-08-30 19:17:49",
       "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "ismael-aka",
-      "platform": "TikTok",
-      "roomId": "7679905027246312214",
-      "title": "",
-      "viewers": 951,
-      "startedAt": "2026-08-30 19:14:11",
-      "handle": "ismael.aka.ddr"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
     "published": 2,
-    "added": [],
+    "added": [
+      {
+        "profileId": "census-joshua-cooker",
+        "platform": "TikTok",
+        "handle": "paaa.persil",
+        "addedAt": "2026-08-30T23:35:04+00:00",
+        "reason": "unknown_audit_live"
+      }
+    ],
     "stored": [
       {
-        "profileId": "dez-cocrane225",
+        "profileId": "census-joshua-cooker",
         "platform": "TikTok"
       },
       {
-        "profileId": "ismael-aka",
+        "profileId": "dez-cocrane225",
         "platform": "TikTok"
       }
     ],
     "skipped": [],
-    "p0Count": 18
+    "p0Count": 19
   },
   "enabled": true,
   "error": null

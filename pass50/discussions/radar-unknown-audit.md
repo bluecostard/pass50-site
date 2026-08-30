@@ -11,6 +11,20 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-08-30 23:35 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **1**
+
+Vraiment en live :
+- TikTok `census-joshua-cooker` @paaa.persil — 7679962107411958546 · 1812 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7679905849262787360 · 339 viewers
+
+Nouveaux P0 :
+- TikTok `census-joshua-cooker`
+
 ### 2026-08-30 21:13 UTC
 
 - Unknown sondés : **200**
@@ -406,16 +420,6 @@ Vraiment en live :
 - Aucun unknown réellement en live à ce passage.
 
 ### 2026-08-23 09:47 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
-
-### 2026-08-23 07:06 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **1**
