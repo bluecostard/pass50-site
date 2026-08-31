@@ -1,47 +1,26 @@
 {
-  "at": "2026-08-30 23:35 UTC",
+  "at": "2026-08-31 05:46 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "census-joshua-cooker",
+      "profileId": "aya-robert",
       "platform": "TikTok",
-      "roomId": "7679962107411958546",
+      "roomId": "7680064053405928224",
       "title": "",
-      "viewers": 1812,
-      "startedAt": "2026-08-30 22:55:55",
-      "handle": "paaa.persil"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7679905849262787360",
-      "title": "",
-      "viewers": 339,
-      "startedAt": "2026-08-30 19:17:49",
-      "handle": "dezcocrane.225"
+      "viewers": 551,
+      "startedAt": "2026-08-31 05:35:51",
+      "handle": "aya.robert27"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 2,
-    "added": [
-      {
-        "profileId": "census-joshua-cooker",
-        "platform": "TikTok",
-        "handle": "paaa.persil",
-        "addedAt": "2026-08-30T23:35:04+00:00",
-        "reason": "unknown_audit_live"
-      }
-    ],
+    "published": 1,
+    "added": [],
     "stored": [
       {
-        "profileId": "census-joshua-cooker",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
+        "profileId": "aya-robert",
         "platform": "TikTok"
       }
     ],
