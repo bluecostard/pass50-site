@@ -1,32 +1,9 @@
 {
-  "at": "2026-08-31 05:46 UTC",
+  "at": "2026-08-31 14:04 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
-  "lives": [
-    {
-      "profileId": "aya-robert",
-      "platform": "TikTok",
-      "roomId": "7680064053405928224",
-      "title": "",
-      "viewers": 551,
-      "startedAt": "2026-08-31 05:35:51",
-      "handle": "aya.robert27"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 1,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "aya-robert",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 19
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
