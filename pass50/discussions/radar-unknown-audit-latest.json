@@ -1,9 +1,45 @@
 {
-  "at": "2026-08-31 14:04 UTC",
+  "at": "2026-08-31 20:52 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "dez-cocrane225",
+      "platform": "TikTok",
+      "roomId": "7680300712722516769",
+      "title": "",
+      "viewers": 677,
+      "startedAt": "2026-08-31 20:50:17",
+      "handle": "dezcocrane.225"
+    },
+    {
+      "profileId": "tma",
+      "platform": "TikTok",
+      "roomId": "7680283999134747399",
+      "title": "",
+      "viewers": 3898,
+      "startedAt": "2026-08-31 19:44:59",
+      "handle": "tmacrush_officiel"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "dez-cocrane225",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "tma",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 19
+  },
   "enabled": true,
   "error": null
 }
