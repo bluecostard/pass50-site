@@ -11,6 +11,20 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-01 14:11 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **1**
+
+Vraiment en live :
+- TikTok `census-cahie-kunta` @cahiekunta — 7680564045808454420 · 156 viewers
+- TikTok `p_1786797024293` @professeurdelarue79 — BONNE RENTRÉE SCOLAIRE · 386 viewers
+
+Nouveaux P0 :
+- TikTok `p_1786797024293`
+
 ### 2026-09-01 08:45 UTC
 
 - Unknown sondés : **200**
@@ -409,19 +423,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `ennemi-des-djandjou` @ennemidesdjandjou — 🥷🏻ENNEMI DES DJANDJOU 🥷🏻
-
-### 2026-08-24 02:00 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **5**
-- Publiés radar : **4**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `aya-robert` @aya.robert27 — 7677389443908520737 · 2293 viewers
-- TikTok `census-isouch` @prince_du_pays — 7677403931957267233 · 843 viewers
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — Lets Go LIVE! · 2069 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7677315703598304033 · 506 viewers
-- TikTok `ennemi-des-djandjou` @ennemidesdjandjou — 7677372195979086613 · 2344 viewers
-
-Ignorés : 1

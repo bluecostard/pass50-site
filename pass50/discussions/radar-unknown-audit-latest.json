@@ -1,9 +1,53 @@
 {
-  "at": "2026-09-01 08:45 UTC",
+  "at": "2026-09-01 14:11 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "census-cahie-kunta",
+      "platform": "TikTok",
+      "roomId": "7680564045808454420",
+      "title": "",
+      "viewers": 156,
+      "startedAt": "2026-09-01 13:51:19",
+      "handle": "cahiekunta"
+    },
+    {
+      "profileId": "p_1786797024293",
+      "platform": "TikTok",
+      "roomId": "7680560005636033313",
+      "title": "BONNE RENTRÉE SCOLAIRE",
+      "viewers": 386,
+      "startedAt": "2026-09-01 13:36:56",
+      "handle": "professeurdelarue79"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [
+      {
+        "profileId": "p_1786797024293",
+        "platform": "TikTok",
+        "handle": "professeurdelarue79",
+        "addedAt": "2026-09-01T14:11:45+00:00",
+        "reason": "unknown_audit_live"
+      }
+    ],
+    "stored": [
+      {
+        "profileId": "census-cahie-kunta",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "p_1786797024293",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 20
+  },
   "enabled": true,
   "error": null
 }
