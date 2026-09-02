@@ -1,52 +1,39 @@
 {
-  "at": "2026-09-02 21:08 UTC",
+  "at": "2026-09-02 23:22 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-amour-ruth-poopy",
+      "profileId": "census-samuella-kouassi",
       "platform": "TikTok",
-      "roomId": "7681042580099877650",
+      "roomId": "7681067525320248097",
       "title": "",
-      "viewers": 93,
-      "startedAt": "2026-09-02 20:48:42",
-      "handle": "amourruth0"
+      "viewers": 2582,
+      "startedAt": "2026-09-02 22:26:08",
+      "handle": "samuellakouassiofficiel"
     },
     {
       "profileId": "dez-cocrane225",
       "platform": "TikTok",
       "roomId": "7681042148728245025",
-      "title": "",
-      "viewers": 582,
-      "startedAt": "2026-09-02 20:47:18",
+      "title": "Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂",
+      "viewers": null,
+      "startedAt": null,
       "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "lolo-beaute",
-      "platform": "TikTok",
-      "roomId": "7681045028256402209",
-      "title": "",
-      "viewers": 774,
-      "startedAt": "2026-09-02 20:58:33",
-      "handle": "lolobeaute85"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 2,
     "added": [],
     "stored": [
       {
-        "profileId": "census-amour-ruth-poopy",
+        "profileId": "census-samuella-kouassi",
         "platform": "TikTok"
       },
       {
         "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "lolo-beaute",
         "platform": "TikTok"
       }
     ],
