@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-02 11:28 UTC",
+  "at": "2026-09-02 16:40 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "holy",
+      "platform": "TikTok",
+      "roomId": "7680976735260723990",
+      "title": "",
+      "viewers": 113,
+      "startedAt": "2026-09-02 16:33:12",
+      "handle": "holysheilla"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "holy",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 21
+  },
   "enabled": true,
   "error": null
 }

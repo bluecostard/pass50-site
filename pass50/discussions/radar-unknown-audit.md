@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-02 16:40 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `holy` @holysheilla — 7680976735260723990 · 113 viewers
+
 ### 2026-09-02 11:28 UTC
 
 - Unknown sondés : **200**
@@ -415,16 +425,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7677647180370955041 · 414 viewers
-
-### 2026-08-24 15:59 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-bb-sans-os-de-man` @bebe.sans.os.de.m — 7677626328921443092 · 476 viewers
-- TikTok `census-le-grand-bicongo` @legrandbicongo — 7677616791900293889 · 151 viewers
-- TikTok `census-stephane-galactik` @le_coach_des_debout — 7677624947437439765 · 102 viewers
-- TikTok `census-willway-jordan-officiel` @jack.carter39 — Bon debut de semaine · 569 viewers
