@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-02 04:44 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-01 23:22 UTC
 
 - Unknown sondés : **200**
@@ -414,14 +422,6 @@ Vraiment en live :
 - TikTok `census-willway-jordan-officiel` @jack.carter39 — Bon debut de semaine · 569 viewers
 
 ### 2026-08-24 13:17 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-08-24 10:07 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
