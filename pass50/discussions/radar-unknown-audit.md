@@ -11,6 +11,22 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-03 23:19 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **1**
+
+Vraiment en live :
+- TikTok `census-amour-ruth-poopy` @amourruth0 — 7681417957339122440 · 68 viewers
+- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7681441180793555745 · 1136 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7681414094015990561 · 894 viewers
+- TikTok `laura-ziehi` @laurateresaziehi — Laura Ziehi
+
+Nouveaux P0 :
+- TikTok `laura-ziehi`
+
 ### 2026-09-03 21:08 UTC
 
 - Unknown sondés : **200**
@@ -424,7 +440,3 @@ Erreur : `POST HTTP 500`
 
 Vraiment en live :
 - TikTok `aya-robert` @aya.robert27 — 7677998728585792288 · 3529 viewers
-
-### 2026-08-25 13:15 UTC
-
-Erreur : `GET HTTP 429`
