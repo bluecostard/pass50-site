@@ -4,14 +4,18 @@ on:
   push:
     paths:
       - 'apps/mobile/**'
+      - 'codemagic.yaml'
       - 'tests/test_pass50_mobile_app_v1.py'
       - 'tests/test_pass50_mobile_eas_v1.py'
+      - 'tests/test_pass50_mobile_codemagic_v1.py'
       - '.github/workflows/validate-pass50-mobile-eas-v1.yml'
   pull_request:
     paths:
       - 'apps/mobile/**'
+      - 'codemagic.yaml'
       - 'tests/test_pass50_mobile_app_v1.py'
       - 'tests/test_pass50_mobile_eas_v1.py'
+      - 'tests/test_pass50_mobile_codemagic_v1.py'
 
 jobs:
   validate:
@@ -36,4 +40,4 @@ jobs:
 
       - name: Run mobile tests
         working-directory: ${{ github.workspace }}
-        run: python3 -m unittest tests.test_pass50_mobile_app_v1 tests.test_pass50_mobile_eas_v1 -v
+        run: python3 -m unittest tests.test_pass50_mobile_app_v1 tests.test_pass50_mobile_eas_v1 tests.test_pass50_mobile_codemagic_v1 -v
