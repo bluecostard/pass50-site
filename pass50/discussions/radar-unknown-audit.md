@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-04 16:27 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7681702018972486433 · 275 viewers
+- TikTok `hamondchic` @coachhamond — C’est pour poser question · 16502 viewers
+- TikTok `hassan` @hassanhayekofficiel — Pkoi les hommes fuient grossesse · 453 viewers
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 469 viewers
+
 ### 2026-09-04 11:27 UTC
 
 - Unknown sondés : **200**
@@ -432,15 +445,3 @@ Vraiment en live :
 - TikTok `p_1785175190809` @ulrich_jordan30 — 7678161979148241682 · 1637 viewers
 
 Ignorés : 1
-
-### 2026-08-26 02:02 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-dezouch-officiel` @dezouch_officiel — Je recherche une fille céliba😫 · 28 viewers
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — Lets Go LIVE! · 1072 viewers
-- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
