@@ -182,9 +182,8 @@ workflows:
         auth: integration
         submit_to_testflight: true
         # After App Store Connect metadata is complete, set submit_to_app_store: true
-        # or submit for review manually in App Store Connect.
+        # (and optionally cancel_previous_submissions: true), or submit review manually.
         submit_to_app_store: false
-        cancel_previous_submissions: true
 
   pass50-android-internal:
     name: PASS50 Android → Play Internal (AAB)
