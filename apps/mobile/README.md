@@ -84,6 +84,33 @@ Prérequis :
 - **Android** : compte Google Play + clé de service (JSON) configurée dans EAS credentials
 - **iOS** : compte Apple Developer, certificats gérés par EAS (`eas credentials`)
 
+## Codemagic (App Store / TestFlight / Play)
+
+Alternative CI/CD cloud : fichier `codemagic.yaml` à la **racine** du dépôt.
+
+### Workflows
+
+| Workflow | Rôle |
+|----------|------|
+| `pass50-ios-testflight` | Build IPA + upload **TestFlight** |
+| `pass50-ios-appstore` | Build IPA + upload App Store Connect (revue manuelle par défaut) |
+| `pass50-android-internal` | Build AAB + piste Play **internal** (draft) |
+
+### Configuration Codemagic (une fois)
+
+1. [codemagic.io](https://codemagic.io) → **Add application** → repo `bluecostard/pass50-site`
+2. **Team settings → Integrations → Apple Developer Portal**  
+   Créer une clé API App Store Connect nommée exactement **`pass50`**
+3. **Environment groups** → groupe **`pass50_store`** :
+   - `APP_STORE_APPLE_ID` = ID numérique de l’app (App Store Connect → infos app)
+4. **Code signing identities** → iOS distribution pour `store.pass50.app`
+5. Créer l’app dans [App Store Connect](https://appstoreconnect.apple.com) (Bundle ID `store.pass50.app`)
+6. Scanner la branche (`main` ou `cursor/pass50-mobile-app-0a21`) → **Start build** → `pass50-ios-testflight`
+
+Android (optionnel) : groupe `google_play` + variable secrète `GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS`, identity keystore `pass50_android`.
+
+Le prebuild Expo (`ios/` / `android/`) est généré **sur la VM** à chaque build — ne pas committer ces dossiers.
+
 ### Identifiants (alignés coque Capacitor)
 
 | Clé | Valeur |

@@ -1,0 +1,248 @@
+# PASS50 Mobile — Codemagic CI/CD (Expo SDK 57)
+# Docs: https://docs.codemagic.io/yaml-quick-start/building-a-react-native-app/
+#
+# Setup (Codemagic UI):
+# 1. Add application → GitHub repo bluecostard/pass50-site
+# 2. Team settings → Integrations → Apple Developer Portal
+#    Create API key named exactly: pass50
+# 3. Environment groups → create group "pass50_store" with:
+#    - APP_STORE_APPLE_ID = numeric Apple ID from App Store Connect (after app record exists)
+# 4. Code signing identities → iOS distribution for bundle store.pass50.app
+# 5. Scan branch for codemagic.yaml → Start build (pass50-ios-testflight first)
+
+workflows:
+  pass50-ios-testflight:
+    name: PASS50 iOS → TestFlight
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: pass50
+    environment:
+      groups:
+        - pass50_store
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: store.pass50.app
+      node: 22.14.0
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: store.pass50.app
+        XCODE_WORKSPACE: PASS50.xcworkspace
+        XCODE_SCHEME: PASS50
+        MOBILE_DIR: apps/mobile
+        EXPO_PUBLIC_API_BASE: https://pass50.store/api/
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npm ci
+      - name: Expo prebuild (iOS)
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npx expo prebuild --platform ios --non-interactive
+      - name: Ensure ITSAppUsesNonExemptEncryption
+        script: |
+          set -euo pipefail
+          PLIST="$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_SCHEME/Info.plist"
+          PLIST_BUDDY=/usr/libexec/PlistBuddy
+          if ! $PLIST_BUDDY -c "Print :ITSAppUsesNonExemptEncryption" "$PLIST" >/dev/null 2>&1; then
+            $PLIST_BUDDY -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
+          fi
+      - name: Install CocoaPods
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          pod install
+      - name: Set up code signing profiles
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          xcode-project use-profiles
+      - name: Increment iOS build number
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          LATEST=0
+          if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
+            LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || \
+                     app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || \
+                     echo 0)
+          fi
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            LATEST=0
+          fi
+          NEXT=$((LATEST + 1))
+          if [ "$NEXT" -lt "${BUILD_NUMBER:-1}" ]; then
+            NEXT="${BUILD_NUMBER}"
+          fi
+          echo "Setting CFBundleVersion=$NEXT (previous=$LATEST)"
+          agvtool new-version -all "$NEXT"
+      - name: Build IPA
+        script: |
+          set -euo pipefail
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - apps/mobile/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+
+  pass50-ios-appstore:
+    name: PASS50 iOS → App Store Review
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: pass50
+    environment:
+      groups:
+        - pass50_store
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: store.pass50.app
+      node: 22.14.0
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: store.pass50.app
+        XCODE_WORKSPACE: PASS50.xcworkspace
+        XCODE_SCHEME: PASS50
+        MOBILE_DIR: apps/mobile
+        EXPO_PUBLIC_API_BASE: https://pass50.store/api/
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npm ci
+      - name: Expo prebuild (iOS)
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npx expo prebuild --platform ios --non-interactive
+      - name: Ensure ITSAppUsesNonExemptEncryption
+        script: |
+          set -euo pipefail
+          PLIST="$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_SCHEME/Info.plist"
+          PLIST_BUDDY=/usr/libexec/PlistBuddy
+          if ! $PLIST_BUDDY -c "Print :ITSAppUsesNonExemptEncryption" "$PLIST" >/dev/null 2>&1; then
+            $PLIST_BUDDY -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
+          fi
+      - name: Install CocoaPods
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          pod install
+      - name: Set up code signing profiles
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          xcode-project use-profiles
+      - name: Increment iOS build number
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          LATEST=0
+          if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
+            LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || \
+                     app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || \
+                     echo 0)
+          fi
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            LATEST=0
+          fi
+          NEXT=$((LATEST + 1))
+          if [ "$NEXT" -lt "${BUILD_NUMBER:-1}" ]; then
+            NEXT="${BUILD_NUMBER}"
+          fi
+          echo "Setting CFBundleVersion=$NEXT (previous=$LATEST)"
+          agvtool new-version -all "$NEXT"
+      - name: Build IPA
+        script: |
+          set -euo pipefail
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - apps/mobile/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # After App Store Connect metadata is complete, set submit_to_app_store: true
+        # or submit for review manually in App Store Connect.
+        submit_to_app_store: false
+        cancel_previous_submissions: true
+
+  pass50-android-internal:
+    name: PASS50 Android → Play Internal (AAB)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - pass50_store
+        - google_play
+      android_signing:
+        - pass50_android
+      node: 22.14.0
+      java: 17
+      vars:
+        PACKAGE_NAME: store.pass50.app
+        MOBILE_DIR: apps/mobile
+        EXPO_PUBLIC_API_BASE: https://pass50.store/api/
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npm ci
+      - name: Expo prebuild (Android)
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npx expo prebuild --platform android --non-interactive
+      - name: Set Android SDK location
+        script: |
+          set -euo pipefail
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/$MOBILE_DIR/android/local.properties"
+      - name: Inject Codemagic Android release signing
+        script: |
+          set -euo pipefail
+          GRADLE="$CM_BUILD_DIR/$MOBILE_DIR/android/app/build.gradle"
+          SIGNING="$CM_BUILD_DIR/$MOBILE_DIR/support-files/codemagic-android-signing.gradle"
+          if [ -f "$SIGNING" ] && ! grep -q 'codemagic-android-signing.gradle' "$GRADLE"; then
+            echo "apply from: \"../../support-files/codemagic-android-signing.gradle\"" >> "$GRADLE"
+          fi
+      - name: Build Android App Bundle
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/android"
+          UPDATED_BUILD_NUMBER="${BUILD_NUMBER:-1}"
+          if [ -n "${GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS:-}" ]; then
+            LATEST=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" || true)
+            if [ -n "$LATEST" ] && [ "$LATEST" != "null" ]; then
+              UPDATED_BUILD_NUMBER=$((LATEST + 1))
+            fi
+          fi
+          ./gradlew bundleRelease \
+            -PversionCode="$UPDATED_BUILD_NUMBER" \
+            -PversionName="1.0.$UPDATED_BUILD_NUMBER"
+    artifacts:
+      - apps/mobile/android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
