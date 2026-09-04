@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-04 04:42 UTC",
+  "at": "2026-09-04 11:27 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "african-ryou",
+      "platform": "TikTok",
+      "roomId": "7681634835634391829",
+      "title": "",
+      "viewers": 1200,
+      "startedAt": "2026-09-04 11:06:39",
+      "handle": "african_ryou_officiel"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "african-ryou",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 22
+  },
   "enabled": true,
   "error": null
 }
