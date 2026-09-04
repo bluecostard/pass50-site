@@ -1,71 +1,9 @@
 {
-  "at": "2026-09-04 16:27 UTC",
+  "at": "2026-09-04 20:50 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
-  "lives": [
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7681702018972486433",
-      "title": "",
-      "viewers": 275,
-      "startedAt": "2026-09-04 15:28:17",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "hamondchic",
-      "platform": "TikTok",
-      "roomId": "7681676108517542678",
-      "title": "C’est pour poser question",
-      "viewers": 16502,
-      "startedAt": "2026-09-04 13:47:13",
-      "handle": "coachhamond"
-    },
-    {
-      "profileId": "hassan",
-      "platform": "TikTok",
-      "roomId": "7681713964692392725",
-      "title": "Pkoi les hommes fuient grossesse",
-      "viewers": 453,
-      "startedAt": "2026-09-04 16:13:41",
-      "handle": "hassanhayekofficiel"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7681717089077431062",
-      "title": "Lets Go LIVE!",
-      "viewers": 469,
-      "startedAt": "2026-09-04 16:26:09",
-      "handle": "oustazdianeofficiel1"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 4,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "hamondchic",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "hassan",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 23
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
