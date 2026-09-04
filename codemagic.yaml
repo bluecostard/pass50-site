@@ -86,26 +86,46 @@ workflows:
           set -euo pipefail
           IOS_DIR="$CM_BUILD_DIR/$MOBILE_DIR/ios"
           cd "$IOS_DIR"
-          echo "=== Xcode project contents ==="
+          echo "=== ios/ contents ==="
           ls -la
           echo "=== Available schemes ==="
-          xcodebuild -list -workspace "$XCODE_WORKSPACE" || true
+          xcodebuild -list -workspace "$XCODE_WORKSPACE"
+          # Prefer Codemagic helper; on failure dump raw xcodebuild errors (code 65 is opaque).
           set +e
           xcode-project build-ipa \
             --workspace "$IOS_DIR/$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --archive-flags "-destination generic/platform=iOS"
+            --scheme "$XCODE_SCHEME"
           STATUS=$?
           set -e
           if [ "$STATUS" -ne 0 ]; then
-            echo "=== Build IPA failed (exit $STATUS). Last log lines: ==="
-            ls -lt /tmp/xcodebuild_logs 2>/dev/null || true
+            echo "=== build-ipa failed ($STATUS); retrying with raw xcodebuild for diagnostics ==="
+            ARCHIVE_PATH="$IOS_DIR/build/PASS50.xcarchive"
+            EXPORT_PATH="$IOS_DIR/build/ipa"
+            mkdir -p "$IOS_DIR/build" "$EXPORT_PATH"
+            set +e
+            xcodebuild \
+              -workspace "$IOS_DIR/$XCODE_WORKSPACE" \
+              -scheme "$XCODE_SCHEME" \
+              -configuration Release \
+              -archivePath "$ARCHIVE_PATH" \
+              -destination "generic/platform=iOS" \
+              CLEAN=NO \
+              archive \
+              CODE_SIGN_STYLE=Manual \
+              2>&1 | tee /tmp/pass50-xcodebuild-archive.log
+            XB_STATUS=${PIPESTATUS[0]}
+            set -e
+            echo "=== grep errors from archive log ==="
+            grep -E "error:|ERROR|fatal|No profile|Provisioning|CODE_SIGN|Swift Compiler|❌" /tmp/pass50-xcodebuild-archive.log | tail -n 80 || true
+            echo "=== tail archive log ==="
+            tail -n 80 /tmp/pass50-xcodebuild-archive.log || true
             find /tmp/xcodebuild_logs -type f -name '*.log' -print0 2>/dev/null \
               | xargs -0 ls -t 2>/dev/null \
               | head -3 \
               | while read -r f; do
                   echo "----- $f -----"
-                  tail -n 100 "$f" || true
+                  grep -E "error:|ERROR|fatal|No profile|Provisioning" "$f" | tail -n 40 || true
+                  tail -n 40 "$f" || true
                 done
             exit "$STATUS"
           fi
@@ -195,26 +215,46 @@ workflows:
           set -euo pipefail
           IOS_DIR="$CM_BUILD_DIR/$MOBILE_DIR/ios"
           cd "$IOS_DIR"
-          echo "=== Xcode project contents ==="
+          echo "=== ios/ contents ==="
           ls -la
           echo "=== Available schemes ==="
-          xcodebuild -list -workspace "$XCODE_WORKSPACE" || true
+          xcodebuild -list -workspace "$XCODE_WORKSPACE"
+          # Prefer Codemagic helper; on failure dump raw xcodebuild errors (code 65 is opaque).
           set +e
           xcode-project build-ipa \
             --workspace "$IOS_DIR/$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --archive-flags "-destination generic/platform=iOS"
+            --scheme "$XCODE_SCHEME"
           STATUS=$?
           set -e
           if [ "$STATUS" -ne 0 ]; then
-            echo "=== Build IPA failed (exit $STATUS). Last log lines: ==="
-            ls -lt /tmp/xcodebuild_logs 2>/dev/null || true
+            echo "=== build-ipa failed ($STATUS); retrying with raw xcodebuild for diagnostics ==="
+            ARCHIVE_PATH="$IOS_DIR/build/PASS50.xcarchive"
+            EXPORT_PATH="$IOS_DIR/build/ipa"
+            mkdir -p "$IOS_DIR/build" "$EXPORT_PATH"
+            set +e
+            xcodebuild \
+              -workspace "$IOS_DIR/$XCODE_WORKSPACE" \
+              -scheme "$XCODE_SCHEME" \
+              -configuration Release \
+              -archivePath "$ARCHIVE_PATH" \
+              -destination "generic/platform=iOS" \
+              CLEAN=NO \
+              archive \
+              CODE_SIGN_STYLE=Manual \
+              2>&1 | tee /tmp/pass50-xcodebuild-archive.log
+            XB_STATUS=${PIPESTATUS[0]}
+            set -e
+            echo "=== grep errors from archive log ==="
+            grep -E "error:|ERROR|fatal|No profile|Provisioning|CODE_SIGN|Swift Compiler|❌" /tmp/pass50-xcodebuild-archive.log | tail -n 80 || true
+            echo "=== tail archive log ==="
+            tail -n 80 /tmp/pass50-xcodebuild-archive.log || true
             find /tmp/xcodebuild_logs -type f -name '*.log' -print0 2>/dev/null \
               | xargs -0 ls -t 2>/dev/null \
               | head -3 \
               | while read -r f; do
                   echo "----- $f -----"
-                  tail -n 100 "$f" || true
+                  grep -E "error:|ERROR|fatal|No profile|Provisioning" "$f" | tail -n 40 || true
+                  tail -n 40 "$f" || true
                 done
             exit "$STATUS"
           fi
