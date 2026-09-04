@@ -42,7 +42,7 @@ workflows:
         script: |
           set -euo pipefail
           cd "$CM_BUILD_DIR/$MOBILE_DIR"
-          npx expo prebuild --platform ios --non-interactive
+          CI=1 npx expo prebuild --platform ios --clean
       - name: Ensure ITSAppUsesNonExemptEncryption
         script: |
           set -euo pipefail
@@ -59,8 +59,9 @@ workflows:
       - name: Set up code signing profiles
         script: |
           set -euo pipefail
-          cd "$CM_BUILD_DIR/$MOBILE_DIR"
-          xcode-project use-profiles
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          xcode-project use-profiles \
+            --project "$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_SCHEME.xcodeproj"
       - name: Increment iOS build number
         script: |
           set -euo pipefail
@@ -83,9 +84,31 @@ workflows:
       - name: Build IPA
         script: |
           set -euo pipefail
+          IOS_DIR="$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          cd "$IOS_DIR"
+          echo "=== Xcode project contents ==="
+          ls -la
+          echo "=== Available schemes ==="
+          xcodebuild -list -workspace "$XCODE_WORKSPACE" || true
+          set +e
           xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --workspace "$IOS_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags "-destination generic/platform=iOS"
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            echo "=== Build IPA failed (exit $STATUS). Last log lines: ==="
+            ls -lt /tmp/xcodebuild_logs 2>/dev/null || true
+            find /tmp/xcodebuild_logs -type f -name '*.log' -print0 2>/dev/null \
+              | xargs -0 ls -t 2>/dev/null \
+              | head -3 \
+              | while read -r f; do
+                  echo "----- $f -----"
+                  tail -n 100 "$f" || true
+                done
+            exit "$STATUS"
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - apps/mobile/build/ios/ipa/*.ipa
@@ -128,7 +151,7 @@ workflows:
         script: |
           set -euo pipefail
           cd "$CM_BUILD_DIR/$MOBILE_DIR"
-          npx expo prebuild --platform ios --non-interactive
+          CI=1 npx expo prebuild --platform ios --clean
       - name: Ensure ITSAppUsesNonExemptEncryption
         script: |
           set -euo pipefail
@@ -145,8 +168,9 @@ workflows:
       - name: Set up code signing profiles
         script: |
           set -euo pipefail
-          cd "$CM_BUILD_DIR/$MOBILE_DIR"
-          xcode-project use-profiles
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          xcode-project use-profiles \
+            --project "$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_SCHEME.xcodeproj"
       - name: Increment iOS build number
         script: |
           set -euo pipefail
@@ -169,9 +193,31 @@ workflows:
       - name: Build IPA
         script: |
           set -euo pipefail
+          IOS_DIR="$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          cd "$IOS_DIR"
+          echo "=== Xcode project contents ==="
+          ls -la
+          echo "=== Available schemes ==="
+          xcodebuild -list -workspace "$XCODE_WORKSPACE" || true
+          set +e
           xcode-project build-ipa \
-            --workspace "$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --workspace "$IOS_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags "-destination generic/platform=iOS"
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            echo "=== Build IPA failed (exit $STATUS). Last log lines: ==="
+            ls -lt /tmp/xcodebuild_logs 2>/dev/null || true
+            find /tmp/xcodebuild_logs -type f -name '*.log' -print0 2>/dev/null \
+              | xargs -0 ls -t 2>/dev/null \
+              | head -3 \
+              | while read -r f; do
+                  echo "----- $f -----"
+                  tail -n 100 "$f" || true
+                done
+            exit "$STATUS"
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - apps/mobile/build/ios/ipa/*.ipa
