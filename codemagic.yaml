@@ -129,9 +129,27 @@ workflows:
                 done
             exit "$STATUS"
           fi
+      - name: Locate IPA for upload
+        script: |
+          set -euo pipefail
+          echo "=== Searching for IPA artifacts ==="
+          find "$CM_BUILD_DIR" -name '*.ipa' -type f -print || true
+          IPA="$(find "$CM_BUILD_DIR" -name '*.ipa' -type f | head -n 1 || true)"
+          if [ -z "$IPA" ]; then
+            echo "ERROR: No .ipa found — cannot publish to App Store Connect / TestFlight"
+            exit 1
+          fi
+          # Codemagic publishing looks for IPA under these conventional paths.
+          mkdir -p "$CM_BUILD_DIR/build/ios/ipa" "$CM_BUILD_DIR/artifacts"
+          cp "$IPA" "$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          cp "$IPA" "$CM_BUILD_DIR/artifacts/PASS50.ipa"
+          ls -la "$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          echo "IPA ready for App Store Connect publishing step"
     artifacts:
+      - artifacts/*.ipa
       - build/ios/ipa/*.ipa
       - apps/mobile/build/ios/ipa/*.ipa
+      - "**/*.ipa"
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
