@@ -1,79 +1,9 @@
 {
-  "at": "2026-09-03 23:19 UTC",
+  "at": "2026-09-04 04:42 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
-  "lives": [
-    {
-      "profileId": "census-amour-ruth-poopy",
-      "platform": "TikTok",
-      "roomId": "7681417957339122440",
-      "title": "",
-      "viewers": 68,
-      "startedAt": "2026-09-03 21:05:19",
-      "handle": "amourruth0"
-    },
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7681441180793555745",
-      "title": "",
-      "viewers": 1136,
-      "startedAt": "2026-09-03 22:36:16",
-      "handle": "samuellakouassiofficiel"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7681414094015990561",
-      "title": "",
-      "viewers": 894,
-      "startedAt": "2026-09-03 20:50:37",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "laura-ziehi",
-      "platform": "TikTok",
-      "roomId": "7681447091192859400",
-      "title": "Laura Ziehi",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "laurateresaziehi"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 4,
-    "added": [
-      {
-        "profileId": "laura-ziehi",
-        "platform": "TikTok",
-        "handle": "laurateresaziehi",
-        "addedAt": "2026-09-03T23:19:51+00:00",
-        "reason": "unknown_audit_live"
-      }
-    ],
-    "stored": [
-      {
-        "profileId": "census-amour-ruth-poopy",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "laura-ziehi",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 22
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
