@@ -1,9 +1,71 @@
 {
-  "at": "2026-09-04 20:50 UTC",
+  "at": "2026-09-04 23:04 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 4,
+  "lives": [
+    {
+      "profileId": "census-samuella-kouassi",
+      "platform": "TikTok",
+      "roomId": "7681813519460911905",
+      "title": "",
+      "viewers": 1492,
+      "startedAt": "2026-09-04 22:40:49",
+      "handle": "samuellakouassiofficiel"
+    },
+    {
+      "profileId": "census-segano-et-mael",
+      "platform": "TikTok",
+      "roomId": "7681816883305237280",
+      "title": "",
+      "viewers": 3022,
+      "startedAt": "2026-09-04 22:54:14",
+      "handle": "seganoofficiel2.0"
+    },
+    {
+      "profileId": "holy",
+      "platform": "TikTok",
+      "roomId": "7681819813647305475",
+      "title": "Holy Sheilla",
+      "viewers": 1,
+      "startedAt": null,
+      "handle": "holysheilla"
+    },
+    {
+      "profileId": "oustaz-diane",
+      "platform": "TikTok",
+      "roomId": "7681787500209244960",
+      "title": "Lets Go LIVE!",
+      "viewers": 1814,
+      "startedAt": "2026-09-04 20:59:38",
+      "handle": "oustazdianeofficiel1"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 4,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-samuella-kouassi",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-segano-et-mael",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "holy",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "oustaz-diane",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 23
+  },
   "enabled": true,
   "error": null
 }
