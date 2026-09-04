@@ -20,7 +20,7 @@ class Pass50MobileCodemagicV1Tests(unittest.TestCase):
         self.assertIn("bundle_identifier: store.pass50.app", text)
         self.assertIn("BUNDLE_ID: store.pass50.app", text)
         self.assertIn("PACKAGE_NAME: store.pass50.app", text)
-        self.assertIn("app_store_connect: pass50", text)
+        self.assertIn("app_store_connect: Pass50", text)
         self.assertIn("MOBILE_DIR: apps/mobile", text)
         self.assertIn("npx expo prebuild --platform ios", text)
         self.assertIn("submit_to_testflight: true", text)

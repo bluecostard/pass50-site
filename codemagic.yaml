@@ -4,7 +4,7 @@
 # Setup (Codemagic UI):
 # 1. Add application → GitHub repo bluecostard/pass50-site
 # 2. Team settings → Integrations → Apple Developer Portal
-#    Create API key named exactly: pass50
+#    Create API key named exactly: Pass50
 # 3. Environment groups → create group "pass50_store" with:
 #    - APP_STORE_APPLE_ID = numeric Apple ID from App Store Connect (after app record exists)
 # 4. Code signing identities → iOS distribution for bundle store.pass50.app
@@ -16,7 +16,7 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: pass50
+      app_store_connect: Pass50
     environment:
       groups:
         - pass50_store
@@ -102,7 +102,7 @@ workflows:
     max_build_duration: 120
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: pass50
+      app_store_connect: Pass50
     environment:
       groups:
         - pass50_store

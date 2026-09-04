@@ -100,7 +100,7 @@ Alternative CI/CD cloud : fichier `codemagic.yaml` à la **racine** du dépôt.
 
 1. [codemagic.io](https://codemagic.io) → **Add application** → repo `bluecostard/pass50-site`
 2. **Team settings → Integrations → Apple Developer Portal**  
-   Créer une clé API App Store Connect nommée exactement **`pass50`**
+   Créer une clé API App Store Connect nommée exactement **`Pass50`**
 3. **Environment groups** → groupe **`pass50_store`** :
    - `APP_STORE_APPLE_ID` = ID numérique de l’app (App Store Connect → infos app)
 4. **Code signing identities** → iOS distribution pour `store.pass50.app`
