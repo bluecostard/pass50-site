@@ -75,11 +75,16 @@ workflows:
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
             LATEST=0
           fi
+          # Must be strictly higher than any previously uploaded CFBundleVersion.
           NEXT=$((LATEST + 1))
-          if [ "$NEXT" -lt "${BUILD_NUMBER:-1}" ]; then
-            NEXT="${BUILD_NUMBER}"
+          if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
+            NEXT=$((BUILD_NUMBER + 1))
           fi
-          echo "Setting CFBundleVersion=$NEXT (previous=$LATEST)"
+          # Safety floor: known previous upload was 8.
+          if [ "$NEXT" -le 8 ]; then
+            NEXT=9
+          fi
+          echo "Setting CFBundleVersion=$NEXT (ASC latest=$LATEST, CM BUILD_NUMBER=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
       - name: Build IPA
         script: |
@@ -222,11 +227,16 @@ workflows:
           if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
             LATEST=0
           fi
+          # Must be strictly higher than any previously uploaded CFBundleVersion.
           NEXT=$((LATEST + 1))
-          if [ "$NEXT" -lt "${BUILD_NUMBER:-1}" ]; then
-            NEXT="${BUILD_NUMBER}"
+          if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
+            NEXT=$((BUILD_NUMBER + 1))
           fi
-          echo "Setting CFBundleVersion=$NEXT (previous=$LATEST)"
+          # Safety floor: known previous upload was 8.
+          if [ "$NEXT" -le 8 ]; then
+            NEXT=9
+          fi
+          echo "Setting CFBundleVersion=$NEXT (ASC latest=$LATEST, CM BUILD_NUMBER=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
       - name: Build IPA
         script: |
