@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-05 22:59 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7682161059154742048 · 9205 viewers
+- TikTok `census-gaelle-taglao` @gaelletaglao02 — 7682150121391328001 · 1616 viewers
+
 ### 2026-09-05 20:28 UTC
 
 - Unknown sondés : **200**
@@ -438,14 +449,3 @@ Vraiment en live :
 - TikTok `census-no-limit` @nolimit_vousdv — 7678851598977714962 · 600 viewers
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7678829891407629089 · 1250 viewers
 - TikTok `census-willway-jordan-officiel` @jack.carter39 — Rebellion de 2002 a 2011:analyse · 110 viewers
-
-### 2026-08-27 14:19 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7678699503892957985 · 247 viewers
-- TikTok `hamondchic` @coachhamond — C’est pour poser question · 13750 viewers
