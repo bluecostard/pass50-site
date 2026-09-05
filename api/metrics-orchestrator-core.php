@@ -89,7 +89,7 @@ function p50_mo_fair_rotation_profiles(PDO $pdo,int $limit,array $excludeIds=[])
     $threshold=p50_mc_threshold();
     $sql="SELECT r.profile_id,MAX(c.captured_at) last_capture FROM p50_profile_registry r
       JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
-      LEFT JOIN p50_metric_captures c ON BINARY c.profile_id=BINARY r.profile_id AND c.platform=s.platform AND c.quality_status='usable'
+      LEFT JOIN p50_metric_captures c ON BINARY c.profile_id=BINARY r.profile_id AND BINARY c.platform=BINARY s.platform AND c.quality_status='usable'
       WHERE r.alive=1 AND s.status='verified' AND s.confidence>=?
       AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')";
     $params=[$threshold];
@@ -130,7 +130,7 @@ function p50_mo_exploration_profiles(PDO $pdo,int $limit,int $topRankCutoff,arra
     }
     $sql="SELECT r.profile_id,MAX(c.captured_at) last_capture FROM p50_profile_registry r
       JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
-      LEFT JOIN p50_metric_captures c ON BINARY c.profile_id=BINARY r.profile_id AND c.platform=s.platform AND c.quality_status='usable'
+      LEFT JOIN p50_metric_captures c ON BINARY c.profile_id=BINARY r.profile_id AND BINARY c.platform=BINARY s.platform AND c.quality_status='usable'
       WHERE r.alive=1 AND s.status='verified' AND s.confidence>=?
       AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')
       AND r.profile_id NOT IN ($topSub)";
