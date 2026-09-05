@@ -37,24 +37,14 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("https://pass50.store", shell)
         self.assertIn("mon-fil.html", shell)
         self.assertIn("pronostics.html", shell)
-        self.assertIn("open=account", shell)
+        self.assertIn("mon-espace.html", shell)
         self.assertIn(".p50-bottom-nav", shell)
-        # Guest auth must NOT bounce Mon fil / Pronos back to Classement
         self.assertIn("BLOCK_AUTH_REDIRECT_JS", shell)
         self.assertIn("need-auth", shell)
         self.assertIn("pathAllowedForTab", shell)
-        # Mon espace must not leave ranking chrome visible behind the account modal
-        self.assertIn("pass50-native-account", shell)
-        self.assertIn("ACCOUNT_SHELL_CSS", shell)
-        self.assertIn("OPEN_ACCOUNT_JS", shell)
-        self.assertIn("pass50-onboarding-root", shell)
-        self.assertIn("pass50_onboarding_seen_v1", shell)
+        self.assertNotIn("ACCOUNT_SHELL_CSS", shell)
+        self.assertNotIn("OPEN_ACCOUNT_JS", shell)
         self.assertIn("expo-router", shell)
-        # Mon espace: never stay blank/loading (timeout + fallback CTA)
-        self.assertIn("account-ready", shell)
-        self.assertIn("pass50-native-account-retry", shell)
-        self.assertIn("setTimeout(() => setLoading(false), 3500)", shell)
-        self.assertNotIn("MutationObserver", shell)
         self.assertNotIn("@react-navigation/native", shell)
         self.assertNotIn("/app.html", shell)
         self.assertNotIn("/app.html", ranking)
@@ -108,6 +98,22 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("PASS", shell)
         self.assertIn("#050705", colors)
         self.assertIn("#b7ff00", colors)
+
+
+class Pass50MonEspacePageTests(unittest.TestCase):
+    def test_dedicated_account_page_exists(self):
+        html = (ROOT / "mon-espace.html").read_text(encoding="utf-8")
+        js = (ROOT / "mon-espace.js").read_text(encoding="utf-8")
+        nav = (ROOT / "mobile-bottom-nav-v1.js").read_text(encoding="utf-8")
+        self.assertIn("Mon espace", html)
+        self.assertIn("mon-espace.js", html)
+        self.assertIn("pass50-auth-session.js", html)
+        self.assertIn("login.php", js)
+        self.assertIn("register.php", js)
+        self.assertIn("me.php", js)
+        self.assertIn("mon-espace.html", nav)
+        self.assertIn("isAccount", nav)
+        self.assertIn("location.replace('./mon-espace.html'", nav)
 
 
 if __name__ == "__main__":
