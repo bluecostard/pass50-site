@@ -105,7 +105,7 @@ Si l’étape **Publish IPA** échoue alors que l’IPA est dans Artifacts : té
 ### Configuration Codemagic (une fois)
 
 1. [codemagic.io](https://codemagic.io) → **Add application** → repo `bluecostard/pass50-site`
-2. **Team settings → Integrations → Apple Developer Portal**  
+2. **Team settings → Integrations → Apple Developer Portal**
    Créer une clé API App Store Connect nommée exactement **`Pass50`**
 3. **Environment groups** → groupe **`pass50_store`** :
    - `APP_STORE_APPLE_ID` = ID numérique de l’app (App Store Connect → infos app)
