@@ -380,7 +380,7 @@
       <span class="sub">Pronostics</span>
     </div>
     <div>
-      <button class="btn primary" id="btnCompte" onclick="location.href='/?open=account'">Compte</button>
+      <button class="btn primary" id="btnCompte" onclick="location.href='./mon-espace.html'">Compte</button>
     </div>
   </div>
 
@@ -552,7 +552,7 @@
       if(localStorage.getItem('pass50_session_user'))return true;
       if(sessionStorage.getItem('pass50_session'))return true;
     }catch(_){}
-    location.replace('./?open=account');
+    location.replace('./mon-espace.html');
     return false;
   }
   if(!requireLogin())return;
