@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -311,7 +311,7 @@ function pathAllowedForTab(tab: SiteTab, url: string): boolean {
  */
 export function SiteWebView({ tab, title = 'PASS50' }: Props) {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<any>();
+  const router = useRouter();
   const webRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -349,11 +349,11 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
 
   const goAccountTab = useCallback(() => {
     try {
-      navigation.navigate('profile');
+      router.push('/(tabs)/profile');
     } catch {
       // ignore
     }
-  }, [navigation]);
+  }, [router]);
 
   const onMessage = useCallback(
     (event: { nativeEvent: { data: string } }) => {

@@ -49,6 +49,8 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("OPEN_ACCOUNT_JS", shell)
         self.assertIn("pass50-onboarding-root", shell)
         self.assertIn("pass50_onboarding_seen_v1", shell)
+        self.assertIn("expo-router", shell)
+        self.assertNotIn("@react-navigation/native", shell)
         self.assertNotIn("/app.html", shell)
         self.assertNotIn("/app.html", ranking)
 
