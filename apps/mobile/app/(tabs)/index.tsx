@@ -1,15 +1,31 @@
-import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BuzzHero } from '@/components/BuzzHero';
 import { PeriodChips } from '@/components/PeriodChips';
-import { RankRow } from '@/components/RankRow';
-import { ScreenShell } from '@/components/ScreenShell';
+import { RankCard } from '@/components/RankCard';
+import { RegionChips, RankingRegion } from '@/components/RegionChips';
 import { Pass50 } from '@/constants/Colors';
 import { pass50Api } from '@/src/api/client';
-import { PublicRanking, RankingPeriod } from '@/src/types';
+import { PublicRanking, RankingPeriod, RankingRow } from '@/src/types';
 
+function regionEligible(row: RankingRow, region: RankingRegion) {
+  if (region === 'ALL') return true;
+  return row.region === region || row.region === 'BOTH';
+}
+
+/** Classement — présentation site mobile (filtres + buzz + cartes photo). */
 export default function RankingScreen() {
+  const insets = useSafeAreaInsets();
   const [period, setPeriod] = useState<RankingPeriod>('24H');
+  const [region, setRegion] = useState<RankingRegion>('ALL');
   const [data, setData] = useState<PublicRanking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,50 +46,64 @@ export default function RankingScreen() {
     load();
   }, [load]);
 
-  const rows = data?.periods?.[period] ?? [];
+  const rows = useMemo(() => {
+    const list = data?.periods?.[period] ?? [];
+    return list.filter((row) => regionEligible(row, region));
+  }, [data, period, region]);
+
+  const top3 = rows.slice(0, 3);
 
   return (
-    <ScreenShell
-      eyebrow="Classement public"
-      title="Qui monte maintenant"
-      subtitle={`Top ${rows.length || 50} · période ${period}`}
-      status={loading ? 'Maj…' : 'À jour'}
-      refreshing={loading}
-      onRefresh={load}>
-      <PeriodChips value={period} onChange={setPeriod} />
-      {error && !data ? (
-        <View style={styles.panel}>
-          <Text style={styles.error}>{error}</Text>
-        </View>
-      ) : null}
-      <View style={styles.panel}>
+    <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 110 }]}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={load} tintColor={Pass50.lime} />
+        }
+        showsVerticalScrollIndicator={false}>
+        <PeriodChips value={period} onChange={setPeriod} />
+        <RegionChips value={region} onChange={setRegion} />
+
+        {error && !data ? <Text style={styles.error}>{error}</Text> : null}
+
+        {top3.length ? <BuzzHero top3={top3} period={period} updatedAt={data?.publishedAt} /> : null}
+
         {rows.length ? (
-          rows.map((row) => <RankRow key={row.id} row={row} />)
+          rows.map((row, index) => <RankCard key={row.id} row={row} index={index} />)
         ) : (
-          <Text style={styles.empty}>
-            {loading ? 'Chargement…' : `Aucun profil classé pour ${period}.`}
-          </Text>
+          <View style={styles.emptyBox}>
+            <Text style={styles.empty}>
+              {loading ? 'Chargement…' : `Aucun profil classé pour ${period}.`}
+            </Text>
+          </View>
         )}
-      </View>
-    </ScreenShell>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  panel: {
+  root: {
+    flex: 1,
+    backgroundColor: Pass50.bg,
+  },
+  content: {
+    paddingHorizontal: 12,
+    gap: 10,
+  },
+  emptyBox: {
     borderWidth: 1,
     borderColor: Pass50.line,
     borderRadius: 18,
     backgroundColor: Pass50.panel,
-    overflow: 'hidden',
+    padding: 18,
   },
   empty: {
     color: Pass50.muted,
-    padding: 16,
     lineHeight: 20,
   },
   error: {
     color: Pass50.danger,
-    padding: 16,
+    paddingVertical: 8,
   },
 });

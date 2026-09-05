@@ -13,12 +13,29 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         for tab in ("index", "feed", "prono", "live", "profile"):
             self.assertIn(f'name="{tab}"', layout)
         self.assertIn("Pass50TabBar", layout)
-        # Dock aligné sur app.html
+        # Dock = site mobile
+        self.assertIn("Mon fil", tabbar)
+        self.assertIn("Pronos", tabbar)
         self.assertIn("Classement", tabbar)
-        self.assertIn("Fil", tabbar)
-        self.assertIn("Live", tabbar)
-        self.assertIn("Compte", tabbar)
-        self.assertIn("href: null", layout)  # Pronos hors dock
+        self.assertIn("Mon espace", tabbar)
+        self.assertIn("elevated", tabbar)
+        self.assertIn("href: null", layout)  # Live hors dock
+
+    def test_ranking_screen_matches_site_mobile_presentation(self):
+        ranking = (MOBILE / "app/(tabs)/index.tsx").read_text(encoding="utf-8")
+        buzz = (MOBILE / "components/BuzzHero.tsx").read_text(encoding="utf-8")
+        card = (MOBILE / "components/RankCard.tsx").read_text(encoding="utf-8")
+        periods = (MOBILE / "components/PeriodChips.tsx").read_text(encoding="utf-8")
+        regions = (MOBILE / "components/RegionChips.tsx").read_text(encoding="utf-8")
+        self.assertIn("BuzzHero", ranking)
+        self.assertIn("RankCard", ranking)
+        self.assertIn("RegionChips", ranking)
+        self.assertIn("LE BUZZ", buzz)
+        self.assertIn("/300", buzz)
+        self.assertIn("share-outline", card)
+        self.assertIn("7 JOURS", periods)
+        self.assertIn("DIASPORA", regions)
+        self.assertIn("CÔTE D'IVOIRE", regions)
 
     def test_api_client_targets_pass50_store(self):
         client = (MOBILE / "src/api/client.ts").read_text(encoding="utf-8")
@@ -62,7 +79,6 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("'coules'", slides)
         self.assertIn("resetOnboarding", storage)
         self.assertIn("Revoir le tutoriel", profile)
-        self.assertIn("Pronos & Coulés", profile)
 
     def test_influencer_profile_from_public_ranking(self):
         influencer = (MOBILE / "app/influencer/[id].tsx").read_text(encoding="utf-8")

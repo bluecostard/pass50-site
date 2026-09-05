@@ -8,6 +8,7 @@ export const Pass50 = {
   lime: '#b7ff00',
   red: '#ff4b4b',
   danger: '#ffb4b4',
+  orange: '#ff9d1d',
 } as const;
 
 export default {

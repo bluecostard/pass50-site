@@ -8,22 +8,20 @@ import { Pass50 } from '@/constants/Colors';
 type TabVisual = {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
+  elevated?: boolean;
 };
 
-/**
- * Dock = client mobile app.html (Classement · Fil · Live · Compte).
- * Pronos reste une vue native accessible hors dock (depuis Mon espace).
- */
+/** Dock = site mobile (mobile-bottom-nav-v1) : Mon fil · Pronos · Classement · Mon espace */
 const TAB_VISUAL: Record<string, TabVisual> = {
-  index: { label: 'Classement', icon: 'stats-chart-outline' },
-  feed: { label: 'Fil', icon: 'newspaper-outline' },
-  live: { label: 'Live', icon: 'radio-outline' },
-  profile: { label: 'Compte', icon: 'person-outline' },
+  feed: { label: 'Mon fil', icon: 'calendar-outline' },
+  prono: { label: 'Pronos', icon: 'star-outline' },
+  index: { label: 'Classement', icon: 'trophy', elevated: true },
+  profile: { label: 'Mon espace', icon: 'person-outline' },
 };
 
-const TAB_ORDER = ['index', 'feed', 'live', 'profile'] as const;
+const TAB_ORDER = ['feed', 'prono', 'index', 'profile'] as const;
 
-/** Dock flottant — même présentation que app.html, navigation 100 % native. */
+/** Dock flottant — même présentation que pass50.store mobile, navigation native. */
 export function Pass50TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
@@ -49,6 +47,23 @@ export function Pass50TabBar({ state, descriptors, navigation }: BottomTabBarPro
             }
           };
 
+          if (visual.elevated) {
+            return (
+              <Pressable
+                key={route.key}
+                accessibilityRole="button"
+                accessibilityState={focused ? { selected: true } : {}}
+                accessibilityLabel={options.tabBarAccessibilityLabel ?? visual.label}
+                onPress={onPress}
+                style={[styles.elevated, focused && styles.elevatedActive]}>
+                <Ionicons name={visual.icon} size={22} color={focused ? '#050705' : '#dce5d8'} />
+                <Text style={[styles.elevatedLabel, focused && styles.elevatedLabelActive]}>
+                  {visual.label}
+                </Text>
+              </Pressable>
+            );
+          }
+
           return (
             <Pressable
               key={route.key}
@@ -57,7 +72,7 @@ export function Pass50TabBar({ state, descriptors, navigation }: BottomTabBarPro
               accessibilityLabel={options.tabBarAccessibilityLabel ?? visual.label}
               onPress={onPress}
               style={[styles.link, focused && styles.linkActive]}>
-              <Ionicons name={visual.icon} size={22} color={focused ? Pass50.lime : '#98a295'} />
+              <Ionicons name={visual.icon} size={22} color={focused ? Pass50.lime : '#c8d0c6'} />
               <Text style={[styles.label, focused && styles.labelActive]}>{visual.label}</Text>
             </Pressable>
           );
@@ -80,14 +95,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     minHeight: 72,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 22,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(183,255,0,.22)',
-    backgroundColor: 'rgba(6,9,6,.98)',
+    backgroundColor: 'rgba(6,9,6,.99)',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOpacity: 0.5,
@@ -105,14 +120,42 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   linkActive: {
-    backgroundColor: 'rgba(183,255,0,.08)',
+    backgroundColor: 'rgba(183,255,0,.075)',
   },
   label: {
-    color: '#98a295',
-    fontSize: 10,
+    color: '#c8d0c6',
+    fontSize: 9,
     fontWeight: '900',
   },
   labelActive: {
     color: Pass50.lime,
+  },
+  elevated: {
+    flex: 1.15,
+    minHeight: 64,
+    marginTop: -10,
+    marginBottom: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,.12)',
+    backgroundColor: '#101610',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    transform: [{ translateY: -2 }],
+  },
+  elevatedActive: {
+    backgroundColor: Pass50.lime,
+    borderColor: Pass50.lime,
+  },
+  elevatedLabel: {
+    color: '#dce5d8',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  elevatedLabelActive: {
+    color: '#050705',
   },
 });

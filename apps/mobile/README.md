@@ -2,7 +2,7 @@
 
 Application native **iOS / Android** (écrans React Native, pas une WebView).
 
-Le **design** reprend le client mobile du site (`app.html`) : fond `#050705`, lime `#b7ff00`, dock flottant Classement · Fil · Live · Compte.
+Le **design** reprend le **site mobile** (`index.html`) : fond `#050705`, lime `#b7ff00`, dock Mon fil · Pronos · Classement · Mon espace, buzz hero + cartes photo.
 
 Le **fonctionnement** reste une vraie app : onglets natifs, API `https://pass50.store/api/`, pas de navigation multi-pages web.
 

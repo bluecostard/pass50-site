@@ -1,33 +1,32 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { Pass50 } from '@/constants/Colors';
-import { RankingPeriod } from '@/src/types';
 
-const PERIODS: { key: RankingPeriod; label: string }[] = [
-  { key: '2H', label: '2 H' },
-  { key: '24H', label: '24 H' },
-  { key: '48H', label: '48 H' },
-  { key: '7J', label: '7 JOURS' },
-  { key: '15J', label: '15 JOURS' },
+export type RankingRegion = 'ALL' | 'CI' | 'DIASPORA';
+
+const REGIONS: { key: RankingRegion; label: string }[] = [
+  { key: 'ALL', label: 'TOUS' },
+  { key: 'CI', label: "🇨🇮  CÔTE D'IVOIRE" },
+  { key: 'DIASPORA', label: '🌍  DIASPORA' },
 ];
 
 type Props = {
-  value: RankingPeriod;
-  onChange: (period: RankingPeriod) => void;
+  value: RankingRegion;
+  onChange: (region: RankingRegion) => void;
 };
 
-/** Chips période — mêmes libellés que le site mobile. */
-export function PeriodChips({ value, onChange }: Props) {
+/** Filtres zone — même logique que index.html (ALL / CI / DIASPORA). */
+export function RegionChips({ value, onChange }: Props) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-      {PERIODS.map((period) => {
-        const active = period.key === value;
+      {REGIONS.map((region) => {
+        const active = region.key === value;
         return (
           <Pressable
-            key={period.key}
-            onPress={() => onChange(period.key)}
+            key={region.key}
+            onPress={() => onChange(region.key)}
             style={[styles.chip, active && styles.chipActive]}>
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>{period.label}</Text>
+            <Text style={[styles.chipText, active && styles.chipTextActive]}>{region.label}</Text>
           </Pressable>
         );
       })}
@@ -43,7 +42,7 @@ const styles = StyleSheet.create({
   chip: {
     borderWidth: 1,
     borderColor: Pass50.line,
-    borderRadius: 14,
+    borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: '#0a0d0a',
@@ -55,8 +54,8 @@ const styles = StyleSheet.create({
   chipText: {
     color: Pass50.text,
     fontWeight: '900',
-    fontSize: 12,
-    letterSpacing: 0.3,
+    fontSize: 11,
+    letterSpacing: 0.4,
   },
   chipTextActive: {
     color: '#050705',
