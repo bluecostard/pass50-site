@@ -54,11 +54,15 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
     def test_mon_espace_bundled_for_testflight(self):
         """HTML embarqué tant que mon-espace.html n'est pas live (évite HTTP 404)."""
         bundled = (MOBILE / "constants/monEspaceHtml.ts").read_text(encoding="utf-8")
+        shell = (MOBILE / "components/SiteWebView.tsx").read_text(encoding="utf-8")
         self.assertIn("MON_ESPACE_BUNDLED_HTML", bundled)
         self.assertIn("Mon espace", bundled)
         self.assertIn("login.php", bundled)
         self.assertIn("pass50-auth-session.js", bundled)
-        self.assertIn('"buildNumber": "33"', (MOBILE / "app.json").read_text(encoding="utf-8"))
+        self.assertIn('"buildNumber": "34"', (MOBILE / "app.json").read_text(encoding="utf-8"))
+        # baseUrl must be origin `/` — mon-espace.html remote is Apache 404 and WKWebView shows it.
+        self.assertIn("baseUrl: `${SITE_ORIGIN}/`", shell)
+        self.assertNotIn("baseUrl: `${SITE_ORIGIN}/mon-espace.html", shell)
 
     def test_api_client_targets_pass50_store(self):
         client = (MOBILE / "src/api/client.ts").read_text(encoding="utf-8")

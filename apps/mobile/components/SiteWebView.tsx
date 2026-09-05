@@ -131,7 +131,8 @@ function pathAllowedForTab(tab: SiteTab, url: string): boolean {
     const path = u.pathname.replace(/\/+$/, '') || '/';
     if (tab === 'feed') return /mon-fil\.html$/i.test(path);
     if (tab === 'prono') return /pronostics\.html$/i.test(path);
-    if (tab === 'account') return /mon-espace\.html$/i.test(path);
+    // Compte = HTML embarqué avec baseUrl `/` (mon-espace.html remote = 404 Apache).
+    if (tab === 'account') return path === '/' || /mon-espace\.html$/i.test(path);
     if (tab === 'ranking') {
       if (isAccountUrl(url)) return false;
       return path === '/' || /^\/fi\//i.test(path);
@@ -156,10 +157,12 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
   const url = SITE_URLS[tab];
   const source = useMemo(() => {
     // Bundle local : TestFlight n’attend pas le deploy IONOS de mon-espace.html.
+    // IMPORTANT: baseUrl doit exister (200). Pointer mon-espace.html (404) fait
+    // afficher la page Apache « Not Found » dans WKWebView.
     if (tab === 'account') {
       return {
         html: MON_ESPACE_BUNDLED_HTML,
-        baseUrl: `${SITE_ORIGIN}/mon-espace.html?native=1`,
+        baseUrl: `${SITE_ORIGIN}/`,
       };
     }
     return { uri: url };
@@ -173,12 +176,19 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
 
   const beforeLoadJs = useMemo(() => {
     const parts = [HIDE_SITE_DOCK_JS];
+    if (tab === 'account') {
+      // Marque l’URL logique sans fetch réseau (évite le 404 Apache).
+      parts.push(`(function(){try{history.replaceState(null,'','/mon-espace.html?native=1');}catch(e){}true;})();`);
+    }
     if (tab === 'feed' || tab === 'prono') parts.push(BLOCK_AUTH_REDIRECT_JS);
     return parts.join('\n');
   }, [tab]);
 
   const afterLoadJs = useMemo(() => {
     const parts = [HIDE_SITE_DOCK_JS];
+    if (tab === 'account') {
+      parts.push(`(function(){try{history.replaceState(null,'','/mon-espace.html?native=1');}catch(e){}true;})();`);
+    }
     if (tab === 'feed' || tab === 'prono') parts.push(BLOCK_AUTH_REDIRECT_JS);
     return parts.join('\n');
   }, [tab]);
@@ -209,6 +219,11 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
       if (!next || next.startsWith('about:') || next.startsWith('blob:')) return true;
       if (!/pass50\.store/i.test(next) && /^https?:/i.test(next)) return true;
 
+      // Compte embarqué : ne jamais naviguer vers mon-espace.html remote (404 Apache).
+      if (tab === 'account' && isAccountUrl(next)) {
+        return false;
+      }
+
       if ((tab === 'feed' || tab === 'prono') && isAccountUrl(next)) {
         goAccountTab();
         return false;
@@ -219,6 +234,8 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
           goAccountTab();
           return false;
         }
+        // Sur compte, rester sur le HTML embarqué — ne pas location.replace vers l’URL 404.
+        if (tab === 'account') return false;
         webRef.current?.injectJavaScript(`window.location.replace(${JSON.stringify(url)}); true;`);
         return false;
       }
