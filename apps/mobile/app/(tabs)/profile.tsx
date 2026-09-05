@@ -1,6 +1,6 @@
-import { SiteWebView, SITE_URLS } from '@/components/SiteWebView';
+import { SiteWebView } from '@/components/SiteWebView';
 
-/** Mon espace — compte site (?open=account). */
+/** Mon espace — panneau compte (open=account). */
 export default function ProfileScreen() {
-  return <SiteWebView url={SITE_URLS.account} title="MON ESPACE" />;
+  return <SiteWebView tab="account" title="MON ESPACE" />;
 }

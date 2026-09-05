@@ -1,6 +1,6 @@
-import { SiteWebView, SITE_URLS } from '@/components/SiteWebView';
+import { SiteWebView } from '@/components/SiteWebView';
 
-/** Mon fil — mon-fil.html du site mobile. */
+/** Mon fil — mon-fil.html (sans redirection vers le Classement). */
 export default function FeedScreen() {
-  return <SiteWebView url={SITE_URLS.feed} title="MON FIL" />;
+  return <SiteWebView tab="feed" title="MON FIL" />;
 }

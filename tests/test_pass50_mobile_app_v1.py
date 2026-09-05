@@ -21,7 +21,7 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("href: null", layout)
 
     def test_tabs_load_site_mobile_safari_pages(self):
-        """Parity Safari mobile: WebView of pass50.store pages (not app.html)."""
+        """Parity Safari mobile: WebView of pass50.store pages (not Capacitor shell)."""
         shell = (MOBILE / "components/SiteWebView.tsx").read_text(encoding="utf-8")
         ranking = (MOBILE / "app/(tabs)/index.tsx").read_text(encoding="utf-8")
         feed = (MOBILE / "app/(tabs)/feed.tsx").read_text(encoding="utf-8")
@@ -30,19 +30,21 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         package = (MOBILE / "package.json").read_text(encoding="utf-8")
 
         self.assertIn("react-native-webview", package)
-        self.assertIn("SiteWebView", ranking)
-        self.assertIn("SiteWebView", feed)
-        self.assertIn("SiteWebView", prono)
-        self.assertIn("SiteWebView", profile)
+        self.assertIn('tab="ranking"', ranking)
+        self.assertIn('tab="feed"', feed)
+        self.assertIn('tab="prono"', prono)
+        self.assertIn('tab="account"', profile)
         self.assertIn("https://pass50.store", shell)
         self.assertIn("mon-fil.html", shell)
         self.assertIn("pronostics.html", shell)
         self.assertIn("open=account", shell)
         self.assertIn(".p50-bottom-nav", shell)
-        self.assertNotIn("app.html?", shell)
+        # Guest auth must NOT bounce Mon fil / Pronos back to Classement
+        self.assertIn("BLOCK_AUTH_REDIRECT_JS", shell)
+        self.assertIn("need-auth", shell)
+        self.assertIn("pathAllowedForTab", shell)
         self.assertNotIn("/app.html", shell)
         self.assertNotIn("/app.html", ranking)
-        self.assertIn("SITE_URLS.ranking", ranking)
 
     def test_api_client_targets_pass50_store(self):
         client = (MOBILE / "src/api/client.ts").read_text(encoding="utf-8")

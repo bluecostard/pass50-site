@@ -1,13 +1,6 @@
+import { useNavigation } from '@react-navigation/native';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
@@ -15,7 +8,16 @@ import { Pass50 } from '@/constants/Colors';
 
 const SITE_ORIGIN = 'https://pass50.store';
 
-/** Masque le dock web du site — le dock natif Expo reste visible. */
+export type SiteTab = 'ranking' | 'feed' | 'prono' | 'account';
+
+/** Pages site mobile Safari (pas le shell Capacitor). */
+export const SITE_URLS: Record<SiteTab, string> = {
+  ranking: `${SITE_ORIGIN}/?native=1`,
+  feed: `${SITE_ORIGIN}/mon-fil.html?native=1`,
+  prono: `${SITE_ORIGIN}/pronostics.html?v=83&native=1`,
+  account: `${SITE_ORIGIN}/?native=1&open=account`,
+};
+
 const HIDE_SITE_DOCK_JS = `
 (function () {
   try {
@@ -26,7 +28,12 @@ const HIDE_SITE_DOCK_JS = `
       'body{padding-bottom:calc(108px + env(safe-area-inset-bottom))!important}',
       'body .app{padding-bottom:calc(108px + env(safe-area-inset-bottom))!important}',
       'body .shell{padding-bottom:calc(108px + env(safe-area-inset-bottom))!important}',
-      'html.pass50-native-app body{overscroll-behavior-y:contain}'
+      'html.pass50-native-app body{overscroll-behavior-y:contain}',
+      '#pass50-native-login-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,7,5,.92)}',
+      '#pass50-native-login-gate .box{max-width:340px;width:100%;border:1px solid rgba(183,255,0,.28);border-radius:22px;background:#0d110d;padding:22px;text-align:center}',
+      '#pass50-native-login-gate h2{margin:0 0 10px;color:#f6f8f4;font-size:22px}',
+      '#pass50-native-login-gate p{margin:0 0 18px;color:#9da79b;line-height:1.45}',
+      '#pass50-native-login-gate button{border:0;border-radius:999px;padding:12px 18px;background:#b7ff00;color:#050705;font-weight:900;font-size:15px}'
     ].join('');
     (document.head || document.documentElement).appendChild(css);
     document.documentElement.classList.add('pass50-native-app');
@@ -36,55 +43,220 @@ const HIDE_SITE_DOCK_JS = `
 })();
 `;
 
+/**
+ * Empêche mon-fil / pronostics de rediriger vers /?open=account (= Classement).
+ * Affiche une porte de connexion locale à la place.
+ */
+const BLOCK_AUTH_REDIRECT_JS = `
+(function () {
+  function isAccountRedirect(url) {
+    try {
+      var u = new URL(String(url), location.href);
+      if (u.searchParams.get('open') === 'account') return true;
+      return /[?&]open=account(?:&|$)/i.test(String(url));
+    } catch (e) {
+      return /open=account/i.test(String(url || ''));
+    }
+  }
+  function notify() {
+    try {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'need-auth', path: location.pathname }));
+      }
+    } catch (e) {}
+  }
+  function showLoginGate(label) {
+    if (document.getElementById('pass50-native-login-gate')) return;
+    var root = document.createElement('div');
+    root.id = 'pass50-native-login-gate';
+    root.innerHTML = '<div class="box"><h2>Connexion requise</h2><p>' + label + '</p><button type="button" id="pass50-native-login-btn">Se connecter</button></div>';
+    (document.body || document.documentElement).appendChild(root);
+    document.getElementById('pass50-native-login-btn')?.addEventListener('click', function () {
+      notify();
+    });
+  }
+  try {
+    var _replace = window.location.replace.bind(window.location);
+    var _assign = window.location.assign.bind(window.location);
+    window.location.replace = function (url) {
+      if (isAccountRedirect(url)) {
+        showLoginGate('Connecte-toi pour ouvrir cette section. Tu ne seras plus renvoyé sur le Classement.');
+        notify();
+        return;
+      }
+      return _replace(url);
+    };
+    window.location.assign = function (url) {
+      if (isAccountRedirect(url)) {
+        showLoginGate('Connecte-toi pour ouvrir cette section. Tu ne seras plus renvoyé sur le Classement.');
+        notify();
+        return;
+      }
+      return _assign(url);
+    };
+  } catch (e) {}
+  true;
+})();
+`;
+
+/** Sur Mon espace : ouvrir le panneau compte et masquer le classement derrière. */
+const OPEN_ACCOUNT_JS = `
+(function () {
+  function hideRankingChrome() {
+    try {
+      ['#buzz', '#top10', '#tendance', '#coules', '.filters', '.hero', '#top50Modal'].forEach(function (s) {
+        document.querySelectorAll(s).forEach(function (el) {
+          el.style.setProperty('display', 'none', 'important');
+        });
+      });
+    } catch (e) {}
+  }
+  function openPanel() {
+    hideRankingChrome();
+    try {
+      if (typeof window.currentUser === 'function' && window.currentUser()) {
+        if (typeof window.openUser === 'function') { window.openUser(); return; }
+      }
+      if (typeof window.openAuth === 'function') { window.openAuth('login'); return; }
+      if (typeof window.openUser === 'function') { window.openUser(); return; }
+    } catch (e) {}
+  }
+  hideRankingChrome();
+  openPanel();
+  var n = 0;
+  var t = setInterval(function () {
+    n += 1;
+    openPanel();
+    if (n >= 40) clearInterval(t);
+  }, 200);
+  true;
+})();
+`;
+
 const MOBILE_UA =
   Platform.OS === 'ios'
     ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 Pass50Native/1'
     : 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 Pass50Native/1';
 
-/** Pages du site mobile Safari (accueil / mon-fil / pronostics — pas le shell Capacitor). */
-export const SITE_URLS = {
-  ranking: `${SITE_ORIGIN}/?source=native&native=1`,
-  feed: `${SITE_ORIGIN}/mon-fil.html?source=native&native=1`,
-  prono: `${SITE_ORIGIN}/pronostics.html?v=83&source=native&native=1`,
-  account: `${SITE_ORIGIN}/?source=native&native=1&open=account`,
-} as const;
-
 type Props = {
-  url: string;
+  tab: SiteTab;
   title?: string;
 };
 
+function isAccountUrl(url: string): boolean {
+  try {
+    return new URL(url).searchParams.get('open') === 'account';
+  } catch {
+    return /[?&]open=account(?:&|$)/i.test(url);
+  }
+}
+
+function pathAllowedForTab(tab: SiteTab, url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (!u.origin.includes('pass50.store')) return true;
+    const path = u.pathname.replace(/\/+$/, '') || '/';
+    if (tab === 'feed') return /mon-fil\.html$/i.test(path);
+    if (tab === 'prono') return /pronostics\.html$/i.test(path);
+    if (tab === 'account') return path === '/' || isAccountUrl(url);
+    if (tab === 'ranking') {
+      if (isAccountUrl(url)) return false;
+      return path === '/' || /^\/fi\//i.test(path);
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 /**
- * Coque WebView = rendu exact Safari mobile de pass50.store.
- * Classement / Mon fil / Pronos / Mon espace chargent les vraies pages du site.
+ * Coque WebView du site mobile Safari.
+ * Chaque onglet garde sa page et refuse mon-fil/pronos → /?open=account
+ * (qui affichait le Classement sur tous les onglets).
  */
-export function SiteWebView({ url, title = 'PASS50' }: Props) {
+export function SiteWebView({ tab, title = 'PASS50' }: Props) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const webRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
 
+  const url = SITE_URLS[tab];
   const source = useMemo(() => ({ uri: url }), [url]);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setError('');
-    webRef.current?.reload();
-  }, []);
+  const beforeLoadJs = useMemo(() => {
+    const parts = [HIDE_SITE_DOCK_JS];
+    if (tab === 'feed' || tab === 'prono') parts.push(BLOCK_AUTH_REDIRECT_JS);
+    return parts.join('\n');
+  }, [tab]);
+
+  const afterLoadJs = useMemo(() => {
+    const parts = [HIDE_SITE_DOCK_JS];
+    if (tab === 'feed' || tab === 'prono') parts.push(BLOCK_AUTH_REDIRECT_JS);
+    if (tab === 'account') parts.push(OPEN_ACCOUNT_JS);
+    return parts.join('\n');
+  }, [tab]);
+
+  const goAccountTab = useCallback(() => {
+    try {
+      navigation.navigate('profile');
+    } catch {
+      // ignore
+    }
+  }, [navigation]);
+
+  const onMessage = useCallback(
+    (event: { nativeEvent: { data: string } }) => {
+      try {
+        const data = JSON.parse(event.nativeEvent.data);
+        if (data?.type === 'need-auth') goAccountTab();
+      } catch {
+        // ignore
+      }
+    },
+    [goAccountTab],
+  );
+
+  const onShouldStart = useCallback(
+    (request: { url: string }) => {
+      const next = request.url || '';
+      if (!next || next.startsWith('about:') || next.startsWith('blob:')) return true;
+      if (!/pass50\.store/i.test(next) && /^https?:/i.test(next)) return true;
+
+      if ((tab === 'feed' || tab === 'prono') && isAccountUrl(next)) {
+        goAccountTab();
+        return false;
+      }
+
+      if (!pathAllowedForTab(tab, next)) {
+        if (isAccountUrl(next)) {
+          goAccountTab();
+          return false;
+        }
+        webRef.current?.injectJavaScript(`window.location.replace(${JSON.stringify(url)}); true;`);
+        return false;
+      }
+      return true;
+    },
+    [tab, url, goAccountTab],
+  );
 
   if (error) {
     return (
       <View style={[styles.root, { paddingTop: insets.top }]}>
-        <ScrollView
-          contentContainerStyle={styles.errorBox}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Pass50.lime} />
-          }>
+        <View style={styles.errorBox}>
           <Text style={styles.errorTitle}>Connexion impossible</Text>
           <Text style={styles.errorBody}>{error}</Text>
-          <Text style={styles.errorHint}>Tire pour réessayer — {title}</Text>
-        </ScrollView>
+          <Text
+            style={styles.retry}
+            onPress={() => {
+              setError('');
+              setLoading(true);
+              webRef.current?.reload();
+            }}>
+            Réessayer — {title}
+          </Text>
+        </View>
       </View>
     );
   }
@@ -99,6 +271,7 @@ export function SiteWebView({ url, title = 'PASS50' }: Props) {
       ) : null}
 
       <WebView
+        key={`pass50-webview-${tab}`}
         ref={webRef}
         source={source}
         style={styles.web}
@@ -115,20 +288,20 @@ export function SiteWebView({ url, title = 'PASS50' }: Props) {
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
         pullToRefreshEnabled
-        injectedJavaScriptBeforeContentLoaded={HIDE_SITE_DOCK_JS}
-        injectedJavaScript={HIDE_SITE_DOCK_JS}
+        injectedJavaScriptBeforeContentLoaded={beforeLoadJs}
+        injectedJavaScript={afterLoadJs}
+        onShouldStartLoadWithRequest={onShouldStart}
+        onMessage={onMessage}
         onLoadStart={() => {
           setLoading(true);
           setError('');
         }}
         onLoadEnd={() => {
           setLoading(false);
-          setRefreshing(false);
-          webRef.current?.injectJavaScript(HIDE_SITE_DOCK_JS);
+          webRef.current?.injectJavaScript(`${afterLoadJs}; true;`);
         }}
         onError={(event) => {
           setLoading(false);
-          setRefreshing(false);
           setError(event.nativeEvent.description || 'Erreur de chargement');
         }}
         onHttpError={(event) => {
@@ -164,7 +337,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   errorBox: {
-    flexGrow: 1,
+    flex: 1,
     padding: 24,
     justifyContent: 'center',
     gap: 10,
@@ -178,7 +351,10 @@ const styles = StyleSheet.create({
     color: Pass50.danger,
     fontWeight: '700',
   },
-  errorHint: {
-    color: Pass50.muted,
+  retry: {
+    marginTop: 8,
+    color: Pass50.lime,
+    fontWeight: '900',
+    fontSize: 16,
   },
 });

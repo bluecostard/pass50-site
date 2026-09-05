@@ -1,6 +1,6 @@
-import { SiteWebView, SITE_URLS } from '@/components/SiteWebView';
+import { SiteWebView } from '@/components/SiteWebView';
 
-/** Classement — page d’accueil mobile Safari (pass50.store/). */
+/** Classement — accueil mobile Safari. */
 export default function RankingScreen() {
-  return <SiteWebView url={SITE_URLS.ranking} title="CLASSEMENT" />;
+  return <SiteWebView tab="ranking" title="CLASSEMENT" />;
 }
