@@ -80,9 +80,9 @@ workflows:
           if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
             NEXT=$((BUILD_NUMBER + 1))
           fi
-          # Safety floor: known previous upload was 8+; keep ahead of app.json.
-          if [ "$NEXT" -le 10 ]; then
-            NEXT=11
+          # Safety floor: keep ahead of last known TestFlight uploads.
+          if [ "$NEXT" -le 11 ]; then
+            NEXT=12
           fi
           echo "Setting CFBundleVersion=$NEXT (ASC latest=$LATEST, CM BUILD_NUMBER=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
@@ -150,6 +150,26 @@ workflows:
           cp "$IPA" "$CM_BUILD_DIR/artifacts/PASS50.ipa"
           ls -la "$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
           echo "IPA ready for App Store Connect publishing step"
+      - name: Publish IPA to TestFlight (verbose)
+        script: |
+          set -euo pipefail
+          IPA="$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          if [ ! -f "$IPA" ]; then
+            IPA="$(find "$CM_BUILD_DIR" -name '*.ipa' -type f | head -n 1 || true)"
+          fi
+          if [ -z "${IPA:-}" ] || [ ! -f "$IPA" ]; then
+            echo "ERROR: No IPA to publish"
+            exit 1
+          fi
+          echo "Publishing IPA: $IPA ($(du -h "$IPA" | awk '{print $1}'))"
+          # Verbose + retries: Codemagic's default publish step often hides Apple's real reason.
+          # Transient ASC/network failures (-1005/-5/-11) usually succeed on retry.
+          app-store-connect publish \
+            --path "$IPA" \
+            --testflight \
+            --altool-retries 5 \
+            --altool-retry-wait 30 \
+            --altool-verbose-logging
     artifacts:
       - artifacts/*.ipa
       - build/ios/ipa/*.ipa
@@ -160,7 +180,8 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Upload is done in the verbose script above (avoids double-upload + opaque failures).
+        submit_to_testflight: false
         submit_to_app_store: false
 
   pass50-ios-appstore:
@@ -232,9 +253,9 @@ workflows:
           if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
             NEXT=$((BUILD_NUMBER + 1))
           fi
-          # Safety floor: known previous upload was 8+; keep ahead of app.json.
-          if [ "$NEXT" -le 10 ]; then
-            NEXT=11
+          # Safety floor: keep ahead of last known TestFlight uploads.
+          if [ "$NEXT" -le 11 ]; then
+            NEXT=12
           fi
           echo "Setting CFBundleVersion=$NEXT (ASC latest=$LATEST, CM BUILD_NUMBER=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
@@ -301,6 +322,24 @@ workflows:
           cp "$IPA" "$CM_BUILD_DIR/artifacts/PASS50.ipa"
           ls -la "$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
           echo "IPA ready for App Store Connect publishing step"
+      - name: Publish IPA to TestFlight (verbose)
+        script: |
+          set -euo pipefail
+          IPA="$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          if [ ! -f "$IPA" ]; then
+            IPA="$(find "$CM_BUILD_DIR" -name '*.ipa' -type f | head -n 1 || true)"
+          fi
+          if [ -z "${IPA:-}" ] || [ ! -f "$IPA" ]; then
+            echo "ERROR: No IPA to publish"
+            exit 1
+          fi
+          echo "Publishing IPA: $IPA ($(du -h "$IPA" | awk '{print $1}'))"
+          app-store-connect publish \
+            --path "$IPA" \
+            --testflight \
+            --altool-retries 5 \
+            --altool-retry-wait 30 \
+            --altool-verbose-logging
     artifacts:
       - artifacts/*.ipa
       - build/ios/ipa/*.ipa
@@ -311,7 +350,8 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Upload handled by verbose script above; App Store review submit stays manual unless enabled.
+        submit_to_testflight: false
         # After App Store Connect metadata is complete, set submit_to_app_store: true
         # (and optionally cancel_previous_submissions: true), or submit review manually.
         submit_to_app_store: false
