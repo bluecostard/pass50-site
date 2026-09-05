@@ -85,9 +85,9 @@ workflows:
           if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
             NEXT=$((BUILD_NUMBER + 1))
           fi
-          # Safety floor: ahead of known TestFlight uploads (build 14+ already used).
-          if [ "$NEXT" -le 19 ]; then
-            NEXT=20
+          # Safety floor: ahead of known TestFlight uploads (builds through ~20 already used).
+          if [ "$NEXT" -le 24 ]; then
+            NEXT=25
           fi
           echo "Setting CFBundleVersion=$NEXT (appstore=$LATEST_APPSTORE testflight=$LATEST_TESTFLIGHT max=$LATEST CM=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
@@ -304,9 +304,9 @@ workflows:
           if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
             NEXT=$((BUILD_NUMBER + 1))
           fi
-          # Safety floor: ahead of known TestFlight uploads (build 14+ already used).
-          if [ "$NEXT" -le 19 ]; then
-            NEXT=20
+          # Safety floor: ahead of known TestFlight uploads (builds through ~20 already used).
+          if [ "$NEXT" -le 24 ]; then
+            NEXT=25
           fi
           echo "Setting CFBundleVersion=$NEXT (appstore=$LATEST_APPSTORE testflight=$LATEST_TESTFLIGHT max=$LATEST CM=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
