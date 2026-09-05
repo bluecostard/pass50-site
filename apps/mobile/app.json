@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "store.pass50.app",
-      "buildNumber": "9",
+      "buildNumber": "10",
       "associatedDomains": [
         "applinks:pass50.store",
         "applinks:www.pass50.store"
@@ -76,6 +76,7 @@
     },
     "extra": {
       "apiBase": "https://pass50.store/api/",
+      "appUrl": "https://pass50.store/app.html?source=native",
       "eas": {
         "projectId": "5f122043-730b-45d5-bc92-1bb88706bb5e"
       }

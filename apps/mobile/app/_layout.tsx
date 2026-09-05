@@ -25,27 +25,19 @@ const pass50Theme = {
 
 export default function RootLayout() {
   useEffect(() => {
-    SplashScreen.hideAsync();
+    // Splash is hidden when the WebView finishes loading (see app/index.tsx).
+    const fallback = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 8000);
+    return () => clearTimeout(fallback);
   }, []);
 
   return (
     <SafeAreaProvider>
       <ThemeProvider value={pass50Theme}>
         <StatusBar style="light" />
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding/index" options={{ headerShown: false, animation: 'fade' }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="influencer/[id]"
-            options={{
-              title: 'Influenceur',
-              presentation: 'modal',
-              headerStyle: { backgroundColor: Pass50.bg },
-              headerTintColor: Pass50.lime,
-              contentStyle: { backgroundColor: Pass50.bg },
-            }}
-          />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Pass50.bg } }}>
+          <Stack.Screen name="index" />
         </Stack>
       </ThemeProvider>
     </SafeAreaProvider>
