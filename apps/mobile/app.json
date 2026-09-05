@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "store.pass50.app",
-      "buildNumber": "28",
+      "buildNumber": "29",
       "associatedDomains": [
         "applinks:pass50.store",
         "applinks:www.pass50.store"

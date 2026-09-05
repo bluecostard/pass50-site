@@ -99,36 +99,150 @@ const BLOCK_AUTH_REDIRECT_JS = `
 })();
 `;
 
-/** Sur Mon espace : ouvrir le panneau compte et masquer le classement derrière. */
+/**
+ * Mon espace = coque compte plein écran.
+ * Le site n’a pas de page dédiée : open=account ouvre un modal SUR le classement.
+ * On masque donc tout .app / chrome classement et on force auth/user en page entière.
+ */
+const ACCOUNT_SHELL_CSS = `
+html.pass50-native-account,
+html.pass50-native-account body{
+  background:#050705!important;
+  overflow:hidden!important;
+}
+html.pass50-native-account .app,
+html.pass50-native-account .app > *,
+html.pass50-native-account .p50-bottom-nav,
+html.pass50-native-account #liveModal,
+html.pass50-native-account #profileModal,
+html.pass50-native-account #top50Modal,
+html.pass50-native-account #notificationModal,
+html.pass50-native-account #voteShareModal,
+html.pass50-native-account #fiPhotoLightbox,
+html.pass50-native-account .demo-banner{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  height:0!important;
+  max-height:0!important;
+  overflow:hidden!important;
+  opacity:0!important;
+}
+html.pass50-native-account #authModal.show,
+html.pass50-native-account #userModal.show,
+html.pass50-native-account #adminModal.show,
+html.pass50-native-account #toolModal.show{
+  display:grid!important;
+  place-items:stretch!important;
+  align-items:stretch!important;
+  padding:0!important;
+  background:#050705!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  z-index:200000!important;
+}
+html.pass50-native-account #authModal.show .modal-box,
+html.pass50-native-account #userModal.show .modal-box,
+html.pass50-native-account #adminModal.show .modal-box,
+html.pass50-native-account #toolModal.show .modal-box{
+  width:100vw!important;
+  max-width:100vw!important;
+  min-height:100dvh!important;
+  max-height:100dvh!important;
+  height:100dvh!important;
+  border-radius:0!important;
+  margin:0!important;
+}
+html.pass50-native-account #authModal .close,
+html.pass50-native-account #userModal .close{
+  display:none!important;
+}
+#pass50-native-account-placeholder{
+  position:fixed;inset:0;z-index:150000;
+  display:flex;align-items:center;justify-content:center;
+  background:#050705;color:#b7ff00;font-weight:900;letter-spacing:1px;
+}
+`;
+
 const OPEN_ACCOUNT_JS = `
 (function () {
-  function hideRankingChrome() {
-    try {
-      ['#buzz', '#top10', '#tendance', '#coules', '.filters', '.hero', '#top50Modal'].forEach(function (s) {
-        document.querySelectorAll(s).forEach(function (el) {
-          el.style.setProperty('display', 'none', 'important');
-        });
-      });
-    } catch (e) {}
+  function ensureCss() {
+    if (document.getElementById('pass50-native-account-css')) return;
+    var css = document.createElement('style');
+    css.id = 'pass50-native-account-css';
+    css.textContent = ${JSON.stringify(ACCOUNT_SHELL_CSS)};
+    (document.head || document.documentElement).appendChild(css);
+  }
+  function ensurePlaceholder() {
+    if (document.getElementById('pass50-native-account-placeholder')) return;
+    var el = document.createElement('div');
+    el.id = 'pass50-native-account-placeholder';
+    el.textContent = 'MON ESPACE';
+    (document.body || document.documentElement).appendChild(el);
+  }
+  function accountOpen() {
+    var auth = document.getElementById('authModal');
+    var user = document.getElementById('userModal');
+    var admin = document.getElementById('adminModal');
+    var tool = document.getElementById('toolModal');
+    return !!(
+      (auth && auth.classList.contains('show')) ||
+      (user && user.classList.contains('show')) ||
+      (admin && admin.classList.contains('show')) ||
+      (tool && tool.classList.contains('show'))
+    );
+  }
+  function syncPlaceholder() {
+    var ph = document.getElementById('pass50-native-account-placeholder');
+    if (!ph) return;
+    ph.style.display = accountOpen() ? 'none' : 'flex';
   }
   function openPanel() {
-    hideRankingChrome();
+    ensureCss();
+    document.documentElement.classList.add('pass50-native-account');
+    ensurePlaceholder();
     try {
-      if (typeof window.currentUser === 'function' && window.currentUser()) {
-        if (typeof window.openUser === 'function') { window.openUser(); return; }
+      var loggedIn = typeof window.currentUser === 'function' && window.currentUser();
+      if (loggedIn) {
+        if (typeof window.openUser === 'function') window.openUser();
+      } else if (typeof window.authPending === 'function' && window.authPending()) {
+        // session en cours
+      } else if (typeof window.openAuth === 'function') {
+        window.openAuth('login');
       }
-      if (typeof window.openAuth === 'function') { window.openAuth('login'); return; }
-      if (typeof window.openUser === 'function') { window.openUser(); return; }
     } catch (e) {}
+    syncPlaceholder();
   }
-  hideRankingChrome();
+  ensureCss();
+  document.documentElement.classList.add('pass50-native-account');
+  ensurePlaceholder();
   openPanel();
-  var n = 0;
-  var t = setInterval(function () {
-    n += 1;
-    openPanel();
-    if (n >= 40) clearInterval(t);
-  }, 200);
+  if (!window.__pass50NativeAccountWatch) {
+    window.__pass50NativeAccountWatch = true;
+    var n = 0;
+    var t = setInterval(function () {
+      n += 1;
+      openPanel();
+      if (n >= 60) clearInterval(t);
+    }, 250);
+    try {
+      var mo = new MutationObserver(function () {
+        if (!accountOpen()) openPanel();
+        else syncPlaceholder();
+      });
+      mo.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    } catch (e) {}
+    document.addEventListener('click', function (ev) {
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      var closeBtn = t.closest('#authModal .close, #userModal .close, [data-close="authModal"], [data-close="userModal"]');
+      if (closeBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        setTimeout(openPanel, 0);
+      }
+    }, true);
+  }
   true;
 })();
 `;
@@ -187,6 +301,20 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
   const beforeLoadJs = useMemo(() => {
     const parts = [HIDE_SITE_DOCK_JS];
     if (tab === 'feed' || tab === 'prono') parts.push(BLOCK_AUTH_REDIRECT_JS);
+    // Masquer le classement dès le premier paint sur Mon espace
+    if (tab === 'account') {
+      parts.push(`
+(function(){
+  try {
+    document.documentElement.classList.add('pass50-native-account');
+    var css = document.createElement('style');
+    css.id = 'pass50-native-account-css';
+    css.textContent = ${JSON.stringify(ACCOUNT_SHELL_CSS)};
+    (document.head || document.documentElement).appendChild(css);
+  } catch (e) {}
+  true;
+})();`);
+    }
     return parts.join('\n');
   }, [tab]);
 

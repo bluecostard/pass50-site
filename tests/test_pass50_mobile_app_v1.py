@@ -43,6 +43,10 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("BLOCK_AUTH_REDIRECT_JS", shell)
         self.assertIn("need-auth", shell)
         self.assertIn("pathAllowedForTab", shell)
+        # Mon espace must not leave ranking chrome visible behind the account modal
+        self.assertIn("pass50-native-account", shell)
+        self.assertIn("ACCOUNT_SHELL_CSS", shell)
+        self.assertIn("OPEN_ACCOUNT_JS", shell)
         self.assertNotIn("/app.html", shell)
         self.assertNotIn("/app.html", ranking)
 
