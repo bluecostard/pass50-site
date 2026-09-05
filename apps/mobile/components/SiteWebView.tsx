@@ -119,7 +119,9 @@ html.pass50-native-account #top50Modal,
 html.pass50-native-account #notificationModal,
 html.pass50-native-account #voteShareModal,
 html.pass50-native-account #fiPhotoLightbox,
-html.pass50-native-account .demo-banner{
+html.pass50-native-account .demo-banner,
+html.pass50-native-account #pass50-onboarding-root,
+html.pass50-native-account #pass50-onboarding-root *{
   display:none!important;
   visibility:hidden!important;
   pointer-events:none!important;
@@ -127,6 +129,7 @@ html.pass50-native-account .demo-banner{
   max-height:0!important;
   overflow:hidden!important;
   opacity:0!important;
+  z-index:-1!important;
 }
 html.pass50-native-account #authModal.show,
 html.pass50-native-account #userModal.show,
@@ -197,9 +200,26 @@ const OPEN_ACCOUNT_JS = `
     if (!ph) return;
     ph.style.display = accountOpen() ? 'none' : 'flex';
   }
+  function dismissSiteOnboarding() {
+    try { localStorage.setItem('pass50_onboarding_seen_v1', '1'); } catch (e) {}
+    try {
+      if (window.PASS50Onboarding && typeof window.PASS50Onboarding.close === 'function') {
+        window.PASS50Onboarding.close();
+      }
+    } catch (e) {}
+    try {
+      var root = document.getElementById('pass50-onboarding-root');
+      if (root) {
+        root.setAttribute('hidden', 'hidden');
+        root.style.setProperty('display', 'none', 'important');
+        root.remove();
+      }
+    } catch (e) {}
+  }
   function openPanel() {
     ensureCss();
     document.documentElement.classList.add('pass50-native-account');
+    dismissSiteOnboarding();
     ensurePlaceholder();
     try {
       var loggedIn = typeof window.currentUser === 'function' && window.currentUser();
@@ -215,6 +235,7 @@ const OPEN_ACCOUNT_JS = `
   }
   ensureCss();
   document.documentElement.classList.add('pass50-native-account');
+  dismissSiteOnboarding();
   ensurePlaceholder();
   openPanel();
   if (!window.__pass50NativeAccountWatch) {
@@ -306,6 +327,7 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
       parts.push(`
 (function(){
   try {
+    try { localStorage.setItem('pass50_onboarding_seen_v1', '1'); } catch (e) {}
     document.documentElement.classList.add('pass50-native-account');
     var css = document.createElement('style');
     css.id = 'pass50-native-account-css';

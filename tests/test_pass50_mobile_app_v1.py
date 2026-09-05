@@ -47,6 +47,8 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("pass50-native-account", shell)
         self.assertIn("ACCOUNT_SHELL_CSS", shell)
         self.assertIn("OPEN_ACCOUNT_JS", shell)
+        self.assertIn("pass50-onboarding-root", shell)
+        self.assertIn("pass50_onboarding_seen_v1", shell)
         self.assertNotIn("/app.html", shell)
         self.assertNotIn("/app.html", ranking)
 
