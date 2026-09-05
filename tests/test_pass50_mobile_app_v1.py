@@ -38,6 +38,8 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("mon-fil.html", shell)
         self.assertIn("pronostics.html", shell)
         self.assertIn("mon-espace.html", shell)
+        self.assertIn("MON_ESPACE_BUNDLED_HTML", shell)
+        self.assertIn("monEspaceHtml", shell)
         self.assertIn(".p50-bottom-nav", shell)
         self.assertIn("BLOCK_AUTH_REDIRECT_JS", shell)
         self.assertIn("need-auth", shell)
@@ -48,6 +50,15 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertNotIn("@react-navigation/native", shell)
         self.assertNotIn("/app.html", shell)
         self.assertNotIn("/app.html", ranking)
+
+    def test_mon_espace_bundled_for_testflight(self):
+        """HTML embarqué tant que mon-espace.html n'est pas live (évite HTTP 404)."""
+        bundled = (MOBILE / "constants/monEspaceHtml.ts").read_text(encoding="utf-8")
+        self.assertIn("MON_ESPACE_BUNDLED_HTML", bundled)
+        self.assertIn("Mon espace", bundled)
+        self.assertIn("login.php", bundled)
+        self.assertIn("pass50-auth-session.js", bundled)
+        self.assertIn('"buildNumber": "33"', (MOBILE / "app.json").read_text(encoding="utf-8"))
 
     def test_api_client_targets_pass50_store(self):
         client = (MOBILE / "src/api/client.ts").read_text(encoding="utf-8")

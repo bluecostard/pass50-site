@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
 import { Pass50 } from '@/constants/Colors';
+import { MON_ESPACE_BUNDLED_HTML } from '@/constants/monEspaceHtml';
 
 const SITE_ORIGIN = 'https://pass50.store';
 
@@ -12,7 +13,8 @@ export type SiteTab = 'ranking' | 'feed' | 'prono' | 'account';
 
 /**
  * Pages site mobile Safari (pas le shell Capacitor).
- * Mon espace = page dédiée mon-espace.html (plus de modal sur le classement).
+ * Mon espace = HTML embarqué (évite le 404 tant que mon-espace.html n’est pas déployé IONOS)
+ * + baseUrl pass50.store pour que ./api et cookies fonctionnent.
  */
 export const SITE_URLS: Record<SiteTab, string> = {
   ranking: `${SITE_ORIGIN}/?native=1`,
@@ -152,7 +154,16 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
   const [error, setError] = useState('');
 
   const url = SITE_URLS[tab];
-  const source = useMemo(() => ({ uri: url }), [url]);
+  const source = useMemo(() => {
+    // Bundle local : TestFlight n’attend pas le deploy IONOS de mon-espace.html.
+    if (tab === 'account') {
+      return {
+        html: MON_ESPACE_BUNDLED_HTML,
+        baseUrl: `${SITE_ORIGIN}/mon-espace.html?native=1`,
+      };
+    }
+    return { uri: url };
+  }, [tab, url]);
 
   useEffect(() => {
     if (!loading) return;
@@ -280,6 +291,8 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
           setError(event.nativeEvent.description || 'Erreur de chargement');
         }}
         onHttpError={(event) => {
+          // Compte = HTML embarqué : ignorer les 404 réseau (page absente en prod).
+          if (tab === 'account') return;
           if (event.nativeEvent.statusCode >= 400) {
             setLoading(false);
             setError(`HTTP ${event.nativeEvent.statusCode}`);
