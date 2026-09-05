@@ -1,9 +1,40 @@
 {
-  "at": "2026-09-05 04:38 UTC",
+  "at": "2026-09-05 10:43 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "census-awao-officiel",
+      "platform": "TikTok",
+      "roomId": "7681995703857449736",
+      "title": "",
+      "viewers": 693,
+      "startedAt": "2026-09-05 10:27:05",
+      "handle": "influamenta1"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [
+      {
+        "profileId": "census-awao-officiel",
+        "platform": "TikTok",
+        "handle": "influamenta1",
+        "addedAt": "2026-09-05T10:43:43+00:00",
+        "reason": "unknown_audit_live"
+      }
+    ],
+    "stored": [
+      {
+        "profileId": "census-awao-officiel",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 24
+  },
   "enabled": true,
   "error": null
 }
