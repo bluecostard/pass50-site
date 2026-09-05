@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-05 17:25 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-madame-koffi` @madamekofii — Ça va? · 11 viewers
+- TikTok `hassan` @hassanhayekofficiel — Pkoi les hommes fuient grossesse · 480 viewers
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 443 viewers
+
 ### 2026-09-05 15:20 UTC
 
 - Unknown sondés : **200**
@@ -438,13 +450,3 @@ Vraiment en live :
 - TikTok `census-no-limit` @nolimit_vousdv — 7678499415909534482 · 1156 viewers
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — Lets Go LIVE! · 1052 viewers
 - TikTok `holy` @holysheilla — Bonjour je suis au Togo 🇹🇬❤️ · 471 viewers
-
-### 2026-08-26 20:12 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7678420359376964385 · 9502 viewers

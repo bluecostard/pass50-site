@@ -1,39 +1,52 @@
 {
-  "at": "2026-09-05 15:20 UTC",
+  "at": "2026-09-05 17:25 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
+  "liveCount": 3,
   "lives": [
     {
-      "profileId": "census-rosemark-marcel",
+      "profileId": "census-madame-koffi",
       "platform": "TikTok",
-      "roomId": "7682062744933894933",
-      "title": "",
-      "viewers": 1685,
-      "startedAt": "2026-09-05 14:47:03",
-      "handle": "rosemarkmarcel"
+      "roomId": "7682099115395779360",
+      "title": "Ça va?",
+      "viewers": 11,
+      "startedAt": null,
+      "handle": "madamekofii"
     },
     {
-      "profileId": "census-stephane-galactik",
+      "profileId": "hassan",
       "platform": "TikTok",
-      "roomId": "7682067414636989205",
-      "title": "",
-      "viewers": 92,
-      "startedAt": "2026-09-05 15:05:10",
-      "handle": "le_coach_des_debout"
+      "roomId": "7682100135322438420",
+      "title": "Pkoi les hommes fuient grossesse",
+      "viewers": 480,
+      "startedAt": "2026-09-05 17:12:14",
+      "handle": "hassanhayekofficiel"
+    },
+    {
+      "profileId": "oustaz-diane",
+      "platform": "TikTok",
+      "roomId": "7682101712517745430",
+      "title": "Lets Go LIVE!",
+      "viewers": 443,
+      "startedAt": "2026-09-05 17:18:27",
+      "handle": "oustazdianeofficiel1"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 2,
+    "published": 3,
     "added": [],
     "stored": [
       {
-        "profileId": "census-rosemark-marcel",
+        "profileId": "census-madame-koffi",
         "platform": "TikTok"
       },
       {
-        "profileId": "census-stephane-galactik",
+        "profileId": "hassan",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "oustaz-diane",
         "platform": "TikTok"
       }
     ],
