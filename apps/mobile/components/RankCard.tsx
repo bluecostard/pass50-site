@@ -56,12 +56,23 @@ export function RankCard({ row, index }: Props) {
           <View style={styles.scoreRow}>
             <View>
               <Text style={styles.scoreLabel}>TREND SCORE</Text>
-              <Text style={styles.score}>{Number(score).toFixed(1)}</Text>
+              <Text style={styles.score}>{Math.round(Number(score))}/100</Text>
             </View>
             <Text style={[styles.delta, delta.style]}>{delta.text}</Text>
           </View>
         </Pressable>
       </Link>
+      <View style={styles.actions}>
+        <Pressable style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="Favori">
+          <Text style={styles.actionText}>☆ Favori</Text>
+        </Pressable>
+        <Pressable style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="J'aime">
+          <Text style={styles.actionText}>♥ J'aime</Text>
+        </Pressable>
+        <Pressable style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="Suivre">
+          <Text style={styles.actionText}>+ Suivre</Text>
+        </Pressable>
+      </View>
       <Pressable
         style={styles.shareFab}
         onPress={onShare}
@@ -167,6 +178,25 @@ const styles = StyleSheet.create({
   deltaUp: { color: Pass50.lime },
   deltaDown: { color: Pass50.red },
   deltaFlat: { color: '#c5cdc2' },
+  actions: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  actionBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,157,29,.55)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#050705',
+  },
+  actionText: {
+    color: Pass50.text,
+    fontWeight: '800',
+    fontSize: 12,
+  },
   shareFab: {
     position: 'absolute',
     right: 14,
