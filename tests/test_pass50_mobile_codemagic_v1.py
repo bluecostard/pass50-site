@@ -25,7 +25,9 @@ class Pass50MobileCodemagicV1Tests(unittest.TestCase):
         self.assertIn("npx expo prebuild --platform ios", text)
         self.assertIn("app-store-connect publish", text)
         self.assertIn("--altool-verbose-logging", text)
-        self.assertIn("--testflight", text)
+        self.assertIn('--beta-group "Équipe"', text)
+        # Must NOT force external beta review (--testflight); that blocks Internal TestFlight.
+        self.assertNotIn("--testflight \\", text)
         self.assertIn("EXPO_PUBLIC_API_BASE: https://pass50.store/api/", text)
 
     def test_android_signing_support_file(self):
