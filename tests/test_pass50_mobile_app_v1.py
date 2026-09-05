@@ -13,12 +13,12 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         for tab in ("index", "feed", "prono", "live", "profile"):
             self.assertIn(f'name="{tab}"', layout)
         self.assertIn("Pass50TabBar", layout)
-        self.assertIn("Mon fil", tabbar)
-        self.assertIn("Pronos", tabbar)
+        # Dock aligné sur app.html
         self.assertIn("Classement", tabbar)
-        self.assertIn("Mon espace", tabbar)
-        self.assertIn("elevated", tabbar)
-        self.assertIn("href: null", layout)  # live hors dock
+        self.assertIn("Fil", tabbar)
+        self.assertIn("Live", tabbar)
+        self.assertIn("Compte", tabbar)
+        self.assertIn("href: null", layout)  # Pronos hors dock
 
     def test_api_client_targets_pass50_store(self):
         client = (MOBILE / "src/api/client.ts").read_text(encoding="utf-8")
@@ -55,13 +55,14 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         profile = (MOBILE / "app/(tabs)/profile.tsx").read_text(encoding="utf-8")
 
         self.assertIn("hasCompletedOnboarding", entry)
-        self.assertIn('/onboarding', entry)
+        self.assertIn("/onboarding", entry)
         self.assertIn('name="onboarding/index"', layout)
         self.assertIn("pass50_onboarding_seen_v1", slides)
         self.assertIn("'final'", slides)
         self.assertIn("'coules'", slides)
         self.assertIn("resetOnboarding", storage)
         self.assertIn("Revoir le tutoriel", profile)
+        self.assertIn("Pronos & Coulés", profile)
 
     def test_influencer_profile_from_public_ranking(self):
         influencer = (MOBILE / "app/influencer/[id].tsx").read_text(encoding="utf-8")

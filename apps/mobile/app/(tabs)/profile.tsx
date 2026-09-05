@@ -107,8 +107,8 @@ export default function ProfileScreen() {
       </View>
       <View style={styles.panel}>
         <Text style={styles.label}>Paramètres</Text>
-        <Pressable style={styles.btnGhost} onPress={() => router.push('/(tabs)/live')}>
-          <Text style={styles.btnGhostText}>Lives en cours</Text>
+        <Pressable style={styles.btnGhost} onPress={() => router.push('/(tabs)/prono')}>
+          <Text style={styles.btnGhostText}>Pronos & Coulés</Text>
         </Pressable>
         <Pressable style={styles.btnGhost} onPress={onReplayTutorial}>
           <Text style={styles.btnGhostText}>Revoir le tutoriel</Text>

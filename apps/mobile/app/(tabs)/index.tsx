@@ -1,6 +1,5 @@
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { PeriodChips } from '@/components/PeriodChips';
 import { RankRow } from '@/components/RankRow';
@@ -10,7 +9,6 @@ import { pass50Api } from '@/src/api/client';
 import { PublicRanking, RankingPeriod } from '@/src/types';
 
 export default function RankingScreen() {
-  const router = useRouter();
   const [period, setPeriod] = useState<RankingPeriod>('24H');
   const [data, setData] = useState<PublicRanking | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,13 +41,6 @@ export default function RankingScreen() {
       refreshing={loading}
       onRefresh={load}>
       <PeriodChips value={period} onChange={setPeriod} />
-      <Pressable
-        style={styles.liveLink}
-        onPress={() => router.push('/(tabs)/live')}
-        accessibilityRole="button"
-        accessibilityLabel="Voir les lives">
-        <Text style={styles.liveLinkText}>Lives en cours →</Text>
-      </Pressable>
       {error && !data ? (
         <View style={styles.panel}>
           <Text style={styles.error}>{error}</Text>
@@ -69,16 +60,6 @@ export default function RankingScreen() {
 }
 
 const styles = StyleSheet.create({
-  liveLink: {
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 2,
-  },
-  liveLinkText: {
-    color: Pass50.lime,
-    fontSize: 13,
-    fontWeight: '900',
-  },
   panel: {
     borderWidth: 1,
     borderColor: Pass50.line,
