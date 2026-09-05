@@ -66,25 +66,30 @@ workflows:
         script: |
           set -euo pipefail
           cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
-          LATEST=0
+          # Fetch BOTH sources independently. Using "||" between them was wrong:
+          # a lower App Store number short-circuited TestFlight and caused
+          # ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE on upload.
+          LATEST_APPSTORE=0
+          LATEST_TESTFLIGHT=0
           if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
-            LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || \
-                     app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || \
-                     echo 0)
+            LATEST_APPSTORE=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+            LATEST_TESTFLIGHT=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
           fi
-          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
-            LATEST=0
+          case "$LATEST_APPSTORE" in ''|null|*[!0-9]*) LATEST_APPSTORE=0 ;; esac
+          case "$LATEST_TESTFLIGHT" in ''|null|*[!0-9]*) LATEST_TESTFLIGHT=0 ;; esac
+          LATEST=$LATEST_APPSTORE
+          if [ "$LATEST_TESTFLIGHT" -gt "$LATEST" ]; then
+            LATEST=$LATEST_TESTFLIGHT
           fi
-          # Must be strictly higher than any previously uploaded CFBundleVersion.
           NEXT=$((LATEST + 1))
           if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
             NEXT=$((BUILD_NUMBER + 1))
           fi
-          # Safety floor: keep ahead of last known TestFlight uploads.
-          if [ "$NEXT" -le 11 ]; then
-            NEXT=12
+          # Safety floor: ahead of known TestFlight uploads (build 14+ already used).
+          if [ "$NEXT" -le 19 ]; then
+            NEXT=20
           fi
-          echo "Setting CFBundleVersion=$NEXT (ASC latest=$LATEST, CM BUILD_NUMBER=${BUILD_NUMBER:-n/a})"
+          echo "Setting CFBundleVersion=$NEXT (appstore=$LATEST_APPSTORE testflight=$LATEST_TESTFLIGHT max=$LATEST CM=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
       - name: Build IPA
         script: |
@@ -262,25 +267,30 @@ workflows:
         script: |
           set -euo pipefail
           cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
-          LATEST=0
+          # Fetch BOTH sources independently. Using "||" between them was wrong:
+          # a lower App Store number short-circuited TestFlight and caused
+          # ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE on upload.
+          LATEST_APPSTORE=0
+          LATEST_TESTFLIGHT=0
           if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
-            LATEST=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || \
-                     app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || \
-                     echo 0)
+            LATEST_APPSTORE=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+            LATEST_TESTFLIGHT=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
           fi
-          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
-            LATEST=0
+          case "$LATEST_APPSTORE" in ''|null|*[!0-9]*) LATEST_APPSTORE=0 ;; esac
+          case "$LATEST_TESTFLIGHT" in ''|null|*[!0-9]*) LATEST_TESTFLIGHT=0 ;; esac
+          LATEST=$LATEST_APPSTORE
+          if [ "$LATEST_TESTFLIGHT" -gt "$LATEST" ]; then
+            LATEST=$LATEST_TESTFLIGHT
           fi
-          # Must be strictly higher than any previously uploaded CFBundleVersion.
           NEXT=$((LATEST + 1))
           if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
             NEXT=$((BUILD_NUMBER + 1))
           fi
-          # Safety floor: keep ahead of last known TestFlight uploads.
-          if [ "$NEXT" -le 11 ]; then
-            NEXT=12
+          # Safety floor: ahead of known TestFlight uploads (build 14+ already used).
+          if [ "$NEXT" -le 19 ]; then
+            NEXT=20
           fi
-          echo "Setting CFBundleVersion=$NEXT (ASC latest=$LATEST, CM BUILD_NUMBER=${BUILD_NUMBER:-n/a})"
+          echo "Setting CFBundleVersion=$NEXT (appstore=$LATEST_APPSTORE testflight=$LATEST_TESTFLIGHT max=$LATEST CM=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
       - name: Build IPA
         script: |

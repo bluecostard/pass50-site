@@ -29,6 +29,16 @@ class Pass50MobileCodemagicV1Tests(unittest.TestCase):
         # Must NOT force external beta review (--testflight); that blocks Internal TestFlight.
         self.assertNotIn("--testflight \\", text)
         self.assertIn("EXPO_PUBLIC_API_BASE: https://pass50.store/api/", text)
+        # Build number must consider BOTH App Store and TestFlight (max), not short-circuit.
+        self.assertIn("get-latest-app-store-build-number", text)
+        self.assertIn("get-latest-testflight-build-number", text)
+        self.assertIn("LATEST_TESTFLIGHT", text)
+        self.assertIn("LATEST_APPSTORE", text)
+        self.assertNotIn(
+            "get-latest-app-store-build-number \"$APP_STORE_APPLE_ID\" || \\",
+            text,
+            "App Store query must not short-circuit TestFlight via ||",
+        )
 
     def test_android_signing_support_file(self):
         gradle = MOBILE / "support-files" / "codemagic-android-signing.gradle"
