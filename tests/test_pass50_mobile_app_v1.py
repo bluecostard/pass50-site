@@ -13,40 +13,36 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         for tab in ("index", "feed", "prono", "live", "profile"):
             self.assertIn(f'name="{tab}"', layout)
         self.assertIn("Pass50TabBar", layout)
-        # Dock = site mobile
         self.assertIn("Mon fil", tabbar)
         self.assertIn("Pronos", tabbar)
         self.assertIn("Classement", tabbar)
         self.assertIn("Mon espace", tabbar)
         self.assertIn("elevated", tabbar)
-        self.assertIn("href: null", layout)  # Live hors dock
+        self.assertIn("href: null", layout)
 
-    def test_ranking_screen_matches_site_mobile_presentation(self):
+    def test_tabs_load_site_mobile_safari_pages(self):
+        """Parity Safari mobile: WebView of pass50.store pages (not app.html)."""
+        shell = (MOBILE / "components/SiteWebView.tsx").read_text(encoding="utf-8")
         ranking = (MOBILE / "app/(tabs)/index.tsx").read_text(encoding="utf-8")
-        buzz = (MOBILE / "components/BuzzHero.tsx").read_text(encoding="utf-8")
-        card = (MOBILE / "components/RankCard.tsx").read_text(encoding="utf-8")
-        periods = (MOBILE / "components/PeriodChips.tsx").read_text(encoding="utf-8")
-        regions = (MOBILE / "components/RegionChips.tsx").read_text(encoding="utf-8")
-        top10 = (MOBILE / "components/Top10Strip.tsx").read_text(encoding="utf-8")
-        trend = (MOBILE / "components/TrendContentCard.tsx").read_text(encoding="utf-8")
-        self.assertIn("BuzzHero", ranking)
-        self.assertIn("RankCard", ranking)
-        self.assertIn("RegionChips", ranking)
-        self.assertIn("Top10Strip", ranking)
-        self.assertIn("TrendContentCard", ranking)
-        self.assertIn("TOP 10", ranking)
-        self.assertIn("TOP 50", ranking)
-        self.assertIn("TOP 5 CONTENUS TENDANCE", ranking)
-        self.assertIn("LE BUZZ", buzz)
-        self.assertIn("/300", buzz)
-        self.assertIn("share-outline", card)
-        self.assertIn("Favori", card)
-        self.assertIn("/100", card)
-        self.assertIn("/100", top10)
-        self.assertIn("HOT", trend)
-        self.assertIn("7 JOURS", periods)
-        self.assertIn("DIASPORA", regions)
-        self.assertIn("CÔTE D'IVOIRE", regions)
+        feed = (MOBILE / "app/(tabs)/feed.tsx").read_text(encoding="utf-8")
+        prono = (MOBILE / "app/(tabs)/prono.tsx").read_text(encoding="utf-8")
+        profile = (MOBILE / "app/(tabs)/profile.tsx").read_text(encoding="utf-8")
+        package = (MOBILE / "package.json").read_text(encoding="utf-8")
+
+        self.assertIn("react-native-webview", package)
+        self.assertIn("SiteWebView", ranking)
+        self.assertIn("SiteWebView", feed)
+        self.assertIn("SiteWebView", prono)
+        self.assertIn("SiteWebView", profile)
+        self.assertIn("https://pass50.store", shell)
+        self.assertIn("mon-fil.html", shell)
+        self.assertIn("pronostics.html", shell)
+        self.assertIn("open=account", shell)
+        self.assertIn(".p50-bottom-nav", shell)
+        self.assertNotIn("app.html?", shell)
+        self.assertNotIn("/app.html", shell)
+        self.assertNotIn("/app.html", ranking)
+        self.assertIn("SITE_URLS.ranking", ranking)
 
     def test_api_client_targets_pass50_store(self):
         client = (MOBILE / "src/api/client.ts").read_text(encoding="utf-8")
@@ -68,19 +64,11 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn('"scheme": "pass50"', app_json)
         self.assertIn("#050705", app_json)
 
-    def test_native_shell_not_webview(self):
-        entry = (MOBILE / "app/index.tsx").read_text(encoding="utf-8")
-        package = (MOBILE / "package.json").read_text(encoding="utf-8")
-        self.assertNotIn("react-native-webview", package)
-        self.assertNotIn("WebView", entry)
-        self.assertIn("hasCompletedOnboarding", entry)
-
     def test_onboarding_first_open_flow(self):
         entry = (MOBILE / "app/index.tsx").read_text(encoding="utf-8")
         layout = (MOBILE / "app/_layout.tsx").read_text(encoding="utf-8")
         slides = (MOBILE / "src/onboarding/slides.ts").read_text(encoding="utf-8")
         storage = (MOBILE / "src/onboarding/storage.ts").read_text(encoding="utf-8")
-        profile = (MOBILE / "app/(tabs)/profile.tsx").read_text(encoding="utf-8")
 
         self.assertIn("hasCompletedOnboarding", entry)
         self.assertIn("/onboarding", entry)
@@ -89,7 +77,6 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("'final'", slides)
         self.assertIn("'coules'", slides)
         self.assertIn("resetOnboarding", storage)
-        self.assertIn("Revoir le tutoriel", profile)
 
     def test_influencer_profile_from_public_ranking(self):
         influencer = (MOBILE / "app/influencer/[id].tsx").read_text(encoding="utf-8")
@@ -97,15 +84,6 @@ class Pass50MobileAppV1Tests(unittest.TestCase):
         self.assertIn("findInfluencerInRanking", influencer)
         self.assertIn("pass50Api.ranking", influencer)
         self.assertIn("RANKING_PERIODS", lookup)
-
-    def test_prono_screen_has_pronostics_and_coules_modes(self):
-        prono = (MOBILE / "app/(tabs)/prono.tsx").read_text(encoding="utf-8")
-        self.assertIn("pass50Api.pronoFeed", prono)
-        self.assertIn("pass50Api.coulesHistory", prono)
-        self.assertIn("Pronostics", prono)
-        self.assertIn("Coulés", prono)
-        self.assertIn("CoulesDuelCard", prono)
-        self.assertIn("PronoCard", prono)
 
     def test_screen_shell_matches_site_chrome(self):
         shell = (MOBILE / "components/ScreenShell.tsx").read_text(encoding="utf-8")

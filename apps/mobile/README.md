@@ -1,12 +1,12 @@
 # PASS50 Mobile (Expo)
 
-Application native **iOS / Android** (écrans React Native, pas une WebView).
+Application **iOS / Android** qui affiche le **site mobile Safari** (`pass50.store`) dans une coque native.
 
-Le **design** reprend le **site mobile** (`index.html`) : fond `#050705`, lime `#b7ff00`, dock Mon fil · Pronos · Classement · Mon espace, buzz hero + cartes photo.
+Le Classement, Mon fil, Pronos et Mon espace chargent les **vraies pages** du site (`index.html`, `mon-fil.html`, `pronostics.html`) — même rendu que Safari. Le dock natif (Mon fil · Pronos · Classement · Mon espace) remplace le dock web.
 
-Le **fonctionnement** reste une vraie app : onglets natifs, API `https://pass50.store/api/`, pas de navigation multi-pages web.
+Ce n’est **pas** `app.html` / Capacitor : c’est le site grand public adapté mobile.
 
-Stack : Expo SDK 57 · Expo Router · API PASS50
+Stack : Expo SDK 57 · Expo Router · `react-native-webview` · API PASS50
 
 ## Développement local
 
