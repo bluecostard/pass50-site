@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-05 15:20 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-rosemark-marcel` @rosemarkmarcel — 7682062744933894933 · 1685 viewers
+- TikTok `census-stephane-galactik` @le_coach_des_debout — 7682067414636989205 · 92 viewers
+
 ### 2026-09-05 10:43 UTC
 
 - Unknown sondés : **200**
@@ -437,14 +448,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7678420359376964385 · 9502 viewers
-
-### 2026-08-26 16:35 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7678347106345569056 · 1604 viewers
-- TikTok `hamondchic` @coachhamond — C’est pour poser question · 20975 viewers

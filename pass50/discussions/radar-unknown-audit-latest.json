@@ -1,34 +1,39 @@
 {
-  "at": "2026-09-05 10:43 UTC",
+  "at": "2026-09-05 15:20 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-awao-officiel",
+      "profileId": "census-rosemark-marcel",
       "platform": "TikTok",
-      "roomId": "7681995703857449736",
+      "roomId": "7682062744933894933",
       "title": "",
-      "viewers": 693,
-      "startedAt": "2026-09-05 10:27:05",
-      "handle": "influamenta1"
+      "viewers": 1685,
+      "startedAt": "2026-09-05 14:47:03",
+      "handle": "rosemarkmarcel"
+    },
+    {
+      "profileId": "census-stephane-galactik",
+      "platform": "TikTok",
+      "roomId": "7682067414636989205",
+      "title": "",
+      "viewers": 92,
+      "startedAt": "2026-09-05 15:05:10",
+      "handle": "le_coach_des_debout"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
-    "added": [
-      {
-        "profileId": "census-awao-officiel",
-        "platform": "TikTok",
-        "handle": "influamenta1",
-        "addedAt": "2026-09-05T10:43:43+00:00",
-        "reason": "unknown_audit_live"
-      }
-    ],
+    "published": 2,
+    "added": [],
     "stored": [
       {
-        "profileId": "census-awao-officiel",
+        "profileId": "census-rosemark-marcel",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-stephane-galactik",
         "platform": "TikTok"
       }
     ],
