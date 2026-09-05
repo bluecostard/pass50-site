@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -71,9 +71,8 @@ const BLOCK_AUTH_REDIRECT_JS = `
     root.id = 'pass50-native-login-gate';
     root.innerHTML = '<div class="box"><h2>Connexion requise</h2><p>' + label + '</p><button type="button" id="pass50-native-login-btn">Se connecter</button></div>';
     (document.body || document.documentElement).appendChild(root);
-    document.getElementById('pass50-native-login-btn')?.addEventListener('click', function () {
-      notify();
-    });
+    var btn = document.getElementById('pass50-native-login-btn');
+    if (btn) btn.addEventListener('click', function () { notify(); });
   }
   try {
     var _replace = window.location.replace.bind(window.location);
@@ -101,8 +100,9 @@ const BLOCK_AUTH_REDIRECT_JS = `
 
 /**
  * Mon espace = coque compte plein écran.
- * Le site n’a pas de page dédiée : open=account ouvre un modal SUR le classement.
- * On masque donc tout .app / chrome classement et on force auth/user en page entière.
+ * Production : open=account n’ouvre rien tout seul → on force openAuth/openUser.
+ * On masque le classement, on affiche un fallback visible (jamais page blanche),
+ * et on notifie React Native quand l’UI compte est prête.
  */
 const ACCOUNT_SHELL_CSS = `
 html.pass50-native-account,
@@ -111,7 +111,6 @@ html.pass50-native-account body{
   overflow:hidden!important;
 }
 html.pass50-native-account .app,
-html.pass50-native-account .app > *,
 html.pass50-native-account .p50-bottom-nav,
 html.pass50-native-account #liveModal,
 html.pass50-native-account #profileModal,
@@ -120,16 +119,10 @@ html.pass50-native-account #notificationModal,
 html.pass50-native-account #voteShareModal,
 html.pass50-native-account #fiPhotoLightbox,
 html.pass50-native-account .demo-banner,
-html.pass50-native-account #pass50-onboarding-root,
-html.pass50-native-account #pass50-onboarding-root *{
+html.pass50-native-account #pass50-onboarding-root{
   display:none!important;
   visibility:hidden!important;
   pointer-events:none!important;
-  height:0!important;
-  max-height:0!important;
-  overflow:hidden!important;
-  opacity:0!important;
-  z-index:-1!important;
 }
 html.pass50-native-account #authModal.show,
 html.pass50-native-account #userModal.show,
@@ -162,43 +155,64 @@ html.pass50-native-account #userModal .close{
 }
 #pass50-native-account-placeholder{
   position:fixed;inset:0;z-index:150000;
-  display:flex;align-items:center;justify-content:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  padding:24px;text-align:center;
   background:#050705;color:#b7ff00;font-weight:900;letter-spacing:1px;
+}
+#pass50-native-account-placeholder .sub{
+  color:#9da79b;font-weight:700;letter-spacing:0;max-width:280px;line-height:1.45;
+}
+#pass50-native-account-placeholder button{
+  border:0;border-radius:999px;padding:12px 18px;background:#b7ff00;color:#050705;font-weight:900;font-size:15px;
 }
 `;
 
 const OPEN_ACCOUNT_JS = `
 (function () {
+  function post(type, extra) {
+    try {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(Object.assign({ type: type }, extra || {})));
+      }
+    } catch (e) {}
+  }
   function ensureCss() {
-    if (document.getElementById('pass50-native-account-css')) return;
+    var existing = document.getElementById('pass50-native-account-css');
+    if (existing) return;
     var css = document.createElement('style');
     css.id = 'pass50-native-account-css';
     css.textContent = ${JSON.stringify(ACCOUNT_SHELL_CSS)};
     (document.head || document.documentElement).appendChild(css);
   }
   function ensurePlaceholder() {
-    if (document.getElementById('pass50-native-account-placeholder')) return;
-    var el = document.createElement('div');
+    var el = document.getElementById('pass50-native-account-placeholder');
+    if (el) return el;
+    el = document.createElement('div');
     el.id = 'pass50-native-account-placeholder';
-    el.textContent = 'MON ESPACE';
+    el.innerHTML = '<div>MON ESPACE</div><div class="sub">Ouverture du compte…</div><button type="button" id="pass50-native-account-retry">Afficher la connexion</button>';
     (document.body || document.documentElement).appendChild(el);
+    var retry = document.getElementById('pass50-native-account-retry');
+    if (retry) {
+      retry.addEventListener('click', function () {
+        forceOpen(true);
+      });
+    }
+    return el;
   }
   function accountOpen() {
-    var auth = document.getElementById('authModal');
-    var user = document.getElementById('userModal');
-    var admin = document.getElementById('adminModal');
-    var tool = document.getElementById('toolModal');
-    return !!(
-      (auth && auth.classList.contains('show')) ||
-      (user && user.classList.contains('show')) ||
-      (admin && admin.classList.contains('show')) ||
-      (tool && tool.classList.contains('show'))
-    );
+    var ids = ['authModal', 'userModal', 'adminModal', 'toolModal'];
+    for (var i = 0; i < ids.length; i++) {
+      var node = document.getElementById(ids[i]);
+      if (node && node.classList.contains('show')) return true;
+    }
+    return false;
   }
   function syncPlaceholder() {
     var ph = document.getElementById('pass50-native-account-placeholder');
     if (!ph) return;
-    ph.style.display = accountOpen() ? 'none' : 'flex';
+    var open = accountOpen();
+    ph.style.display = open ? 'none' : 'flex';
+    if (open) post('account-ready');
   }
   function dismissSiteOnboarding() {
     try { localStorage.setItem('pass50_onboarding_seen_v1', '1'); } catch (e) {}
@@ -209,14 +223,10 @@ const OPEN_ACCOUNT_JS = `
     } catch (e) {}
     try {
       var root = document.getElementById('pass50-onboarding-root');
-      if (root) {
-        root.setAttribute('hidden', 'hidden');
-        root.style.setProperty('display', 'none', 'important');
-        root.remove();
-      }
+      if (root) root.remove();
     } catch (e) {}
   }
-  function openPanel() {
+  function forceOpen(fromUser) {
     ensureCss();
     document.documentElement.classList.add('pass50-native-account');
     dismissSiteOnboarding();
@@ -225,42 +235,52 @@ const OPEN_ACCOUNT_JS = `
       var loggedIn = typeof window.currentUser === 'function' && window.currentUser();
       if (loggedIn) {
         if (typeof window.openUser === 'function') window.openUser();
-      } else if (typeof window.authPending === 'function' && window.authPending()) {
-        // session en cours
       } else if (typeof window.openAuth === 'function') {
+        // Ne pas rester bloqué sur authPending (session fantôme → écran vide)
         window.openAuth('login');
+      } else if (fromUser) {
+        var ph = ensurePlaceholder();
+        var sub = ph.querySelector('.sub');
+        if (sub) sub.textContent = 'Connexion indisponible pour le moment. Réessaie.';
       }
-    } catch (e) {}
+    } catch (e) {
+      post('account-error', { message: String(e && e.message || e) });
+    }
     syncPlaceholder();
   }
   ensureCss();
   document.documentElement.classList.add('pass50-native-account');
   dismissSiteOnboarding();
   ensurePlaceholder();
-  openPanel();
+  forceOpen(false);
+  post('account-boot');
   if (!window.__pass50NativeAccountWatch) {
     window.__pass50NativeAccountWatch = true;
     var n = 0;
     var t = setInterval(function () {
       n += 1;
-      openPanel();
-      if (n >= 60) clearInterval(t);
-    }, 250);
-    try {
-      var mo = new MutationObserver(function () {
-        if (!accountOpen()) openPanel();
-        else syncPlaceholder();
-      });
-      mo.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['class'] });
-    } catch (e) {}
+      if (accountOpen()) {
+        syncPlaceholder();
+        clearInterval(t);
+        return;
+      }
+      forceOpen(false);
+      if (n >= 40) {
+        clearInterval(t);
+        var ph = ensurePlaceholder();
+        var sub = ph.querySelector('.sub');
+        if (sub) sub.textContent = 'Appuie pour afficher la connexion.';
+        post('account-timeout');
+      }
+    }, 300);
     document.addEventListener('click', function (ev) {
-      var t = ev.target;
-      if (!t || !t.closest) return;
-      var closeBtn = t.closest('#authModal .close, #userModal .close, [data-close="authModal"], [data-close="userModal"]');
+      var target = ev.target;
+      if (!target || !target.closest) return;
+      var closeBtn = target.closest('#authModal .close, #userModal .close, [data-close="authModal"], [data-close="userModal"]');
       if (closeBtn) {
         ev.preventDefault();
         ev.stopPropagation();
-        setTimeout(openPanel, 0);
+        setTimeout(function () { forceOpen(true); }, 0);
       }
     }, true);
   }
@@ -293,7 +313,8 @@ function pathAllowedForTab(tab: SiteTab, url: string): boolean {
     const path = u.pathname.replace(/\/+$/, '') || '/';
     if (tab === 'feed') return /mon-fil\.html$/i.test(path);
     if (tab === 'prono') return /pronostics\.html$/i.test(path);
-    if (tab === 'account') return path === '/' || isAccountUrl(url);
+    // Mon espace : rester sur l’origine, éviter les boucles de reload
+    if (tab === 'account') return true;
     if (tab === 'ranking') {
       if (isAccountUrl(url)) return false;
       return path === '/' || /^\/fi\//i.test(path);
@@ -319,10 +340,16 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
   const url = SITE_URLS[tab];
   const source = useMemo(() => ({ uri: url }), [url]);
 
+  // Ne jamais laisser le loader tourner indéfiniment (Mon espace page blanche)
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => setLoading(false), 3500);
+    return () => clearTimeout(timer);
+  }, [loading, tab]);
+
   const beforeLoadJs = useMemo(() => {
     const parts = [HIDE_SITE_DOCK_JS];
     if (tab === 'feed' || tab === 'prono') parts.push(BLOCK_AUTH_REDIRECT_JS);
-    // Masquer le classement dès le premier paint sur Mon espace
     if (tab === 'account') {
       parts.push(`
 (function(){
@@ -360,6 +387,9 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
       try {
         const data = JSON.parse(event.nativeEvent.data);
         if (data?.type === 'need-auth') goAccountTab();
+        if (data?.type === 'account-ready' || data?.type === 'account-boot' || data?.type === 'account-timeout') {
+          setLoading(false);
+        }
       } catch {
         // ignore
       }
@@ -433,7 +463,7 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
         domStorageEnabled
         javaScriptEnabled
         allowsBackForwardNavigationGestures
-        startInLoadingState
+        startInLoadingState={false}
         setSupportMultipleWindows={false}
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
@@ -456,6 +486,7 @@ export function SiteWebView({ tab, title = 'PASS50' }: Props) {
         }}
         onHttpError={(event) => {
           if (event.nativeEvent.statusCode >= 400) {
+            setLoading(false);
             setError(`HTTP ${event.nativeEvent.statusCode}`);
           }
         }}
