@@ -89,11 +89,11 @@ function p50_mo_fair_rotation_profiles(PDO $pdo,int $limit,array $excludeIds=[])
     $threshold=p50_mc_threshold();
     $sql="SELECT r.profile_id,MAX(c.captured_at) last_capture FROM p50_profile_registry r
       JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
-      LEFT JOIN p50_metric_captures c ON c.profile_id=r.profile_id AND c.platform=s.platform AND c.quality_status='usable'
+      LEFT JOIN p50_metric_captures c ON BINARY c.profile_id=BINARY r.profile_id AND BINARY c.platform=BINARY s.platform AND c.quality_status='usable'
       WHERE r.alive=1 AND s.status='verified' AND s.confidence>=?
-      AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')";
+      AND BINARY s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')";
     $params=[$threshold];
-    if($excludeIds){$sql.=" AND r.profile_id NOT IN (".implode(',',array_fill(0,count($excludeIds),'?')).")";$params=array_merge($params,$excludeIds);}
+    if($excludeIds){$sql.=" AND BINARY r.profile_id NOT IN (".implode(',',array_fill(0,count($excludeIds),'?')).")";$params=array_merge($params,$excludeIds);}
     $sql.=" GROUP BY r.profile_id ORDER BY last_capture IS NULL DESC,last_capture ASC,r.profile_id ASC LIMIT ".max(1,(int)$limit);
     $stmt=$pdo->prepare($sql);$stmt->execute($params);
     return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
@@ -130,12 +130,12 @@ function p50_mo_exploration_profiles(PDO $pdo,int $limit,int $topRankCutoff,arra
     }
     $sql="SELECT r.profile_id,MAX(c.captured_at) last_capture FROM p50_profile_registry r
       JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
-      LEFT JOIN p50_metric_captures c ON c.profile_id=r.profile_id AND c.platform=s.platform AND c.quality_status='usable'
+      LEFT JOIN p50_metric_captures c ON BINARY c.profile_id=BINARY r.profile_id AND BINARY c.platform=BINARY s.platform AND c.quality_status='usable'
       WHERE r.alive=1 AND s.status='verified' AND s.confidence>=?
-      AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')
-      AND r.profile_id NOT IN ($topSub)";
+      AND BINARY s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat')
+      AND BINARY r.profile_id NOT IN ($topSub)";
     $params=[$threshold];
-    if($excludeIds){$sql.=" AND r.profile_id NOT IN (".implode(',',array_fill(0,count($excludeIds),'?')).")";$params=array_merge($params,$excludeIds);}
+    if($excludeIds){$sql.=" AND BINARY r.profile_id NOT IN (".implode(',',array_fill(0,count($excludeIds),'?')).")";$params=array_merge($params,$excludeIds);}
     $sql.=" GROUP BY r.profile_id ORDER BY last_capture IS NULL DESC,last_capture ASC,r.profile_id ASC LIMIT ".max(1,(int)$limit);
     $stmt=$pdo->prepare($sql);$stmt->execute($params);
     return array_map('strval',$stmt->fetchAll(PDO::FETCH_COLUMN));
@@ -202,7 +202,7 @@ function p50_mo_select(PDO $pdo,string $cadenceKey,array $options=[]): array {
     $placeholders=implode(',',array_fill(0,count($ids),'?'));$threshold=p50_mc_threshold();
     $stmt=$pdo->prepare("SELECT r.profile_id,s.platform FROM p50_profile_registry r JOIN p50_social_links s ON BINARY s.profile_id=BINARY r.profile_id
       WHERE r.alive=1 AND r.profile_id IN ($placeholders) AND s.status='verified' AND s.confidence>=?
-      AND s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat') ORDER BY r.profile_id,s.platform LIMIT 3000");
+      AND BINARY s.platform IN ('YouTube','X','TikTok','Instagram','Facebook','Snapchat') ORDER BY r.profile_id,s.platform LIMIT 3000");
     $stmt->execute([...$ids,$threshold]);$rows=p50_mo_unique_candidate_rows(array_merge($stmt->fetchAll(),p50_mo_oauth_youtube_rows($pdo,$ids),p50_mo_oauth_meta_rows($pdo,$ids)));$summary['eligibleProfiles']=count(array_unique(array_column($rows,'profile_id')));$summary['eligibleLinks']=count($rows);$candidates=[];$liveSet=array_fill_keys($live['profileIds'],true);
     $selectionTime=strtotime((string)($options['now']??'now'));if($selectionTime===false)$selectionTime=time();$ignoreFresh=!empty($options['ignoreFresh']);
     foreach($rows as $row){$profileId=(string)$row['profile_id'];$platform=(string)$row['platform'];$access=p50_mc_public_access($platform,$profileId);
