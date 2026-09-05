@@ -100,7 +100,7 @@ Alternative CI/CD cloud : fichier `codemagic.yaml` à la **racine** du dépôt.
 | `pass50-ios-appstore` | Build IPA + upload App Store Connect (revue manuelle par défaut) |
 | `pass50-android-internal` | Build AAB + piste Play **internal** (draft) |
 
-Si l’étape **Publishing** échoue alors que l’IPA est dans Artifacts : télécharge `PASS50.ipa` → ouvre **Transporter** (Mac) → Deliver. Puis vérifie dans le log Codemagic (étape *Publish IPA to TestFlight*) le message Apple détaillé (build en doublon, accord ASC, auth).
+Si l’étape **Publish IPA** échoue alors que l’IPA est dans Artifacts : télécharge `PASS50.ipa` → ouvre **Transporter** (Mac) → Deliver. Puis vérifie dans App Store Connect / TestFlight si le build est déjà en traitement (un upload peut réussir même si l’assignation au groupe **Équipe** échoue — le workflow traite ça en best-effort).
 
 ### Configuration Codemagic (une fois)
 

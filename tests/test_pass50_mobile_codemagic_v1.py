@@ -26,6 +26,7 @@ class Pass50MobileCodemagicV1Tests(unittest.TestCase):
         self.assertIn("app-store-connect publish", text)
         self.assertIn("--altool-verbose-logging", text)
         self.assertIn('--beta-group "Équipe"', text)
+        self.assertIn("--skip-package-upload", text)
         # Must NOT force external beta review (--testflight); that blocks Internal TestFlight.
         self.assertNotIn("--testflight \\", text)
         self.assertIn("EXPO_PUBLIC_API_BASE: https://pass50.store/api/", text)
@@ -39,6 +40,9 @@ class Pass50MobileCodemagicV1Tests(unittest.TestCase):
             text,
             "App Store query must not short-circuit TestFlight via ||",
         )
+        # Upload must succeed even if beta-group assignment fails (no re-upload trap).
+        self.assertIn("treating upload as success", text)
+        self.assertIn("best-effort", text)
 
     def test_android_signing_support_file(self):
         gradle = MOBILE / "support-files" / "codemagic-android-signing.gradle"

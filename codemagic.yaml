@@ -167,7 +167,6 @@ workflows:
             exit 1
           fi
           echo "Publishing IPA: $IPA ($(du -h "$IPA" | awk '{print $1}'))"
-          # Show version/build encoded in the IPA (duplicate CFBundleVersion is a common ASC reject).
           TMP_IPA_DIR="$(mktemp -d)"
           unzip -l "$IPA" | grep -E 'Info\.plist$' | head -n 5 || true
           unzip -p "$IPA" 'Payload/*.app/Info.plist' > "$TMP_IPA_DIR/Info.plist" 2>/dev/null || true
@@ -176,27 +175,45 @@ workflows:
             /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$TMP_IPA_DIR/Info.plist" || true
           fi
           rm -rf "$TMP_IPA_DIR"
-          # IMPORTANT: do NOT pass --testflight here.
-          # That flag submits for *external* beta review and often fails (missing beta details / wait).
-          # A plain upload is enough for Internal TestFlight (group Équipe).
+          LOG=/tmp/pass50-asc-publish.log
+          # Step 1: upload ONLY. Do NOT combine with --beta-group:
+          # if upload succeeds but group assignment fails, a retry re-upload hits DUPLICATE
+          # and fails the whole step even though the IPA is already on ASC/TestFlight.
+          # Do NOT pass --testflight (external beta review).
           set +e
           app-store-connect publish \
             --path "$IPA" \
-            --beta-group "Équipe" \
             --altool-retries 5 \
             --altool-retry-wait 30 \
             --altool-verbose-logging \
-            --max-find-build-wait 20 \
-            --max-build-processing-wait 30
-          STATUS=$?
+            2>&1 | tee "$LOG"
+          STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$STATUS" -ne 0 ]; then
-            echo "Publish with beta-group failed ($STATUS); retrying upload-only (Internal TestFlight)..."
-            app-store-connect publish \
-              --path "$IPA" \
-              --altool-retries 5 \
-              --altool-retry-wait 30 \
-              --altool-verbose-logging
+            if grep -qiE 'DUPLICATE|already been uploaded|value that has already been used|The bundle version must be higher' "$LOG"; then
+              echo "WARN: ASC reported duplicate/already-uploaded — treating upload as success"
+              STATUS=0
+            else
+              echo "ERROR: IPA upload failed ($STATUS). See $LOG"
+              exit "$STATUS"
+            fi
+          fi
+          echo "IPA upload OK — assigning beta group Équipe (best-effort, non-blocking)..."
+          set +e
+          app-store-connect publish \
+            --path "$IPA" \
+            --skip-package-upload \
+            --beta-group "Équipe" \
+            --max-find-build-wait 10 \
+            --max-build-processing-wait 20 \
+            --altool-verbose-logging \
+            2>&1 | tee -a "$LOG"
+          BG_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$BG_STATUS" -ne 0 ]; then
+            echo "WARN: beta-group assignment failed ($BG_STATUS). Build is still on TestFlight once Apple finishes processing; add to Équipe manually if needed."
+          else
+            echo "Beta group Équipe assigned."
           fi
     artifacts:
       - artifacts/*.ipa
@@ -204,6 +221,7 @@ workflows:
       - apps/mobile/build/ios/ipa/*.ipa
       - "**/*.ipa"
       - /tmp/xcodebuild_logs/*.log
+      - /tmp/pass50-asc-publish.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
       app_store_connect:
@@ -374,25 +392,42 @@ workflows:
             /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$TMP_IPA_DIR/Info.plist" || true
           fi
           rm -rf "$TMP_IPA_DIR"
-          # Upload only (+ optional internal group). Avoid --testflight (external beta review).
+          LOG=/tmp/pass50-asc-publish.log
+          # Upload ONLY first; beta-group is best-effort (avoids DUPLICATE retry trap).
           set +e
           app-store-connect publish \
             --path "$IPA" \
-            --beta-group "Équipe" \
             --altool-retries 5 \
             --altool-retry-wait 30 \
             --altool-verbose-logging \
-            --max-find-build-wait 20 \
-            --max-build-processing-wait 30
-          STATUS=$?
+            2>&1 | tee "$LOG"
+          STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$STATUS" -ne 0 ]; then
-            echo "Publish with beta-group failed ($STATUS); retrying upload-only..."
-            app-store-connect publish \
-              --path "$IPA" \
-              --altool-retries 5 \
-              --altool-retry-wait 30 \
-              --altool-verbose-logging
+            if grep -qiE 'DUPLICATE|already been uploaded|value that has already been used|The bundle version must be higher' "$LOG"; then
+              echo "WARN: ASC reported duplicate/already-uploaded — treating upload as success"
+              STATUS=0
+            else
+              echo "ERROR: IPA upload failed ($STATUS). See $LOG"
+              exit "$STATUS"
+            fi
+          fi
+          echo "IPA upload OK — assigning beta group Équipe (best-effort, non-blocking)..."
+          set +e
+          app-store-connect publish \
+            --path "$IPA" \
+            --skip-package-upload \
+            --beta-group "Équipe" \
+            --max-find-build-wait 10 \
+            --max-build-processing-wait 20 \
+            --altool-verbose-logging \
+            2>&1 | tee -a "$LOG"
+          BG_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$BG_STATUS" -ne 0 ]; then
+            echo "WARN: beta-group assignment failed ($BG_STATUS). Build is still on TestFlight once Apple finishes processing; add to Équipe manually if needed."
+          else
+            echo "Beta group Équipe assigned."
           fi
     artifacts:
       - artifacts/*.ipa
@@ -400,6 +435,7 @@ workflows:
       - apps/mobile/build/ios/ipa/*.ipa
       - "**/*.ipa"
       - /tmp/xcodebuild_logs/*.log
+      - /tmp/pass50-asc-publish.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
       app_store_connect:
