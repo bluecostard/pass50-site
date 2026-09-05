@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-05 20:28 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-gaelle-taglao` @gaelletaglao02 — 7682150121391328001 · 1384 viewers
+- TikTok `lolo-beaute` @lolobeaute85 — 7682149396233980704 · 583 viewers
+
 ### 2026-09-05 17:25 UTC
 
 - Unknown sondés : **200**
@@ -438,15 +449,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7678699503892957985 · 247 viewers
 - TikTok `hamondchic` @coachhamond — C’est pour poser question · 13750 viewers
-
-### 2026-08-27 00:51 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-no-limit` @nolimit_vousdv — 7678499415909534482 · 1156 viewers
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — Lets Go LIVE! · 1052 viewers
-- TikTok `holy` @holysheilla — Bonjour je suis au Togo 🇹🇬❤️ · 471 viewers

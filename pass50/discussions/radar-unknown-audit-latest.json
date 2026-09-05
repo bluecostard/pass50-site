@@ -1,52 +1,39 @@
 {
-  "at": "2026-09-05 17:25 UTC",
+  "at": "2026-09-05 20:28 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-madame-koffi",
+      "profileId": "census-gaelle-taglao",
       "platform": "TikTok",
-      "roomId": "7682099115395779360",
-      "title": "Ça va?",
-      "viewers": 11,
-      "startedAt": null,
-      "handle": "madamekofii"
+      "roomId": "7682150121391328001",
+      "title": "",
+      "viewers": 1384,
+      "startedAt": "2026-09-05 20:26:15",
+      "handle": "gaelletaglao02"
     },
     {
-      "profileId": "hassan",
+      "profileId": "lolo-beaute",
       "platform": "TikTok",
-      "roomId": "7682100135322438420",
-      "title": "Pkoi les hommes fuient grossesse",
-      "viewers": 480,
-      "startedAt": "2026-09-05 17:12:14",
-      "handle": "hassanhayekofficiel"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7682101712517745430",
-      "title": "Lets Go LIVE!",
-      "viewers": 443,
-      "startedAt": "2026-09-05 17:18:27",
-      "handle": "oustazdianeofficiel1"
+      "roomId": "7682149396233980704",
+      "title": "",
+      "viewers": 583,
+      "startedAt": "2026-09-05 20:23:54",
+      "handle": "lolobeaute85"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 2,
     "added": [],
     "stored": [
       {
-        "profileId": "census-madame-koffi",
+        "profileId": "census-gaelle-taglao",
         "platform": "TikTok"
       },
       {
-        "profileId": "hassan",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
+        "profileId": "lolo-beaute",
         "platform": "TikTok"
       }
     ],
