@@ -7,11 +7,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "pass50",
     "userInterfaceStyle": "dark",
-    "description": "Classement, fil, lives et paris sur l'actualité des influenceurs ivoiriens.",
+    "description": "Classement, fil, lives et paris sur l'actualit\u00e9 des influenceurs ivoiriens.",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "store.pass50.app",
-      "buildNumber": "10",
+      "buildNumber": "11",
       "associatedDomains": [
         "applinks:pass50.store",
         "applinks:www.pass50.store"
@@ -51,7 +51,10 @@
               "pathPrefix": "/app"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -76,7 +79,6 @@
     },
     "extra": {
       "apiBase": "https://pass50.store/api/",
-      "appUrl": "https://pass50.store/app.html?source=native",
       "eas": {
         "projectId": "5f122043-730b-45d5-bc92-1bb88706bb5e"
       }

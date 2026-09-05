@@ -1,11 +1,12 @@
 # PASS50 Mobile (Expo)
 
-Application native **iOS / Android** — coque WebView autour du client mobile déjà en prod :
-`https://pass50.store/app.html?source=native`
+Application native **iOS / Android** (écrans React Native, pas une WebView).
 
-Même doctrine que l’ancienne coque Capacitor (`shell/`) : le site mobile (`app.html`) reste la présentation de référence ; l’app store charge cette UI, avec splash / status bar natifs.
+Le **design** reprend le client mobile du site (`app.html` + dock `mobile-bottom-nav-v1`) : fond `#050705`, lime `#b7ff00`, dock flottant avec Classement relevé.
 
-Stack : Expo SDK 57 · Expo Router · `react-native-webview`
+Le **fonctionnement** reste une vraie app : onglets natifs, API `https://pass50.store/api/`, pas de navigation multi-pages web.
+
+Stack : Expo SDK 57 · Expo Router · API PASS50
 
 ## Développement local
 
@@ -129,14 +130,14 @@ Politique de confidentialité : https://pass50.store/politique-confidentialite.h
 
 ## Migration depuis `shell/` (Capacitor)
 
-| Avant (Capacitor) | Après (Expo + Codemagic) |
-|-------------------|--------------------------|
-| WebView → `app.html?source=native` | Même URL / même UI mobile |
-| `shell/capacitor.config.json` | `apps/mobile` + `src/shell/url.ts` |
-| `npm run sync` + Android Studio / Xcode | Codemagic / EAS Build |
-| Même package `store.pass50.app` | Même package — mise à jour store |
+| Avant (Capacitor) | Après (Expo) |
+|-------------------|--------------|
+| Design `app.html` (WebView Capacitor) | Même design, écrans natifs Expo |
+| `shell/capacitor.config.json` | `apps/mobile/app.json` |
+| `npm run sync` + Android Studio | `eas build` |
+| Même package `store.pass50.app` | Même package — mise à jour store possible |
 
-La coque Capacitor reste dans `shell/` en référence ; les builds store passent par `apps/mobile`.
+La coque Capacitor reste dans `shell/` le temps de basculer les builds store ; ne plus l’utiliser pour les nouvelles features.
 
 ## Tests
 

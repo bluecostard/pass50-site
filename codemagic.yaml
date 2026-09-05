@@ -81,8 +81,8 @@ workflows:
             NEXT=$((BUILD_NUMBER + 1))
           fi
           # Safety floor: known previous upload was 8+; keep ahead of app.json.
-          if [ "$NEXT" -le 9 ]; then
-            NEXT=10
+          if [ "$NEXT" -le 10 ]; then
+            NEXT=11
           fi
           echo "Setting CFBundleVersion=$NEXT (ASC latest=$LATEST, CM BUILD_NUMBER=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
@@ -233,8 +233,8 @@ workflows:
             NEXT=$((BUILD_NUMBER + 1))
           fi
           # Safety floor: known previous upload was 8+; keep ahead of app.json.
-          if [ "$NEXT" -le 9 ]; then
-            NEXT=10
+          if [ "$NEXT" -le 10 ]; then
+            NEXT=11
           fi
           echo "Setting CFBundleVersion=$NEXT (ASC latest=$LATEST, CM BUILD_NUMBER=${BUILD_NUMBER:-n/a})"
           agvtool new-version -all "$NEXT"
