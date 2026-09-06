@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-06 20:29 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
+- TikTok `ismael-aka` @ismael.aka.ddr — 7682500159691508502 · 976 viewers
+- TikTok `lolo-beaute` @lolobeaute85 — 7682520657674832672 · 770 viewers
+
 ### 2026-09-06 15:32 UTC
 
 - Unknown sondés : **200**
@@ -420,16 +432,3 @@ Vraiment en live :
 - TikTok `census-no-limit` @nolimit_vousdv — nolimit
 - TikTok `holy` @holysheilla — Bonjour je suis au Togo 🇹🇬❤️ · 171 viewers
 - TikTok `tma` @tmacrush_officiel — Ekortipaa Au Bénin 🇧🇯 · 3791 viewers
-
-### 2026-08-29 16:47 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-jordan-evraa` @realjordanevraa — Goumin tv, causerie ou Q/A · 59 viewers
-- TikTok `census-no-limit` @nolimit_vousdv — 7679492370588928775 · 535 viewers
-- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
-- TikTok `census-stephane-galactik` @le_coach_des_debout — 7679492912964406037 · 14 viewers

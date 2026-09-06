@@ -1,26 +1,52 @@
 {
-  "at": "2026-09-06 15:32 UTC",
+  "at": "2026-09-06 20:29 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 3,
   "lives": [
     {
-      "profileId": "holy",
+      "profileId": "census-souley-de-paris",
       "platform": "TikTok",
-      "roomId": "7682432536739400470",
-      "title": "Je suis à Babi 🇨🇮❤️",
-      "viewers": 415,
-      "startedAt": "2026-09-06 14:42:26",
-      "handle": "holysheilla"
+      "roomId": "7682521121714916129",
+      "title": "SOULEY DE-PARIS 🦅 B-52",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "souleydeparis"
+    },
+    {
+      "profileId": "ismael-aka",
+      "platform": "TikTok",
+      "roomId": "7682500159691508502",
+      "title": "",
+      "viewers": 976,
+      "startedAt": "2026-09-06 19:04:44",
+      "handle": "ismael.aka.ddr"
+    },
+    {
+      "profileId": "lolo-beaute",
+      "platform": "TikTok",
+      "roomId": "7682520657674832672",
+      "title": "",
+      "viewers": 770,
+      "startedAt": "2026-09-06 20:24:57",
+      "handle": "lolobeaute85"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
+    "published": 3,
     "added": [],
     "stored": [
       {
-        "profileId": "holy",
+        "profileId": "census-souley-de-paris",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "ismael-aka",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "lolo-beaute",
         "platform": "TikTok"
       }
     ],
