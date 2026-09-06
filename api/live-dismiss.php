@@ -34,4 +34,9 @@ $end->execute([$metadata,$profileId,$platform]);
 $health=db()->prepare("UPDATE p50_live_source_health SET last_state='offline',last_error='manually_dismissed',last_checked_at=UTC_TIMESTAMP() WHERE profile_id=? AND platform=?");
 $health->execute([$profileId,$platform]);
 
+if(is_file(__DIR__.'/live-status-cache-core.php')){
+    require_once __DIR__.'/live-status-cache-core.php';
+    try{p50_live_status_cache_invalidate();}catch(Throwable){}
+}
+
 json_response(['ok'=>true,'dismissed'=>true,'streamKey'=>$key,'profileDismissKey'=>$profileKey,'profileId'=>$profileId,'platform'=>$platform]);

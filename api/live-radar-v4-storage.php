@@ -127,6 +127,10 @@ function p50_live_v4_active_rows(): array {
         $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()),metadata=JSON_SET(COALESCE(metadata,'{}'),'$.endReason','known_false_positive') WHERE profile_id=? AND platform='TikTok' AND source='automatic' AND status IN ('live','unconfirmed')");
         $stmt->execute([$profileId]);
     }
+    foreach(P50_LIVE_V4_FALSE_POSITIVE_YOUTUBE_PROFILES as $profileId){
+        $stmt=db()->prepare("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()),metadata=JSON_SET(COALESCE(metadata,'{}'),'$.endReason','known_false_positive') WHERE profile_id=? AND platform='YouTube' AND source='automatic' AND status IN ('live','unconfirmed')");
+        $stmt->execute([$profileId]);
+    }
     db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='automatic' AND status='unconfirmed' AND platform NOT IN ('TikTok','YouTube') AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 24 HOUR)");
     db()->exec("UPDATE p50_live_streams SET status='ended',ended_at=COALESCE(ended_at,UTC_TIMESTAMP()) WHERE source='meta_authorized' AND status='live' AND last_seen_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 20 MINUTE)");
     // TikTok/YouTube : un live retiré uniquement pour « trop vieux » redevient public.
