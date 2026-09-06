@@ -1,45 +1,9 @@
 {
-  "at": "2026-09-05 22:59 UTC",
+  "at": "2026-09-06 04:48 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7682161059154742048",
-      "title": "",
-      "viewers": 9205,
-      "startedAt": "2026-09-05 21:09:32",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "census-gaelle-taglao",
-      "platform": "TikTok",
-      "roomId": "7682150121391328001",
-      "title": "",
-      "viewers": 1616,
-      "startedAt": "2026-09-05 20:26:15",
-      "handle": "gaelletaglao02"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-gaelle-taglao",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 24
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
