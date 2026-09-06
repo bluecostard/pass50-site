@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__.'/bootstrap.php';
-require __DIR__.'/metrics-orchestrator-core.php';
+require __DIR__.'/metrics-ranking-publication-apply-core.php';
 require __DIR__.'/metrics-ranking-publication-history-core.php';
 
 const P50_MR_STABILITY_AUDIT_CONTRACT='MR-STABILITY-AUDIT-V1.0';
@@ -155,8 +155,8 @@ if(!preg_match('~^application/json(?:\s*;\s*charset=[A-Za-z0-9._-]+)?$~',$conten
 $length=(int)($_SERVER['CONTENT_LENGTH']??0);if($length>16384)json_response(['error'=>'Corps trop volumineux.'],413);
 $raw=file_get_contents('php://input');if($raw===false||strlen($raw)>16384)json_response(['error'=>'Corps invalide.'],413);
 
-$cfg=p50_mo_config();$secret=(string)$cfg['cronSecret'];
-if(!$cfg['enabled'])json_response(['error'=>'Orchestrateur métrique désactivé.'],503);
+$cfg=p50_mrp_apply_config();$secret=(string)$cfg['cronSecret'];
+if(!$cfg['orchestratorEnabled'])json_response(['error'=>'Orchestrateur métrique désactivé.'],503);
 if(strlen($secret)<32)json_response(['error'=>'Cron métrique non configuré.'],503);
 $timestamp=trim((string)($_SERVER['HTTP_X_P50_TIMESTAMP']??''));$signature=strtolower(trim((string)($_SERVER['HTTP_X_P50_SIGNATURE']??'')));
 if(!preg_match('/^\d{10}$/',$timestamp)||abs(time()-(int)$timestamp)>300)json_response(['error'=>'Horodatage refusé.'],401);
