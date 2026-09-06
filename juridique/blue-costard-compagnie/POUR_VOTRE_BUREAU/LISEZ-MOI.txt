@@ -1,0 +1,20 @@
+BLUE COSTARD COMPAGNIE — Documents juridiques
+
+Ces fichiers sont bien au format Word :
+- .docx = Word moderne (Microsoft Word, Google Docs, LibreOffice)
+- .rtf  = compatible presque partout (ouvrez avec Word)
+
+COMMENT LES METTRE SUR VOTRE BUREAU :
+1. Téléchargez le fichier ZIP
+2. Clic droit → Extraire
+3. Glissez les fichiers sur votre Bureau
+4. Ouvrez avec Microsoft Word
+5. Remplacez les zones [ENTRE CROCHETS]
+6. Fichier → Enregistrer / Imprimer
+
+Fichiers :
+1-Objet-social-Blue-Costard-Compagnie
+2-Statuts-SASU-Blue-Costard-Compagnie
+3-Fiche-a-completer-Blue-Costard-Compagnie
+
+Si un fichier .docx dit « non supporté », ouvrez plutôt le .rtf du même nom.
