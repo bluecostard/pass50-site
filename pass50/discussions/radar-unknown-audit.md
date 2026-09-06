@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-06 11:05 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-awao-officiel` @influamenta1 — 7682357681361455892 · 688 viewers
+
 ### 2026-09-06 04:48 UTC
 
 - Unknown sondés : **200**
@@ -425,19 +435,3 @@ Vraiment en live :
 - TikTok `census-eudoxie-yao` @eudoxie_yao — Venez on va causer mes bb · 1279 viewers
 - TikTok `census-no-limit` @nolimit_vousdv — 7679230641908566802 · 1126 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7679224338498784032 · 444 viewers
-
-### 2026-08-28 15:29 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **1**
-
-Vraiment en live :
-- TikTok `census-dezouch-officiel` @dezouch_officiel — 7679094187142040340 · 60 viewers
-- TikTok `census-gaelle-taglao` @gaelletaglao02 — 7679100461259000596 · 1008 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
-- TikTok `hamondchic` @coachhamond — C’est pour poser question · 20139 viewers
-
-Nouveaux P0 :
-- TikTok `census-gaelle-taglao`
