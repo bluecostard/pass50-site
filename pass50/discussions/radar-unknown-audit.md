@@ -11,6 +11,20 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-06 22:55 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **5**
+- Publiés radar : **5**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-amour-ruth-poopy` @amourruth0 — 7682534869813660424 · 148 viewers
+- TikTok `census-bb-sans-os-de-man` @bebe.sans.os.de.m — 7682548142626589461 · 1669 viewers
+- TikTok `census-madame-koffi` @madamekofii — Ça va? · 118 viewers
+- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7682558252118969120 · 675 viewers
+
 ### 2026-09-06 20:29 UTC
 
 - Unknown sondés : **200**
@@ -419,16 +433,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `aya-robert` @aya.robert27 — 7679595533618416416 · 1244 viewers
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7679586890311387937 · 2007 viewers
-
-### 2026-08-29 20:59 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-jordan-evraa` @realjordanevraa — Goumin tv, causerie ou Q/A · 261 viewers
-- TikTok `census-no-limit` @nolimit_vousdv — nolimit
-- TikTok `holy` @holysheilla — Bonjour je suis au Togo 🇹🇬❤️ · 171 viewers
-- TikTok `tma` @tmacrush_officiel — Ekortipaa Au Bénin 🇧🇯 · 3791 viewers

@@ -1,8 +1,35 @@
 {
-  "at": "2026-09-06 20:29 UTC",
+  "at": "2026-09-06 22:55 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 5,
   "lives": [
+    {
+      "profileId": "census-amour-ruth-poopy",
+      "platform": "TikTok",
+      "roomId": "7682534869813660424",
+      "title": "",
+      "viewers": 148,
+      "startedAt": "2026-09-06 21:19:27",
+      "handle": "amourruth0"
+    },
+    {
+      "profileId": "census-bb-sans-os-de-man",
+      "platform": "TikTok",
+      "roomId": "7682548142626589461",
+      "title": "",
+      "viewers": 1669,
+      "startedAt": "2026-09-06 22:10:52",
+      "handle": "bebe.sans.os.de.m"
+    },
+    {
+      "profileId": "census-madame-koffi",
+      "platform": "TikTok",
+      "roomId": "7682541664862260001",
+      "title": "Ça va?",
+      "viewers": 118,
+      "startedAt": null,
+      "handle": "madamekofii"
+    },
     {
       "profileId": "census-souley-de-paris",
       "platform": "TikTok",
@@ -13,40 +40,39 @@
       "handle": "souleydeparis"
     },
     {
-      "profileId": "ismael-aka",
+      "profileId": "dez-cocrane225",
       "platform": "TikTok",
-      "roomId": "7682500159691508502",
+      "roomId": "7682558252118969120",
       "title": "",
-      "viewers": 976,
-      "startedAt": "2026-09-06 19:04:44",
-      "handle": "ismael.aka.ddr"
-    },
-    {
-      "profileId": "lolo-beaute",
-      "platform": "TikTok",
-      "roomId": "7682520657674832672",
-      "title": "",
-      "viewers": 770,
-      "startedAt": "2026-09-06 20:24:57",
-      "handle": "lolobeaute85"
+      "viewers": 675,
+      "startedAt": "2026-09-06 22:51:12",
+      "handle": "dezcocrane.225"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 5,
     "added": [],
     "stored": [
+      {
+        "profileId": "census-amour-ruth-poopy",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-bb-sans-os-de-man",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-madame-koffi",
+        "platform": "TikTok"
+      },
       {
         "profileId": "census-souley-de-paris",
         "platform": "TikTok"
       },
       {
-        "profileId": "ismael-aka",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "lolo-beaute",
+        "profileId": "dez-cocrane225",
         "platform": "TikTok"
       }
     ],
