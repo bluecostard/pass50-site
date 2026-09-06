@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-06 15:32 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `holy` @holysheilla — Je suis à Babi 🇨🇮❤️ · 415 viewers
+
 ### 2026-09-06 11:05 UTC
 
 - Unknown sondés : **200**
@@ -423,15 +433,3 @@ Vraiment en live :
 - TikTok `census-no-limit` @nolimit_vousdv — 7679492370588928775 · 535 viewers
 - TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
 - TikTok `census-stephane-galactik` @le_coach_des_debout — 7679492912964406037 · 14 viewers
-
-### 2026-08-29 01:47 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-eudoxie-yao` @eudoxie_yao — Venez on va causer mes bb · 1279 viewers
-- TikTok `census-no-limit` @nolimit_vousdv — 7679230641908566802 · 1126 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7679224338498784032 · 444 viewers
