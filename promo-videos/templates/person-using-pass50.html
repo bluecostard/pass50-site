@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PASS50 Promo 15s</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg0: #050705;
+    --lime: #b7ff00;
+    --text: #f4f7f1;
+    --muted: #9da79b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    background: var(--bg0);
+    color: var(--text);
+    font-family: Manrope, "Segoe UI", sans-serif;
+  }
+  .stage {
+    position: relative;
+    width: 1080px;
+    height: 1920px;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 18%, rgba(183,255,0,.16), transparent 55%),
+      radial-gradient(ellipse 70% 40% at 70% 85%, rgba(30,229,255,.08), transparent 50%),
+      linear-gradient(180deg, #071007 0%, #050705 45%, #0a100a 100%);
+    overflow: hidden;
+  }
+  .grain {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    opacity: .07;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+  .brand {
+    position: absolute;
+    top: 72px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    z-index: 5;
+  }
+  .brand .word {
+    font-family: "Archivo Black", Impact, sans-serif;
+    font-size: 92px;
+    letter-spacing: -4px;
+    line-height: 1;
+  }
+  .brand .word .fifty { color: var(--lime); }
+  .brand .tag {
+    margin-top: 10px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .scene-label {
+    position: absolute;
+    top: 210px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 7;
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 1px solid rgba(183,255,0,.45);
+    background: rgba(5,7,5,.72);
+    color: var(--lime);
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity .25s ease;
+    white-space: nowrap;
+  }
+  .scene-label.on { opacity: 1; }
+
+  .scene-person {
+    position: absolute;
+    left: 50%;
+    top: 210px;
+    width: 920px;
+    height: 1480px;
+    transform: translateX(-50%);
+    z-index: 3;
+  }
+  .person-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 40px 60px rgba(0,0,0,.45));
+  }
+  .phone-slot {
+    position: absolute;
+    left: 268px;
+    top: 268px;
+    width: 384px;
+    height: 780px;
+    z-index: 4;
+    transform-origin: 50% 100%;
+  }
+  .phone-bezel {
+    position: absolute;
+    inset: 0;
+    border-radius: 48px;
+    background: linear-gradient(160deg, #1c221c, #0a0d0a 40%, #151a15);
+    box-shadow:
+      0 0 0 3px #2a332a,
+      0 0 0 6px #0a0d0a,
+      0 28px 70px rgba(0,0,0,.55),
+      inset 0 1px 0 rgba(255,255,255,.08);
+    overflow: hidden;
+  }
+  .phone-notch {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 118px;
+    height: 28px;
+    border-radius: 20px;
+    background: #050705;
+    z-index: 3;
+  }
+  .phone-screen {
+    position: absolute;
+    top: 18px;
+    left: 14px;
+    right: 14px;
+    bottom: 18px;
+    border-radius: 36px;
+    overflow: hidden;
+    background: #050705;
+  }
+  .phone-screen .layer {
+    position: absolute;
+    inset: 0;
+  }
+  .phone-screen img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    opacity: 0;
+  }
+  .phone-screen img.on { opacity: 1; }
+  .phone-glow {
+    position: absolute;
+    inset: -30px;
+    border-radius: 60px;
+    background: radial-gradient(circle at 50% 40%, rgba(183,255,0,.22), transparent 60%);
+    z-index: -1;
+  }
+
+  .caption {
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    bottom: 110px;
+    z-index: 6;
+    text-align: center;
+  }
+  .caption h1 {
+    font-family: "Archivo Black", Impact, sans-serif;
+    font-size: 52px;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    min-height: 110px;
+  }
+  .caption h1 em {
+    font-style: normal;
+    color: var(--lime);
+  }
+  .caption p {
+    margin-top: 14px;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .cta-pill {
+    display: inline-flex;
+    margin-top: 24px;
+    padding: 16px 28px;
+    border-radius: 999px;
+    background: var(--lime);
+    color: #050705;
+    font-weight: 900;
+    font-size: 26px;
+  }
+
+  body.mode-fullscreen .scene-person,
+  body.mode-fullscreen .brand,
+  body.mode-fullscreen .caption,
+  body.mode-fullscreen .scene-label { display: none; }
+  body.mode-fullscreen .fullscreen-phone { display: block; }
+  .fullscreen-phone {
+    display: none;
+    position: absolute;
+    inset: 0;
+  }
+  .fullscreen-phone .layer { position: absolute; inset: 0; }
+  .fullscreen-phone img {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    opacity: 0;
+  }
+  .fullscreen-phone img.on { opacity: 1; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="grain"></div>
+    <div class="brand">
+      <div class="word">PASS<span class="fifty">50</span></div>
+      <div class="tag">Qui dit quoi, qui va où ?</div>
+    </div>
+    <div class="scene-label" id="sceneLabel">Classement</div>
+
+    <div class="scene-person">
+      <svg class="person-svg" viewBox="0 0 920 1480" aria-hidden="true">
+        <defs>
+          <linearGradient id="shirtGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#243024"/>
+            <stop offset="100%" stop-color="#101610"/>
+          </linearGradient>
+          <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#d4a574"/>
+            <stop offset="100%" stop-color="#8d5524"/>
+          </linearGradient>
+          <radialGradient id="faceLight" cx="40%" cy="30%" r="60%">
+            <stop offset="0%" stop-color="#e0b888"/>
+            <stop offset="100%" stop-color="#8d5524"/>
+          </radialGradient>
+        </defs>
+        <path d="M250 720 C280 560 380 500 460 490 C560 478 680 540 700 720 L740 1280 C620 1360 300 1360 180 1280 Z" fill="url(#shirtGrad)"/>
+        <path d="M430 470 C445 520 475 530 500 470" fill="url(#skinGrad)"/>
+        <ellipse cx="465" cy="350" rx="118" ry="140" fill="url(#faceLight)"/>
+        <path d="M350 320 C360 200 420 160 470 155 C540 148 590 210 585 320 C620 280 630 360 600 400 C560 280 380 270 350 360 Z" fill="#1a120c"/>
+        <ellipse cx="350" cy="360" rx="18" ry="28" fill="#a66b3a"/>
+        <ellipse cx="420" cy="350" rx="10" ry="7" fill="#1a120c"/>
+        <ellipse cx="490" cy="348" rx="10" ry="7" fill="#1a120c"/>
+        <path d="M400 400 C430 420 490 418 515 396" fill="none" stroke="#6b3f22" stroke-width="6" stroke-linecap="round"/>
+        <path d="M250 760 C180 820 140 920 160 1020 C180 1100 240 1140 300 1120" fill="url(#shirtGrad)"/>
+        <path d="M290 1100 C250 1120 230 1160 250 1200 C280 1250 340 1240 360 1200 C380 1160 360 1120 330 1105 Z" fill="url(#skinGrad)"/>
+        <path d="M700 760 C780 820 820 940 800 1040 C780 1120 720 1160 660 1130" fill="url(#shirtGrad)"/>
+        <path d="M650 1105 C690 1120 720 1160 700 1210 C670 1260 610 1245 590 1200 C575 1165 600 1115 640 1100 Z" fill="url(#skinGrad)"/>
+        <path d="M250 1180 C270 1260 330 1300 390 1285 C360 1220 320 1180 280 1160 Z" fill="url(#skinGrad)" opacity=".95"/>
+        <path d="M670 1175 C650 1260 590 1305 530 1285 C560 1220 610 1180 650 1160 Z" fill="url(#skinGrad)" opacity=".95"/>
+      </svg>
+
+      <div class="phone-slot">
+        <div class="phone-glow"></div>
+        <div class="phone-bezel">
+          <div class="phone-notch"></div>
+          <div class="phone-screen" id="screen"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="caption">
+      <h1 id="captionTitle">Le buzz <em>maintenant</em></h1>
+      <p id="captionSub">Classement · fiches · pronostics</p>
+      <div class="cta-pill">pass50.store</div>
+    </div>
+
+    <div class="fullscreen-phone" id="fullscreen"></div>
+  </div>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const mode = params.get('mode') || 'person';
+  if (mode === 'fullscreen') document.body.classList.add('mode-fullscreen');
+
+  const SEQUENCES = [
+    {
+      id: 'home',
+      label: 'Classement',
+      title: 'Le buzz <em>maintenant</em>',
+      sub: 'Vrai classement PASS50',
+      base: '../captures/scroll-frames',
+      count: Number(params.get('homeCount') || 48),
+    },
+    {
+      id: 'fiche',
+      label: 'Fiche influenceur',
+      title: 'Les <em>fiches</em> influenceurs',
+      sub: 'Profils, scores et liens officiels',
+      base: '../captures/fiche-frames',
+      count: Number(params.get('ficheCount') || 48),
+    },
+    {
+      id: 'prono',
+      label: 'Pronostics',
+      title: 'Les <em>pronostics</em>',
+      sub: 'Votes et duels en direct',
+      base: '../captures/prono-frames',
+      count: Number(params.get('pronoCount') || 40),
+    },
+  ];
+
+  const host = mode === 'fullscreen'
+    ? document.getElementById('fullscreen')
+    : document.getElementById('screen');
+
+  const layers = {};
+  for (const seq of SEQUENCES) {
+    const layer = document.createElement('div');
+    layer.className = 'layer';
+    layer.dataset.seq = seq.id;
+    layer.style.display = 'none';
+    const imgs = [];
+    for (let i = 0; i < seq.count; i++) {
+      const img = new Image();
+      img.src = `${seq.base}/frame-${String(i).padStart(3, '0')}.jpg`;
+      img.decoding = 'async';
+      layer.appendChild(img);
+      imgs.push(img);
+    }
+    host.appendChild(layer);
+    layers[seq.id] = { layer, imgs, meta: seq };
+  }
+
+  const labelEl = document.getElementById('sceneLabel');
+  const titleEl = document.getElementById('captionTitle');
+  const subEl = document.getElementById('captionSub');
+
+  let currentSeq = 'home';
+  let currentIndex = 0;
+
+  function showSeq(id) {
+    currentSeq = id;
+    const seq = layers[id]?.meta;
+    for (const [key, pack] of Object.entries(layers)) {
+      pack.layer.style.display = key === id ? 'block' : 'none';
+    }
+    if (seq) {
+      if (labelEl) {
+        labelEl.textContent = seq.label;
+        labelEl.classList.add('on');
+      }
+      if (titleEl) titleEl.innerHTML = seq.title;
+      if (subEl) subEl.textContent = seq.sub;
+    }
+  }
+
+  function showFrame(i) {
+    const pack = layers[currentSeq];
+    if (!pack) return 0;
+    const clamped = Math.max(0, Math.min(pack.imgs.length - 1, i | 0));
+    pack.imgs.forEach((img, n) => img.classList.toggle('on', n === clamped));
+    currentIndex = clamped;
+    return clamped;
+  }
+
+  window.__PASS50_PROMO__ = {
+    ready: false,
+    sequences: SEQUENCES.map((s) => ({ id: s.id, count: s.count, label: s.label })),
+    async preload() {
+      const all = Object.values(layers).flatMap((p) => p.imgs);
+      await Promise.all(all.map((img) => img.decode?.().catch(() => {}) || Promise.resolve()));
+      // Drop empty sequences (failed loads)
+      for (const [id, pack] of Object.entries(layers)) {
+        const ok = pack.imgs.filter((img) => img.naturalWidth > 0);
+        if (ok.length === 0) {
+          console.warn('empty sequence', id);
+        } else if (ok.length < pack.imgs.length) {
+          pack.imgs = ok;
+          pack.meta.count = ok.length;
+        }
+      }
+      showSeq('home');
+      showFrame(0);
+      this.ready = true;
+      this.sequences = SEQUENCES.map((s) => ({
+        id: s.id,
+        count: layers[s.id]?.imgs.length || 0,
+        label: s.label,
+      }));
+      return this.sequences;
+    },
+    setSequence(id) {
+      if (!layers[id]) return false;
+      showSeq(id);
+      showFrame(0);
+      return true;
+    },
+    setFrame(i) {
+      return showFrame(i);
+    },
+    getState() {
+      return { seq: currentSeq, index: currentIndex, count: layers[currentSeq]?.imgs.length || 0 };
+    },
+  };
+
+  window.__PASS50_PROMO__.preload().then(() => {
+    document.documentElement.dataset.ready = '1';
+  });
+})();
+</script>
+</body>
+</html>
