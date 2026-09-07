@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-07 23:34 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7682905552142666529 · 9237 viewers
+- TikTok `census-no-limit` @nolimit_vousdv — 7682919839874157329 · 1364 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7682900234162162464 · 227 viewers
+
 ### 2026-09-07 19:14 UTC
 
 - Unknown sondés : **200**
@@ -422,14 +434,3 @@ Nouveaux P0 :
 Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7679905849262787360 · 802 viewers
 - TikTok `ismael-aka` @ismael.aka.ddr — 7679905027246312214 · 951 viewers
-
-### 2026-08-30 16:46 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `aya-robert` @aya.robert27 — 7679850981982522145 · 2631 viewers
-- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
