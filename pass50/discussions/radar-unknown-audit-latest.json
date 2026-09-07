@@ -1,84 +1,9 @@
 {
-  "at": "2026-09-06 22:55 UTC",
+  "at": "2026-09-07 04:53 UTC",
   "unknownCount": 200,
-  "liveCount": 5,
-  "lives": [
-    {
-      "profileId": "census-amour-ruth-poopy",
-      "platform": "TikTok",
-      "roomId": "7682534869813660424",
-      "title": "",
-      "viewers": 148,
-      "startedAt": "2026-09-06 21:19:27",
-      "handle": "amourruth0"
-    },
-    {
-      "profileId": "census-bb-sans-os-de-man",
-      "platform": "TikTok",
-      "roomId": "7682548142626589461",
-      "title": "",
-      "viewers": 1669,
-      "startedAt": "2026-09-06 22:10:52",
-      "handle": "bebe.sans.os.de.m"
-    },
-    {
-      "profileId": "census-madame-koffi",
-      "platform": "TikTok",
-      "roomId": "7682541664862260001",
-      "title": "Ça va?",
-      "viewers": 118,
-      "startedAt": null,
-      "handle": "madamekofii"
-    },
-    {
-      "profileId": "census-souley-de-paris",
-      "platform": "TikTok",
-      "roomId": "7682521121714916129",
-      "title": "SOULEY DE-PARIS 🦅 B-52",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "souleydeparis"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7682558252118969120",
-      "title": "",
-      "viewers": 675,
-      "startedAt": "2026-09-06 22:51:12",
-      "handle": "dezcocrane.225"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 5,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-amour-ruth-poopy",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-bb-sans-os-de-man",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-madame-koffi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-souley-de-paris",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 24
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
