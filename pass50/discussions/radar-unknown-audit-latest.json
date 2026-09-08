@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-07 23:34 UTC",
+  "at": "2026-09-08 04:48 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7682905552142666529",
-      "title": "",
-      "viewers": 9237,
-      "startedAt": "2026-09-07 21:18:30",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "census-no-limit",
-      "platform": "TikTok",
-      "roomId": "7682919839874157329",
-      "title": "",
-      "viewers": 1364,
-      "startedAt": "2026-09-07 22:13:14",
-      "handle": "nolimit_vousdv"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7682900234162162464",
-      "title": "",
-      "viewers": 227,
-      "startedAt": "2026-09-07 20:57:44",
-      "handle": "dezcocrane.225"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-no-limit",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 24
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
