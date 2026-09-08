@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-08 23:27 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-jordan-evraa` @realjordanevraa — AFRO FEST 2026 · 272 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7683234929244654369 · 946 viewers
+- TikTok `holy` @holysheilla — Je suis à Babi 🇨🇮❤️ · 164 viewers
+
 ### 2026-09-08 21:15 UTC
 
 - Unknown sondés : **200**
@@ -422,14 +434,3 @@ Nouveaux P0 :
 Vraiment en live :
 - TikTok `aya-robert` @aya.robert27 — 7680324194001505056 · 1481 viewers
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7680327342052444960 · 1621 viewers
-
-### 2026-08-31 20:52 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7680300712722516769 · 677 viewers
-- TikTok `tma` @tmacrush_officiel — 7680283999134747399 · 3898 viewers

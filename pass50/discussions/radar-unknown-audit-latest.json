@@ -1,53 +1,44 @@
 {
-  "at": "2026-09-08 21:15 UTC",
+  "at": "2026-09-08 23:27 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
+  "liveCount": 3,
   "lives": [
     {
-      "profileId": "apoutchou",
+      "profileId": "census-jordan-evraa",
       "platform": "TikTok",
-      "roomId": "7683272528971008801",
-      "title": "",
-      "viewers": 19143,
-      "startedAt": "2026-09-08 21:02:33",
-      "handle": "apoutchou_national1"
+      "roomId": "7683280907549100831",
+      "title": "AFRO FEST 2026",
+      "viewers": 272,
+      "startedAt": "2026-09-08 21:35:31",
+      "handle": "realjordanevraa"
     },
     {
       "profileId": "dez-cocrane225",
       "platform": "TikTok",
       "roomId": "7683234929244654369",
       "title": "",
-      "viewers": 1172,
+      "viewers": 946,
       "startedAt": "2026-09-08 18:36:18",
       "handle": "dezcocrane.225"
     },
     {
-      "profileId": "general-camille-makosso",
+      "profileId": "holy",
       "platform": "TikTok",
-      "roomId": "7683273843112905479",
-      "title": "",
-      "viewers": 19913,
-      "startedAt": "2026-09-08 21:07:01",
-      "handle": "generalmakossocamille79"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7683262653678111521",
-      "title": "Lets Go LIVE!",
-      "viewers": 1409,
-      "startedAt": "2026-09-08 20:24:03",
-      "handle": "oustazdianeofficiel1"
+      "roomId": "7683299990248196887",
+      "title": "Je suis à Babi 🇨🇮❤️",
+      "viewers": 164,
+      "startedAt": "2026-09-08 22:48:55",
+      "handle": "holysheilla"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 4,
+    "published": 3,
     "added": [],
     "stored": [
       {
-        "profileId": "apoutchou",
+        "profileId": "census-jordan-evraa",
         "platform": "TikTok"
       },
       {
@@ -55,11 +46,7 @@
         "platform": "TikTok"
       },
       {
-        "profileId": "general-camille-makosso",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
+        "profileId": "holy",
         "platform": "TikTok"
       }
     ],
