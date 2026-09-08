@@ -1,44 +1,70 @@
 {
-  "at": "2026-09-08 16:43 UTC",
+  "at": "2026-09-08 21:15 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
+  "liveCount": 4,
   "lives": [
     {
-      "profileId": "census-willway-jordan-officiel",
+      "profileId": "apoutchou",
       "platform": "TikTok",
-      "roomId": "7683166993213655830",
-      "title": "Willway  Jordan officiel",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "jack.carter39"
+      "roomId": "7683272528971008801",
+      "title": "",
+      "viewers": 19143,
+      "startedAt": "2026-09-08 21:02:33",
+      "handle": "apoutchou_national1"
     },
     {
-      "profileId": "hamondchic",
+      "profileId": "dez-cocrane225",
       "platform": "TikTok",
-      "roomId": "7683158910764583702",
-      "title": "Allô y…goss",
-      "viewers": 15129,
-      "startedAt": "2026-09-08 13:41:16",
-      "handle": "coachhamond"
+      "roomId": "7683234929244654369",
+      "title": "",
+      "viewers": 1172,
+      "startedAt": "2026-09-08 18:36:18",
+      "handle": "dezcocrane.225"
+    },
+    {
+      "profileId": "general-camille-makosso",
+      "platform": "TikTok",
+      "roomId": "7683273843112905479",
+      "title": "",
+      "viewers": 19913,
+      "startedAt": "2026-09-08 21:07:01",
+      "handle": "generalmakossocamille79"
+    },
+    {
+      "profileId": "oustaz-diane",
+      "platform": "TikTok",
+      "roomId": "7683262653678111521",
+      "title": "Lets Go LIVE!",
+      "viewers": 1409,
+      "startedAt": "2026-09-08 20:24:03",
+      "handle": "oustazdianeofficiel1"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 2,
+    "published": 4,
     "added": [],
     "stored": [
       {
-        "profileId": "census-willway-jordan-officiel",
+        "profileId": "apoutchou",
         "platform": "TikTok"
       },
       {
-        "profileId": "hamondchic",
+        "profileId": "dez-cocrane225",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "general-camille-makosso",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "oustaz-diane",
         "platform": "TikTok"
       }
     ],
     "skipped": [],
-    "p0Count": 24
+    "p0Count": 25
   },
   "enabled": true,
   "error": null
