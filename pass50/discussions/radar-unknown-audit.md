@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-09 21:00 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7683598218806577952 · 919 viewers
+- TikTok `general-camille-makosso` @generalmakossocamille79 — 7683632383335058183 · 39030 viewers
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 1554 viewers
+
 ### 2026-09-09 16:45 UTC
 
 - Unknown sondés : **200**
@@ -414,14 +426,3 @@ Vraiment en live :
 - TikTok `apoutchou` @apoutchou_national1 — 7680687241416559393 · 15979 viewers
 - TikTok `census-amour-ruth-poopy` @amourruth0 — 7680689268627114760 · 136 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
-
-### 2026-09-01 18:37 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `hassan` @hassanhayekofficiel — Pkoi les hommes fuient grossesse · 321 viewers
-- TikTok `lolo-beaute` @lolobeaute85 — 7680630436737485601 · 444 viewers
