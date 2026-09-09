@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-09 16:45 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-09 11:32 UTC
 
 - Unknown sondés : **200**
@@ -417,17 +425,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `hassan` @hassanhayekofficiel — Pkoi les hommes fuient grossesse · 321 viewers
 - TikTok `lolo-beaute` @lolobeaute85 — 7680630436737485601 · 444 viewers
-
-### 2026-09-01 14:11 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **1**
-
-Vraiment en live :
-- TikTok `census-cahie-kunta` @cahiekunta — 7680564045808454420 · 156 viewers
-- TikTok `p_1786797024293` @professeurdelarue79 — BONNE RENTRÉE SCOLAIRE · 386 viewers
-
-Nouveaux P0 :
-- TikTok `p_1786797024293`
