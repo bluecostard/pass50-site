@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-10 16:31 UTC",
+  "at": "2026-09-10 20:56 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "dez-cocrane225",
+      "platform": "TikTok",
+      "roomId": "7683958867952290592",
+      "title": "",
+      "viewers": 809,
+      "startedAt": "2026-09-10 17:25:58",
+      "handle": "dezcocrane.225"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "dez-cocrane225",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 25
+  },
   "enabled": true,
   "error": null
 }
