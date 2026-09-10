@@ -11,6 +11,20 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-10 23:14 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **5**
+- Publiés radar : **5**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-dezouch-officiel` @dezouch_officiel — Je recherche une fille célib · 87 viewers
+- TikTok `census-no-limit` @nolimit_vousdv — 7684030655721769745 · 1061 viewers
+- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7684043252927875873 · 914 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7683958867952290592 · 827 viewers
+- TikTok `general-camille-makosso` @generalmakossocamille79 — 7684035374268336903 · 22762 viewers
+
 ### 2026-09-10 20:56 UTC
 
 - Unknown sondés : **200**
@@ -419,14 +433,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-02 23:22 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7681067525320248097 · 2582 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
