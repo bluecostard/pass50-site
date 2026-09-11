@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-11 23:20 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7684417294172293921 · 1558 viewers
+- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7684392329741962016 · 1022 viewers
+
 ### 2026-09-11 21:03 UTC
 
 - Unknown sondés : **200**
@@ -413,19 +425,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-03 23:19 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **1**
-
-Vraiment en live :
-- TikTok `census-amour-ruth-poopy` @amourruth0 — 7681417957339122440 · 68 viewers
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7681441180793555745 · 1136 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7681414094015990561 · 894 viewers
-- TikTok `laura-ziehi` @laurateresaziehi — Laura Ziehi
-
-Nouveaux P0 :
-- TikTok `laura-ziehi`
