@@ -143,7 +143,7 @@ class MetricsOrchestratorV1Tests(unittest.TestCase):
 
     def test_workflows_are_bounded_and_do_not_publish(self):
         expected = {
-            "metrics-priority-15m.yml": ("*/15 * * * *", "timeout-minutes: 15", "p0"),
+            "metrics-priority-15m.yml": ("7,22,37,52 * * * *", "timeout-minutes: 15", "p0"),
             "metrics-top50-2h.yml": ("7 */2 * * *", "timeout-minutes: 75", "p1"),
             "metrics-census-12h.yml": ("23 */12 * * *", "timeout-minutes: 120", "p2"),
         }
