@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-11 23:20 UTC",
+  "at": "2026-09-12 04:43 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7684417294172293921",
-      "title": "",
-      "viewers": 1558,
-      "startedAt": "2026-09-11 23:05:13",
-      "handle": "samuellakouassiofficiel"
-    },
-    {
-      "profileId": "census-souley-de-paris",
-      "platform": "TikTok",
-      "roomId": "7684404569945819937",
-      "title": "SOULEY DE-PARIS 🦅 B-52",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "souleydeparis"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7684392329741962016",
-      "title": "",
-      "viewers": 1022,
-      "startedAt": "2026-09-11 21:27:42",
-      "handle": "dezcocrane.225"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-souley-de-paris",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 25
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

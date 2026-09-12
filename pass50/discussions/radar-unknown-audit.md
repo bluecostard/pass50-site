@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-12 04:43 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-11 23:20 UTC
 
 - Unknown sondés : **200**
@@ -417,11 +425,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `african-ryou` @african_ryou_officiel — 7681634835634391829 · 1200 viewers
-
-### 2026-09-04 04:42 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
