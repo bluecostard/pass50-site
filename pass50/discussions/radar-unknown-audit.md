@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-12 15:37 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `hassan` @hassanhayekofficiel — 7684649468965423892 · 719 viewers
+
 ### 2026-09-12 10:55 UTC
 
 - Unknown sondés : **200**
@@ -410,16 +420,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-04 16:27 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7681702018972486433 · 275 viewers
-- TikTok `hamondchic` @coachhamond — C’est pour poser question · 16502 viewers
-- TikTok `hassan` @hassanhayekofficiel — Pkoi les hommes fuient grossesse · 453 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 469 viewers
