@@ -1,44 +1,53 @@
 {
-  "at": "2026-09-12 20:39 UTC",
+  "at": "2026-09-12 23:05 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 4,
   "lives": [
     {
-      "profileId": "census-madame-koffi",
+      "profileId": "apoutchou",
       "platform": "TikTok",
-      "roomId": "7684747436486658848",
-      "title": "Ça va?",
-      "viewers": 4,
-      "startedAt": null,
-      "handle": "madamekofii"
+      "roomId": "7684760229816421152",
+      "title": "",
+      "viewers": 12173,
+      "startedAt": "2026-09-12 21:15:16",
+      "handle": "apoutchou_national1"
     },
     {
       "profileId": "dez-cocrane225",
       "platform": "TikTok",
       "roomId": "7684716259614706464",
       "title": "",
-      "viewers": 502,
+      "viewers": 427,
       "startedAt": "2026-09-12 18:24:35",
       "handle": "dezcocrane.225"
     },
     {
-      "profileId": "holy",
+      "profileId": "p_1785175190809",
       "platform": "TikTok",
-      "roomId": "7684743550022191894",
-      "title": "Je suis à Babi 🇨🇮❤️",
-      "viewers": 217,
-      "startedAt": "2026-09-12 20:10:11",
-      "handle": "holysheilla"
+      "roomId": "7684783126741551880",
+      "title": "",
+      "viewers": 5079,
+      "startedAt": "2026-09-12 22:43:58",
+      "handle": "ulrich_jordan30"
+    },
+    {
+      "profileId": "tma",
+      "platform": "TikTok",
+      "roomId": "7684757204385876743",
+      "title": "",
+      "viewers": 404,
+      "startedAt": "2026-09-12 21:03:14",
+      "handle": "tmacrush_officiel"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 4,
     "added": [],
     "stored": [
       {
-        "profileId": "census-madame-koffi",
+        "profileId": "apoutchou",
         "platform": "TikTok"
       },
       {
@@ -46,7 +55,11 @@
         "platform": "TikTok"
       },
       {
-        "profileId": "holy",
+        "profileId": "p_1785175190809",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "tma",
         "platform": "TikTok"
       }
     ],
