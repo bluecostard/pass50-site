@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-12 20:39 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-madame-koffi` @madamekofii — Ça va? · 4 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7684716259614706464 · 502 viewers
+- TikTok `holy` @holysheilla — Je suis à Babi 🇨🇮❤️ · 217 viewers
+
 ### 2026-09-12 15:37 UTC
 
 - Unknown sondés : **200**
@@ -412,11 +424,3 @@ Vraiment en live :
 - TikTok `census-segano-et-mael` @seganoofficiel2.0 — 7681816883305237280 · 3022 viewers
 - TikTok `holy` @holysheilla — Holy Sheilla · 1 viewers
 - TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 1814 viewers
-
-### 2026-09-04 20:50 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.

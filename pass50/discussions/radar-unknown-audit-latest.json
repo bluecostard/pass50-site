@@ -1,26 +1,52 @@
 {
-  "at": "2026-09-12 15:37 UTC",
+  "at": "2026-09-12 20:39 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 3,
   "lives": [
     {
-      "profileId": "hassan",
+      "profileId": "census-madame-koffi",
       "platform": "TikTok",
-      "roomId": "7684649468965423892",
+      "roomId": "7684747436486658848",
+      "title": "Ça va?",
+      "viewers": 4,
+      "startedAt": null,
+      "handle": "madamekofii"
+    },
+    {
+      "profileId": "dez-cocrane225",
+      "platform": "TikTok",
+      "roomId": "7684716259614706464",
       "title": "",
-      "viewers": 719,
-      "startedAt": "2026-09-12 14:04:50",
-      "handle": "hassanhayekofficiel"
+      "viewers": 502,
+      "startedAt": "2026-09-12 18:24:35",
+      "handle": "dezcocrane.225"
+    },
+    {
+      "profileId": "holy",
+      "platform": "TikTok",
+      "roomId": "7684743550022191894",
+      "title": "Je suis à Babi 🇨🇮❤️",
+      "viewers": 217,
+      "startedAt": "2026-09-12 20:10:11",
+      "handle": "holysheilla"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
+    "published": 3,
     "added": [],
     "stored": [
       {
-        "profileId": "hassan",
+        "profileId": "census-madame-koffi",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "dez-cocrane225",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "holy",
         "platform": "TikTok"
       }
     ],
