@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-13 20:55 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `general-camille-makosso` @generalmakossocamille79 — ‼️ARRESTATION ILLÉGALE DE JP‼️ · 9874 viewers
+- TikTok `tma` @tmacrush_officiel — 7685083879351798536 · 328 viewers
+
 ### 2026-09-13 16:26 UTC
 
 - Unknown sondés : **200**
@@ -410,15 +421,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `census-gaelle-taglao` @gaelletaglao02 — 7682150121391328001 · 1384 viewers
 - TikTok `lolo-beaute` @lolobeaute85 — 7682149396233980704 · 583 viewers
-
-### 2026-09-05 17:25 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-madame-koffi` @madamekofii — Ça va? · 11 viewers
-- TikTok `hassan` @hassanhayekofficiel — Pkoi les hommes fuient grossesse · 480 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 443 viewers

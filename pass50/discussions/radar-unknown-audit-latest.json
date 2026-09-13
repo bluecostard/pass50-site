@@ -1,52 +1,39 @@
 {
-  "at": "2026-09-13 16:26 UTC",
+  "at": "2026-09-13 20:55 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-willway-jordan-officiel",
+      "profileId": "general-camille-makosso",
       "platform": "TikTok",
-      "roomId": "7685047610662685463",
-      "title": "Causerie amicale du Dimanche",
-      "viewers": 180,
-      "startedAt": "2026-09-13 15:50:16",
-      "handle": "jack.carter39"
+      "roomId": "7685118184106298120",
+      "title": "‼️ARRESTATION ILLÉGALE DE JP‼️",
+      "viewers": 9874,
+      "startedAt": "2026-09-13 20:23:59",
+      "handle": "generalmakossocamille79"
     },
     {
-      "profileId": "hassan",
+      "profileId": "tma",
       "platform": "TikTok",
-      "roomId": "7685056904179632917",
-      "title": "yann diomande",
-      "viewers": 95,
-      "startedAt": "2026-09-13 16:25:58",
-      "handle": "hassanhayekofficiel"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7685056167357975318",
-      "title": "Lets Go LIVE!",
-      "viewers": 378,
-      "startedAt": "2026-09-13 16:23:22",
-      "handle": "oustazdianeofficiel1"
+      "roomId": "7685083879351798536",
+      "title": "",
+      "viewers": 328,
+      "startedAt": "2026-09-13 18:10:52",
+      "handle": "tmacrush_officiel"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 2,
     "added": [],
     "stored": [
       {
-        "profileId": "census-willway-jordan-officiel",
+        "profileId": "general-camille-makosso",
         "platform": "TikTok"
       },
       {
-        "profileId": "hassan",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
+        "profileId": "tma",
         "platform": "TikTok"
       }
     ],
