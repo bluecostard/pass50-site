@@ -1,71 +1,9 @@
 {
-  "at": "2026-09-12 23:05 UTC",
+  "at": "2026-09-13 04:57 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7684760229816421152",
-      "title": "",
-      "viewers": 12173,
-      "startedAt": "2026-09-12 21:15:16",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7684716259614706464",
-      "title": "",
-      "viewers": 427,
-      "startedAt": "2026-09-12 18:24:35",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "p_1785175190809",
-      "platform": "TikTok",
-      "roomId": "7684783126741551880",
-      "title": "",
-      "viewers": 5079,
-      "startedAt": "2026-09-12 22:43:58",
-      "handle": "ulrich_jordan30"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7684757204385876743",
-      "title": "",
-      "viewers": 404,
-      "startedAt": "2026-09-12 21:03:14",
-      "handle": "tmacrush_officiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 4,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "p_1785175190809",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 25
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
