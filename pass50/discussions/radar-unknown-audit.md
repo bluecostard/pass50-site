@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-13 16:26 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-willway-jordan-officiel` @jack.carter39 — Causerie amicale du Dimanche · 180 viewers
+- TikTok `hassan` @hassanhayekofficiel — yann diomande · 95 viewers
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 378 viewers
+
 ### 2026-09-13 12:01 UTC
 
 - Unknown sondés : **200**
@@ -410,14 +422,3 @@ Vraiment en live :
 - TikTok `census-madame-koffi` @madamekofii — Ça va? · 11 viewers
 - TikTok `hassan` @hassanhayekofficiel — Pkoi les hommes fuient grossesse · 480 viewers
 - TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 443 viewers
-
-### 2026-09-05 15:20 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-rosemark-marcel` @rosemarkmarcel — 7682062744933894933 · 1685 viewers
-- TikTok `census-stephane-galactik` @le_coach_des_debout — 7682067414636989205 · 92 viewers
