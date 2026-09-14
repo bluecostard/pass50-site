@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-14 19:52 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `tma` @tmacrush_officiel — 7685480723121589000 · 686 viewers
+
 ### 2026-09-14 13:00 UTC
 
 - Unknown sondés : **200**
@@ -411,13 +421,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `holy` @holysheilla — Je suis à Babi 🇨🇮❤️ · 415 viewers
-
-### 2026-09-06 11:05 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-awao-officiel` @influamenta1 — 7682357681361455892 · 688 viewers

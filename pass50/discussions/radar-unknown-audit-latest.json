@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-14 13:00 UTC",
+  "at": "2026-09-14 19:52 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "tma",
+      "platform": "TikTok",
+      "roomId": "7685480723121589000",
+      "title": "",
+      "viewers": 686,
+      "startedAt": "2026-09-14 19:50:51",
+      "handle": "tmacrush_officiel"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "tma",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 26
+  },
   "enabled": true,
   "error": null
 }
