@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-14 13:00 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-14 05:06 UTC
 
 - Unknown sondés : **200**
@@ -413,11 +421,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-awao-officiel` @influamenta1 — 7682357681361455892 · 688 viewers
-
-### 2026-09-06 04:48 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
