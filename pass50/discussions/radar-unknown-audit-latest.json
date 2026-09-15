@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-14 23:53 UTC",
+  "at": "2026-09-15 05:01 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7685528308636764960",
-      "title": "",
-      "viewers": 1165,
-      "startedAt": "2026-09-14 22:57:01",
-      "handle": "samuellakouassiofficiel"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7685489605323344673",
-      "title": "",
-      "viewers": 240,
-      "startedAt": "2026-09-14 20:25:51",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7685480723121589000",
-      "title": "",
-      "viewers": 464,
-      "startedAt": "2026-09-14 19:50:51",
-      "handle": "tmacrush_officiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 26
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

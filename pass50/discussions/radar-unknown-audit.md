@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-15 05:01 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-14 23:53 UTC
 
 - Unknown sondés : **200**
@@ -411,15 +419,3 @@ Vraiment en live :
 - TikTok `census-madame-koffi` @madamekofii — Ça va? · 118 viewers
 - TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7682558252118969120 · 675 viewers
-
-### 2026-09-06 20:29 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
-- TikTok `ismael-aka` @ismael.aka.ddr — 7682500159691508502 · 976 viewers
-- TikTok `lolo-beaute` @lolobeaute85 — 7682520657674832672 · 770 viewers
