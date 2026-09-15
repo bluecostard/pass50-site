@@ -35,6 +35,7 @@ async function dismiss(button){
     await apiFetch('live-dismiss.php',{method:'POST',body:{profileId,platform,url}});
     if(Array.isArray(db?.liveStreams))db.liveStreams=db.liveStreams.filter(item=>!(String(item.profileId)===profileId&&String(item.platform)===platform&&item?.status==='live'));
     try{localStorage.setItem(APP_KEY,JSON.stringify(db))}catch{}
+    if(typeof refreshLiveStatus==='function')await refreshLiveStatus();
     if(typeof normalizeLiveStreams==='function')normalizeLiveStreams();
     if(typeof render==='function')render();
     if(typeof renderAdminPane==='function')renderAdminPane();

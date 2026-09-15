@@ -4,14 +4,17 @@ declare(strict_types=1);
 const P50_LIVE_V4_LOGIC_REVISION = 'LIVE-STRICT-PUBLISH-2026-08-11-1';
 /** Fenêtre pour classer un candidat (probable) — ne publie plus à elle seule. */
 const P50_LIVE_V4_TIKTOK_FRESH_ROOM_SECONDS = 3600;
-const P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS = ['TOa6dTjz7V0'];
+const P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS = ['TOa6dTjz7V0', 'IhiWA0vAeVo'];
 /** TikTok webcast status=2 persistant alors que le créateur n'est plus en direct. */
 const P50_LIVE_V4_FALSE_POSITIVE_TIKTOK_PROFILES = ['census-isouch'];
+/** YouTube : chaîne mal reliée ou live étranger détecté par erreur. */
+const P50_LIVE_V4_FALSE_POSITIVE_YOUTUBE_PROFILES = ['census-stoni'];
 
 function p50_live_v4_known_false_positive(array $live): bool {
     $profileId=trim((string)($live['profileId']??''));
     $platform=(string)($live['platform']??'');
     if(strcasecmp($platform,'TikTok')===0&&in_array($profileId,P50_LIVE_V4_FALSE_POSITIVE_TIKTOK_PROFILES,true))return true;
+    if(strcasecmp($platform,'YouTube')===0&&in_array($profileId,P50_LIVE_V4_FALSE_POSITIVE_YOUTUBE_PROFILES,true))return true;
     if(strcasecmp($platform,'YouTube')!==0)return false;
     $videoId=trim((string)($live['videoId']??($live['metadata']['videoId']??'')));
     if($videoId==='')$videoId=p50_live_v4_video_id((string)($live['url']??''));
@@ -130,6 +133,8 @@ function p50_live_v4_parse_youtube(array $source,array $responses): array {
     if($title==='')$title='Direct YouTube en cours';$started=null;
     if(preg_match('/"startTimestamp"\s*:\s*"([^"]+)"/',$html,$m)){try{$started=(new DateTimeImmutable(p50_live_v4_unescape($m[1])))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');}catch(Throwable){}}
     $thumb=(string)($meta['image']??'');if($thumb===''&&$videoId!=='')$thumb='https://i.ytimg.com/vi/'.rawurlencode($videoId).'/hqdefault.jpg';
+    $liveCandidate=['profileId'=>(string)$source['profile_id'],'platform'=>'YouTube','url'=>$url,'videoId'=>$videoId];
+    if(p50_live_v4_known_false_positive($liveCandidate))return ['state'=>'replay','error'=>'known_false_positive','confidence'=>100,'responseMs'=>$maxMs,'replay'=>['url'=>$url,'videoId'=>$videoId,'title'=>$title]];
     return ['state'=>'live','confidence'=>99,'responseMs'=>$maxMs,'live'=>['profileId'=>(string)$source['profile_id'],'platform'=>'YouTube','title'=>$title,'url'=>$url,'thumbnail'=>$thumb,'confidence'=>99,'startedAt'=>$started,'viewers'=>p50_live_v4_viewers($html),'metadata'=>['channelUrl'=>(string)$source['url'],'videoId'=>$videoId,'probe'=>'channel_live','liveSignal'=>'isLiveNow']]];
 }
 
