@@ -346,7 +346,21 @@ function p50_de_sync_registry_from_state(): int {
         $stmt->execute($payload);
         $count++;
     }
+    p50_de_set_setting('registry_last_sync_at', gmdate(DATE_ATOM));
     return $count;
+}
+
+/** Évite de resynchroniser ~1000 profils à chaque scan radar / lecture hub. */
+function p50_de_sync_registry_if_stale(int $maxAgeSeconds = 300, bool $force = false): int {
+    $maxAgeSeconds = max(30, $maxAgeSeconds);
+    if (!$force) {
+        $last = trim((string)p50_de_get_setting('registry_last_sync_at', ''));
+        if ($last !== '') {
+            $lastTs = strtotime($last) ?: 0;
+            if ($lastTs > 0 && (time() - $lastTs) < $maxAgeSeconds) return 0;
+        }
+    }
+    return p50_de_sync_registry_from_state();
 }
 
 function p50_de_registry_profiles(?string $profileId = null, int $limit = 1000, int $offset = 0, bool $eligibleOnly = false): array {
@@ -2180,9 +2194,9 @@ function p50_de_hub_trend_candidate(array $stateProfile): array {
     return ['score'=>0,'classable'=>false,'events'=>0,'stale'=>true];
 }
 
-function p50_de_hub_payload(): array {
+function p50_de_hub_payload(bool $forceRegistrySync = false): array {
     p50_de_ensure_schema();
-    p50_de_sync_registry_from_state();
+    p50_de_sync_registry_if_stale(300, $forceRegistrySync);
     $state=p50_de_load_public_state();$stateMap=p50_de_profile_state_map($state);
     $registry=p50_de_registry_profiles(null,1000,0,false);
     $profileIds=array_values(array_map(static fn(array $r): string => (string)$r['profile_id'],$registry));

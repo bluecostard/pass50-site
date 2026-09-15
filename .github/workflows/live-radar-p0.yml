@@ -10,7 +10,8 @@ name: PASS50 Live Radar P0
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    # Décalé :00 pour ne pas empiler les 4 jobs radar sur la même minute.
+    - cron: '0,5,10,15,20,25,30,35,40,45,50,55 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
