@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-15 05:01 UTC",
+  "at": "2026-09-15 11:52 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "oustaz-diane",
+      "platform": "TikTok",
+      "roomId": "7685713987322071840",
+      "title": "Lets Go LIVE!",
+      "viewers": 2016,
+      "startedAt": "2026-09-15 10:57:16",
+      "handle": "oustazdianeofficiel1"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "oustaz-diane",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 26
+  },
   "enabled": true,
   "error": null
 }
