@@ -1,16 +1,16 @@
 {
-  "at": "2026-09-15 11:52 UTC",
+  "at": "2026-09-15 17:07 UTC",
   "unknownCount": 200,
   "liveCount": 1,
   "lives": [
     {
-      "profileId": "oustaz-diane",
+      "profileId": "census-souley-de-paris",
       "platform": "TikTok",
-      "roomId": "7685713987322071840",
-      "title": "Lets Go LIVE!",
-      "viewers": 2016,
-      "startedAt": "2026-09-15 10:57:16",
-      "handle": "oustazdianeofficiel1"
+      "roomId": "7685788321569590049",
+      "title": "SOULEY DE-PARIS 🦅 B-52",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "souleydeparis"
     }
   ],
   "posted": {
@@ -20,7 +20,7 @@
     "added": [],
     "stored": [
       {
-        "profileId": "oustaz-diane",
+        "profileId": "census-souley-de-paris",
         "platform": "TikTok"
       }
     ],
