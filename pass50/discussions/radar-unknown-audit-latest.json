@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-16 04:57 UTC",
+  "at": "2026-09-16 11:47 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "lolo-beaute",
+      "platform": "TikTok",
+      "roomId": "7686065205733821217",
+      "title": "Lolo beauté🔥",
+      "viewers": 312,
+      "startedAt": null,
+      "handle": "lolobeaute85"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "lolo-beaute",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 27
+  },
   "enabled": true,
   "error": null
 }
