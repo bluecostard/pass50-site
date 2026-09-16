@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-15 21:28 UTC",
+  "at": "2026-09-16 04:57 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "african-ryou",
-      "platform": "TikTok",
-      "roomId": "7685873983418321684",
-      "title": "",
-      "viewers": 251,
-      "startedAt": "2026-09-15 21:16:47",
-      "handle": "african_ryou_officiel"
-    },
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7685870762549054240",
-      "title": "",
-      "viewers": 18322,
-      "startedAt": "2026-09-15 21:05:39",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "census-amour-ruth-poopy",
-      "platform": "TikTok",
-      "roomId": "7685876775460801287",
-      "title": "",
-      "viewers": 7,
-      "startedAt": "2026-09-15 21:27:50",
-      "handle": "amourruth0"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "african-ryou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-amour-ruth-poopy",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 27
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
