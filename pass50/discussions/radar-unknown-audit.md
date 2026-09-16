@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-16 17:07 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7686167062381202208 · 1965 viewers
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 1200 viewers
+
 ### 2026-09-16 11:47 UTC
 
 - Unknown sondés : **200**
@@ -408,11 +419,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-le-grand-bicongo` @legrandbicongo — 7683119795557976833 · 262 viewers
-
-### 2026-09-08 04:48 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
