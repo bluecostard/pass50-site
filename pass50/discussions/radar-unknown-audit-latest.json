@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-16 21:24 UTC",
+  "at": "2026-09-17 04:59 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7686243043288746785",
-      "title": "",
-      "viewers": 12885,
-      "startedAt": "2026-09-16 21:10:04",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7686227729645751072",
-      "title": "",
-      "viewers": 400,
-      "startedAt": "2026-09-16 20:10:02",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "lolo-beaute",
-      "platform": "TikTok",
-      "roomId": "7686204071195904801",
-      "title": "Lolo beauté🔥",
-      "viewers": 468,
-      "startedAt": null,
-      "handle": "lolobeaute85"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "lolo-beaute",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 27
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
