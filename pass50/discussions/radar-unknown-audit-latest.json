@@ -1,9 +1,45 @@
 {
-  "at": "2026-09-17 11:50 UTC",
+  "at": "2026-09-17 17:07 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "census-dezouch-officiel",
+      "platform": "TikTok",
+      "roomId": "7686539558034000647",
+      "title": "Je recherche une fille célib ❤️",
+      "viewers": 58,
+      "startedAt": "2026-09-17 16:19:43",
+      "handle": "dezouch_officiel"
+    },
+    {
+      "profileId": "hassan",
+      "platform": "TikTok",
+      "roomId": "7686547234446002964",
+      "title": "",
+      "viewers": 682,
+      "startedAt": "2026-09-17 16:50:18",
+      "handle": "hassanhayekofficiel"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-dezouch-officiel",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "hassan",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 27
+  },
   "enabled": true,
   "error": null
 }

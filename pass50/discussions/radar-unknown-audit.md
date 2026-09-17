@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-17 17:07 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-dezouch-officiel` @dezouch_officiel — Je recherche une fille célib ❤️ · 58 viewers
+- TikTok `hassan` @hassanhayekofficiel — 7686547234446002964 · 682 viewers
+
 ### 2026-09-17 11:50 UTC
 
 - Unknown sondés : **200**
@@ -401,15 +412,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-08 23:27 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-jordan-evraa` @realjordanevraa — AFRO FEST 2026 · 272 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7683234929244654369 · 946 viewers
-- TikTok `holy` @holysheilla — Je suis à Babi 🇨🇮❤️ · 164 viewers
