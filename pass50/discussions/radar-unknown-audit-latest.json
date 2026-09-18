@@ -1,26 +1,52 @@
 {
-  "at": "2026-09-18 11:26 UTC",
+  "at": "2026-09-18 16:32 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 3,
   "lives": [
     {
-      "profileId": "general-camille-makosso",
+      "profileId": "census-gaelle-taglao",
       "platform": "TikTok",
-      "roomId": "7686824156331100936",
+      "roomId": "7686907864318659344",
       "title": "",
-      "viewers": 3055,
-      "startedAt": "2026-09-18 10:44:21",
-      "handle": "generalmakossocamille79"
+      "viewers": 660,
+      "startedAt": "2026-09-18 16:08:39",
+      "handle": "gaelletaglao02"
+    },
+    {
+      "profileId": "hamondchic",
+      "platform": "TikTok",
+      "roomId": "7686868731091503894",
+      "title": "",
+      "viewers": 21109,
+      "startedAt": "2026-09-18 13:37:18",
+      "handle": "coachhamond"
+    },
+    {
+      "profileId": "lolo-beaute",
+      "platform": "TikTok",
+      "roomId": "7686910380262198049",
+      "title": "Lolo beauté🔥",
+      "viewers": 246,
+      "startedAt": null,
+      "handle": "lolobeaute85"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
+    "published": 3,
     "added": [],
     "stored": [
       {
-        "profileId": "general-camille-makosso",
+        "profileId": "census-gaelle-taglao",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "hamondchic",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "lolo-beaute",
         "platform": "TikTok"
       }
     ],
