@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-18 20:59 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-18 16:32 UTC
 
 - Unknown sondés : **200**
@@ -400,21 +408,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-09 23:20 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **9**
-- Publiés radar : **9**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `apoutchou` @apoutchou_national1 — 7683644021710129953 · 10248 viewers
-- TikTok `census-joshua-cooker` @paaa.persil — 7683678408504576775 · 5156 viewers
-- TikTok `census-no-limit` @nolimit_vousdv — 7683665834161507073 · 1171 viewers
-- TikTok `census-rach-makosso` @rach_makosso1 — 7683656718563592993 · 417 viewers
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7683675193432804128 · 1241 viewers
-- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7683598218806577952 · 1154 viewers
-- TikTok `general-camille-makosso` @generalmakossocamille79 — 7683665273337563922 · 43255 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 1732 viewers
