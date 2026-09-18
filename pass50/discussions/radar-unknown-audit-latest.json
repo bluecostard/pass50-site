@@ -1,9 +1,71 @@
 {
-  "at": "2026-09-18 20:59 UTC",
+  "at": "2026-09-18 23:22 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 4,
+  "lives": [
+    {
+      "profileId": "apoutchou",
+      "platform": "TikTok",
+      "roomId": "7686985158855019297",
+      "title": "",
+      "viewers": 10479,
+      "startedAt": "2026-09-18 21:09:23",
+      "handle": "apoutchou_national1"
+    },
+    {
+      "profileId": "census-amour-ruth-poopy",
+      "platform": "TikTok",
+      "roomId": "7687001500387691272",
+      "title": "",
+      "viewers": 107,
+      "startedAt": "2026-09-18 22:12:33",
+      "handle": "amourruth0"
+    },
+    {
+      "profileId": "census-guyguy-le-grouilleur-de-bologne",
+      "platform": "TikTok",
+      "roomId": "7686989280038374152",
+      "title": "la vie est très simple",
+      "viewers": 669,
+      "startedAt": "2026-09-18 21:25:34",
+      "handle": "guyguylegrouilleur07"
+    },
+    {
+      "profileId": "census-souley-de-paris",
+      "platform": "TikTok",
+      "roomId": "7687017541743774497",
+      "title": "SOULEY DE-PARIS 🦅 B-52",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "souleydeparis"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 4,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "apoutchou",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-amour-ruth-poopy",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-guyguy-le-grouilleur-de-bologne",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-souley-de-paris",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 27
+  },
   "enabled": true,
   "error": null
 }
