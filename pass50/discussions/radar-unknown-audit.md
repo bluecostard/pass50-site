@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-19 11:10 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-19 04:44 UTC
 
 - Unknown sondés : **200**
@@ -403,11 +411,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7683958867952290592 · 809 viewers
-
-### 2026-09-10 16:31 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
