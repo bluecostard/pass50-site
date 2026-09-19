@@ -11,6 +11,20 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-19 15:57 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **1**
+
+Vraiment en live :
+- TikTok `hassan` @hassanhayekofficiel — L’infestation · 1217 viewers
+- TikTok `teknoush` @teknoushhh — Dr. Love ♥️ · 1159 viewers
+
+Nouveaux P0 :
+- TikTok `teknoush`
+
 ### 2026-09-19 11:10 UTC
 
 - Unknown sondés : **200**
@@ -401,13 +415,3 @@ Vraiment en live :
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7684043252927875873 · 914 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7683958867952290592 · 827 viewers
 - TikTok `general-camille-makosso` @generalmakossocamille79 — 7684035374268336903 · 22762 viewers
-
-### 2026-09-10 20:56 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7683958867952290592 · 809 viewers
