@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-19 20:49 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7687325727921949472 · 383 viewers
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 1764 viewers
+
 ### 2026-09-19 15:57 UTC
 
 - Unknown sondés : **200**
@@ -401,17 +413,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-10 23:14 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **5**
-- Publiés radar : **5**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-dezouch-officiel` @dezouch_officiel — Je recherche une fille célib · 87 viewers
-- TikTok `census-no-limit` @nolimit_vousdv — 7684030655721769745 · 1061 viewers
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7684043252927875873 · 914 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7683958867952290592 · 827 viewers
-- TikTok `general-camille-makosso` @generalmakossocamille79 — 7684035374268336903 · 22762 viewers
