@@ -1,52 +1,39 @@
 {
-  "at": "2026-09-19 20:49 UTC",
+  "at": "2026-09-19 23:13 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-ange-boli",
+      "profileId": "apoutchou",
       "platform": "TikTok",
-      "roomId": "7687348854592686856",
-      "title": "Ange Boli LA VAR 💡🐬⭕️",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "angeboli7"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7687325727921949472",
+      "roomId": "7687355889413557024",
       "title": "",
-      "viewers": 383,
-      "startedAt": "2026-09-19 19:10:38",
-      "handle": "dezcocrane.225"
+      "viewers": 9996,
+      "startedAt": "2026-09-19 21:08:08",
+      "handle": "apoutchou_national1"
     },
     {
-      "profileId": "oustaz-diane",
+      "profileId": "census-willway-jordan-officiel",
       "platform": "TikTok",
-      "roomId": "7687348376282663713",
-      "title": "Lets Go LIVE!",
-      "viewers": 1764,
-      "startedAt": "2026-09-19 20:38:34",
-      "handle": "oustazdianeofficiel1"
+      "roomId": "7687364135843203842",
+      "title": "Causerie tard la nuit",
+      "viewers": 203,
+      "startedAt": "2026-09-19 21:39:30",
+      "handle": "jack.carter39"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 2,
     "added": [],
     "stored": [
       {
-        "profileId": "census-ange-boli",
+        "profileId": "apoutchou",
         "platform": "TikTok"
       },
       {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
+        "profileId": "census-willway-jordan-officiel",
         "platform": "TikTok"
       }
     ],

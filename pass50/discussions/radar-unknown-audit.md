@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-19 23:13 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7687355889413557024 · 9996 viewers
+- TikTok `census-willway-jordan-officiel` @jack.carter39 — Causerie tard la nuit · 203 viewers
+
 ### 2026-09-19 20:49 UTC
 
 - Unknown sondés : **200**
@@ -399,14 +410,6 @@ Vraiment en live :
 - TikTok `census-no-limit` @nolimit_vousdv — 7684309071444478736 · 672 viewers
 
 ### 2026-09-11 11:31 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-09-11 04:49 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
