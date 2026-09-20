@@ -1,45 +1,9 @@
 {
-  "at": "2026-09-19 23:13 UTC",
+  "at": "2026-09-20 05:00 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7687355889413557024",
-      "title": "",
-      "viewers": 9996,
-      "startedAt": "2026-09-19 21:08:08",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "census-willway-jordan-officiel",
-      "platform": "TikTok",
-      "roomId": "7687364135843203842",
-      "title": "Causerie tard la nuit",
-      "viewers": 203,
-      "startedAt": "2026-09-19 21:39:30",
-      "handle": "jack.carter39"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-willway-jordan-officiel",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 28
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

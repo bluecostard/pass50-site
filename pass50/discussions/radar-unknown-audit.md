@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-20 05:00 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-19 23:13 UTC
 
 - Unknown sondés : **200**
@@ -408,11 +416,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-no-limit` @nolimit_vousdv — 7684309071444478736 · 672 viewers
-
-### 2026-09-11 11:31 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
