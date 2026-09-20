@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-20 20:54 UTC",
+  "at": "2026-09-20 23:17 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "african-ryou",
-      "platform": "TikTok",
-      "roomId": "7687706725461314325",
-      "title": "",
-      "viewers": 238,
-      "startedAt": "2026-09-20 19:49:08",
-      "handle": "african_ryou_officiel"
-    },
-    {
-      "profileId": "lolo-beaute",
-      "platform": "TikTok",
-      "roomId": "7687673765420976928",
-      "title": "Lolo beauté🔥",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "lolobeaute85"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7687705824517262102",
-      "title": "Lets Go LIVE!",
-      "viewers": 701,
-      "startedAt": "2026-09-20 19:45:20",
-      "handle": "oustazdianeofficiel1"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "african-ryou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "lolo-beaute",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 28
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
