@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-21 20:01 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `lolo-beaute` @lolobeaute85 — Lolo beauté🔥
+
 ### 2026-09-21 12:59 UTC
 
 - Unknown sondés : **200**
@@ -404,13 +414,3 @@ Vraiment en live :
 - TikTok `census-madame-koffi` @madamekofii — Ça va? · 4 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7684716259614706464 · 502 viewers
 - TikTok `holy` @holysheilla — Je suis à Babi 🇨🇮❤️ · 217 viewers
-
-### 2026-09-12 15:37 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `hassan` @hassanhayekofficiel — 7684649468965423892 · 719 viewers
