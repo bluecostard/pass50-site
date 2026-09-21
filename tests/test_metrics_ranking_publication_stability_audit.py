@@ -8,12 +8,16 @@ VALIDATE = (ROOT / ".github/workflows/validate-metrics-ranking-publication-stabi
 
 
 class MetricsRankingPublicationStabilityAuditTests(unittest.TestCase):
-    def test_endpoint_loads_runtime_dependencies_before_hmac_use(self):
-        orchestrator = "require __DIR__.'/metrics-orchestrator-core.php';"
-        self.assertIn(orchestrator, ENDPOINT)
-        self.assertIn("require __DIR__.'/metrics-ranking-publication-history-core.php';", ENDPOINT)
-        self.assertLess(ENDPOINT.index(orchestrator), ENDPOINT.index("$cfg=p50_mo_config()"))
-        self.assertLess(ENDPOINT.index(orchestrator), ENDPOINT.index("p50_mo_verify_cron_signature"))
+    def test_endpoint_loads_proven_runtime_config_before_hmac_use(self):
+        apply_core = "require __DIR__.'/metrics-ranking-publication-apply-core.php';"
+        history_core = "require __DIR__.'/metrics-ranking-publication-history-core.php';"
+        self.assertIn(apply_core, ENDPOINT)
+        self.assertIn(history_core, ENDPOINT)
+        self.assertNotIn("require __DIR__.'/metrics-orchestrator-core.php';", ENDPOINT)
+        self.assertLess(ENDPOINT.index(apply_core), ENDPOINT.index("$cfg=p50_mrp_apply_config()"))
+        self.assertLess(ENDPOINT.index(apply_core), ENDPOINT.index("p50_mo_verify_cron_signature"))
+        self.assertIn("$cfg=p50_mrp_apply_config()", ENDPOINT)
+        self.assertIn("$cfg['orchestratorEnabled']", ENDPOINT)
 
     def test_endpoint_is_strict_signed_and_advisory_only(self):
         self.assertIn("MR-STABILITY-AUDIT-V1.0", ENDPOINT)
