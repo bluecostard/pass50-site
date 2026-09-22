@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-22 11:49 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-22 05:08 UTC
 
 - Unknown sondés : **200**
@@ -397,11 +405,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7684979756479023905 · 2084 viewers
-
-### 2026-09-13 04:57 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
