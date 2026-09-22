@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-22 21:26 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-madame-koffi` @madamekofii — Madame Koffi
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7688445109306362656 · 302 viewers
+- TikTok `general-camille-makosso` @generalmakossocamille79 — 7688463575997434632 · 3180 viewers
+
 ### 2026-09-22 17:03 UTC
 
 - Unknown sondés : **200**
@@ -391,15 +403,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `general-camille-makosso` @generalmakossocamille79 — ‼️ARRESTATION ILLÉGALE DE JP‼️ · 9874 viewers
 - TikTok `tma` @tmacrush_officiel — 7685083879351798536 · 328 viewers
-
-### 2026-09-13 16:26 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-willway-jordan-officiel` @jack.carter39 — Causerie amicale du Dimanche · 180 viewers
-- TikTok `hassan` @hassanhayekofficiel — yann diomande · 95 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 378 viewers
