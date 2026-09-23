@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-22 21:26 UTC",
+  "at": "2026-09-23 04:52 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "census-madame-koffi",
-      "platform": "TikTok",
-      "roomId": "7688446373527669537",
-      "title": "Madame Koffi",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "madamekofii"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7688445109306362656",
-      "title": "",
-      "viewers": 302,
-      "startedAt": "2026-09-22 19:34:31",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "general-camille-makosso",
-      "platform": "TikTok",
-      "roomId": "7688463575997434632",
-      "title": "",
-      "viewers": 3180,
-      "startedAt": "2026-09-22 20:46:49",
-      "handle": "generalmakossocamille79"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-madame-koffi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "general-camille-makosso",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

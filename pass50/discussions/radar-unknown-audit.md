@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-23 04:52 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-22 21:26 UTC
 
 - Unknown sondés : **200**
@@ -392,14 +400,3 @@ Vraiment en live :
 - TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
 - TikTok `census-constant-kone` @constant_k225 — Bonjour ! 📷 · 12 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7685137640970734369 · 170 viewers
-
-### 2026-09-13 20:55 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `general-camille-makosso` @generalmakossocamille79 — ‼️ARRESTATION ILLÉGALE DE JP‼️ · 9874 viewers
-- TikTok `tma` @tmacrush_officiel — 7685083879351798536 · 328 viewers
