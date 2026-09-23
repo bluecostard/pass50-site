@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-23 04:52 UTC",
+  "at": "2026-09-23 11:49 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "census-akouba-angola",
+      "platform": "TikTok",
+      "roomId": "7688684389827431200",
+      "title": "Le jeu de la main 🤚jour 2",
+      "viewers": 2490,
+      "startedAt": "2026-09-23 11:03:38",
+      "handle": "akouba.angola"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-akouba-angola",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 29
+  },
   "enabled": true,
   "error": null
 }

@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-23 11:49 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-akouba-angola` @akouba.angola — Le jeu de la main 🤚jour 2 · 2490 viewers
+
 ### 2026-09-23 04:52 UTC
 
 - Unknown sondés : **200**
@@ -386,17 +396,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-13 23:13 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **5**
-- Publiés radar : **5**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `apoutchou` @apoutchou_national1 — 7685130720377457440 · 10298 viewers
-- TikTok `aya-robert` @aya.robert27 — 7685135360266947361 · 609 viewers
-- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
-- TikTok `census-constant-kone` @constant_k225 — Bonjour ! 📷 · 12 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7685137640970734369 · 170 viewers
