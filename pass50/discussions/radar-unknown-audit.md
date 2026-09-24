@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-24 05:01 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-23 21:35 UTC
 
 - Unknown sondés : **200**
@@ -392,11 +400,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `tma` @tmacrush_officiel — 7685480723121589000 · 686 viewers
-
-### 2026-09-14 13:00 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.

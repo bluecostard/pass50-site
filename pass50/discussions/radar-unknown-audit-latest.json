@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-23 21:35 UTC",
+  "at": "2026-09-24 05:01 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7688842927358937888",
-      "title": "",
-      "viewers": 26307,
-      "startedAt": "2026-09-23 21:18:49",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "census-amour-ruth-poopy",
-      "platform": "TikTok",
-      "roomId": "7688844613959912199",
-      "title": "",
-      "viewers": 135,
-      "startedAt": "2026-09-23 21:25:08",
-      "handle": "amourruth0"
-    },
-    {
-      "profileId": "general-camille-makosso",
-      "platform": "TikTok",
-      "roomId": "7688843245308218120",
-      "title": "",
-      "viewers": 13312,
-      "startedAt": "2026-09-23 21:20:05",
-      "handle": "generalmakossocamille79"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-amour-ruth-poopy",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "general-camille-makosso",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
