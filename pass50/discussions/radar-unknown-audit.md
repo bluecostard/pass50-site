@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-24 11:56 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-le-grand-bicongo` @legrandbicongo — Le grand Bicongo
+
 ### 2026-09-24 05:01 UTC
 
 - Unknown sondés : **200**
@@ -390,13 +400,3 @@ Vraiment en live :
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7685528308636764960 · 1165 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7685489605323344673 · 240 viewers
 - TikTok `tma` @tmacrush_officiel — 7685480723121589000 · 464 viewers
-
-### 2026-09-14 19:52 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `tma` @tmacrush_officiel — 7685480723121589000 · 686 viewers
