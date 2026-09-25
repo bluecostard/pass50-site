@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-25 11:58 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
+- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 1131 viewers
+
 ### 2026-09-25 05:05 UTC
 
 - Unknown sondés : **200**
@@ -390,13 +401,3 @@ Vraiment en live :
 - TikTok `african-ryou` @african_ryou_officiel — 7685873983418321684 · 251 viewers
 - TikTok `apoutchou` @apoutchou_national1 — 7685870762549054240 · 18322 viewers
 - TikTok `census-amour-ruth-poopy` @amourruth0 — 7685876775460801287 · 7 viewers
-
-### 2026-09-15 17:07 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
