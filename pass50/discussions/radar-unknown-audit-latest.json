@@ -1,45 +1,9 @@
 {
-  "at": "2026-09-24 21:36 UTC",
+  "at": "2026-09-25 05:05 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "census-souley-de-paris",
-      "platform": "TikTok",
-      "roomId": "7689122409400175393",
-      "title": "SOULEY DE-PARIS 🦅 B-52",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "souleydeparis"
-    },
-    {
-      "profileId": "general-camille-makosso",
-      "platform": "TikTok",
-      "roomId": "7689211344423308039",
-      "title": "",
-      "viewers": 3735,
-      "startedAt": "2026-09-24 21:08:21",
-      "handle": "generalmakossocamille79"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-souley-de-paris",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "general-camille-makosso",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
