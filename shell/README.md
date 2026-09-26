@@ -1,5 +1,8 @@
 # PASS50 — Coque native (Capacitor)
 
+> **Successeur :** l’app Expo dans [`apps/mobile/`](../apps/mobile/README.md) reprend le **design** mobile du site en écrans natifs (pas une WebView).
+> Cette coque Capacitor reste pour transition ; ne plus l’enrichir pour les nouvelles features.
+
 Coque **iOS / Android** autour du client mobile déjà en prod :
 `https://pass50.store/app.html`
 

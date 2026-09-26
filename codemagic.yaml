@@ -1,0 +1,508 @@
+# PASS50 Mobile — Codemagic CI/CD (Expo SDK 57)
+# Docs: https://docs.codemagic.io/yaml-quick-start/building-a-react-native-app/
+#
+# Setup (Codemagic UI):
+# 1. Add application → GitHub repo bluecostard/pass50-site
+# 2. Team settings → Integrations → Apple Developer Portal
+#    Create API key named exactly: Pass50
+# 3. Environment groups → create group "pass50_store" with:
+#    - APP_STORE_APPLE_ID = numeric Apple ID from App Store Connect (after app record exists)
+# 4. Code signing identities → iOS distribution for bundle store.pass50.app
+# 5. Scan branch for codemagic.yaml → Start build (pass50-ios-testflight first)
+
+workflows:
+  pass50-ios-testflight:
+    name: PASS50 iOS → TestFlight
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Pass50
+    environment:
+      groups:
+        - pass50_store
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: store.pass50.app
+      node: 22.14.0
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: store.pass50.app
+        XCODE_WORKSPACE: PASS50.xcworkspace
+        XCODE_SCHEME: PASS50
+        MOBILE_DIR: apps/mobile
+        EXPO_PUBLIC_API_BASE: https://pass50.store/api/
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npm ci
+      - name: Expo prebuild (iOS)
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          CI=1 npx expo prebuild --platform ios --clean
+      - name: Ensure ITSAppUsesNonExemptEncryption
+        script: |
+          set -euo pipefail
+          PLIST="$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_SCHEME/Info.plist"
+          PLIST_BUDDY=/usr/libexec/PlistBuddy
+          if ! $PLIST_BUDDY -c "Print :ITSAppUsesNonExemptEncryption" "$PLIST" >/dev/null 2>&1; then
+            $PLIST_BUDDY -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
+          fi
+      - name: Install CocoaPods
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          pod install
+      - name: Set up code signing profiles
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          xcode-project use-profiles \
+            --project "$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_SCHEME.xcodeproj"
+      - name: Increment iOS build number
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          # Fetch BOTH sources independently. Using "||" between them was wrong:
+          # a lower App Store number short-circuited TestFlight and caused
+          # ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE on upload.
+          LATEST_APPSTORE=0
+          LATEST_TESTFLIGHT=0
+          if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
+            LATEST_APPSTORE=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+            LATEST_TESTFLIGHT=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          fi
+          case "$LATEST_APPSTORE" in ''|null|*[!0-9]*) LATEST_APPSTORE=0 ;; esac
+          case "$LATEST_TESTFLIGHT" in ''|null|*[!0-9]*) LATEST_TESTFLIGHT=0 ;; esac
+          LATEST=$LATEST_APPSTORE
+          if [ "$LATEST_TESTFLIGHT" -gt "$LATEST" ]; then
+            LATEST=$LATEST_TESTFLIGHT
+          fi
+          NEXT=$((LATEST + 1))
+          if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
+            NEXT=$((BUILD_NUMBER + 1))
+          fi
+          # Safety floor: ahead of known TestFlight uploads (builds through ~20 already used).
+          if [ "$NEXT" -le 26 ]; then
+            NEXT=34
+          fi
+          echo "Setting CFBundleVersion=$NEXT (appstore=$LATEST_APPSTORE testflight=$LATEST_TESTFLIGHT max=$LATEST CM=${BUILD_NUMBER:-n/a})"
+          agvtool new-version -all "$NEXT"
+      - name: Build IPA
+        script: |
+          set -euo pipefail
+          IOS_DIR="$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          cd "$IOS_DIR"
+          echo "=== ios/ contents ==="
+          ls -la
+          echo "=== Available schemes ==="
+          xcodebuild -list -workspace "$XCODE_WORKSPACE"
+          # Prefer Codemagic helper; on failure dump raw xcodebuild errors (code 65 is opaque).
+          set +e
+          xcode-project build-ipa \
+            --workspace "$IOS_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            echo "=== build-ipa failed ($STATUS); retrying with raw xcodebuild for diagnostics ==="
+            ARCHIVE_PATH="$IOS_DIR/build/PASS50.xcarchive"
+            EXPORT_PATH="$IOS_DIR/build/ipa"
+            mkdir -p "$IOS_DIR/build" "$EXPORT_PATH"
+            set +e
+            xcodebuild \
+              -workspace "$IOS_DIR/$XCODE_WORKSPACE" \
+              -scheme "$XCODE_SCHEME" \
+              -configuration Release \
+              -archivePath "$ARCHIVE_PATH" \
+              -destination "generic/platform=iOS" \
+              CLEAN=NO \
+              archive \
+              CODE_SIGN_STYLE=Manual \
+              2>&1 | tee /tmp/pass50-xcodebuild-archive.log
+            XB_STATUS=${PIPESTATUS[0]}
+            set -e
+            echo "=== grep errors from archive log ==="
+            grep -E "error:|ERROR|fatal|No profile|Provisioning|CODE_SIGN|Swift Compiler|❌" /tmp/pass50-xcodebuild-archive.log | tail -n 80 || true
+            echo "=== tail archive log ==="
+            tail -n 80 /tmp/pass50-xcodebuild-archive.log || true
+            find /tmp/xcodebuild_logs -type f -name '*.log' -print0 2>/dev/null \
+              | xargs -0 ls -t 2>/dev/null \
+              | head -3 \
+              | while read -r f; do
+                  echo "----- $f -----"
+                  grep -E "error:|ERROR|fatal|No profile|Provisioning" "$f" | tail -n 40 || true
+                  tail -n 40 "$f" || true
+                done
+            exit "$STATUS"
+          fi
+      - name: Locate IPA for upload
+        script: |
+          set -euo pipefail
+          echo "=== Searching for IPA artifacts ==="
+          find "$CM_BUILD_DIR" -name '*.ipa' -type f -print || true
+          IPA="$(find "$CM_BUILD_DIR" -name '*.ipa' -type f | head -n 1 || true)"
+          if [ -z "$IPA" ]; then
+            echo "ERROR: No .ipa found — cannot publish to App Store Connect / TestFlight"
+            exit 1
+          fi
+          # Codemagic publishing looks for IPA under these conventional paths.
+          mkdir -p "$CM_BUILD_DIR/build/ios/ipa" "$CM_BUILD_DIR/artifacts"
+          cp "$IPA" "$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          cp "$IPA" "$CM_BUILD_DIR/artifacts/PASS50.ipa"
+          ls -la "$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          echo "IPA ready for App Store Connect publishing step"
+      - name: Publish IPA to TestFlight (verbose)
+        script: |
+          set -euo pipefail
+          IPA="$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          if [ ! -f "$IPA" ]; then
+            IPA="$(find "$CM_BUILD_DIR" -name '*.ipa' -type f | head -n 1 || true)"
+          fi
+          if [ -z "${IPA:-}" ] || [ ! -f "$IPA" ]; then
+            echo "ERROR: No IPA to publish"
+            exit 1
+          fi
+          echo "Publishing IPA: $IPA ($(du -h "$IPA" | awk '{print $1}'))"
+          TMP_IPA_DIR="$(mktemp -d)"
+          unzip -l "$IPA" | grep -E 'Info\.plist$' | head -n 5 || true
+          unzip -p "$IPA" 'Payload/*.app/Info.plist' > "$TMP_IPA_DIR/Info.plist" 2>/dev/null || true
+          if [ -f "$TMP_IPA_DIR/Info.plist" ]; then
+            /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$TMP_IPA_DIR/Info.plist" || true
+            /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$TMP_IPA_DIR/Info.plist" || true
+          fi
+          rm -rf "$TMP_IPA_DIR"
+          LOG=/tmp/pass50-asc-publish.log
+          # Step 1: upload ONLY. Do NOT combine with --beta-group:
+          # if upload succeeds but group assignment fails, a retry re-upload hits DUPLICATE
+          # and fails the whole step even though the IPA is already on ASC/TestFlight.
+          # Do NOT pass --testflight (external beta review).
+          set +e
+          app-store-connect publish \
+            --path "$IPA" \
+            --altool-retries 5 \
+            --altool-retry-wait 30 \
+            --altool-verbose-logging \
+            2>&1 | tee "$LOG"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            if grep -qiE 'DUPLICATE|already been uploaded|value that has already been used|The bundle version must be higher' "$LOG"; then
+              echo "WARN: ASC reported duplicate/already-uploaded — treating upload as success"
+              STATUS=0
+            else
+              echo "ERROR: IPA upload failed ($STATUS). See $LOG"
+              exit "$STATUS"
+            fi
+          fi
+          echo "IPA upload OK — assigning beta group Équipe (best-effort, non-blocking)..."
+          set +e
+          app-store-connect publish \
+            --path "$IPA" \
+            --skip-package-upload \
+            --beta-group "Équipe" \
+            --max-find-build-wait 10 \
+            --max-build-processing-wait 20 \
+            --altool-verbose-logging \
+            2>&1 | tee -a "$LOG"
+          BG_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$BG_STATUS" -ne 0 ]; then
+            echo "WARN: beta-group assignment failed ($BG_STATUS). Build is still on TestFlight once Apple finishes processing; add to Équipe manually if needed."
+          else
+            echo "Beta group Équipe assigned."
+          fi
+    artifacts:
+      - artifacts/*.ipa
+      - build/ios/ipa/*.ipa
+      - apps/mobile/build/ios/ipa/*.ipa
+      - "**/*.ipa"
+      - /tmp/xcodebuild_logs/*.log
+      - /tmp/pass50-asc-publish.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload is done in the verbose script above (avoids double-upload + opaque failures).
+        submit_to_testflight: false
+        submit_to_app_store: false
+
+  pass50-ios-appstore:
+    name: PASS50 iOS → App Store Review
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Pass50
+    environment:
+      groups:
+        - pass50_store
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: store.pass50.app
+      node: 22.14.0
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: store.pass50.app
+        XCODE_WORKSPACE: PASS50.xcworkspace
+        XCODE_SCHEME: PASS50
+        MOBILE_DIR: apps/mobile
+        EXPO_PUBLIC_API_BASE: https://pass50.store/api/
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npm ci
+      - name: Expo prebuild (iOS)
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          CI=1 npx expo prebuild --platform ios --clean
+      - name: Ensure ITSAppUsesNonExemptEncryption
+        script: |
+          set -euo pipefail
+          PLIST="$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_SCHEME/Info.plist"
+          PLIST_BUDDY=/usr/libexec/PlistBuddy
+          if ! $PLIST_BUDDY -c "Print :ITSAppUsesNonExemptEncryption" "$PLIST" >/dev/null 2>&1; then
+            $PLIST_BUDDY -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
+          fi
+      - name: Install CocoaPods
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          pod install
+      - name: Set up code signing profiles
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          xcode-project use-profiles \
+            --project "$CM_BUILD_DIR/$MOBILE_DIR/ios/$XCODE_SCHEME.xcodeproj"
+      - name: Increment iOS build number
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          # Fetch BOTH sources independently. Using "||" between them was wrong:
+          # a lower App Store number short-circuited TestFlight and caused
+          # ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE on upload.
+          LATEST_APPSTORE=0
+          LATEST_TESTFLIGHT=0
+          if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
+            LATEST_APPSTORE=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+            LATEST_TESTFLIGHT=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          fi
+          case "$LATEST_APPSTORE" in ''|null|*[!0-9]*) LATEST_APPSTORE=0 ;; esac
+          case "$LATEST_TESTFLIGHT" in ''|null|*[!0-9]*) LATEST_TESTFLIGHT=0 ;; esac
+          LATEST=$LATEST_APPSTORE
+          if [ "$LATEST_TESTFLIGHT" -gt "$LATEST" ]; then
+            LATEST=$LATEST_TESTFLIGHT
+          fi
+          NEXT=$((LATEST + 1))
+          if [ "${BUILD_NUMBER:-0}" -ge "$NEXT" ]; then
+            NEXT=$((BUILD_NUMBER + 1))
+          fi
+          # Safety floor: ahead of known TestFlight uploads (builds through ~20 already used).
+          if [ "$NEXT" -le 26 ]; then
+            NEXT=34
+          fi
+          echo "Setting CFBundleVersion=$NEXT (appstore=$LATEST_APPSTORE testflight=$LATEST_TESTFLIGHT max=$LATEST CM=${BUILD_NUMBER:-n/a})"
+          agvtool new-version -all "$NEXT"
+      - name: Build IPA
+        script: |
+          set -euo pipefail
+          IOS_DIR="$CM_BUILD_DIR/$MOBILE_DIR/ios"
+          cd "$IOS_DIR"
+          echo "=== ios/ contents ==="
+          ls -la
+          echo "=== Available schemes ==="
+          xcodebuild -list -workspace "$XCODE_WORKSPACE"
+          # Prefer Codemagic helper; on failure dump raw xcodebuild errors (code 65 is opaque).
+          set +e
+          xcode-project build-ipa \
+            --workspace "$IOS_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            echo "=== build-ipa failed ($STATUS); retrying with raw xcodebuild for diagnostics ==="
+            ARCHIVE_PATH="$IOS_DIR/build/PASS50.xcarchive"
+            EXPORT_PATH="$IOS_DIR/build/ipa"
+            mkdir -p "$IOS_DIR/build" "$EXPORT_PATH"
+            set +e
+            xcodebuild \
+              -workspace "$IOS_DIR/$XCODE_WORKSPACE" \
+              -scheme "$XCODE_SCHEME" \
+              -configuration Release \
+              -archivePath "$ARCHIVE_PATH" \
+              -destination "generic/platform=iOS" \
+              CLEAN=NO \
+              archive \
+              CODE_SIGN_STYLE=Manual \
+              2>&1 | tee /tmp/pass50-xcodebuild-archive.log
+            XB_STATUS=${PIPESTATUS[0]}
+            set -e
+            echo "=== grep errors from archive log ==="
+            grep -E "error:|ERROR|fatal|No profile|Provisioning|CODE_SIGN|Swift Compiler|❌" /tmp/pass50-xcodebuild-archive.log | tail -n 80 || true
+            echo "=== tail archive log ==="
+            tail -n 80 /tmp/pass50-xcodebuild-archive.log || true
+            find /tmp/xcodebuild_logs -type f -name '*.log' -print0 2>/dev/null \
+              | xargs -0 ls -t 2>/dev/null \
+              | head -3 \
+              | while read -r f; do
+                  echo "----- $f -----"
+                  grep -E "error:|ERROR|fatal|No profile|Provisioning" "$f" | tail -n 40 || true
+                  tail -n 40 "$f" || true
+                done
+            exit "$STATUS"
+          fi
+      - name: Locate IPA for upload
+        script: |
+          set -euo pipefail
+          echo "=== Searching for IPA artifacts ==="
+          find "$CM_BUILD_DIR" -name '*.ipa' -type f -print || true
+          IPA="$(find "$CM_BUILD_DIR" -name '*.ipa' -type f | head -n 1 || true)"
+          if [ -z "$IPA" ]; then
+            echo "ERROR: No .ipa found — cannot publish to App Store Connect / TestFlight"
+            exit 1
+          fi
+          mkdir -p "$CM_BUILD_DIR/build/ios/ipa" "$CM_BUILD_DIR/artifacts"
+          cp "$IPA" "$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          cp "$IPA" "$CM_BUILD_DIR/artifacts/PASS50.ipa"
+          ls -la "$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          echo "IPA ready for App Store Connect publishing step"
+      - name: Publish IPA to TestFlight (verbose)
+        script: |
+          set -euo pipefail
+          IPA="$CM_BUILD_DIR/build/ios/ipa/PASS50.ipa"
+          if [ ! -f "$IPA" ]; then
+            IPA="$(find "$CM_BUILD_DIR" -name '*.ipa' -type f | head -n 1 || true)"
+          fi
+          if [ -z "${IPA:-}" ] || [ ! -f "$IPA" ]; then
+            echo "ERROR: No IPA to publish"
+            exit 1
+          fi
+          echo "Publishing IPA: $IPA ($(du -h "$IPA" | awk '{print $1}'))"
+          TMP_IPA_DIR="$(mktemp -d)"
+          unzip -p "$IPA" 'Payload/*.app/Info.plist' > "$TMP_IPA_DIR/Info.plist" 2>/dev/null || true
+          if [ -f "$TMP_IPA_DIR/Info.plist" ]; then
+            /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$TMP_IPA_DIR/Info.plist" || true
+            /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$TMP_IPA_DIR/Info.plist" || true
+          fi
+          rm -rf "$TMP_IPA_DIR"
+          LOG=/tmp/pass50-asc-publish.log
+          # Upload ONLY first; beta-group is best-effort (avoids DUPLICATE retry trap).
+          set +e
+          app-store-connect publish \
+            --path "$IPA" \
+            --altool-retries 5 \
+            --altool-retry-wait 30 \
+            --altool-verbose-logging \
+            2>&1 | tee "$LOG"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            if grep -qiE 'DUPLICATE|already been uploaded|value that has already been used|The bundle version must be higher' "$LOG"; then
+              echo "WARN: ASC reported duplicate/already-uploaded — treating upload as success"
+              STATUS=0
+            else
+              echo "ERROR: IPA upload failed ($STATUS). See $LOG"
+              exit "$STATUS"
+            fi
+          fi
+          echo "IPA upload OK — assigning beta group Équipe (best-effort, non-blocking)..."
+          set +e
+          app-store-connect publish \
+            --path "$IPA" \
+            --skip-package-upload \
+            --beta-group "Équipe" \
+            --max-find-build-wait 10 \
+            --max-build-processing-wait 20 \
+            --altool-verbose-logging \
+            2>&1 | tee -a "$LOG"
+          BG_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$BG_STATUS" -ne 0 ]; then
+            echo "WARN: beta-group assignment failed ($BG_STATUS). Build is still on TestFlight once Apple finishes processing; add to Équipe manually if needed."
+          else
+            echo "Beta group Équipe assigned."
+          fi
+    artifacts:
+      - artifacts/*.ipa
+      - build/ios/ipa/*.ipa
+      - apps/mobile/build/ios/ipa/*.ipa
+      - "**/*.ipa"
+      - /tmp/xcodebuild_logs/*.log
+      - /tmp/pass50-asc-publish.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Upload handled by verbose script above; App Store review submit stays manual unless enabled.
+        submit_to_testflight: false
+        # After App Store Connect metadata is complete, set submit_to_app_store: true
+        # (and optionally cancel_previous_submissions: true), or submit review manually.
+        submit_to_app_store: false
+
+  pass50-android-internal:
+    name: PASS50 Android → Play Internal (AAB)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - pass50_store
+        - google_play
+      android_signing:
+        - pass50_android
+      node: 22.14.0
+      java: 17
+      vars:
+        PACKAGE_NAME: store.pass50.app
+        MOBILE_DIR: apps/mobile
+        EXPO_PUBLIC_API_BASE: https://pass50.store/api/
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npm ci
+      - name: Expo prebuild (Android)
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR"
+          npx expo prebuild --platform android --non-interactive
+      - name: Set Android SDK location
+        script: |
+          set -euo pipefail
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/$MOBILE_DIR/android/local.properties"
+      - name: Inject Codemagic Android release signing
+        script: |
+          set -euo pipefail
+          GRADLE="$CM_BUILD_DIR/$MOBILE_DIR/android/app/build.gradle"
+          SIGNING="$CM_BUILD_DIR/$MOBILE_DIR/support-files/codemagic-android-signing.gradle"
+          if [ -f "$SIGNING" ] && ! grep -q 'codemagic-android-signing.gradle' "$GRADLE"; then
+            echo "apply from: \"../../support-files/codemagic-android-signing.gradle\"" >> "$GRADLE"
+          fi
+      - name: Build Android App Bundle
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/$MOBILE_DIR/android"
+          UPDATED_BUILD_NUMBER="${BUILD_NUMBER:-1}"
+          if [ -n "${GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS:-}" ]; then
+            LATEST=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" || true)
+            if [ -n "$LATEST" ] && [ "$LATEST" != "null" ]; then
+              UPDATED_BUILD_NUMBER=$((LATEST + 1))
+            fi
+          fi
+          ./gradlew bundleRelease \
+            -PversionCode="$UPDATED_BUILD_NUMBER" \
+            -PversionName="1.0.$UPDATED_BUILD_NUMBER"
+    artifacts:
+      - apps/mobile/android/app/build/outputs/**/*.aab
+    publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true

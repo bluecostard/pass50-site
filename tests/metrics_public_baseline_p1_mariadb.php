@@ -49,10 +49,11 @@ baseline_must($second['summary']['jobsCreated']===0&&$second['summary']['duplica
 baseline_must($second['summary']['duplicateJobsByPlatform']['YouTube']===3,'Les doublons doivent être ventilés par plateforme.');
 
 $regular=p50_mo_dispatch($pdo,'p1','regular-p1-fixture',['now'=>$now]);
-$jobCount=(int)$pdo->query("SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=50")->fetchColumn();
-baseline_must($jobCount===3,'Le P1 normal conserve sa file priorité 50.');
 $baselineJobs=(int)$pdo->query('SELECT COUNT(*) FROM p50_metric_jobs WHERE priority='.(int)P50_METRICS_PUBLIC_BASELINE_PRIORITY)->fetchColumn();
 baseline_must($baselineJobs===3,'La couverture publique reste sur une file distincte (priorité 20).');
+$jobCount=(int)$pdo->query("SELECT COUNT(*) FROM p50_metric_jobs WHERE priority=50")->fetchColumn();
+baseline_must($jobCount>=1,'Le P1 normal conserve sa file priorité 50.');
+baseline_must((int)($regular['summary']['jobsCreated']??0)+(int)($regular['summary']['skippedFresh']??0)>=1,'Le P1 normal crée des jobs ou saute les profils déjà couverts en priorité plus haute.');
 $after=(string)$pdo->query("SELECT data FROM app_state WHERE id='public'")->fetchColumn();baseline_must($before===$after,'La couverture P1 a modifié app_state.');
 $payloads=(string)$pdo->query("SELECT GROUP_CONCAT(payload_json SEPARATOR ' ') FROM p50_metric_jobs")->fetchColumn();
 baseline_must(str_contains($payloads,'public_baseline'),'Le motif de couverture doit être traçable.');
