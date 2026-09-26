@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-26 21:16 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-26 16:30 UTC
 
 - Unknown sondés : **200**
@@ -385,14 +393,6 @@ Vraiment en live :
 - TikTok `hassan` @hassanhayekofficiel — 7686547234446002964 · 682 viewers
 
 ### 2026-09-17 11:50 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-09-17 04:59 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
