@@ -69,6 +69,7 @@ class LiveExperienceV41Tests(unittest.TestCase):
     def test_false_positive_can_be_dismissed_by_admin(self):
         self.assertIn("button.className='btn small danger p50-live-dismiss'", DISMISS_UI)
         self.assertIn("apiFetch('live-dismiss.php'", DISMISS_UI)
+        self.assertIn("refreshLiveStatus", DISMISS_UI)
         self.assertIn("require_role($user,'owner','admin')", DISMISS_API)
         self.assertIn('p50_live_dismissals', STORAGE)
         self.assertIn('p50_live_v4_is_dismissed', STORAGE)
