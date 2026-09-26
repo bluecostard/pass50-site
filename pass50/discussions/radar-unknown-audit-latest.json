@@ -1,45 +1,9 @@
 {
-  "at": "2026-09-25 21:40 UTC",
+  "at": "2026-09-26 05:08 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7689582329072798496",
-      "title": "",
-      "viewers": 20539,
-      "startedAt": "2026-09-25 21:07:32",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7689572093260483361",
-      "title": "Lets Go LIVE!",
-      "viewers": 1831,
-      "startedAt": "2026-09-25 20:27:42",
-      "handle": "oustazdianeofficiel1"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
