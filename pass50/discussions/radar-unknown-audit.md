@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-27 05:25 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-26 23:40 UTC
 
 - Unknown sondés : **200**
@@ -391,14 +399,3 @@ Vraiment en live :
 - TikTok `apoutchou` @apoutchou_national1 — 7686611264398838560 · 12726 viewers
 - TikTok `census-guyguy-le-grouilleur-de-bologne` @guyguylegrouilleur07 — la vie est très simple · 523 viewers
 - TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 877 viewers
-
-### 2026-09-17 17:07 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-dezouch-officiel` @dezouch_officiel — Je recherche une fille célib ❤️ · 58 viewers
-- TikTok `hassan` @hassanhayekofficiel — 7686547234446002964 · 682 viewers

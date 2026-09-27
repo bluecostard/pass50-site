@@ -1,45 +1,9 @@
 {
-  "at": "2026-09-26 23:40 UTC",
+  "at": "2026-09-27 05:25 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7689956291036351265",
-      "title": "",
-      "viewers": 9058,
-      "startedAt": "2026-09-26 21:18:32",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "census-stephane-galactik",
-      "platform": "TikTok",
-      "roomId": "7689976762406619925",
-      "title": "",
-      "viewers": 58,
-      "startedAt": "2026-09-26 22:38:18",
-      "handle": "le_coach_des_debout"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-stephane-galactik",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
