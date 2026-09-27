@@ -1,9 +1,45 @@
 {
-  "at": "2026-09-27 12:12 UTC",
+  "at": "2026-09-27 17:03 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "lolo-beaute",
+      "platform": "TikTok",
+      "roomId": "7690257402104531745",
+      "title": "Lolo beaute center",
+      "viewers": 545,
+      "startedAt": null,
+      "handle": "lolobeaute85"
+    },
+    {
+      "profileId": "oustaz-diane",
+      "platform": "TikTok",
+      "roomId": "7690251274134768416",
+      "title": "Lets Go LIVE!",
+      "viewers": 1095,
+      "startedAt": "2026-09-27 16:23:32",
+      "handle": "oustazdianeofficiel1"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "lolo-beaute",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "oustaz-diane",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 29
+  },
   "enabled": true,
   "error": null
 }
