@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-27 21:26 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7690327761767942944 · 11416 viewers
+- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
+- TikTok `census-gaelle-taglao` @gaelletaglao02 — LA TAGLISH 🐆
+
 ### 2026-09-27 17:03 UTC
 
 - Unknown sondés : **200**
@@ -388,13 +400,3 @@ Vraiment en live :
 - TikTok `census-gaelle-taglao` @gaelletaglao02 — 7686907864318659344 · 660 viewers
 - TikTok `hamondchic` @coachhamond — 7686868731091503894 · 21109 viewers
 - TikTok `lolo-beaute` @lolobeaute85 — Lolo beauté🔥 · 246 viewers
-
-### 2026-09-18 11:26 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `general-camille-makosso` @generalmakossocamille79 — 7686824156331100936 · 3055 viewers
