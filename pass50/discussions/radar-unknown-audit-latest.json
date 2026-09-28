@@ -1,9 +1,45 @@
 {
-  "at": "2026-09-28 14:09 UTC",
+  "at": "2026-09-28 21:16 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "census-ange-boli",
+      "platform": "TikTok",
+      "roomId": "7690694643872500498",
+      "title": "Ange Boli LA VAR 💡🐬⭕️",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "angeboli7"
+    },
+    {
+      "profileId": "tma",
+      "platform": "TikTok",
+      "roomId": "7690688079094418184",
+      "title": "",
+      "viewers": 313,
+      "startedAt": "2026-09-28 20:38:13",
+      "handle": "tmacrush_officiel"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-ange-boli",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "tma",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 29
+  },
   "enabled": true,
   "error": null
 }
