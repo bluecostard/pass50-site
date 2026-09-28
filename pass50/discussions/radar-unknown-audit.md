@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-28 05:33 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-09-27 21:26 UTC
 
 - Unknown sondés : **200**
@@ -388,15 +396,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-18 16:32 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-gaelle-taglao` @gaelletaglao02 — 7686907864318659344 · 660 viewers
-- TikTok `hamondchic` @coachhamond — 7686868731091503894 · 21109 viewers
-- TikTok `lolo-beaute` @lolobeaute85 — Lolo beauté🔥 · 246 viewers

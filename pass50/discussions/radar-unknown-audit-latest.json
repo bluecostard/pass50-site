@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-27 21:26 UTC",
+  "at": "2026-09-28 05:33 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7690327761767942944",
-      "title": "",
-      "viewers": 11416,
-      "startedAt": "2026-09-27 21:20:13",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "census-ange-boli",
-      "platform": "TikTok",
-      "roomId": "7690306163279252232",
-      "title": "Ange Boli LA VAR 💡🐬⭕️",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "angeboli7"
-    },
-    {
-      "profileId": "census-gaelle-taglao",
-      "platform": "TikTok",
-      "roomId": "7690311720439728948",
-      "title": "LA TAGLISH 🐆",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "gaelletaglao02"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-ange-boli",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-gaelle-taglao",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
