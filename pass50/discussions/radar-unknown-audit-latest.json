@@ -1,23 +1,23 @@
 {
-  "at": "2026-09-28 21:16 UTC",
+  "at": "2026-09-29 01:03 UTC",
   "unknownCount": 200,
   "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-ange-boli",
+      "profileId": "census-cahie-kunta",
       "platform": "TikTok",
-      "roomId": "7690694643872500498",
-      "title": "Ange Boli LA VAR 💡🐬⭕️",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "angeboli7"
+      "roomId": "7690732013162105620",
+      "title": "",
+      "viewers": 58,
+      "startedAt": "2026-09-28 23:29:18",
+      "handle": "cahiekunta"
     },
     {
       "profileId": "tma",
       "platform": "TikTok",
       "roomId": "7690688079094418184",
       "title": "",
-      "viewers": 313,
+      "viewers": 286,
       "startedAt": "2026-09-28 20:38:13",
       "handle": "tmacrush_officiel"
     }
@@ -29,7 +29,7 @@
     "added": [],
     "stored": [
       {
-        "profileId": "census-ange-boli",
+        "profileId": "census-cahie-kunta",
         "platform": "TikTok"
       },
       {
