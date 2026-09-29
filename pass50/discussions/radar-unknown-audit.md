@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-29 22:23 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7691071026750425888 · 22480 viewers
+- TikTok `atoule` @atouleee.officiel — Lets Go LIVE! · 118 viewers
+- TikTok `tma` @tmacrush_officiel — 7691078400032787208 · 226 viewers
+
 ### 2026-09-29 18:08 UTC
 
 - Unknown sondés : **200**
@@ -381,15 +393,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `apoutchou` @apoutchou_national1 — 7687355889413557024 · 9996 viewers
 - TikTok `census-willway-jordan-officiel` @jack.carter39 — Causerie tard la nuit · 203 viewers
-
-### 2026-09-19 20:49 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7687325727921949472 · 383 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 1764 viewers
