@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-29 09:57 UTC",
+  "at": "2026-09-29 18:08 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "census-segano-et-mael",
+      "platform": "TikTok",
+      "roomId": "7691015412363954977",
+      "title": "",
+      "viewers": 1194,
+      "startedAt": "2026-09-29 17:48:49",
+      "handle": "seganoofficiel2.0"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-segano-et-mael",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 29
+  },
   "enabled": true,
   "error": null
 }
