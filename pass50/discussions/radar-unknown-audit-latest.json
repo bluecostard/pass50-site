@@ -1,45 +1,9 @@
 {
-  "at": "2026-09-29 01:03 UTC",
+  "at": "2026-09-29 09:57 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "census-cahie-kunta",
-      "platform": "TikTok",
-      "roomId": "7690732013162105620",
-      "title": "",
-      "viewers": 58,
-      "startedAt": "2026-09-28 23:29:18",
-      "handle": "cahiekunta"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7690688079094418184",
-      "title": "",
-      "viewers": 286,
-      "startedAt": "2026-09-28 20:38:13",
-      "handle": "tmacrush_officiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-cahie-kunta",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
