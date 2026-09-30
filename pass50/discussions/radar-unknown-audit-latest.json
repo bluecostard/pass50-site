@@ -1,26 +1,39 @@
 {
-  "at": "2026-09-30 12:45 UTC",
+  "at": "2026-09-30 20:06 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "general-camille-makosso",
+      "profileId": "census-akouba-angola",
       "platform": "TikTok",
-      "roomId": "7691306444922424072",
+      "roomId": "7691399700192168736",
+      "title": "On discute ☺️",
+      "viewers": 129,
+      "startedAt": "2026-09-30 18:39:47",
+      "handle": "akouba.angola"
+    },
+    {
+      "profileId": "dez-cocrane225",
+      "platform": "TikTok",
+      "roomId": "7691418879238638368",
       "title": "",
-      "viewers": 4629,
-      "startedAt": "2026-09-30 12:37:38",
-      "handle": "generalmakossocamille79"
+      "viewers": 192,
+      "startedAt": "2026-09-30 19:54:09",
+      "handle": "dezcocrane.225"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
+    "published": 2,
     "added": [],
     "stored": [
       {
-        "profileId": "general-camille-makosso",
+        "profileId": "census-akouba-angola",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "dez-cocrane225",
         "platform": "TikTok"
       }
     ],

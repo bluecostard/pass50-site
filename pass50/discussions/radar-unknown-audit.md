@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-09-30 20:06 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-akouba-angola` @akouba.angola — On discute ☺️ · 129 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7691418879238638368 · 192 viewers
+
 ### 2026-09-30 12:45 UTC
 
 - Unknown sondés : **200**
@@ -384,11 +395,3 @@ Vraiment en live :
 - TikTok `african-ryou` @african_ryou_officiel — 7687706725461314325 · 238 viewers
 - TikTok `lolo-beaute` @lolobeaute85 — Lolo beauté🔥
 - TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 701 viewers
-
-### 2026-09-20 11:34 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
