@@ -1,58 +1,9 @@
 {
-  "at": "2026-09-29 22:23 UTC",
+  "at": "2026-09-30 05:41 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7691071026750425888",
-      "title": "",
-      "viewers": 22480,
-      "startedAt": "2026-09-29 21:24:54",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "atoule",
-      "platform": "TikTok",
-      "roomId": "7691072135460031252",
-      "title": "Lets Go LIVE!",
-      "viewers": 118,
-      "startedAt": "2026-09-29 21:29:00",
-      "handle": "atouleee.officiel"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7691078400032787208",
-      "title": "",
-      "viewers": 226,
-      "startedAt": "2026-09-29 21:53:30",
-      "handle": "tmacrush_officiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "atoule",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
