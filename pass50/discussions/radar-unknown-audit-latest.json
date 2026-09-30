@@ -1,9 +1,32 @@
 {
-  "at": "2026-09-30 05:41 UTC",
+  "at": "2026-09-30 12:45 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "general-camille-makosso",
+      "platform": "TikTok",
+      "roomId": "7691306444922424072",
+      "title": "",
+      "viewers": 4629,
+      "startedAt": "2026-09-30 12:37:38",
+      "handle": "generalmakossocamille79"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "general-camille-makosso",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 29
+  },
   "enabled": true,
   "error": null
 }
