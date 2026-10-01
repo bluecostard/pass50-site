@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-01 18:27 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-joshua-cooker` @paaa.persil — 7691766231413705524 · 848 viewers
+
 ### 2026-10-01 10:16 UTC
 
 - Unknown sondés : **200**
@@ -383,14 +393,6 @@ Vraiment en live :
 - TikTok `lolo-beaute` @lolobeaute85 — Lolo beauté🔥
 
 ### 2026-09-21 12:59 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-09-21 05:06 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
