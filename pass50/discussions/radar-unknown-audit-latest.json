@@ -1,52 +1,26 @@
 {
-  "at": "2026-10-01 00:36 UTC",
+  "at": "2026-10-01 10:16 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "census-ange-morel",
+      "profileId": "census-le-grand-bicongo",
       "platform": "TikTok",
-      "roomId": "7691475854677756692",
+      "roomId": "7691633457195682581",
       "title": "",
-      "viewers": 13438,
-      "startedAt": "2026-09-30 23:35:32",
-      "handle": "angemorel4"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7691418879238638368",
-      "title": "",
-      "viewers": 246,
-      "startedAt": "2026-09-30 19:54:09",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7691444651971398408",
-      "title": "",
-      "viewers": 235,
-      "startedAt": "2026-09-30 21:34:40",
-      "handle": "tmacrush_officiel"
+      "viewers": 495,
+      "startedAt": "2026-10-01 09:46:46",
+      "handle": "legrandbicongo"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "census-ange-morel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
+        "profileId": "census-le-grand-bicongo",
         "platform": "TikTok"
       }
     ],
