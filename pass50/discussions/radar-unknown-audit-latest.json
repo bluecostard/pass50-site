@@ -1,32 +1,9 @@
 {
-  "at": "2026-10-01 18:27 UTC",
+  "at": "2026-10-02 00:52 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
-  "lives": [
-    {
-      "profileId": "census-joshua-cooker",
-      "platform": "TikTok",
-      "roomId": "7691766231413705524",
-      "title": "",
-      "viewers": 848,
-      "startedAt": "2026-10-01 18:22:12",
-      "handle": "paaa.persil"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 1,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-joshua-cooker",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 29
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
