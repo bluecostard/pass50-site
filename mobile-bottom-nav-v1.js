@@ -7,7 +7,12 @@
   const path = location.pathname || '';
   const isFeed = /(?:^|\/)mon-fil\.html$/i.test(path);
   const isProno = /(?:^|\/)pronostics\.html$/i.test(path);
-  const isHome = !isFeed && !isProno;
+  const isAccount = /(?:^|\/)mon-espace\.html$/i.test(path);
+  const isHome = !isFeed && !isProno && !isAccount;
+  const isNative =
+    new URLSearchParams(location.search).get('native') === '1' ||
+    /Pass50Native/i.test(navigator.userAgent || '') ||
+    document.documentElement.classList.contains('pass50-native-app');
   let navigating = false;
   let pressLink = null;
   let pressX = 0;
@@ -170,11 +175,12 @@
       <a class="p50-bottom-link ${isFeed ? 'active' : ''}" href="./mon-fil.html" data-p50-tab="feed" ${isFeed ? 'aria-current="page"' : ''}>${feedIcon()}<span>Mon fil</span></a>
       <a class="p50-bottom-link ${isProno ? 'active' : ''}" href="${PRONO_HREF}" data-p50-tab="prono" ${isProno ? 'aria-current="page"' : ''}>${pronoIcon()}<span>Pronos</span></a>
       <a class="p50-bottom-link p50-bottom-link-ranking ${isHome ? 'active' : ''}" href="./" data-p50-tab="ranking" ${isHome ? 'aria-current="page"' : ''}>${rankingIcon()}<span>Classement</span></a>
-      <a class="p50-bottom-link" href="./?open=account" data-p50-tab="account">${accountIcon()}<span>Mon espace</span></a>
+      <a class="p50-bottom-link ${isAccount ? 'active' : ''}" href="./mon-espace.html" data-p50-tab="account" ${isAccount ? 'aria-current="page"' : ''}>${accountIcon()}<span>Mon espace</span></a>
     </nav>`;
   }
 
   function injectNav() {
+    if (isNative) return;
     if (document.querySelector('.p50-bottom-nav')) return;
     document.body.insertAdjacentHTML('beforeend', navHtml());
   }
@@ -252,14 +258,15 @@
   }
 
   function routeQuery() {
-    if (isFeed || isProno) return;
+    if (isFeed || isProno || isAccount) return;
     const params = new URLSearchParams(location.search);
     const action = params.get('open');
     const profileId = params.get('profile');
-    if (action === 'account') callWhenReady('currentUser', current => {
-      if (current()) callWhenReady('openUser', fn => fn());
-      else callWhenReady('openAuth', fn => fn('login'));
-    });
+    // Compat anciennes URLs /?open=account → vraie page Mon espace
+    if (action === 'account') {
+      location.replace('./mon-espace.html' + (params.get('native') === '1' ? '?native=1' : ''));
+      return;
+    }
     if (isReloadNavigation()) {
       if (typeof window.p50ClearProfileQuery === 'function') window.p50ClearProfileQuery();
       return;
@@ -276,16 +283,6 @@
       if (sessionStorage.getItem('pass50_session')) return false;
     } catch (_) {}
     return true;
-  }
-
-  function openAccount(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (typeof window.currentUser === 'function' && window.currentUser()) {
-      if (typeof window.openUser === 'function') window.openUser();
-    } else if (typeof window.authPending === 'function' && window.authPending()) {
-      return;
-    } else if (typeof window.openAuth === 'function') window.openAuth('login');
   }
 
   /* Brief overflow freeze only while leaving the page (not on every tap). */
@@ -317,24 +314,13 @@
     }
 
     const tab = link.dataset.p50Tab || '';
-    if (tab === 'account' && isHome) {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      openAccount(event || { preventDefault() {}, stopPropagation() {} });
-      activatedAt = Date.now();
-      return true;
-    }
-
     if ((tab === 'feed' || tab === 'prono') && guestNeedsAuth()) {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
       activatedAt = Date.now();
-      if (isHome && typeof window.openAuth === 'function') window.openAuth('login');
-      else location.assign('./?open=account');
+      go('./mon-espace.html');
       return true;
     }
 

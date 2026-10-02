@@ -48,9 +48,9 @@ jobs:
           grep -q 'platform-wait-probe-v21' .github/workflows/content-freshness-platform-audit.yml
           grep -q 'contentFreshnessRuntime=="CONTENT-FRESHNESS-V4.0"' .github/workflows/content-freshness-platform-audit.yml
           grep -q 'content-freshness-cron-v4.php' .github/workflows/content-freshness-platform-audit.yml
-          grep -q 'put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-platform-audit-cron-v2.php' .github/workflows/deploy-ionos.yml
-          grep -q 'put -O "$REMOTE_DIR/api" .deploy/api/content-freshness-cron-v4.php' .github/workflows/deploy-ionos.yml
-          grep -q 'put -O "$REMOTE_DIR/api" .deploy/api/metrics-collector-facebook.php' .github/workflows/deploy-ionos.yml
+          grep -q 'put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-platform-audit-cron-v2.php' .github/workflows/deploy-ionos.yml
+          grep -q 'put -O ${REMOTE_DIR@Q}/api .deploy/api/content-freshness-cron-v4.php' .github/workflows/deploy-ionos.yml
+          grep -q 'put -O ${REMOTE_DIR@Q}/api .deploy/api/metrics-collector-facebook.php' .github/workflows/deploy-ionos.yml
           ! grep -q 'actions: write' .github/workflows/content-freshness-platform-audit.yml
           ! grep -q 'UPDATE app_state' api/content-freshness-platform-audit-cron-v2.php
           ! grep -q "'profileId'=>" api/content-freshness-platform-audit-cron-v2.php

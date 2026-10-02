@@ -27,20 +27,20 @@ class GuestLoginGatesV1Tests(unittest.TestCase):
         self.assertIn("id=\"buzz\"", INDEX)
 
     def test_mon_fil_requires_login(self):
-        self.assertIn("location.replace('./?open=account')", FEED)
+        self.assertIn("location.replace('./mon-espace.html')", FEED)
         self.assertIn("if (!state.user)", FEED)
         self.assertIn("PASS50-FOLLOW-FEED-PAGE-V2.23", FEED)
 
     def test_prono_requires_login(self):
         self.assertIn("function requireLogin()", PRONO)
-        self.assertIn("location.replace('./?open=account')", PRONO)
+        self.assertIn("location.replace('./mon-espace.html')", PRONO)
         self.assertIn("if(!requireLogin())return;", PRONO)
 
     def test_bottom_nav_gates_feed_and_prono(self):
         self.assertIn("PASS50-MOBILE-BOTTOM-NAV-V1.11", NAV)
         self.assertIn("function guestNeedsAuth()", NAV)
         self.assertIn("tab === 'feed' || tab === 'prono'", NAV)
-        self.assertIn("openAuth('login')", NAV)
+        self.assertIn("go('./mon-espace.html')", NAV)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,20 @@
+// Applied by Codemagic after `expo prebuild` when CM_KEYSTORE_* env vars are set.
+android {
+    signingConfigs {
+        release {
+            if (System.getenv()["CM_KEYSTORE_PATH"]) {
+                storeFile file(System.getenv()["CM_KEYSTORE_PATH"])
+                storePassword System.getenv()["CM_KEYSTORE_PASSWORD"]
+                keyAlias System.getenv()["CM_KEY_ALIAS"]
+                keyPassword System.getenv()["CM_KEY_PASSWORD"]
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (System.getenv()["CM_KEYSTORE_PATH"]) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
