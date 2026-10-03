@@ -1,31 +1,78 @@
 {
-  "at": "2026-10-03 16:29 UTC",
+  "at": "2026-10-03 21:26 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 4,
   "lives": [
     {
-      "profileId": "hassan",
+      "profileId": "census-jordan-evraa",
       "platform": "TikTok",
-      "roomId": "7692465448369720084",
+      "roomId": "7692534366009887518",
+      "title": "COTE D’IVOIRE VS CAMEROUN",
+      "viewers": 755,
+      "startedAt": "2026-10-03 20:03:30",
+      "handle": "realjordanevraa"
+    },
+    {
+      "profileId": "census-jp-nda",
+      "platform": "TikTok",
+      "roomId": "7692554183359089428",
+      "title": "Bienvenue dans mon LIVE",
+      "viewers": 16450,
+      "startedAt": "2026-10-03 21:19:53",
+      "handle": "jpnda_1"
+    },
+    {
+      "profileId": "eunice",
+      "platform": "TikTok",
+      "roomId": "7692555516672822023",
       "title": "",
-      "viewers": 509,
-      "startedAt": "2026-10-03 15:35:10",
-      "handle": "hassanhayekofficiel"
+      "viewers": 105,
+      "startedAt": "2026-10-03 21:25:15",
+      "handle": "eunice.zunon"
+    },
+    {
+      "profileId": "general-camille-makosso",
+      "platform": "TikTok",
+      "roomId": "7692549629497461522",
+      "title": "",
+      "viewers": 5321,
+      "startedAt": "2026-10-03 21:02:20",
+      "handle": "generalmakossocamille79"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
-    "added": [],
+    "published": 4,
+    "added": [
+      {
+        "profileId": "eunice",
+        "platform": "TikTok",
+        "handle": "eunice.zunon",
+        "addedAt": "2026-10-03T21:26:03+00:00",
+        "reason": "unknown_audit_live"
+      }
+    ],
     "stored": [
       {
-        "profileId": "hassan",
+        "profileId": "census-jordan-evraa",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-jp-nda",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "eunice",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "general-camille-makosso",
         "platform": "TikTok"
       }
     ],
     "skipped": [],
-    "p0Count": 29
+    "p0Count": 30
   },
   "enabled": true,
   "error": null

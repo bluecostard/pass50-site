@@ -11,6 +11,22 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-03 21:26 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **1**
+
+Vraiment en live :
+- TikTok `census-jordan-evraa` @realjordanevraa — COTE D’IVOIRE VS CAMEROUN · 755 viewers
+- TikTok `census-jp-nda` @jpnda_1 — Bienvenue dans mon LIVE · 16450 viewers
+- TikTok `eunice` @eunice.zunon — 7692555516672822023 · 105 viewers
+- TikTok `general-camille-makosso` @generalmakossocamille79 — 7692549629497461522 · 5321 viewers
+
+Nouveaux P0 :
+- TikTok `eunice`
+
 ### 2026-10-03 16:29 UTC
 
 - Unknown sondés : **200**
@@ -391,11 +407,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-akouba-angola` @akouba.angola — Le jeu de la main 🤚jour 2 · 2490 viewers
-
-### 2026-09-23 04:52 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
