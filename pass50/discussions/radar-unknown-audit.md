@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-03 05:26 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-10-02 22:20 UTC
 
 - Unknown sondés : **200**
@@ -385,14 +393,6 @@ Vraiment en live :
 - TikTok `general-camille-makosso` @generalmakossocamille79 — 7688463575997434632 · 3180 viewers
 
 ### 2026-09-22 17:03 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-09-22 11:49 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
