@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-04 12:31 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `p_1786797024293` @professeurdelarue79 — RENDEZ VOUS CE SOIR · 125 viewers
+
 ### 2026-10-04 06:02 UTC
 
 - Unknown sondés : **200**
@@ -393,15 +403,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-09-23 21:35 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `apoutchou` @apoutchou_national1 — 7688842927358937888 · 26307 viewers
-- TikTok `census-amour-ruth-poopy` @amourruth0 — 7688844613959912199 · 135 viewers
-- TikTok `general-camille-makosso` @generalmakossocamille79 — 7688843245308218120 · 13312 viewers
