@@ -1,9 +1,32 @@
 {
-  "at": "2026-10-05 05:52 UTC",
+  "at": "2026-10-05 14:55 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "eunice",
+      "platform": "TikTok",
+      "roomId": "7693180612939533064",
+      "title": "Eunice Zunon 🦁",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "eunice.zunon"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "eunice",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 30
+  },
   "enabled": true,
   "error": null
 }
