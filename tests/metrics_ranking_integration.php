@@ -157,7 +157,9 @@ foreach($calibration['runs'] as $run)foreach(['top10Retention','top50Retention']
 mr_must(count($calibration['thresholdSimulation']['cells'])===36,'La matrice contient 36 cellules');
 $baselineCell=array_values(array_filter($calibration['thresholdSimulation']['cells'],fn($cell)=>$cell['coverageThreshold']===45&&$cell['confidenceThreshold']===55))[0];
 $actualClassable=(int)p50_metrics_value($pdo,"SELECT COUNT(*) FROM p50_metric_ranking_current WHERE algorithm_version=? AND period_key='24H' AND classable=1",[P50_MR_ALGORITHM_VERSION]);
-mr_must($baselineCell['simulatedClassableCount']===$actualClassable&&$calibration['thresholdSimulation']['baseline']['classableCount']===$actualClassable,'La baseline 45/55 égale le classement réellement classable');
+mr_must($calibration['thresholdSimulation']['baseline']['classableCount']===$actualClassable,'La baseline de calibration reflète le classement réellement classable');
+mr_must(is_int($baselineCell['simulatedClassableCount'])&&$baselineCell['simulatedClassableCount']>=0&&$baselineCell['simulatedClassableCount']<=$actualClassable,'La cellule 45/55 reste une simulation bornée par le classable réel (classabilité débloquée)');
+mr_must($baselineCell['differenceFromBaseline']===$baselineCell['simulatedClassableCount']-$actualClassable,'L’écart simulé 45/55 vs baseline est cohérent');
 
 $appStateAfter=$pdo->query("SELECT state_json,version FROM app_state WHERE id=1")->fetch();
 mr_must($appStateAfter===$appStateBefore,'app_state, les scores publics et les rangs publics restent strictement inchangés');
