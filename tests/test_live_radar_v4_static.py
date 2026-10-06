@@ -32,12 +32,17 @@ class LiveRadarV41StaticTests(unittest.TestCase):
         self.assertNotIn("live-status-v3.php", FILES['client'])
         self.assertIn("live-status.php", FILES['client'])
 
-    def test_reported_youtube_false_positive_is_scoped_to_one_video(self):
+    def test_reported_youtube_false_positive_is_scoped(self):
         parser = FILES['parsers']
+        storage = FILES['storage']
         self.assertIn('P50_LIVE_V4_FALSE_POSITIVE_VIDEO_IDS', parser)
         self.assertIn('P50_LIVE_V4_FALSE_POSITIVE_TIKTOK_PROFILES', parser)
+        self.assertIn('P50_LIVE_V4_FALSE_POSITIVE_YOUTUBE_PROFILES', parser)
         self.assertIn("'census-isouch'", parser)
+        self.assertIn("'census-stoni'", parser)
+        self.assertIn("'IhiWA0vAeVo'", parser)
         self.assertIn("'error'=>'known_false_positive'", parser)
+        self.assertIn('P50_LIVE_V4_FALSE_POSITIVE_YOUTUBE_PROFILES', storage)
         self.assertIn('p50_live_v4_known_false_positive($stream)', FILES['endpoint'])
         self.assertNotIn("profileId']==='kevine'", parser)
 
