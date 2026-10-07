@@ -1,45 +1,9 @@
 {
-  "at": "2026-10-06 22:41 UTC",
+  "at": "2026-10-07 06:09 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "census-awao-officiel",
-      "platform": "TikTok",
-      "roomId": "7693687152099429140",
-      "title": "Cc on match ? 🥰",
-      "viewers": 414,
-      "startedAt": "2026-10-06 22:36:33",
-      "handle": "influamenta1"
-    },
-    {
-      "profileId": "general-camille-makosso",
-      "platform": "TikTok",
-      "roomId": "7693688229672848146",
-      "title": "",
-      "viewers": 1429,
-      "startedAt": "2026-10-06 22:40:49",
-      "handle": "generalmakossocamille79"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-awao-officiel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "general-camille-makosso",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 30
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

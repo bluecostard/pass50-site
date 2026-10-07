@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-07 06:09 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-10-06 22:41 UTC
 
 - Unknown sondés : **200**
@@ -378,14 +386,6 @@ Vraiment en live :
 - TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 365 viewers
 
 ### 2026-09-26 11:33 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-09-26 05:08 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
