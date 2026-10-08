@@ -1,32 +1,9 @@
 {
-  "at": "2026-10-08 01:03 UTC",
+  "at": "2026-10-08 10:44 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
-  "lives": [
-    {
-      "profileId": "census-ange-morel",
-      "platform": "TikTok",
-      "roomId": "7694074702319078164",
-      "title": "🥖ANGE-MOREL YOUR EYES 👁️🇨🇮",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "angemorel4"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 1,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-ange-morel",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 30
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
