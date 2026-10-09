@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-09 01:16 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-awao-officiel` @influamenta1 — Cc ici❤️ · 32 viewers
+
 ### 2026-10-08 10:44 UTC
 
 - Unknown sondés : **200**
@@ -379,14 +389,6 @@ Vraiment en live :
 - TikTok `oustaz-diane` @oustazdianeofficiel1 — Lets Go LIVE! · 1095 viewers
 
 ### 2026-09-27 12:12 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-09-27 05:25 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
