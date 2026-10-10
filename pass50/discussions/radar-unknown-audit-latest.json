@@ -1,39 +1,26 @@
 {
-  "at": "2026-10-10 17:23 UTC",
+  "at": "2026-10-10 21:51 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "census-ange-boli",
+      "profileId": "oustaz-diane",
       "platform": "TikTok",
-      "roomId": "7695081498521275143",
-      "title": "Ange Boli LA VAR 💡🐬⭕️",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "angeboli7"
-    },
-    {
-      "profileId": "hassan",
-      "platform": "TikTok",
-      "roomId": "7695070161808558868",
-      "title": "",
-      "viewers": 616,
-      "startedAt": "2026-10-10 16:03:03",
-      "handle": "hassanhayekofficiel"
+      "roomId": "7695136871164250913",
+      "title": "Le petit poteau téléphonique",
+      "viewers": 1904,
+      "startedAt": "2026-10-10 20:21:49",
+      "handle": "oustazdianeofficiel1"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 2,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "census-ange-boli",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "hassan",
+        "profileId": "oustaz-diane",
         "platform": "TikTok"
       }
     ],
