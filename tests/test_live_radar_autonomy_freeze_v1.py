@@ -38,9 +38,9 @@ class LiveRadarAutonomyFreezeV1Tests(unittest.TestCase):
         self.assertIn("PASS50_LIVE_RADAR_AUTONOMY_V1", P0)
         self.assertIn("live_radar_continuous_tick.py", P0)
         self.assertIn("--tick 1", P0)
-        self.assertIn("cron: '*/5 * * * *'", P0)
-        self.assertIn("cron: '*/5 * * * *'", QUICK)
-        self.assertIn("cron: '*/5 * * * *'", SWEEP)
+        self.assertIn("cron: '0,5,10", P0)
+        self.assertIn("cron: '1,6,11", QUICK)
+        self.assertIn("cron: '3,8,13", SWEEP)
         self.assertNotIn("cron: '*/15 * * * *'", QUICK)
 
     def test_client_is_cache_only_never_detection(self):
@@ -55,7 +55,7 @@ class LiveRadarAutonomyFreezeV1Tests(unittest.TestCase):
         self.assertIn("même si l’app", NOTES)
         self.assertIn("Tick cible **1 seconde**", NOTES)
         self.assertIn("requiresAppOpen === false", NOTES)
-        self.assertIn("'requiresAppOpen': False", TICK)
+        self.assertIn('"requiresAppOpen": False', TICK)
         self.assertIn("app non requise", TICK)
 
 
