@@ -1,32 +1,9 @@
 {
-  "at": "2026-10-10 21:51 UTC",
+  "at": "2026-10-11 05:59 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
-  "lives": [
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7695136871164250913",
-      "title": "Le petit poteau téléphonique",
-      "viewers": 1904,
-      "startedAt": "2026-10-10 20:21:49",
-      "handle": "oustazdianeofficiel1"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 1,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "oustaz-diane",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 30
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

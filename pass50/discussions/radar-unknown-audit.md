@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-11 05:59 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-10-10 21:51 UTC
 
 - Unknown sondés : **200**
@@ -388,14 +396,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `census-cahie-kunta` @cahiekunta — 7690732013162105620 · 58 viewers
 - TikTok `tma` @tmacrush_officiel — 7690688079094418184 · 286 viewers
-
-### 2026-09-28 21:16 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
-- TikTok `tma` @tmacrush_officiel — 7690688079094418184 · 313 viewers
