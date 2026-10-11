@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-11 19:35 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-guyguy-le-grouilleur-de-bologne` @guyguylegrouilleur07 — affaire de terrain de lolobo ext · 773 viewers
+- TikTok `ismael-aka` @ismael.aka.ddr — 7695491616680708896 · 980 viewers
+
 ### 2026-10-11 13:04 UTC
 
 - Unknown sondés : **200**
@@ -385,11 +396,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-segano-et-mael` @seganoofficiel2.0 — 7691015412363954977 · 1194 viewers
-
-### 2026-09-29 09:57 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.

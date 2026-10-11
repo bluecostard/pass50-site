@@ -1,9 +1,45 @@
 {
-  "at": "2026-10-11 13:04 UTC",
+  "at": "2026-10-11 19:35 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "census-guyguy-le-grouilleur-de-bologne",
+      "platform": "TikTok",
+      "roomId": "7695491552483347208",
+      "title": "affaire de terrain de lolobo ext",
+      "viewers": 773,
+      "startedAt": "2026-10-11 19:18:08",
+      "handle": "guyguylegrouilleur07"
+    },
+    {
+      "profileId": "ismael-aka",
+      "platform": "TikTok",
+      "roomId": "7695491616680708896",
+      "title": "",
+      "viewers": 980,
+      "startedAt": "2026-10-11 19:18:26",
+      "handle": "ismael.aka.ddr"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-guyguy-le-grouilleur-de-bologne",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "ismael-aka",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 31
+  },
   "enabled": true,
   "error": null
 }
