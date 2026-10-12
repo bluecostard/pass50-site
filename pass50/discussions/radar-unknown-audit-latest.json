@@ -1,9 +1,32 @@
 {
-  "at": "2026-10-12 11:03 UTC",
+  "at": "2026-10-12 21:18 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "census-guyguy-le-grouilleur-de-bologne",
+      "platform": "TikTok",
+      "roomId": "7695888278646180628",
+      "title": "tout part du mental,ne doute pas",
+      "viewers": 865,
+      "startedAt": "2026-10-12 20:57:45",
+      "handle": "guyguylegrouilleur07"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-guyguy-le-grouilleur-de-bologne",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 31
+  },
   "enabled": true,
   "error": null
 }
