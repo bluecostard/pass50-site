@@ -1,45 +1,9 @@
 {
-  "at": "2026-10-12 00:37 UTC",
+  "at": "2026-10-12 11:03 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "census-ange-morel",
-      "platform": "TikTok",
-      "roomId": "7695562414596066100",
-      "title": "",
-      "viewers": 9640,
-      "startedAt": "2026-10-11 23:53:23",
-      "handle": "angemorel4"
-    },
-    {
-      "profileId": "census-souley-de-paris",
-      "platform": "TikTok",
-      "roomId": "7695549704364477216",
-      "title": "SOULEY DE-PARIS 🦅 B-52",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "souleydeparis"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-ange-morel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-souley-de-paris",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 31
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
