@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-12 00:37 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-ange-morel` @angemorel4 — 7695562414596066100 · 9640 viewers
+- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
+
 ### 2026-10-11 19:35 UTC
 
 - Unknown sondés : **200**
@@ -386,13 +397,3 @@ Vraiment en live :
 - TikTok `apoutchou` @apoutchou_national1 — 7691071026750425888 · 22480 viewers
 - TikTok `atoule` @atouleee.officiel — Lets Go LIVE! · 118 viewers
 - TikTok `tma` @tmacrush_officiel — 7691078400032787208 · 226 viewers
-
-### 2026-09-29 18:08 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-segano-et-mael` @seganoofficiel2.0 — 7691015412363954977 · 1194 viewers

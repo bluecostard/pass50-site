@@ -1,25 +1,25 @@
 {
-  "at": "2026-10-11 19:35 UTC",
+  "at": "2026-10-12 00:37 UTC",
   "unknownCount": 200,
   "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-guyguy-le-grouilleur-de-bologne",
+      "profileId": "census-ange-morel",
       "platform": "TikTok",
-      "roomId": "7695491552483347208",
-      "title": "affaire de terrain de lolobo ext",
-      "viewers": 773,
-      "startedAt": "2026-10-11 19:18:08",
-      "handle": "guyguylegrouilleur07"
+      "roomId": "7695562414596066100",
+      "title": "",
+      "viewers": 9640,
+      "startedAt": "2026-10-11 23:53:23",
+      "handle": "angemorel4"
     },
     {
-      "profileId": "ismael-aka",
+      "profileId": "census-souley-de-paris",
       "platform": "TikTok",
-      "roomId": "7695491616680708896",
-      "title": "",
-      "viewers": 980,
-      "startedAt": "2026-10-11 19:18:26",
-      "handle": "ismael.aka.ddr"
+      "roomId": "7695549704364477216",
+      "title": "SOULEY DE-PARIS 🦅 B-52",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "souleydeparis"
     }
   ],
   "posted": {
@@ -29,11 +29,11 @@
     "added": [],
     "stored": [
       {
-        "profileId": "census-guyguy-le-grouilleur-de-bologne",
+        "profileId": "census-ange-morel",
         "platform": "TikTok"
       },
       {
-        "profileId": "ismael-aka",
+        "profileId": "census-souley-de-paris",
         "platform": "TikTok"
       }
     ],
