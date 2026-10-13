@@ -1,26 +1,39 @@
 {
-  "at": "2026-10-13 10:46 UTC",
+  "at": "2026-10-13 19:21 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 2,
   "lives": [
     {
       "profileId": "census-le-grand-bicongo",
       "platform": "TikTok",
-      "roomId": "7696094640151923477",
+      "roomId": "7696227182042598164",
       "title": "",
-      "viewers": 322,
-      "startedAt": "2026-10-13 10:18:29",
+      "viewers": 208,
+      "startedAt": "2026-10-13 18:53:36",
       "handle": "legrandbicongo"
+    },
+    {
+      "profileId": "census-lise-akrassi",
+      "platform": "TikTok",
+      "roomId": "7696232331768007444",
+      "title": "",
+      "viewers": 12,
+      "startedAt": "2026-10-13 19:12:58",
+      "handle": "lise.akrassi.offi"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
+    "published": 2,
     "added": [],
     "stored": [
       {
         "profileId": "census-le-grand-bicongo",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-lise-akrassi",
         "platform": "TikTok"
       }
     ],
