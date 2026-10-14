@@ -1,65 +1,26 @@
 {
-  "at": "2026-10-14 00:21 UTC",
+  "at": "2026-10-14 08:50 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "african-ryou",
+      "profileId": "general-camille-makosso",
       "platform": "TikTok",
-      "roomId": "7696291954225416981",
+      "roomId": "7696432622887078674",
       "title": "",
-      "viewers": 429,
-      "startedAt": "2026-10-13 23:04:54",
-      "handle": "african_ryou_officiel"
-    },
-    {
-      "profileId": "census-awao-officiel",
-      "platform": "TikTok",
-      "roomId": "7696306688004999954",
-      "title": "Cc❤️‍🔥",
-      "viewers": 346,
-      "startedAt": "2026-10-14 00:01:32",
-      "handle": "influamenta1"
-    },
-    {
-      "profileId": "census-jordan-evraa",
-      "platform": "TikTok",
-      "roomId": "7696300233692547870",
-      "title": "",
-      "viewers": 249,
-      "startedAt": "2026-10-13 23:36:43",
-      "handle": "realjordanevraa"
-    },
-    {
-      "profileId": "p_1785175190809",
-      "platform": "TikTok",
-      "roomId": "7696295563026778898",
-      "title": "ULRICH JORDAN 🧚‍♂️✌🏽",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "ulrich_jordan30"
+      "viewers": 7495,
+      "startedAt": "2026-10-14 08:10:11",
+      "handle": "generalmakossocamille79"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 4,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "african-ryou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-awao-officiel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-jordan-evraa",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "p_1785175190809",
+        "profileId": "general-camille-makosso",
         "platform": "TikTok"
       }
     ],
