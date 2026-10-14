@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-14 00:21 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `african-ryou` @african_ryou_officiel — 7696291954225416981 · 429 viewers
+- TikTok `census-awao-officiel` @influamenta1 — Cc❤️‍🔥 · 346 viewers
+- TikTok `census-jordan-evraa` @realjordanevraa — 7696300233692547870 · 249 viewers
+- TikTok `p_1785175190809` @ulrich_jordan30 — ULRICH JORDAN 🧚‍♂️✌🏽
+
 ### 2026-10-13 19:21 UTC
 
 - Unknown sondés : **200**
@@ -383,13 +396,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-joshua-cooker` @paaa.persil — 7691766231413705524 · 848 viewers
-
-### 2026-10-01 10:16 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-le-grand-bicongo` @legrandbicongo — 7691633457195682581 · 495 viewers
