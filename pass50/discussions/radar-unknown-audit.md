@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-15 21:30 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7696994984230243104 · 1120 viewers
+- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 1824 viewers
+- TikTok `tma` @tmacrush_officiel — 7697009820146862855 · 13 viewers
+
 ### 2026-10-15 17:09 UTC
 
 - Unknown sondés : **200**
@@ -396,13 +409,3 @@ Vraiment en live :
 
 Nouveaux P0 :
 - TikTok `eunice`
-
-### 2026-10-03 16:29 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `hassan` @hassanhayekofficiel — 7692465448369720084 · 509 viewers
