@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-15 17:09 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
+- TikTok `hassan` @hassanhayekofficiel — 7696942031584086804 · 656 viewers
+
 ### 2026-10-15 11:41 UTC
 
 - Unknown sondés : **200**
@@ -395,13 +406,3 @@ Nouveaux P0 :
 
 Vraiment en live :
 - TikTok `hassan` @hassanhayekofficiel — 7692465448369720084 · 509 viewers
-
-### 2026-10-03 11:48 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-le-grand-bicongo` @legrandbicongo — 7692405145655282453 · 266 viewers
