@@ -1,9 +1,71 @@
 {
-  "at": "2026-10-16 16:46 UTC",
+  "at": "2026-10-16 21:21 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 4,
+  "lives": [
+    {
+      "profileId": "census-samuella-kouassi",
+      "platform": "TikTok",
+      "roomId": "7697374629802838817",
+      "title": "",
+      "viewers": 2921,
+      "startedAt": "2026-10-16 21:05:29",
+      "handle": "samuellakouassiofficiel"
+    },
+    {
+      "profileId": "dez-cocrane225",
+      "platform": "TikTok",
+      "roomId": "7697357077429127968",
+      "title": "",
+      "viewers": 299,
+      "startedAt": "2026-10-16 19:57:14",
+      "handle": "dezcocrane.225"
+    },
+    {
+      "profileId": "hassan",
+      "platform": "TikTok",
+      "roomId": "7697364240138636084",
+      "title": "",
+      "viewers": 838,
+      "startedAt": "2026-10-16 20:25:41",
+      "handle": "hassanhayekofficiel"
+    },
+    {
+      "profileId": "lolo-beaute",
+      "platform": "TikTok",
+      "roomId": "7697364251296074528",
+      "title": "Lolo beaute center",
+      "viewers": 205,
+      "startedAt": null,
+      "handle": "lolobeaute85"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 4,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-samuella-kouassi",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "dez-cocrane225",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "hassan",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "lolo-beaute",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 31
+  },
   "enabled": true,
   "error": null
 }
