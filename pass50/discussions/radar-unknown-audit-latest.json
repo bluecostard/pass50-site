@@ -1,71 +1,9 @@
 {
-  "at": "2026-10-15 21:30 UTC",
+  "at": "2026-10-16 04:41 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
-  "lives": [
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7696994984230243104",
-      "title": "",
-      "viewers": 1120,
-      "startedAt": "2026-10-15 20:32:29",
-      "handle": "samuellakouassiofficiel"
-    },
-    {
-      "profileId": "lolo-beaute",
-      "platform": "TikTok",
-      "roomId": "7696979499934927648",
-      "title": "Lolo beaute center",
-      "viewers": null,
-      "startedAt": null,
-      "handle": "lolobeaute85"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7696987399909313313",
-      "title": "Le petit poteau téléphonique",
-      "viewers": 1824,
-      "startedAt": "2026-10-15 20:02:46",
-      "handle": "oustazdianeofficiel1"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7697009820146862855",
-      "title": "",
-      "viewers": 13,
-      "startedAt": "2026-10-15 21:30:16",
-      "handle": "tmacrush_officiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 4,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "lolo-beaute",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 31
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
