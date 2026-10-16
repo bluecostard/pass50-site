@@ -334,7 +334,7 @@
           <p class="lede">${esc(user.email || '')}</p>
         </section>
         <div class="panel stack">
-          <a class="btn" href="./?open=account">Compte complet</a>
+          <a class="btn" href="./mon-espace.html">Compte complet</a>
           <a class="btn ghost" href="./pronostics.html">Pronostics</a>
           <a class="btn ghost" href="./mon-fil.html">Mon fil (suivis)</a>
           <a class="btn ghost" href="./">Classement desktop</a>
@@ -352,7 +352,7 @@
         <label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label>
         ${state.error.auth ? `<p class="error">${esc(state.error.auth)}</p>` : ''}
         <button class="btn" type="submit"${state.loading.auth ? ' disabled' : ''}>${state.loading.auth ? 'Connexion…' : 'Se connecter'}</button>
-        <a class="btn ghost" href="./?open=account">Créer un compte</a>
+        <a class="btn ghost" href="./mon-espace.html">Créer un compte</a>
       </form>
       <div class="panel stack">
         ${isNativeShell()

@@ -21,7 +21,7 @@ class MetricsRankingFairDiversityTests(unittest.TestCase):
         self.assertIn("function p50_mo_exploration_profiles", ORCH)
         self.assertIn("p1ExplorationRatio", ORCH)
         self.assertIn("p50_mo_exploration_profiles($pdo,$exploreMax,$cfg['p1Rank'],$topIds)", ORCH)
-        self.assertIn("last_capture IS NULL DESC,last_capture ASC", ORCH)
+        self.assertIn("MAX(c.captured_at) IS NULL DESC,MAX(c.captured_at) ASC", ORCH)
 
     def test_global_percentile_when_pool_is_small(self):
         self.assertIn("P50_MR_MIN_PERCENTILE_POOL=20", RANK)

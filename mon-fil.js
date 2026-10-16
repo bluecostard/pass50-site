@@ -689,7 +689,7 @@
     if (!list || !end) return;
     renderPronoStories();
     if (!state.user) {
-      list.innerHTML = '<div class="empty"><strong>Connexion nécessaire.</strong>Connectez-vous pour retrouver les influenceurs que vous suivez.<div style="margin-top:13px"><a class="btn primary" href="./?open=account">Se connecter</a></div></div>';
+      list.innerHTML = '<div class="empty"><strong>Connexion nécessaire.</strong>Connectez-vous pour retrouver les influenceurs que vous suivez.<div style="margin-top:13px"><a class="btn primary" href="./mon-espace.html">Se connecter</a></div></div>';
       end.classList.add('hidden');
       return;
     }
@@ -876,7 +876,7 @@
     state.user = user;
     state.profiles = profiles;
     if (!state.user) {
-      location.replace('./?open=account');
+      location.replace('./mon-espace.html');
       return;
     }
     state.following = [...new Set(Array.isArray(user?.following) ? user.following.map(String) : [])].slice(0, MAX_FOLLOWED);

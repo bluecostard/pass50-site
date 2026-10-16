@@ -57,7 +57,7 @@ class AppPlatformPhase2Tests(unittest.TestCase):
 
     def test_desktop_surfaces_still_linked(self):
         client = read("app-client.js")
-        for href in ("./", "./mon-fil.html", "./pronostics.html", "./?open=account"):
+        for href in ("./", "./mon-fil.html", "./pronostics.html", "./mon-espace.html"):
             self.assertIn(href, client)
 
 
