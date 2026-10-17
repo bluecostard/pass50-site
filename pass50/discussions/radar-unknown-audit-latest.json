@@ -1,9 +1,45 @@
 {
-  "at": "2026-10-17 15:42 UTC",
+  "at": "2026-10-17 20:43 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "dez-cocrane225",
+      "platform": "TikTok",
+      "roomId": "7697695801761336096",
+      "title": "",
+      "viewers": 978,
+      "startedAt": "2026-10-17 17:51:44",
+      "handle": "dezcocrane.225"
+    },
+    {
+      "profileId": "oustaz-diane",
+      "platform": "TikTok",
+      "roomId": "7697716858136431392",
+      "title": "Le petit poteau téléphonique",
+      "viewers": 1048,
+      "startedAt": "2026-10-17 19:13:26",
+      "handle": "oustazdianeofficiel1"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "dez-cocrane225",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "oustaz-diane",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 31
+  },
   "enabled": true,
   "error": null
 }
