@@ -1,9 +1,45 @@
 {
-  "at": "2026-10-18 15:58 UTC",
+  "at": "2026-10-18 20:53 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "census-joshua-cooker",
+      "platform": "TikTok",
+      "roomId": "7698102941489941268",
+      "title": "",
+      "viewers": 566,
+      "startedAt": "2026-10-18 20:12:04",
+      "handle": "paaa.persil"
+    },
+    {
+      "profileId": "census-steephbooyeux",
+      "platform": "TikTok",
+      "roomId": "7698106143923309318",
+      "title": "SIABLE 🥳",
+      "viewers": 309,
+      "startedAt": "2026-10-18 20:23:46",
+      "handle": "steephbooyeux"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-joshua-cooker",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-steephbooyeux",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 31
+  },
   "enabled": true,
   "error": null
 }
