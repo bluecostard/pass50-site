@@ -1,45 +1,9 @@
 {
-  "at": "2026-10-18 23:20 UTC",
+  "at": "2026-10-19 04:52 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "census-dezouch-officiel",
-      "platform": "TikTok",
-      "roomId": "7698146012898724629",
-      "title": "",
-      "viewers": 14,
-      "startedAt": "2026-10-18 22:59:13",
-      "handle": "dezouch_officiel"
-    },
-    {
-      "profileId": "census-joshua-cooker",
-      "platform": "TikTok",
-      "roomId": "7698147149532089109",
-      "title": "",
-      "viewers": 186,
-      "startedAt": "2026-10-18 23:03:29",
-      "handle": "paaa.persil"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-dezouch-officiel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-joshua-cooker",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 31
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

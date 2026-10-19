@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-19 04:52 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-10-18 23:20 UTC
 
 - Unknown sondés : **200**
@@ -399,13 +407,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-ange-morel` @angemorel4 — 🥖ANGE-MOREL YOUR EYES 👁️🇨🇮
-
-### 2026-10-07 20:39 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — Dez.cocrane225 🇨🇮🙏🏿🇫🇷😂
