@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-20 19:21 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `aya-robert` @aya.robert27 — 7698830236317715233 · 2083 viewers
+- TikTok `census-lise-akrassi` @lise.akrassi.offi — PARTAGE DE CARRIÈRE PRO. · 9 viewers
+
 ### 2026-10-20 14:22 UTC
 
 - Unknown sondés : **200**
@@ -399,13 +410,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
 - TikTok `hassan` @hassanhayekofficiel — 7695070161808558868 · 616 viewers
-
-### 2026-10-10 09:58 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 276 viewers
