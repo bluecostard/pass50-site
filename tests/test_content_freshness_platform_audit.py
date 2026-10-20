@@ -35,7 +35,8 @@ class ContentFreshnessPlatformAuditV21Tests(unittest.TestCase):
         self.assertIn("'collectionBucketMinutes'=>P50_CONTENT_FRESHNESS_BUCKET_MINUTES", ENDPOINT)
         self.assertIn("'scheduledCyclesPerBucket'=>1", ENDPOINT)
         self.assertNotIn("collectionIdempotencyBucketMinutes'=>15", ENDPOINT)
-        self.assertIn("cron: '*/5 * * * *'", FRESHNESS)
+        # GitHub coalesces */5; the workflow uses a 3h trigger with 36×5min buckets.
+        self.assertIn("cron: '17 */3 * * *'", FRESHNESS)
         self.assertIn("content-freshness-cron-v4.php", FRESHNESS)
 
     def test_x_health_uses_the_real_social_link_primary_key(self):
@@ -107,7 +108,8 @@ class ContentFreshnessPlatformAuditV21Tests(unittest.TestCase):
             ".deploy/api/content-freshness-cron-v4.php",
             ".deploy/api/metrics-collector-facebook.php",
         ):
-            self.assertIn(f'put -O "$REMOTE_DIR/api" {path}', DEPLOY)
+            self.assertIn(path, DEPLOY)
+            self.assertIn(f"put -O ${{REMOTE_DIR@Q}}/api {path}", DEPLOY)
         self.assertLess(
             DEPLOY.index(".deploy/api/content-freshness-platform-audit-cron-v2.php"),
             DEPLOY.index("mirror --reverse"),

@@ -81,6 +81,9 @@ jobs:
           put -O ${REMOTE_DIR@Q} .deploy/index.html
           put -O ${REMOTE_DIR@Q} .deploy/mon-fil.html
           put -O ${REMOTE_DIR@Q} .deploy/mon-fil.js
+          put -O ${REMOTE_DIR@Q} .deploy/mon-espace.html
+          put -O ${REMOTE_DIR@Q} .deploy/mon-espace.js
+          put -O ${REMOTE_DIR@Q} .deploy/pass50-auth-session.js
           put -O ${REMOTE_DIR@Q} .deploy/app-config.js
           put -O ${REMOTE_DIR@Q} .deploy/profile-samo-samo.js
           put -O ${REMOTE_DIR@Q} .deploy/owner-current-links-lock-v1.js
