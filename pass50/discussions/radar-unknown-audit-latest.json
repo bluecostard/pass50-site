@@ -1,58 +1,9 @@
 {
-  "at": "2026-10-20 00:26 UTC",
+  "at": "2026-10-20 08:41 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "census-joshua-cooker",
-      "platform": "TikTok",
-      "roomId": "7698514854449253172",
-      "title": "",
-      "viewers": 127,
-      "startedAt": "2026-10-19 22:50:27",
-      "handle": "paaa.persil"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7698459032318724897",
-      "title": "",
-      "viewers": 130,
-      "startedAt": "2026-10-19 19:13:32",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7698499623539346194",
-      "title": "",
-      "viewers": 194,
-      "startedAt": "2026-10-19 21:51:11",
-      "handle": "tmacrush_officiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-joshua-cooker",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 33
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
