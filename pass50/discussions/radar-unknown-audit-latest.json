@@ -1,25 +1,25 @@
 {
-  "at": "2026-10-20 19:21 UTC",
+  "at": "2026-10-20 23:57 UTC",
   "unknownCount": 200,
   "liveCount": 2,
   "lives": [
     {
-      "profileId": "aya-robert",
+      "profileId": "apoutchou",
       "platform": "TikTok",
-      "roomId": "7698830236317715233",
+      "roomId": "7698868095850449696",
       "title": "",
-      "viewers": 2083,
-      "startedAt": "2026-10-20 19:13:59",
-      "handle": "aya.robert27"
+      "viewers": 9109,
+      "startedAt": "2026-10-20 21:41:19",
+      "handle": "apoutchou_national1"
     },
     {
-      "profileId": "census-lise-akrassi",
+      "profileId": "tma",
       "platform": "TikTok",
-      "roomId": "7698830253283740422",
-      "title": "PARTAGE DE CARRIÈRE PRO.",
-      "viewers": 9,
-      "startedAt": "2026-10-20 19:14:27",
-      "handle": "lise.akrassi.offi"
+      "roomId": "7698861800921533192",
+      "title": "",
+      "viewers": 295,
+      "startedAt": "2026-10-20 21:16:44",
+      "handle": "tmacrush_officiel"
     }
   ],
   "posted": {
@@ -29,11 +29,11 @@
     "added": [],
     "stored": [
       {
-        "profileId": "aya-robert",
+        "profileId": "apoutchou",
         "platform": "TikTok"
       },
       {
-        "profileId": "census-lise-akrassi",
+        "profileId": "tma",
         "platform": "TikTok"
       }
     ],

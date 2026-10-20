@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-20 23:57 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7698868095850449696 · 9109 viewers
+- TikTok `tma` @tmacrush_officiel — 7698861800921533192 · 295 viewers
+
 ### 2026-10-20 19:21 UTC
 
 - Unknown sondés : **200**
@@ -399,14 +410,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 1904 viewers
-
-### 2026-10-10 17:23 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-ange-boli` @angeboli7 — Ange Boli LA VAR 💡🐬⭕️
-- TikTok `hassan` @hassanhayekofficiel — 7695070161808558868 · 616 viewers
