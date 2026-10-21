@@ -1,45 +1,9 @@
 {
-  "at": "2026-10-20 23:57 UTC",
+  "at": "2026-10-21 04:59 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7698868095850449696",
-      "title": "",
-      "viewers": 9109,
-      "startedAt": "2026-10-20 21:41:19",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7698861800921533192",
-      "title": "",
-      "viewers": 295,
-      "startedAt": "2026-10-20 21:16:44",
-      "handle": "tmacrush_officiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 33
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
