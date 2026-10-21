@@ -11,6 +11,20 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-21 21:49 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **5**
+- Publiés radar : **5**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7699233667188640545 · 19348 viewers
+- TikTok `census-madame-koffi` @madamekofii — Bla-bla · 10 viewers
+- TikTok `general-camille-makosso` @generalmakossocamille79 — 7699225915369507602 · 4309 viewers
+- TikTok `holy` @holysheilla — 7699228336517663520 · 65 viewers
+- TikTok `tma` @tmacrush_officiel — 7699221101310544648 · 151 viewers
+
 ### 2026-10-21 17:21 UTC
 
 - Unknown sondés : **200**
@@ -400,14 +414,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `census-ange-morel` @angemorel4 — 7695562414596066100 · 9640 viewers
 - TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
-
-### 2026-10-11 19:35 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-guyguy-le-grouilleur-de-bologne` @guyguylegrouilleur07 — affaire de terrain de lolobo ext · 773 viewers
-- TikTok `ismael-aka` @ismael.aka.ddr — 7695491616680708896 · 980 viewers
