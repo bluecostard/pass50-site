@@ -1,9 +1,45 @@
 {
-  "at": "2026-10-21 12:01 UTC",
+  "at": "2026-10-21 17:21 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "census-stephane-galactik",
+      "platform": "TikTok",
+      "roomId": "7699168697189600020",
+      "title": "",
+      "viewers": 89,
+      "startedAt": "2026-10-21 17:07:20",
+      "handle": "le_coach_des_debout"
+    },
+    {
+      "profileId": "hassan",
+      "platform": "TikTok",
+      "roomId": "7699164958105307924",
+      "title": "je vais me prononcer",
+      "viewers": 726,
+      "startedAt": "2026-10-21 16:52:53",
+      "handle": "hassanhayekofficiel"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-stephane-galactik",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "hassan",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }
