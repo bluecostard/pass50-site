@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-21 12:01 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-10-21 04:59 UTC
 
 - Unknown sondés : **200**
@@ -394,14 +402,6 @@ Vraiment en live :
 - TikTok `ismael-aka` @ismael.aka.ddr — 7695491616680708896 · 980 viewers
 
 ### 2026-10-11 13:04 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-10-11 05:59 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
