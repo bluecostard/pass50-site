@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-22 12:04 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `general-camille-makosso` @generalmakossocamille79 — 7699461726786571009 · 0 viewers
+- TikTok `p_1785175190809` @ulrich_jordan30 — 7699457388806818578 · 3889 viewers
+
 ### 2026-10-22 05:01 UTC
 
 - Unknown sondés : **200**
@@ -405,11 +416,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-guyguy-le-grouilleur-de-bologne` @guyguylegrouilleur07 — tout part du mental,ne doute pas · 865 viewers
-
-### 2026-10-12 11:03 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
