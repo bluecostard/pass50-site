@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-24 16:03 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `hassan` @hassanhayekofficiel — je vais me prononcer · 1266 viewers
+
 ### 2026-10-24 11:15 UTC
 
 - Unknown sondés : **200**
@@ -403,14 +413,3 @@ Vraiment en live :
 - TikTok `census-awao-officiel` @influamenta1 — 7696675616325847826 · 376 viewers
 - TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7696594856705133345 · 222 viewers
-
-### 2026-10-14 19:28 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7696594856705133345 · 1108 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 1135 viewers
