@@ -20,7 +20,7 @@ if($mode==='status'&&!$force){
 }
 
 p50_live_v4_ensure_schema();
-p50_de_sync_registry_from_state();
+p50_de_sync_registry_if_stale(300);
 $state=p50_de_load_public_state();
 $sources=p50_live_v4_sources($state);
 

@@ -26,7 +26,8 @@ require_role($user,'owner','admin');
 try{
     p50_de_ensure_schema();
     if($_SERVER['REQUEST_METHOD']==='GET'){
-        json_response(p50_de_hub_payload());
+        $forceSync=isset($_GET['sync'])&&(string)$_GET['sync']==='1';
+        json_response(p50_de_hub_payload($forceSync));
     }
     require_method('POST');
     $in=json_input();
