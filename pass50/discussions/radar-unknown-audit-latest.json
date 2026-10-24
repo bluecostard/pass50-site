@@ -1,24 +1,15 @@
 {
-  "at": "2026-10-24 20:57 UTC",
+  "at": "2026-10-24 23:21 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 2,
   "lives": [
-    {
-      "profileId": "census-jp-nda",
-      "platform": "TikTok",
-      "roomId": "7700335067440810770",
-      "title": "Bienvenue dans mon LIVE",
-      "viewers": 16616,
-      "startedAt": "2026-10-24 20:33:30",
-      "handle": "jpnda_1"
-    },
     {
       "profileId": "census-samuella-kouassi",
       "platform": "TikTok",
-      "roomId": "7700330674775640865",
+      "roomId": "7700364320961596193",
       "title": "",
-      "viewers": 1615,
-      "startedAt": "2026-10-24 20:16:21",
+      "viewers": 8244,
+      "startedAt": "2026-10-24 22:27:33",
       "handle": "samuellakouassiofficiel"
     },
     {
@@ -26,7 +17,7 @@
       "platform": "TikTok",
       "roomId": "7700289464903650080",
       "title": "Lolo beaute center",
-      "viewers": 1029,
+      "viewers": 1180,
       "startedAt": null,
       "handle": "lolobeaute85"
     }
@@ -34,13 +25,9 @@
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 2,
     "added": [],
     "stored": [
-      {
-        "profileId": "census-jp-nda",
-        "platform": "TikTok"
-      },
       {
         "profileId": "census-samuella-kouassi",
         "platform": "TikTok"
