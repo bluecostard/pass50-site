@@ -1,52 +1,26 @@
 {
-  "at": "2026-10-23 21:30 UTC",
+  "at": "2026-10-24 04:47 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "apoutchou",
+      "profileId": "census-awao-officiel",
       "platform": "TikTok",
-      "roomId": "7699971483572931361",
+      "roomId": "7700069629804972820",
       "title": "",
-      "viewers": 9377,
-      "startedAt": "2026-10-23 21:02:48",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "dez-cocrane225",
-      "platform": "TikTok",
-      "roomId": "7699905384639318817",
-      "title": "",
-      "viewers": 316,
-      "startedAt": "2026-10-23 16:46:12",
-      "handle": "dezcocrane.225"
-    },
-    {
-      "profileId": "lolo-beaute",
-      "platform": "TikTok",
-      "roomId": "7699967806976052001",
-      "title": "Lolo beaute center",
-      "viewers": 271,
-      "startedAt": null,
-      "handle": "lolobeaute85"
+      "viewers": 146,
+      "startedAt": "2026-10-24 03:23:28",
+      "handle": "influamenta1"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "dez-cocrane225",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "lolo-beaute",
+        "profileId": "census-awao-officiel",
         "platform": "TikTok"
       }
     ],
