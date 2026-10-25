@@ -11,6 +11,20 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-25 23:20 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **5**
+- Publiés radar : **5**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7700730355208293152 · 7913 viewers
+- TikTok `census-jp-nda` @jpnda_1 — Bienvenue dans mon LIVE · 8917 viewers
+- TikTok `census-laguepe` @laguepe03 — 7700707581957868302 · 686 viewers
+- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7700741580776966944 · 2140 viewers
+- TikTok `census-segano-et-mael` @seganoofficiel2.0 — 7700734486098561825 · 10381 viewers
+
 ### 2026-10-25 20:57 UTC
 
 - Unknown sondés : **200**
@@ -399,14 +413,6 @@ Vraiment en live :
 - Aucun unknown réellement en live à ce passage.
 
 ### 2026-10-16 11:35 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-10-16 04:41 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
