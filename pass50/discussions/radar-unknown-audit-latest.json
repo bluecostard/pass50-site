@@ -1,9 +1,45 @@
 {
-  "at": "2026-10-25 04:54 UTC",
+  "at": "2026-10-25 16:33 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "aya-robert",
+      "platform": "TikTok",
+      "roomId": "7700628904419117857",
+      "title": "",
+      "viewers": 1590,
+      "startedAt": "2026-10-25 15:33:53",
+      "handle": "aya.robert27"
+    },
+    {
+      "profileId": "census-cahie-kunta",
+      "platform": "TikTok",
+      "roomId": "7700627452616657684",
+      "title": "",
+      "viewers": 576,
+      "startedAt": "2026-10-25 15:28:05",
+      "handle": "cahiekunta"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "aya-robert",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-cahie-kunta",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }
