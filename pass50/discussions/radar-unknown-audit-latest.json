@@ -1,45 +1,9 @@
 {
-  "at": "2026-10-24 23:21 UTC",
+  "at": "2026-10-25 04:54 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7700364320961596193",
-      "title": "",
-      "viewers": 8244,
-      "startedAt": "2026-10-24 22:27:33",
-      "handle": "samuellakouassiofficiel"
-    },
-    {
-      "profileId": "lolo-beaute",
-      "platform": "TikTok",
-      "roomId": "7700289464903650080",
-      "title": "Lolo beaute center",
-      "viewers": 1180,
-      "startedAt": null,
-      "handle": "lolobeaute85"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "lolo-beaute",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 33
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
