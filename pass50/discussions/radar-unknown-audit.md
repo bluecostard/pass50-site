@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-25 20:57 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-laguepe` @laguepe03 — 7700707581957868302 · 332 viewers
+- TikTok `census-willway-jordan-officiel` @jack.carter39 — Willway  Jordan officiel
+
 ### 2026-10-25 16:33 UTC
 
 - Unknown sondés : **200**
@@ -402,16 +413,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-10-15 21:30 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7696994984230243104 · 1120 viewers
-- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 1824 viewers
-- TikTok `tma` @tmacrush_officiel — 7697009820146862855 · 13 viewers
