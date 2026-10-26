@@ -1,9 +1,71 @@
 {
-  "at": "2026-10-26 04:58 UTC",
+  "at": "2026-10-26 13:18 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 4,
+  "lives": [
+    {
+      "profileId": "census-madame-koffi",
+      "platform": "TikTok",
+      "roomId": "7700963544396876577",
+      "title": "Bla-bla",
+      "viewers": 15,
+      "startedAt": null,
+      "handle": "madamekofii"
+    },
+    {
+      "profileId": "census-willway-jordan-officiel",
+      "platform": "TikTok",
+      "roomId": "7700963210714942210",
+      "title": "CLARISSE NOKPO la poubelle",
+      "viewers": 150,
+      "startedAt": "2026-10-26 13:11:12",
+      "handle": "jack.carter39"
+    },
+    {
+      "profileId": "lolo-beaute",
+      "platform": "TikTok",
+      "roomId": "7700918609941580577",
+      "title": "Lolo beaute center",
+      "viewers": 343,
+      "startedAt": null,
+      "handle": "lolobeaute85"
+    },
+    {
+      "profileId": "oustaz-diane",
+      "platform": "TikTok",
+      "roomId": "7700937768398244630",
+      "title": "Le petit poteau téléphonique",
+      "viewers": 1946,
+      "startedAt": "2026-10-26 11:32:28",
+      "handle": "oustazdianeofficiel1"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 4,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-madame-koffi",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-willway-jordan-officiel",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "lolo-beaute",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "oustaz-diane",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }

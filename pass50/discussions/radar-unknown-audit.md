@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-26 13:18 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-madame-koffi` @madamekofii — Bla-bla · 15 viewers
+- TikTok `census-willway-jordan-officiel` @jack.carter39 — CLARISSE NOKPO la poubelle · 150 viewers
+- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 343 viewers
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 1946 viewers
+
 ### 2026-10-26 04:58 UTC
 
 - Unknown sondés : **200**
@@ -411,11 +424,3 @@ Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7697357077429127968 · 299 viewers
 - TikTok `hassan` @hassanhayekofficiel — 7697364240138636084 · 838 viewers
 - TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 205 viewers
-
-### 2026-10-16 16:46 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
