@@ -1,65 +1,78 @@
 {
-  "at": "2026-10-26 13:18 UTC",
+  "at": "2026-10-27 00:34 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
+  "liveCount": 5,
   "lives": [
     {
-      "profileId": "census-madame-koffi",
+      "profileId": "aya-robert",
       "platform": "TikTok",
-      "roomId": "7700963544396876577",
-      "title": "Bla-bla",
+      "roomId": "7701125490425203488",
+      "title": "",
+      "viewers": 3975,
+      "startedAt": "2026-10-26 23:41:32",
+      "handle": "aya.robert27"
+    },
+    {
+      "profileId": "census-awao-officiel",
+      "platform": "TikTok",
+      "roomId": "7701135255234808597",
+      "title": "Cc",
+      "viewers": 222,
+      "startedAt": "2026-10-27 00:19:09",
+      "handle": "influamenta1"
+    },
+    {
+      "profileId": "census-dezouch-officiel",
+      "platform": "TikTok",
+      "roomId": "7701121999258536724",
+      "title": "",
       "viewers": 15,
-      "startedAt": null,
-      "handle": "madamekofii"
+      "startedAt": "2026-10-26 23:27:20",
+      "handle": "dezouch_officiel"
     },
     {
-      "profileId": "census-willway-jordan-officiel",
+      "profileId": "census-samuella-kouassi",
       "platform": "TikTok",
-      "roomId": "7700963210714942210",
-      "title": "CLARISSE NOKPO la poubelle",
-      "viewers": 150,
-      "startedAt": "2026-10-26 13:11:12",
-      "handle": "jack.carter39"
+      "roomId": "7701114494726572833",
+      "title": "",
+      "viewers": 853,
+      "startedAt": "2026-10-26 22:58:21",
+      "handle": "samuellakouassiofficiel"
     },
     {
-      "profileId": "lolo-beaute",
+      "profileId": "dez-cocrane225",
       "platform": "TikTok",
-      "roomId": "7700918609941580577",
-      "title": "Lolo beaute center",
-      "viewers": 343,
-      "startedAt": null,
-      "handle": "lolobeaute85"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7700937768398244630",
-      "title": "Le petit poteau téléphonique",
-      "viewers": 1946,
-      "startedAt": "2026-10-26 11:32:28",
-      "handle": "oustazdianeofficiel1"
+      "roomId": "7701063651133819681",
+      "title": "",
+      "viewers": 198,
+      "startedAt": "2026-10-26 19:40:50",
+      "handle": "dezcocrane.225"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 4,
+    "published": 5,
     "added": [],
     "stored": [
       {
-        "profileId": "census-madame-koffi",
+        "profileId": "aya-robert",
         "platform": "TikTok"
       },
       {
-        "profileId": "census-willway-jordan-officiel",
+        "profileId": "census-awao-officiel",
         "platform": "TikTok"
       },
       {
-        "profileId": "lolo-beaute",
+        "profileId": "census-dezouch-officiel",
         "platform": "TikTok"
       },
       {
-        "profileId": "oustaz-diane",
+        "profileId": "census-samuella-kouassi",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "dez-cocrane225",
         "platform": "TikTok"
       }
     ],
