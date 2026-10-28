@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-28 13:11 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-segano-et-mael` @seganoofficiel2.0 — seganoofficiel2.0
+- TikTok `ismael-aka` @ismael.aka.ddr — 7701678268457503520 · 542 viewers
+
 ### 2026-10-27 22:24 UTC
 
 - Unknown sondés : **200**
@@ -419,14 +430,3 @@ Vraiment en live :
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7697695801761336096 · 362 viewers
 - TikTok `general-camille-makosso` @generalmakossocamille79 — 7697775550685432594 · 2387 viewers
 - TikTok `tma` @tmacrush_officiel — 7697763499942513424 · 357 viewers
-
-### 2026-10-17 20:43 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7697695801761336096 · 978 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 1048 viewers
