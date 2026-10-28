@@ -1,25 +1,25 @@
 {
-  "at": "2026-10-28 13:11 UTC",
+  "at": "2026-10-28 20:21 UTC",
   "unknownCount": 200,
   "liveCount": 2,
   "lives": [
     {
-      "profileId": "census-segano-et-mael",
+      "profileId": "lolo-beaute",
       "platform": "TikTok",
-      "roomId": "7701701297317825313",
-      "title": "seganoofficiel2.0",
-      "viewers": null,
+      "roomId": "7701706144553372449",
+      "title": "Lolo beaute center",
+      "viewers": 245,
       "startedAt": null,
-      "handle": "seganoofficiel2.0"
+      "handle": "lolobeaute85"
     },
     {
-      "profileId": "ismael-aka",
+      "profileId": "tma",
       "platform": "TikTok",
-      "roomId": "7701678268457503520",
+      "roomId": "7701803741317532434",
       "title": "",
-      "viewers": 542,
-      "startedAt": "2026-10-28 11:26:23",
-      "handle": "ismael.aka.ddr"
+      "viewers": 177,
+      "startedAt": "2026-10-28 19:32:48",
+      "handle": "tmacrush_officiel"
     }
   ],
   "posted": {
@@ -29,11 +29,11 @@
     "added": [],
     "stored": [
       {
-        "profileId": "census-segano-et-mael",
+        "profileId": "lolo-beaute",
         "platform": "TikTok"
       },
       {
-        "profileId": "ismael-aka",
+        "profileId": "tma",
         "platform": "TikTok"
       }
     ],
