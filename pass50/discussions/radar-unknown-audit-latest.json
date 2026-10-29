@@ -1,39 +1,52 @@
 {
-  "at": "2026-10-28 20:21 UTC",
+  "at": "2026-10-29 01:02 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
+  "liveCount": 3,
   "lives": [
     {
-      "profileId": "lolo-beaute",
+      "profileId": "census-ange-morel",
       "platform": "TikTok",
-      "roomId": "7701706144553372449",
-      "title": "Lolo beaute center",
-      "viewers": 245,
-      "startedAt": null,
-      "handle": "lolobeaute85"
+      "roomId": "7701880994832075538",
+      "title": "",
+      "viewers": 7426,
+      "startedAt": "2026-10-29 00:32:29",
+      "handle": "angemorel4"
     },
     {
-      "profileId": "tma",
+      "profileId": "census-awao-officiel",
       "platform": "TikTok",
-      "roomId": "7701803741317532434",
+      "roomId": "7701879892908575506",
+      "title": "Cc😍",
+      "viewers": 184,
+      "startedAt": "2026-10-29 00:28:22",
+      "handle": "influamenta1"
+    },
+    {
+      "profileId": "census-samuella-kouassi",
+      "platform": "TikTok",
+      "roomId": "7701840065479772961",
       "title": "",
-      "viewers": 177,
-      "startedAt": "2026-10-28 19:32:48",
-      "handle": "tmacrush_officiel"
+      "viewers": 1826,
+      "startedAt": "2026-10-28 21:53:55",
+      "handle": "samuellakouassiofficiel"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 2,
+    "published": 3,
     "added": [],
     "stored": [
       {
-        "profileId": "lolo-beaute",
+        "profileId": "census-ange-morel",
         "platform": "TikTok"
       },
       {
-        "profileId": "tma",
+        "profileId": "census-awao-officiel",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-samuella-kouassi",
         "platform": "TikTok"
       }
     ],
