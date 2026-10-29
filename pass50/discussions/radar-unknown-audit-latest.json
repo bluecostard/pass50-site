@@ -1,58 +1,9 @@
 {
-  "at": "2026-10-29 01:02 UTC",
+  "at": "2026-10-29 10:10 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
-  "lives": [
-    {
-      "profileId": "census-ange-morel",
-      "platform": "TikTok",
-      "roomId": "7701880994832075538",
-      "title": "",
-      "viewers": 7426,
-      "startedAt": "2026-10-29 00:32:29",
-      "handle": "angemorel4"
-    },
-    {
-      "profileId": "census-awao-officiel",
-      "platform": "TikTok",
-      "roomId": "7701879892908575506",
-      "title": "Cc😍",
-      "viewers": 184,
-      "startedAt": "2026-10-29 00:28:22",
-      "handle": "influamenta1"
-    },
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7701840065479772961",
-      "title": "",
-      "viewers": 1826,
-      "startedAt": "2026-10-28 21:53:55",
-      "handle": "samuellakouassiofficiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 3,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-ange-morel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-awao-officiel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 33
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
