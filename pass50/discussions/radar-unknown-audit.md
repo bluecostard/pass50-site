@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-30 10:12 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-10-30 01:07 UTC
 
 - Unknown sondés : **200**
@@ -415,14 +423,6 @@ Vraiment en live :
 - TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 976 viewers
 
 ### 2026-10-19 13:35 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
-
-### 2026-10-19 04:52 UTC
 
 - Unknown sondés : **200**
 - Vraiment en live : **0**
