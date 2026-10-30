@@ -1,26 +1,39 @@
 {
-  "at": "2026-10-30 18:04 UTC",
+  "at": "2026-10-30 22:28 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
+  "liveCount": 2,
   "lives": [
     {
-      "profileId": "lolo-beaute",
+      "profileId": "apoutchou",
       "platform": "TikTok",
-      "roomId": "7702433964791319329",
-      "title": "Lolo beaute center",
-      "viewers": 233,
-      "startedAt": null,
-      "handle": "lolobeaute85"
+      "roomId": "7702582423283895072",
+      "title": "",
+      "viewers": 9192,
+      "startedAt": "2026-10-30 21:54:35",
+      "handle": "apoutchou_national1"
+    },
+    {
+      "profileId": "census-jp-nda",
+      "platform": "TikTok",
+      "roomId": "7702575082123660052",
+      "title": "Bienvenue dans mon LIVE",
+      "viewers": 8202,
+      "startedAt": "2026-10-30 21:26:52",
+      "handle": "jpnda_1"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 1,
+    "published": 2,
     "added": [],
     "stored": [
       {
-        "profileId": "lolo-beaute",
+        "profileId": "apoutchou",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-jp-nda",
         "platform": "TikTok"
       }
     ],

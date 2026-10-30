@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-30 22:28 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `apoutchou` @apoutchou_national1 — 7702582423283895072 · 9192 viewers
+- TikTok `census-jp-nda` @jpnda_1 — Bienvenue dans mon LIVE · 8202 viewers
+
 ### 2026-10-30 18:04 UTC
 
 - Unknown sondés : **200**
@@ -419,15 +430,3 @@ Vraiment en live :
 - TikTok `census-joshua-cooker` @paaa.persil — 7698514854449253172 · 127 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7698459032318724897 · 130 viewers
 - TikTok `tma` @tmacrush_officiel — 7698499623539346194 · 194 viewers
-
-### 2026-10-19 20:37 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-willway-jordan-officiel` @jack.carter39 — Willway  Jordan officiel
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7698459032318724897 · 1100 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 976 viewers
