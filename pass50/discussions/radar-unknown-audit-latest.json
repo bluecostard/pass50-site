@@ -1,9 +1,32 @@
 {
-  "at": "2026-10-31 05:55 UTC",
+  "at": "2026-10-31 19:22 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "lolo-beaute",
+      "platform": "TikTok",
+      "roomId": "7702905232711355169",
+      "title": "Lolo beaute center",
+      "viewers": 237,
+      "startedAt": null,
+      "handle": "lolobeaute85"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "lolo-beaute",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }
