@@ -49,6 +49,7 @@ Prérequis
      or (http.request.uri.path eq "/api/public-feed.php")
      or (http.request.uri.path eq "/api/content-feed.php")
      or (http.request.uri.path eq "/api/live-status.php")
+     or (http.request.uri.path eq "/api/live-status-v4.php")
      or (http.request.uri.path eq "/api/app-bootstrap.php")
    Then :
      Eligible for cache = Yes

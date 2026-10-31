@@ -212,16 +212,16 @@ class LiveRadarV41Tests(unittest.TestCase):
         self.assertIn('live-experience-v4-1.js?v=1.8', (ROOT / 'public-copy-fixes.js').read_text(encoding='utf-8'))
 
     def test_server_sweep_uses_v4(self):
-        self.assertIn('*/5 * * * *', SWEEP)
+        self.assertIn("cron: '3,8,13", SWEEP)
         self.assertIn('api/live-status-v4.php', SWEEP)
         self.assertIn('mode=full', SWEEP)
         self.assertIn('live-radar-audit.json', SWEEP)
         self.assertIn('publishedStreams', SWEEP)
         self.assertIn('pass50/live-radar', SWEEP)
         quick = (ROOT / '.github' / 'workflows' / 'live-radar-quick.yml').read_text(encoding='utf-8')
-        self.assertIn('*/5 * * * *', quick)
+        self.assertIn("cron: '1,6,11", quick)
         self.assertIn('mode=quick', quick)
-        self.assertIn('batch=16', quick)
+        self.assertIn('batch=10', quick)
 
 
 if __name__ == '__main__':
