@@ -1,45 +1,9 @@
 {
-  "at": "2026-10-30 22:28 UTC",
+  "at": "2026-10-31 05:55 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "apoutchou",
-      "platform": "TikTok",
-      "roomId": "7702582423283895072",
-      "title": "",
-      "viewers": 9192,
-      "startedAt": "2026-10-30 21:54:35",
-      "handle": "apoutchou_national1"
-    },
-    {
-      "profileId": "census-jp-nda",
-      "platform": "TikTok",
-      "roomId": "7702575082123660052",
-      "title": "Bienvenue dans mon LIVE",
-      "viewers": 8202,
-      "startedAt": "2026-10-30 21:26:52",
-      "handle": "jpnda_1"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "apoutchou",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-jp-nda",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 33
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-10-31 05:55 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-10-30 22:28 UTC
 
 - Unknown sondés : **200**
@@ -418,15 +426,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-10-20 00:26 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-joshua-cooker` @paaa.persil — 7698514854449253172 · 127 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7698459032318724897 · 130 viewers
-- TikTok `tma` @tmacrush_officiel — 7698499623539346194 · 194 viewers
