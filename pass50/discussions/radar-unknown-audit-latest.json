@@ -1,71 +1,9 @@
 {
-  "at": "2026-11-01 00:11 UTC",
+  "at": "2026-11-01 06:23 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
-  "lives": [
-    {
-      "profileId": "census-ange-morel",
-      "platform": "TikTok",
-      "roomId": "7702979690797222663",
-      "title": "",
-      "viewers": 14238,
-      "startedAt": "2026-10-31 23:36:02",
-      "handle": "angemorel4"
-    },
-    {
-      "profileId": "census-samuella-kouassi",
-      "platform": "TikTok",
-      "roomId": "7702947218600250145",
-      "title": "",
-      "viewers": 736,
-      "startedAt": "2026-10-31 21:29:55",
-      "handle": "samuellakouassiofficiel"
-    },
-    {
-      "profileId": "laura-ziehi",
-      "platform": "TikTok",
-      "roomId": "7702977134752025365",
-      "title": "",
-      "viewers": 333,
-      "startedAt": "2026-10-31 23:26:27",
-      "handle": "laurateresaziehi"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7702970159943043858",
-      "title": "",
-      "viewers": 227,
-      "startedAt": "2026-10-31 22:58:58",
-      "handle": "tmacrush_officiel"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 4,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-ange-morel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-samuella-kouassi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "laura-ziehi",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 33
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }

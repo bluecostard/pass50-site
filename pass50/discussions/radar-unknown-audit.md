@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-01 06:23 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-11-01 00:11 UTC
 
 - Unknown sondés : **200**
@@ -420,14 +428,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `apoutchou` @apoutchou_national1 — 7698868095850449696 · 9109 viewers
 - TikTok `tma` @tmacrush_officiel — 7698861800921533192 · 295 viewers
-
-### 2026-10-20 19:21 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `aya-robert` @aya.robert27 — 7698830236317715233 · 2083 viewers
-- TikTok `census-lise-akrassi` @lise.akrassi.offi — PARTAGE DE CARRIÈRE PRO. · 9 viewers
