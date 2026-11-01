@@ -1,9 +1,32 @@
 {
-  "at": "2026-11-01 16:07 UTC",
+  "at": "2026-11-01 22:10 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 1,
+  "lives": [
+    {
+      "profileId": "census-samuella-kouassi",
+      "platform": "TikTok",
+      "roomId": "7703320476215036704",
+      "title": "",
+      "viewers": 1081,
+      "startedAt": "2026-11-01 21:38:38",
+      "handle": "samuellakouassiofficiel"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 1,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-samuella-kouassi",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }
