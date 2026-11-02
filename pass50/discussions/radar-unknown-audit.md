@@ -11,6 +11,14 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-02 06:24 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **0**
+- Publiés radar : **0**
+- Ajoutés P0 : **0**
+- Aucun unknown réellement en live à ce passage.
+
 ### 2026-11-01 22:10 UTC
 
 - Unknown sondés : **200**
@@ -419,11 +427,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `census-stephane-galactik` @le_coach_des_debout — 7699168697189600020 · 89 viewers
 - TikTok `hassan` @hassanhayekofficiel — je vais me prononcer · 726 viewers
-
-### 2026-10-21 12:01 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
