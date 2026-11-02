@@ -1,9 +1,45 @@
 {
-  "at": "2026-11-02 06:24 UTC",
+  "at": "2026-11-02 19:35 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "ismael-aka",
+      "platform": "TikTok",
+      "roomId": "7703641660974058273",
+      "title": "",
+      "viewers": 513,
+      "startedAt": "2026-11-02 18:25:06",
+      "handle": "ismael.aka.ddr"
+    },
+    {
+      "profileId": "lolo-beaute",
+      "platform": "TikTok",
+      "roomId": "7703637024372296481",
+      "title": "Lolo beaute center",
+      "viewers": 278,
+      "startedAt": null,
+      "handle": "lolobeaute85"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "ismael-aka",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "lolo-beaute",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }

@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-02 19:35 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `ismael-aka` @ismael.aka.ddr — 7703641660974058273 · 513 viewers
+- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 278 viewers
+
 ### 2026-11-02 06:24 UTC
 
 - Unknown sondés : **200**
@@ -416,14 +427,3 @@ Vraiment en live :
 - TikTok `general-camille-makosso` @generalmakossocamille79 — 7699225915369507602 · 4309 viewers
 - TikTok `holy` @holysheilla — 7699228336517663520 · 65 viewers
 - TikTok `tma` @tmacrush_officiel — 7699221101310544648 · 151 viewers
-
-### 2026-10-21 17:21 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-stephane-galactik` @le_coach_des_debout — 7699168697189600020 · 89 viewers
-- TikTok `hassan` @hassanhayekofficiel — je vais me prononcer · 726 viewers
