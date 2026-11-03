@@ -1,39 +1,26 @@
 {
-  "at": "2026-11-02 19:35 UTC",
+  "at": "2026-11-03 02:57 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "ismael-aka",
+      "profileId": "census-awao-officiel",
       "platform": "TikTok",
-      "roomId": "7703641660974058273",
+      "roomId": "7703771947427007253",
       "title": "",
-      "viewers": 513,
-      "startedAt": "2026-11-02 18:25:06",
-      "handle": "ismael.aka.ddr"
-    },
-    {
-      "profileId": "lolo-beaute",
-      "platform": "TikTok",
-      "roomId": "7703637024372296481",
-      "title": "Lolo beaute center",
-      "viewers": 278,
-      "startedAt": null,
-      "handle": "lolobeaute85"
+      "viewers": 154,
+      "startedAt": "2026-11-03 02:50:33",
+      "handle": "influamenta1"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 2,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "ismael-aka",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "lolo-beaute",
+        "profileId": "census-awao-officiel",
         "platform": "TikTok"
       }
     ],
