@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-04 19:52 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-no-limit` @nolimit_vousdv — 7704405587367037748 · 329 viewers
+- TikTok `census-segano-et-mael` @seganoofficiel2.0 — 7704406422012463904 · 65 viewers
+- TikTok `dez-cocrane225` @dezcocrane.225 — 7704397006319422240 · 940 viewers
+- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 314 viewers
+
 ### 2026-11-04 11:09 UTC
 
 - Unknown sondés : **200**
@@ -411,11 +424,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 200 viewers
-
-### 2026-10-23 05:02 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.
