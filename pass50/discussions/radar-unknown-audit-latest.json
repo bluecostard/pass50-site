@@ -1,39 +1,26 @@
 {
-  "at": "2026-11-04 01:28 UTC",
+  "at": "2026-11-04 11:09 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "census-awao-officiel",
+      "profileId": "aya-robert",
       "platform": "TikTok",
-      "roomId": "7704115081491712789",
+      "roomId": "7704257140009093921",
       "title": "",
-      "viewers": 192,
-      "startedAt": "2026-11-04 01:02:15",
-      "handle": "influamenta1"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7704073047302441736",
-      "title": "",
-      "viewers": 185,
-      "startedAt": "2026-11-03 22:19:09",
-      "handle": "tmacrush_officiel"
+      "viewers": 5222,
+      "startedAt": "2026-11-04 10:14:23",
+      "handle": "aya.robert27"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 2,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "census-awao-officiel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
+        "profileId": "aya-robert",
         "platform": "TikTok"
       }
     ],
