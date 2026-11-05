@@ -11,6 +11,16 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-05 11:10 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **1**
+- Publiés radar : **1**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-le-grand-bicongo` @legrandbicongo — 7704633906239097620 · 350 viewers
+
 ### 2026-11-05 01:30 UTC
 
 - Unknown sondés : **200**
@@ -415,15 +425,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `census-awao-officiel` @influamenta1 — 7700069629804972820 · 146 viewers
-
-### 2026-10-23 21:30 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **3**
-- Publiés radar : **3**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `apoutchou` @apoutchou_national1 — 7699971483572931361 · 9377 viewers
-- TikTok `dez-cocrane225` @dezcocrane.225 — 7699905384639318817 · 316 viewers
-- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 271 viewers

@@ -1,65 +1,26 @@
 {
-  "at": "2026-11-05 01:30 UTC",
+  "at": "2026-11-05 11:10 UTC",
   "unknownCount": 200,
-  "liveCount": 4,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "aya-robert",
+      "profileId": "census-le-grand-bicongo",
       "platform": "TikTok",
-      "roomId": "7704411967162829601",
+      "roomId": "7704633906239097620",
       "title": "",
-      "viewers": 931,
-      "startedAt": "2026-11-04 20:14:03",
-      "handle": "aya.robert27"
-    },
-    {
-      "profileId": "census-ange-morel",
-      "platform": "TikTok",
-      "roomId": "7704466311972408071",
-      "title": "",
-      "viewers": 8329,
-      "startedAt": "2026-11-04 23:45:14",
-      "handle": "angemorel4"
-    },
-    {
-      "profileId": "census-awao-officiel",
-      "platform": "TikTok",
-      "roomId": "7704487932917549845",
-      "title": "",
-      "viewers": 150,
-      "startedAt": "2026-11-05 01:09:03",
-      "handle": "influamenta1"
-    },
-    {
-      "profileId": "tma",
-      "platform": "TikTok",
-      "roomId": "7704446954441034504",
-      "title": "",
-      "viewers": 153,
-      "startedAt": "2026-11-04 22:30:06",
-      "handle": "tmacrush_officiel"
+      "viewers": 350,
+      "startedAt": "2026-11-05 10:35:15",
+      "handle": "legrandbicongo"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 4,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "aya-robert",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-ange-morel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-awao-officiel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "tma",
+        "profileId": "census-le-grand-bicongo",
         "platform": "TikTok"
       }
     ],
