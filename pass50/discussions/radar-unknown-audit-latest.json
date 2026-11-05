@@ -1,32 +1,9 @@
 {
-  "at": "2026-11-05 11:10 UTC",
+  "at": "2026-11-05 20:05 UTC",
   "unknownCount": 200,
-  "liveCount": 1,
-  "lives": [
-    {
-      "profileId": "census-le-grand-bicongo",
-      "platform": "TikTok",
-      "roomId": "7704633906239097620",
-      "title": "",
-      "viewers": 350,
-      "startedAt": "2026-11-05 10:35:15",
-      "handle": "legrandbicongo"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 1,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-le-grand-bicongo",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 33
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
