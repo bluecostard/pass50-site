@@ -11,6 +11,19 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-05 01:30 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **4**
+- Publiés radar : **4**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `aya-robert` @aya.robert27 — 7704411967162829601 · 931 viewers
+- TikTok `census-ange-morel` @angemorel4 — 7704466311972408071 · 8329 viewers
+- TikTok `census-awao-officiel` @influamenta1 — 7704487932917549845 · 150 viewers
+- TikTok `tma` @tmacrush_officiel — 7704446954441034504 · 153 viewers
+
 ### 2026-11-04 19:52 UTC
 
 - Unknown sondés : **200**
@@ -414,13 +427,3 @@ Vraiment en live :
 - TikTok `apoutchou` @apoutchou_national1 — 7699971483572931361 · 9377 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7699905384639318817 · 316 viewers
 - TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 271 viewers
-
-### 2026-10-23 11:49 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **1**
-- Publiés radar : **1**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 200 viewers
