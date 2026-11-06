@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-06 01:37 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-madame-koffi` @madamekofii — 4 gosses 4 papas🫢 · 127 viewers
+- TikTok `census-no-limit` @nolimit_vousdv — 7704852854602795828 · 832 viewers
+
 ### 2026-11-05 20:05 UTC
 
 - Unknown sondés : **200**
@@ -415,11 +426,3 @@ Vraiment en live :
 
 Vraiment en live :
 - TikTok `hassan` @hassanhayekofficiel — je vais me prononcer · 1266 viewers
-
-### 2026-10-24 11:15 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **0**
-- Publiés radar : **0**
-- Ajoutés P0 : **0**
-- Aucun unknown réellement en live à ce passage.

@@ -1,9 +1,45 @@
 {
-  "at": "2026-11-05 20:05 UTC",
+  "at": "2026-11-06 01:37 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "census-madame-koffi",
+      "platform": "TikTok",
+      "roomId": "7704837963548494614",
+      "title": "4 gosses 4 papas🫢",
+      "viewers": 127,
+      "startedAt": "2026-11-05 23:47:20",
+      "handle": "madamekofii"
+    },
+    {
+      "profileId": "census-no-limit",
+      "platform": "TikTok",
+      "roomId": "7704852854602795828",
+      "title": "",
+      "viewers": 832,
+      "startedAt": "2026-11-06 00:44:42",
+      "handle": "nolimit_vousdv"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-madame-koffi",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-no-limit",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }
