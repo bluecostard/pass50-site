@@ -1,45 +1,9 @@
 {
-  "at": "2026-11-07 00:58 UTC",
+  "at": "2026-11-07 10:25 UTC",
   "unknownCount": 200,
-  "liveCount": 2,
-  "lives": [
-    {
-      "profileId": "census-ange-morel",
-      "platform": "TikTok",
-      "roomId": "7705207556311124744",
-      "title": "",
-      "viewers": 8955,
-      "startedAt": "2026-11-06 23:41:19",
-      "handle": "angemorel4"
-    },
-    {
-      "profileId": "census-guyguy-le-grouilleur-de-bologne",
-      "platform": "TikTok",
-      "roomId": "7705208508677917447",
-      "title": "Très bon médicament de garçon",
-      "viewers": 248,
-      "startedAt": "2026-11-06 23:45:07",
-      "handle": "guyguylegrouilleur07"
-    }
-  ],
-  "posted": {
-    "ok": true,
-    "enabled": true,
-    "published": 2,
-    "added": [],
-    "stored": [
-      {
-        "profileId": "census-ange-morel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-guyguy-le-grouilleur-de-bologne",
-        "platform": "TikTok"
-      }
-    ],
-    "skipped": [],
-    "p0Count": 33
-  },
+  "liveCount": 0,
+  "lives": [],
+  "posted": null,
   "enabled": true,
   "error": null
 }
