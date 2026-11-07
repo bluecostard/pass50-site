@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-07 00:58 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-ange-morel` @angemorel4 — 7705207556311124744 · 8955 viewers
+- TikTok `census-guyguy-le-grouilleur-de-bologne` @guyguylegrouilleur07 — Très bon médicament de garçon · 248 viewers
+
 ### 2026-11-06 19:30 UTC
 
 - Unknown sondés : **200**
@@ -413,14 +424,3 @@ Vraiment en live :
 - Publiés radar : **0**
 - Ajoutés P0 : **0**
 - Aucun unknown réellement en live à ce passage.
-
-### 2026-10-24 23:21 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7700364320961596193 · 8244 viewers
-- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 1180 viewers
