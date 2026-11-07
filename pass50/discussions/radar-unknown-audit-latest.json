@@ -1,9 +1,45 @@
 {
-  "at": "2026-11-07 10:25 UTC",
+  "at": "2026-11-07 17:46 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 2,
+  "lives": [
+    {
+      "profileId": "hassan",
+      "platform": "TikTok",
+      "roomId": "7705486767629126420",
+      "title": "Mes parents chinois",
+      "viewers": 288,
+      "startedAt": "2026-11-07 17:44:59",
+      "handle": "hassanhayekofficiel"
+    },
+    {
+      "profileId": "p_1786797024293",
+      "platform": "TikTok",
+      "roomId": "7705484010733996822",
+      "title": "SCOTTY CFA",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "professeurdelarue79"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 2,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "hassan",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "p_1786797024293",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }

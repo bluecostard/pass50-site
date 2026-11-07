@@ -11,6 +11,17 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-07 17:46 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **2**
+- Publiés radar : **2**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `hassan` @hassanhayekofficiel — Mes parents chinois · 288 viewers
+- TikTok `p_1786797024293` @professeurdelarue79 — SCOTTY CFA
+
 ### 2026-11-07 10:25 UTC
 
 - Unknown sondés : **200**
@@ -413,14 +424,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `census-laguepe` @laguepe03 — 7700707581957868302 · 332 viewers
 - TikTok `census-willway-jordan-officiel` @jack.carter39 — Willway  Jordan officiel
-
-### 2026-10-25 16:33 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **2**
-- Publiés radar : **2**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `aya-robert` @aya.robert27 — 7700628904419117857 · 1590 viewers
-- TikTok `census-cahie-kunta` @cahiekunta — 7700627452616657684 · 576 viewers
