@@ -1,9 +1,58 @@
 {
-  "at": "2026-11-08 13:38 UTC",
+  "at": "2026-11-08 19:45 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 3,
+  "lives": [
+    {
+      "profileId": "census-awao-officiel",
+      "platform": "TikTok",
+      "roomId": "7705862139244595989",
+      "title": "Cc",
+      "viewers": 303,
+      "startedAt": "2026-11-08 18:01:36",
+      "handle": "influamenta1"
+    },
+    {
+      "profileId": "census-jordan-evraa",
+      "platform": "TikTok",
+      "roomId": "7705859402623994655",
+      "title": "",
+      "viewers": 169,
+      "startedAt": "2026-11-08 17:51:43",
+      "handle": "realjordanevraa"
+    },
+    {
+      "profileId": "oustaz-diane",
+      "platform": "TikTok",
+      "roomId": "7705841386080946966",
+      "title": "",
+      "viewers": 1601,
+      "startedAt": "2026-11-08 16:40:39",
+      "handle": "oustazdianeofficiel1"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 3,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "census-awao-officiel",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-jordan-evraa",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "oustaz-diane",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }

@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-08 19:45 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `census-awao-officiel` @influamenta1 — Cc · 303 viewers
+- TikTok `census-jordan-evraa` @realjordanevraa — 7705859402623994655 · 169 viewers
+- TikTok `oustaz-diane` @oustazdianeofficiel1 — 7705841386080946966 · 1601 viewers
+
 ### 2026-11-08 13:38 UTC
 
 - Unknown sondés : **200**
@@ -405,16 +417,3 @@ Vraiment en live :
 - TikTok `census-dezouch-officiel` @dezouch_officiel — 7701121999258536724 · 15 viewers
 - TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7701114494726572833 · 853 viewers
 - TikTok `dez-cocrane225` @dezcocrane.225 — 7701063651133819681 · 198 viewers
-
-### 2026-10-26 13:18 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `census-madame-koffi` @madamekofii — Bla-bla · 15 viewers
-- TikTok `census-willway-jordan-officiel` @jack.carter39 — CLARISSE NOKPO la poubelle · 150 viewers
-- TikTok `lolo-beaute` @lolobeaute85 — Lolo beaute center · 343 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — Le petit poteau téléphonique · 1946 viewers
