@@ -1,52 +1,26 @@
 {
-  "at": "2026-11-08 19:45 UTC",
+  "at": "2026-11-09 00:59 UTC",
   "unknownCount": 200,
-  "liveCount": 3,
+  "liveCount": 1,
   "lives": [
     {
-      "profileId": "census-awao-officiel",
+      "profileId": "census-samuella-kouassi",
       "platform": "TikTok",
-      "roomId": "7705862139244595989",
-      "title": "Cc",
-      "viewers": 303,
-      "startedAt": "2026-11-08 18:01:36",
-      "handle": "influamenta1"
-    },
-    {
-      "profileId": "census-jordan-evraa",
-      "platform": "TikTok",
-      "roomId": "7705859402623994655",
+      "roomId": "7705933158114118432",
       "title": "",
-      "viewers": 169,
-      "startedAt": "2026-11-08 17:51:43",
-      "handle": "realjordanevraa"
-    },
-    {
-      "profileId": "oustaz-diane",
-      "platform": "TikTok",
-      "roomId": "7705841386080946966",
-      "title": "",
-      "viewers": 1601,
-      "startedAt": "2026-11-08 16:40:39",
-      "handle": "oustazdianeofficiel1"
+      "viewers": 1005,
+      "startedAt": "2026-11-08 22:37:31",
+      "handle": "samuellakouassiofficiel"
     }
   ],
   "posted": {
     "ok": true,
     "enabled": true,
-    "published": 3,
+    "published": 1,
     "added": [],
     "stored": [
       {
-        "profileId": "census-awao-officiel",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "census-jordan-evraa",
-        "platform": "TikTok"
-      },
-      {
-        "profileId": "oustaz-diane",
+        "profileId": "census-samuella-kouassi",
         "platform": "TikTok"
       }
     ],
