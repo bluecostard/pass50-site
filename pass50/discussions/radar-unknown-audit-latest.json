@@ -1,9 +1,58 @@
 {
-  "at": "2026-11-10 07:28 UTC",
+  "at": "2026-11-10 17:08 UTC",
   "unknownCount": 200,
-  "liveCount": 0,
-  "lives": [],
-  "posted": null,
+  "liveCount": 3,
+  "lives": [
+    {
+      "profileId": "aya-robert",
+      "platform": "TikTok",
+      "roomId": "7706579077934762784",
+      "title": "",
+      "viewers": 2846,
+      "startedAt": "2026-11-10 16:23:50",
+      "handle": "aya.robert27"
+    },
+    {
+      "profileId": "census-souley-de-paris",
+      "platform": "TikTok",
+      "roomId": "7706585253876124449",
+      "title": "SOULEY DE-PARIS 🦅 B-52",
+      "viewers": null,
+      "startedAt": null,
+      "handle": "souleydeparis"
+    },
+    {
+      "profileId": "hamondchic",
+      "platform": "TikTok",
+      "roomId": "7706551322086099745",
+      "title": "C’est pour poser question",
+      "viewers": 21460,
+      "startedAt": "2026-11-10 14:36:16",
+      "handle": "coachhamond"
+    }
+  ],
+  "posted": {
+    "ok": true,
+    "enabled": true,
+    "published": 3,
+    "added": [],
+    "stored": [
+      {
+        "profileId": "aya-robert",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "census-souley-de-paris",
+        "platform": "TikTok"
+      },
+      {
+        "profileId": "hamondchic",
+        "platform": "TikTok"
+      }
+    ],
+    "skipped": [],
+    "p0Count": 33
+  },
   "enabled": true,
   "error": null
 }

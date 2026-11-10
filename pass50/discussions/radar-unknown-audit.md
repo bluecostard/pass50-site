@@ -11,6 +11,18 @@ Pour arrêter la boucle : le dire dans le chat PASS50.
 
 <!-- JOURNAL:BEGIN -->
 
+### 2026-11-10 17:08 UTC
+
+- Unknown sondés : **200**
+- Vraiment en live : **3**
+- Publiés radar : **3**
+- Ajoutés P0 : **0**
+
+Vraiment en live :
+- TikTok `aya-robert` @aya.robert27 — 7706579077934762784 · 2846 viewers
+- TikTok `census-souley-de-paris` @souleydeparis — SOULEY DE-PARIS 🦅 B-52
+- TikTok `hamondchic` @coachhamond — C’est pour poser question · 21460 viewers
+
 ### 2026-11-10 07:28 UTC
 
 - Unknown sondés : **200**
@@ -402,16 +414,3 @@ Vraiment en live :
 Vraiment en live :
 - TikTok `census-segano-et-mael` @seganoofficiel2.0 — seganoofficiel2.0
 - TikTok `ismael-aka` @ismael.aka.ddr — 7701678268457503520 · 542 viewers
-
-### 2026-10-27 22:24 UTC
-
-- Unknown sondés : **200**
-- Vraiment en live : **4**
-- Publiés radar : **4**
-- Ajoutés P0 : **0**
-
-Vraiment en live :
-- TikTok `apoutchou` @apoutchou_national1 — 7701460601973443360 · 11484 viewers
-- TikTok `aya-robert` @aya.robert27 — 7701333299444173600 · 805 viewers
-- TikTok `census-samuella-kouassi` @samuellakouassiofficiel — 7701474547689704225 · 1552 viewers
-- TikTok `oustaz-diane` @oustazdianeofficiel1 — 7701436732100627232 · 2238 viewers
